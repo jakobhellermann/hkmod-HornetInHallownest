@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net472</TargetFramework>
+        <AssemblyTitle>HornetPlayer</AssemblyTitle>
+        <AssemblyVersion>1.0.0.0</AssemblyVersion>
+        <DebugType>portable</DebugType>
+        <LangVersion>latest</LangVersion>
+        <Nullable>enable</Nullable>
+        <!-- todo macOS -->
+        <GamePath Condition="'$(OS)' == 'Windows_NT'">C:/Program Files (x86)/Steam/steamapps/common/Hollow Knight</GamePath>
+        <GamePath Condition="'$(OS)' != 'Windows_NT'">$(HOME)/.local/share/Steam/steamapps/common/Hollow Knight</GamePath>
+        <HollowKnightRefs>$(GamePath)/hollow_knight_Data/Managed</HollowKnightRefs>
+
+        <CopyDir>$(HollowKnightRefs)/Mods/HornetPlayer</CopyDir>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Reference Include="Assembly-CSharp">
+            <HintPath>$(HollowKnightRefs)/Assembly-CSharp.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+
+    <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(CopyDir)' != ''">
+        <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+    </Target>
+</Project>
