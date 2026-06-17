@@ -34,6 +34,9 @@
         <Reference Include="TeamCherry.TK2D" Private="false">
             <HintPath>$(HollowKnightRefs)/TeamCherry.TK2D.dll</HintPath>
         </Reference>
+        <Reference Include="TeamCherry.SharedUtils" Private="false">
+            <HintPath>$(HollowKnightRefs)/TeamCherry.SharedUtils.dll</HintPath>
+        </Reference>
         <Reference Include="UnityEngine" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.dll</HintPath>
         </Reference>
