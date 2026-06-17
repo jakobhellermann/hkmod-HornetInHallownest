@@ -52,6 +52,9 @@
         <Reference Include="UnityEngine.ParticleSystemModule" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.ParticleSystemModule.dll</HintPath>
         </Reference>
+        <Reference Include="UnityEngine.AnimationModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.AnimationModule.dll</HintPath>
+        </Reference>
         <Reference Include="UnityEngine" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.dll</HintPath>
         </Reference>
