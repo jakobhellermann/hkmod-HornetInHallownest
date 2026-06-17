@@ -1,0 +1,26 @@
+[*.cs]
+insert_final_newline = true
+
+csharp_new_line_before_open_brace = none
+csharp_new_line_before_catch = false
+csharp_new_line_before_finally = false
+
+dotnet_naming_symbols.private_const_fields.applicable_kinds = field
+dotnet_naming_symbols.private_const_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_const_fields.required_modifiers = const
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+dotnet_naming_style.camel_case_style.capitalization = camel_case
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+
+dotnet_naming_rule.private_const_fields_rule.symbols = private_const_fields
+dotnet_naming_rule.private_const_fields_rule.style = pascal_case_style
+dotnet_naming_rule.private_const_fields_rule.severity = suggestion
+
+dotnet_naming_rule.private_fields_rule.symbols = private_fields
+dotnet_naming_rule.private_fields_rule.style = camel_case_style
+dotnet_naming_rule.private_fields_rule.severity = suggestion
+
+resharper_parameter_hides_member_highlighting = none
