@@ -57,6 +57,15 @@ TYPES=(
   GlobalEnums.PermadeathModes
   GlobalEnums.SethNpcLocations
   GlobalEnums.MapZone
+  GlobalEnums.HazardType
+  GlobalEnums.HeroActionButton
+  GlobalEnums.HeroSounds
+  AttackTypes
+  HitSilkGeneration
+  NailElements
+  ToolEquippedReadSource
+  ToolItemType
+  ToolsActiveStates
 )
 # NOTE: extracting HeroController's combat/tools/quest dependencies (ToolItem, DeliveryQuestItem, NailAttackBase,
 # DamageTag, NoiseMaker, …) does NOT converge — they cascade into the tools/quest/inventory/addressables subsystems

@@ -81,6 +81,7 @@ public class WrappedVector2List { }
 public struct HeroItemsState { }
 
 public class ManagerSingleton<T> : MonoBehaviour where T : ManagerSingleton<T> {
+    public static T Instance = null!;
     protected virtual void Awake() { }
     protected virtual void OnDestroy() { }
 }
@@ -89,3 +90,47 @@ public class ManagerSingleton<T> : MonoBehaviour where T : ManagerSingleton<T> {
 public class HazardRespawnMarker : MonoBehaviour {
     public enum FacingDirection { None, Left, Right }
 }
+
+// ── Silksong-only managers / regions / effects / utilities referenced by HeroController. Stubbed (no HK equivalent,
+//    so no shadow risk). Members are added below only as the compiler demands them; behaviour is inert for now. ──
+public class HeroChargeEffects : ManagerSingleton<HeroChargeEffects> { }
+public class HeroCorpseMarker : MonoBehaviour { }
+public class HeroCorpseMarkerProxy : MonoBehaviour { }
+public class HeroDeathSequence : MonoBehaviour { }
+public class HeroInvincibilitySource : MonoBehaviour { }
+public class HeroPerformanceRegion : MonoBehaviour { }
+public class FrostRegion : MonoBehaviour { }
+public class NoClamberRegion : MonoBehaviour { }
+public class NoWallClingRegion : MonoBehaviour { }
+public class SlideSurface : MonoBehaviour { }
+public class NailSlashTerrainThunk : MonoBehaviour { }
+public class GenericMessageCanvas : MonoBehaviour { }
+public class StatusVignette : MonoBehaviour { }
+public class PlayVibration : MonoBehaviour { }
+public class CollectableItemMemento { }
+public class ToolCrest { }
+public class TimerGroup { }
+public class SpriteFlashCallbackHooks { }
+public class WaitForTk2dAnimatorClipFinish { }
+public class CurrencyObjectBase : MonoBehaviour { }
+public class CurrencyCounter : MonoBehaviour { }
+public class InventoryPaneInput : MonoBehaviour { }
+public class ToolItemLimiter : MonoBehaviour { }
+
+public static class Gameplay { }
+public static class EventRegisterEvents { }
+public static class ToolItemManager { }
+public static class CurrencyManager { }
+public static class InteractManager { }
+public static class CollectableItemManager { }
+public static class EnemyJournalManager { }
+public static class QuestManager { }
+public static class PersistentAudioManager { }
+public static class HeroUtility { }
+public static class SaveDataUtility { }
+public static class TerrainThunkUtils { }
+public static class EdgeAdjustHelper { }
+public static class DemoHelper { }
+public static class Effects { }
+public static class Audio { }
+public static class CustomPlayerLoop { }
