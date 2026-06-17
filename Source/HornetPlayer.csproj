@@ -37,6 +37,21 @@
         <Reference Include="TeamCherry.SharedUtils" Private="false">
             <HintPath>$(HollowKnightRefs)/TeamCherry.SharedUtils.dll</HintPath>
         </Reference>
+        <Reference Include="TeamCherry.NestedFadeGroup" Private="false">
+            <HintPath>$(HollowKnightRefs)/TeamCherry.NestedFadeGroup.dll</HintPath>
+        </Reference>
+        <Reference Include="PlayMaker" Private="false">
+            <HintPath>$(HollowKnightRefs)/PlayMaker.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.Physics2DModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.Physics2DModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.AudioModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.AudioModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ParticleSystemModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.ParticleSystemModule.dll</HintPath>
+        </Reference>
         <Reference Include="UnityEngine" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.dll</HintPath>
         </Reference>

@@ -14,19 +14,49 @@ DLL="${SS_DLL:-$HOME/.local/share/Steam/steamapps/common/Hollow Knight Silksong/
 OUT="$(cd "$(dirname "$0")" && pwd)/Decompiled"
 
 # Types to extract pristine. Grow this list as the locomotion port expands.
+# Full metadata names (namespace-qualified where needed; ilspycmd -t needs the exact name). Everything is wrapped
+# into `namespace Silksong;` regardless of its original namespace — HeroController (also in Silksong) resolves these
+# unqualified names in its own namespace first, so the original `using GlobalEnums;` etc. don't matter.
 TYPES=(
   HeroControllerStates
   HeroControllerConfig
+  HeroController
+  # hero-internal helpers + enums referenced by HeroController
+  GlobalEnums.HeroLockStates
+  GlobalEnums.EnvironmentTypes
+  GlobalEnums.DamagePropertyFlags
+  CurrencyType
+  AttackToolBinding
+  SilkSpool
+  Downspike
+  WallTouchCache
+  RunEffects
+  TouchGroundResult
+  CharacterBumpCheck
 )
 
 mkdir -p "$OUT"
 for t in "${TYPES[@]}"; do
-  echo "extracting $t"
-  # Decompile to stdout, then insert a file-scoped `namespace Silksong;` right after the using block.
-  ilspycmd -t "$t" "$DLL" \
-    | awk 'BEGIN{done=0}
-           /^(public|internal|sealed|abstract|static|partial|\[|class|enum|struct|namespace)/ && !done {print "namespace Silksong;"; print ""; done=1}
-           {print}' \
-    > "$OUT/$t.cs"
+  file="$OUT/${t##*.}.cs" # basename after the last dot
+  if [ -f "$file" ] && [ "${FORCE:-0}" != "1" ]; then
+    echo "skip $t (exists; FORCE=1 to re-extract)"
+    continue
+  fi
+
+  src="$(ilspycmd -t "$t" "$DLL" 2>/dev/null)" || { echo "  WARN: failed $t" >&2; continue; }
+  [ -n "$src" ] || { echo "  WARN: empty $t" >&2; continue; }
+  echo "extracting $t -> ${t##*.}.cs"
+
+  # Types that HK also defines (HeroController, HeroControllerStates, …) decompile WITHOUT a namespace and must be
+  # wrapped in `namespace Silksong;` to avoid colliding. Silksong-only types in their own namespace (GlobalEnums.*)
+  # decompile WITH it — leave those pristine; HeroController's `using GlobalEnums;` resolves them.
+  if printf '%s\n' "$src" | grep -qE '^namespace '; then
+    printf '%s\n' "$src" > "$file"
+  else
+    printf '%s\n' "$src" \
+      | awk 'BEGIN{d=0}
+             /^(public|internal|sealed|abstract|static|partial|\[)/ && !d {print "namespace Silksong;"; print ""; d=1}
+             {print}' > "$file"
+  fi
 done
 echo "done -> $OUT"
