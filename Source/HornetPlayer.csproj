@@ -26,6 +26,15 @@
         <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.26.0" PrivateAssets="all"/>
     </ItemGroup>
 
+    <!-- The in-progress HeroController port (Silksong/Decompiled + Adapt) doesn't compile yet — park it out of the
+         build so the working mod (Playground + visual Hornet) keeps building. Re-include once the port is finished
+         (or wired via the B2 prefixed-assembly route). -->
+    <ItemGroup>
+        <Compile Remove="Silksong/Decompiled/**/*.cs"/>
+        <Compile Remove="Silksong/Adapt/**/*.cs"/>
+    </ItemGroup>
+
+
     <ItemGroup>
         <!-- Game/engine assemblies are provided at runtime, so don't copy them into the Mods folder (Private=false). -->
         <Reference Include="Assembly-CSharp" Private="false">
