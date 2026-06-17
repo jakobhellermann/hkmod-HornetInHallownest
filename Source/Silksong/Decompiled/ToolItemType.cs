@@ -1,5 +1,3 @@
-namespace Silksong;
-
 public enum ToolItemType
 {
 	[EnumOrder(1)]

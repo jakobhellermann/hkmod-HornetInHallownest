@@ -11,6 +11,7 @@
 set -euo pipefail
 
 DLL="${SS_DLL:-$HOME/.local/share/Steam/steamapps/common/Hollow Knight Silksong/Hollow Knight Silksong_Data/Managed/Assembly-CSharp.dll}"
+HK_DLL="${HK_DLL:-$HOME/.local/share/Steam/steamapps/common/Hollow Knight/hollow_knight_Data/Managed/Assembly-CSharp.dll}"
 OUT="$(cd "$(dirname "$0")" && pwd)/Decompiled"
 
 # Types to extract pristine. Grow this list as the locomotion port expands.
@@ -66,6 +67,9 @@ TYPES=(
   ToolEquippedReadSource
   ToolItemType
   ToolsActiveStates
+  # combat/tool/crest config + events HeroController reads — extract real (we want these), stub their leaf tails
+  GlobalSettings.Gameplay
+  EventRegisterEvents
 )
 # NOTE: extracting HeroController's combat/tools/quest dependencies (ToolItem, DeliveryQuestItem, NailAttackBase,
 # DamageTag, NoiseMaker, …) does NOT converge — they cascade into the tools/quest/inventory/addressables subsystems
@@ -84,16 +88,22 @@ for t in "${TYPES[@]}"; do
   [ -n "$src" ] || { echo "  WARN: empty $t" >&2; continue; }
   echo "extracting $t -> ${t##*.}.cs"
 
-  # Types that HK also defines (HeroController, HeroControllerStates, …) decompile WITHOUT a namespace and must be
-  # wrapped in `namespace Silksong;` to avoid colliding. Silksong-only types in their own namespace (GlobalEnums.*)
-  # decompile WITH it — leave those pristine; HeroController's `using GlobalEnums;` resolves them.
+  # Namespace policy:
+  #  - already-namespaced (GlobalEnums.*/GlobalSettings.*) → leave pristine.
+  #  - global type that HK ALSO defines (HeroController, PlayerData, SpriteFlash, …) → wrap in `namespace Silksong;`
+  #    so it shadows HK's only inside our ported code, no collision.
+  #  - global Silksong-only type (CurrencyType, SilkSpool, …) → leave global, so it's visible from both the
+  #    Silksong-wrapped extracts and the pristine GlobalSettings/GlobalEnums extracts.
+  base="${t##*.}"
   if printf '%s\n' "$src" | grep -qE '^namespace '; then
     printf '%s\n' "$src" > "$file"
-  else
+  elif ilspycmd -t "$base" "$HK_DLL" >/dev/null 2>&1; then
     printf '%s\n' "$src" \
       | awk 'BEGIN{d=0}
              /^(public|internal|sealed|abstract|static|partial|\[)/ && !d {print "namespace Silksong;"; print ""; d=1}
              {print}' > "$file"
+  else
+    printf '%s\n' "$src" > "$file"
   fi
 done
 echo "done -> $OUT"

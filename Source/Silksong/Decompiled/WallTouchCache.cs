@@ -1,8 +1,6 @@
 using GlobalEnums;
 using UnityEngine;
 
-namespace Silksong;
-
 public sealed class WallTouchCache : FixedUpdateCache
 {
 	public sealed class HitInfo

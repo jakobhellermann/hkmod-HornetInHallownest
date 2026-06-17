@@ -1,7 +1,9 @@
 using UnityEngine;
 
-namespace Silksong;
-
+// Global namespace on purpose: these are all Silksong-only types (verified absent from HK), referenced from both the
+// `namespace Silksong`-wrapped extracts AND the pristine `namespace GlobalSettings`/`GlobalEnums` extracts. Global is
+// in scope for all of them; none collide with HK. (HK-colliding shims like CheatManager live in `namespace Silksong`.)
+//
 // Stubs for HeroController's combat / tools / quest / environment dependencies. These cascade into half the game
 // (ToolItemManager, quests, collectables, Addressables…) if extracted, and none are needed for a playable,
 // locomotion-focused Hornet — so they're stubbed here instead. Members are added only as HeroController's code
@@ -117,8 +119,19 @@ public class CurrencyCounter : MonoBehaviour { }
 public class InventoryPaneInput : MonoBehaviour { }
 public class ToolItemLimiter : MonoBehaviour { }
 
-public static class Gameplay { }
-public static class EventRegisterEvents { }
+public class GlobalSettingsBase<T> { }
+
+// leaf types pulled in by Gameplay config (collectables / quests / pickups / shop)
+public class CollectableItemMementoList { }
+public class CollectableItemPickup : MonoBehaviour { }
+public class CostReference { }
+public class FullQuestBase { }
+public class GenericPickup : MonoBehaviour { }
+public class QuestBoardList { }
+public class QuestTargetPlayerDataBools { }
+public class ShopItemList { }
+public class ThiefSnatchEffect : MonoBehaviour { }
+
 public static class ToolItemManager { }
 public static class CurrencyManager { }
 public static class InteractManager { }

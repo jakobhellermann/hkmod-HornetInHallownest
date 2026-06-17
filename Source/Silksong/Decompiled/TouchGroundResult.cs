@@ -1,7 +1,5 @@
 using UnityEngine;
 
-namespace Silksong;
-
 public sealed class TouchGroundResult : FixedUpdateCache
 {
 	private Vector3 lastPosition;

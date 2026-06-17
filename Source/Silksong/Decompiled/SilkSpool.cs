@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using GlobalSettings;
 using UnityEngine;
 
-namespace Silksong;
-
 public class SilkSpool : MonoBehaviour
 {
 	public enum SilkAddSource
