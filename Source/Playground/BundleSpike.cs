@@ -17,10 +17,15 @@ internal static class BundleSpike {
     // Dependency bundles must be resident BEFORE the prefab is loaded so its cross-bundle PPtrs resolve. The
     // MonoScripts bundle is the key one: the tk2d MonoBehaviours' m_Script points into it, and those MonoScripts
     // carry (assembly="TeamCherry.TK2D", class="tk2dSprite") which binds to HK's identical assembly.
+    // b2 test: the REMAPPED monoscripts bundle (MonoScripts repointed to Silksong.* — examples/remap_monoscripts.rs),
+    // same CAB name as the original so the prefab's m_Script PPtrs resolve to it.
+    private const string RemappedMonoScripts =
+        "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/monoscripts.silksong.bundle";
+
     private static readonly string[] DepBundles = {
-        Aa + "94696d22b6ed0a74097d1bd58feb4dce_monoscripts.bundle", // tk2d MonoScripts
-        Aa + "herocollections_assets_shared.bundle",                // tk2dSpriteCollectionData + materials
-        Aa + "herodynamic_assets_all.bundle",                       // tk2dSpriteAnimation (the clip library)
+        RemappedMonoScripts,                          // remapped MonoScripts -> Silksong.*
+        Aa + "herocollections_assets_shared.bundle",  // tk2dSpriteCollectionData + materials
+        Aa + "herodynamic_assets_all.bundle",         // tk2dSpriteAnimation (the clip library)
     };
     private const string PrefabBundlePath = Aa + "heroloading_assets_all.bundle";
 
@@ -81,6 +86,15 @@ internal static class BundleSpike {
             Log.Error("[BundleSpike] LoadAsset returned null");
             return;
         }
+
+        // b2 validation: before stripping, log how the prefab's root components bind. With the remapped monoscripts
+        // bundle, Silksong scripts should resolve to Silksong.* (assembly Silksong.AssemblyCSharp) — not HK's
+        // Assembly-CSharp (false-bind) or <null> (missing).
+        Log.Info("[SilksongRemap] Hero_Hornet root component bindings:");
+        foreach (var c in prefab.GetComponents<Component>())
+            Log.Info(c == null
+                ? "[SilksongRemap]   <null/missing-script>"
+                : $"[SilksongRemap]   {c.GetType().FullName} [{c.GetType().Assembly.GetName().Name}]");
 
         SpawnPuppet(prefab);
     }
