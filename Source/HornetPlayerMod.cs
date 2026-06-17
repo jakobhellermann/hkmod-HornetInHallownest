@@ -1,10 +1,17 @@
 ﻿using System.Reflection;
+using HornetPlayer.Playground;
 using Modding;
+using UnityEngine;
 
 namespace HornetPlayer;
 
 public class HornetPlayerMod : Mod, ITogglableMod {
+    // Distinct from Silksong's DevUtils server (8200) so both games can be debugged at once.
+    private const int DebugServerPort = 8201;
+
     public static HornetPlayerMod? LoadedInstance { get; private set; }
+
+    private GameObject? playgroundHost;
 
     public override string GetVersion() {
         return Assembly.GetExecutingAssembly().GetName().Version.ToString();
@@ -13,9 +20,29 @@ public class HornetPlayerMod : Mod, ITogglableMod {
     public override void Initialize() {
         if (LoadedInstance != null) return;
         LoadedInstance = this;
+
+        Playground.Log.Sink = msg => Log(msg);
+
+        playgroundHost = new GameObject("HornetPlayer.Playground");
+        Object.DontDestroyOnLoad(playgroundHost);
+        var host = playgroundHost.AddComponent<PlaygroundHost>();
+
+        PlaygroundRoutes.Register();
+        DebugServer.MapPost("/respawn-hornet", _ => {
+            BundleSpike.Cleanup();
+            BundleSpike.Run();
+            return new { ok = true };
+        });
+        DebugServer.Start(host, DebugServerPort);
+
+        BundleSpike.Run();
     }
 
     public void Unload() {
+        BundleSpike.Cleanup();
+        DebugServer.Stop();
+        if (playgroundHost != null) Object.Destroy(playgroundHost);
+        playgroundHost = null;
         LoadedInstance = null;
     }
 }

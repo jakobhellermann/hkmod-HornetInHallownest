@@ -27,8 +27,30 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Reference Include="Assembly-CSharp">
+        <!-- Game/engine assemblies are provided at runtime, so don't copy them into the Mods folder (Private=false). -->
+        <Reference Include="Assembly-CSharp" Private="false">
             <HintPath>$(HollowKnightRefs)/Assembly-CSharp.dll</HintPath>
+        </Reference>
+        <Reference Include="TeamCherry.TK2D" Private="false">
+            <HintPath>$(HollowKnightRefs)/TeamCherry.TK2D.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.CoreModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ImageConversionModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.ImageConversionModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ScreenCaptureModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.ScreenCaptureModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.AssetBundleModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.AssetBundleModule.dll</HintPath>
+        </Reference>
+        <Reference Include="Newtonsoft.Json" Private="false">
+            <HintPath>$(HollowKnightRefs)/Newtonsoft.Json.dll</HintPath>
         </Reference>
     </ItemGroup>
 
