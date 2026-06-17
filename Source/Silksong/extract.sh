@@ -33,7 +33,16 @@ TYPES=(
   RunEffects
   TouchGroundResult
   CharacterBumpCheck
+  # shared-but-divergent types HeroController uses pervasively and that we'll want for real later (flash FX, RNG).
+  # HK has same-named versions but they diverge (e.g. missing nested SpriteFlash.FlashHandle), so we shadow with
+  # Silksong's real ones.
+  SpriteFlash
+  Probability
 )
+# NOTE: extracting HeroController's combat/tools/quest dependencies (ToolItem, DeliveryQuestItem, NailAttackBase,
+# DamageTag, NoiseMaker, …) does NOT converge — they cascade into the tools/quest/inventory/addressables subsystems
+# (ToolItemManager, QuestCompletionData, CollectableItem, AsyncOperationHandle<>, …), i.e. half the game. Those are
+# unnecessary for a playable Hornet, so they are STUBBED in Adapt/ rather than extracted.
 
 mkdir -p "$OUT"
 for t in "${TYPES[@]}"; do
