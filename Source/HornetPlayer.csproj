@@ -55,6 +55,9 @@
         <Reference Include="UnityEngine.AnimationModule" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.AnimationModule.dll</HintPath>
         </Reference>
+        <Reference Include="UnityEngine.UI" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.UI.dll</HintPath>
+        </Reference>
         <Reference Include="UnityEngine" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.dll</HintPath>
         </Reference>

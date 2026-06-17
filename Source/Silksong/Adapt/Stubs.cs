@@ -52,3 +52,40 @@ public class HeroSlashBounceConfig { }
 public class SilkChunk : MonoBehaviour { }
 
 public class FixedUpdateCache { }
+
+// PlayerData's save-data containers (quests, collectables, journal, tools, story). None are needed for a moving
+// Hornet; stubbed empty. Members get added only if PlayerData's own code touches them (compiler-driven).
+public class CollectableItemsData { }
+public class CollectableMementosData { }
+public class CollectableRelicsData { }
+public class CollectionGramaphone {
+    public class PlayingInfo { }
+}
+public class EnemyJournalKillData { }
+public class FloatingCrestSlotsData { }
+public class MateriumItemsData { }
+public class PlayerStory {
+    public class EventInfo { }
+}
+public class QuestCompletionData { }
+public class QuestRumourData { }
+public class SaveSlotCompletionIcons {
+    public class CompletionState { }
+}
+public class SteelSoulQuestSpot {
+    public class Spot { }
+}
+public class ToolCrestsData { }
+public class ToolItemLiquidsData { }
+public class WrappedVector2List { }
+public struct HeroItemsState { }
+
+public class ManagerSingleton<T> : MonoBehaviour where T : ManagerSingleton<T> {
+    protected virtual void Awake() { }
+    protected virtual void OnDestroy() { }
+}
+
+// HK has HazardRespawnMarker but not Silksong's nested FacingDirection enum; HeroController only uses that enum.
+public class HazardRespawnMarker : MonoBehaviour {
+    public enum FacingDirection { None, Left, Right }
+}

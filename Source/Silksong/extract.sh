@@ -38,6 +38,25 @@ TYPES=(
   # Silksong's real ones.
   SpriteFlash
   Probability
+  # core hero-environment classes that own most of the remaining member-level errors — port whole (each collapses a
+  # cluster) rather than fixing members one by one. Their deep tails (quests/tools/save) get stubbed.
+  PlayerData
+  PlayerDataBase
+  Helper
+  InputHandler
+  HeroActions
+  # PlayerData's save-data enum tail (tiny, no cascade)
+  GlobalEnums.BellhomePaintColours
+  GlobalEnums.BelltownHouseStates
+  GlobalEnums.CaravanTroupeLocations
+  GlobalEnums.ExtraRestZones
+  GlobalEnums.FastTravelLocations
+  GlobalEnums.GreenPrinceLocations
+  GlobalEnums.HeroDeathCocoonTypes
+  GlobalEnums.NPCEncounterState
+  GlobalEnums.PermadeathModes
+  GlobalEnums.SethNpcLocations
+  GlobalEnums.MapZone
 )
 # NOTE: extracting HeroController's combat/tools/quest dependencies (ToolItem, DeliveryQuestItem, NailAttackBase,
 # DamageTag, NoiseMaker, …) does NOT converge — they cascade into the tools/quest/inventory/addressables subsystems
