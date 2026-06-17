@@ -33,6 +33,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             BundleSpike.Run();
             return new { ok = true };
         });
+        DebugServer.MapPost("/play-clip", req => BundleSpike.PlayClip(req["name"]));
         DebugServer.Start(host, DebugServerPort);
 
         BundleSpike.Run();

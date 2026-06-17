@@ -27,6 +27,21 @@ internal static class BundleSpike {
     private static readonly List<AssetBundle> bundles = new();
     private static AssetBundle? bundle; // the prefab bundle
     private static readonly List<GameObject> spawned = new();
+    private static tk2dSpriteAnimator? puppetAnim;
+
+    // Play a clip on the spawned puppet by (partial, case-insensitive) name — used to prove provenance by triggering
+    // Silksong-exclusive moves (Needolin, Bind Silk, …) and for general animation debugging.
+    internal static object PlayClip(string? name) {
+        if (puppetAnim == null) return new { error = "no puppet spawned" };
+        var clips = puppetAnim.Library?.clips;
+        if (clips == null) return new { error = "no clip library" };
+        if (string.IsNullOrEmpty(name))
+            return new { clips = clips.Select(c => c.name).ToArray() };
+        var clip = clips.FirstOrDefault(c => c.name.ToLowerInvariant().Contains(name!.ToLowerInvariant()));
+        if (clip == null) return new { error = $"no clip matching '{name}'" };
+        puppetAnim.Play(clip);
+        return new { ok = true, playing = clip.name };
+    }
 
     internal static void Run() {
         if (bundles.Count > 0) {
@@ -111,6 +126,7 @@ internal static class BundleSpike {
         spawned.Add(follower);
 
         var anim = inst.GetComponent<tk2dSpriteAnimator>();
+        puppetAnim = anim;
         if (anim == null) {
             Log.Error("[BundleSpike] no tk2dSpriteAnimator on root after strip");
             return;
