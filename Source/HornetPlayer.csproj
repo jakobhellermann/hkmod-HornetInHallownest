@@ -1,4 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <Import Condition="Exists('LocalConfig.props')" Project="LocalConfig.props"/>
+
     <PropertyGroup>
         <TargetFramework>net472</TargetFramework>
         <AssemblyTitle>HornetPlayer</AssemblyTitle>
@@ -6,13 +8,23 @@
         <DebugType>portable</DebugType>
         <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
+        <EnableNETAnalyzers>True</EnableNETAnalyzers>
+        <AnalysisMode>recommended</AnalysisMode>
+
+        <!-- Shortens and anonymizes paths in debug symbols relative to the project directory. Breakpoints will not work, however. -->
+        <PathMap Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectDirectory)=/</PathMap>
+
         <!-- todo macOS -->
-        <GamePath Condition="'$(OS)' == 'Windows_NT'">C:/Program Files (x86)/Steam/steamapps/common/Hollow Knight</GamePath>
-        <GamePath Condition="'$(OS)' != 'Windows_NT'">$(HOME)/.local/share/Steam/steamapps/common/Hollow Knight</GamePath>
+        <GamePath Condition="'$(GamePath)' == '' And '$(OS)' == 'Windows_NT'">C:/Program Files (x86)/Steam/steamapps/common/Hollow Knight</GamePath>
+        <GamePath Condition="'$(GamePath)' == '' And '$(OS)' != 'Windows_NT'">$(HOME)/.local/share/Steam/steamapps/common/Hollow Knight</GamePath>
         <HollowKnightRefs>$(GamePath)/hollow_knight_Data/Managed</HollowKnightRefs>
 
-        <CopyDir>$(HollowKnightRefs)/Mods/HornetPlayer</CopyDir>
+        <CopyDir Condition="'$(CopyDir)' == ''">$(HollowKnightRefs)/Mods/HornetPlayer</CopyDir>
     </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.26.0" PrivateAssets="all"/>
+    </ItemGroup>
 
     <ItemGroup>
         <Reference Include="Assembly-CSharp">
