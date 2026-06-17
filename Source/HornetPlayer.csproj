@@ -2,7 +2,7 @@
     <Import Condition="Exists('LocalConfig.props')" Project="LocalConfig.props"/>
 
     <PropertyGroup>
-        <TargetFramework>net472</TargetFramework>
+        <TargetFramework>netstandard2.1</TargetFramework>
         <AssemblyTitle>HornetPlayer</AssemblyTitle>
         <AssemblyVersion>1.0.0.0</AssemblyVersion>
         <DebugType>portable</DebugType>
