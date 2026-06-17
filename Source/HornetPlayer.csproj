@@ -58,6 +58,9 @@
         <Reference Include="UnityEngine.UI" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.UI.dll</HintPath>
         </Reference>
+        <Reference Include="TeamCherry.Localization" Private="false">
+            <HintPath>$(HollowKnightRefs)/TeamCherry.Localization.dll</HintPath>
+        </Reference>
         <Reference Include="UnityEngine" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.dll</HintPath>
         </Reference>

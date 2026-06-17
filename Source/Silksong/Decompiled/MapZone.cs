@@ -1,4 +1,4 @@
-namespace GlobalEnums;
+namespace Silksong;
 
 public enum MapZone
 {

@@ -70,6 +70,28 @@ TYPES=(
   # combat/tool/crest config + events HeroController reads — extract real (we want these), stub their leaf tails
   GlobalSettings.Gameplay
   EventRegisterEvents
+  # graduated from stubs to real extracts (high member counts) — combat/tool/crest/anim owners
+  ToolItem
+  ToolItemsData
+  ToolCrest
+  DeliveryQuestItem
+  DamageTag
+  TagDamageTaker
+  NoiseMaker
+  NailAttackBase
+  HeroSlashBounceConfig
+  SilkChunk
+  HeroNailImbuement
+  SlideSurface
+  StatusVignette
+  GameSettings
+  PlayParticleEffects
+  HeroAnimationController
+  ToolItemManager
+  CurrencyManager
+  InteractManager
+  ReadSource
+  ToolDamageFlags
 )
 # NOTE: extracting HeroController's combat/tools/quest dependencies (ToolItem, DeliveryQuestItem, NailAttackBase,
 # DamageTag, NoiseMaker, …) does NOT converge — they cascade into the tools/quest/inventory/addressables subsystems
@@ -88,22 +110,20 @@ for t in "${TYPES[@]}"; do
   [ -n "$src" ] || { echo "  WARN: empty $t" >&2; continue; }
   echo "extracting $t -> ${t##*.}.cs"
 
-  # Namespace policy:
-  #  - already-namespaced (GlobalEnums.*/GlobalSettings.*) → leave pristine.
-  #  - global type that HK ALSO defines (HeroController, PlayerData, SpriteFlash, …) → wrap in `namespace Silksong;`
-  #    so it shadows HK's only inside our ported code, no collision.
-  #  - global Silksong-only type (CurrencyType, SilkSpool, …) → leave global, so it's visible from both the
-  #    Silksong-wrapped extracts and the pristine GlobalSettings/GlobalEnums extracts.
-  base="${t##*.}"
+  # Uniform namespace policy: EVERYTHING goes into `namespace Silksong`, regardless of its original namespace.
+  #  - Avoids collisions with HK's same-named globals (HeroController, PlayerData, SpriteFlash, …).
+  #  - All extracts see each other in one namespace, so cross-references resolve (no global/Silksong split where a
+  #    global extract would accidentally bind to HK's version of a shared type).
+  #  - Originally-namespaced types (GlobalEnums.*/GlobalSettings.*) get their namespace REWRITTEN to Silksong;
+  #    dangling `using GlobalEnums;`/`using GlobalSettings;` in other files are satisfied by dummy namespace
+  #    declarations in Adapt/. Silksong-only stubs in Adapt/ stay in the global namespace (visible from Silksong).
   if printf '%s\n' "$src" | grep -qE '^namespace '; then
-    printf '%s\n' "$src" > "$file"
-  elif ilspycmd -t "$base" "$HK_DLL" >/dev/null 2>&1; then
+    printf '%s\n' "$src" | sed -E '0,/^namespace [A-Za-z0-9_.]+;/ s//namespace Silksong;/' > "$file"
+  else
     printf '%s\n' "$src" \
       | awk 'BEGIN{d=0}
              /^(public|internal|sealed|abstract|static|partial|\[)/ && !d {print "namespace Silksong;"; print ""; d=1}
              {print}' > "$file"
-  else
-    printf '%s\n' "$src" > "$file"
   fi
 done
 echo "done -> $OUT"

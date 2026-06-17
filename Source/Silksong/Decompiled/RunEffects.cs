@@ -3,6 +3,8 @@ using GlobalEnums;
 using GlobalSettings;
 using UnityEngine;
 
+namespace Silksong;
+
 public class RunEffects : MonoBehaviour
 {
 	[Serializable]

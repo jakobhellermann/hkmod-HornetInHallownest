@@ -1,3 +1,5 @@
+namespace Silksong;
+
 public static class EventRegisterEvents
 {
 	public static readonly int FsmCancel = EventRegister.GetEventHashCode("FSM CANCEL");

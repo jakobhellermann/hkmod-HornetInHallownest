@@ -1,6 +1,6 @@
 using System;
 
-namespace GlobalEnums;
+namespace Silksong;
 
 [Flags]
 public enum HeroLockStates

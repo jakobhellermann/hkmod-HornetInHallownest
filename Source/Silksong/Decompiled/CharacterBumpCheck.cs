@@ -2,6 +2,8 @@ using System;
 using GlobalEnums;
 using UnityEngine;
 
+namespace Silksong;
+
 public class CharacterBumpCheck : MonoBehaviour
 {
 	private LayerMask groundMask;

@@ -1,6 +1,8 @@
 using TeamCherry.SharedUtils;
 using UnityEngine;
 
+namespace Silksong;
+
 [CreateAssetMenu(menuName = "Hornet/HeroController Config")]
 public class HeroControllerConfig : ScriptableObject, IIncludeVariableExtensions
 {

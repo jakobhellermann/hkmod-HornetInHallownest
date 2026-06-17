@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 
+namespace Silksong;
+
 public class Downspike : NailAttackBase
 {
 	[SerializeField]

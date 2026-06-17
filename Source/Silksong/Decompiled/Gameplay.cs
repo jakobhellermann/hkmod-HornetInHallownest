@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using TeamCherry.SharedUtils;
 using UnityEngine;
 
-namespace GlobalSettings;
+namespace Silksong;
 
 [CreateAssetMenu(menuName = "Hornet/Global Settings/Global Gameplay Settings")]
 public class Gameplay : GlobalSettingsBase<Gameplay>
