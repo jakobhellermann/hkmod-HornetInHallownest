@@ -36,10 +36,12 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/play-clip", req => BundleSpike.PlayClip(req["name"]));
         DebugServer.Start(host, DebugServerPort);
 
+        SilksongLoadSpike.Run();
         BundleSpike.Run();
     }
 
     public void Unload() {
+        SilksongLoadSpike.Cleanup();
         BundleSpike.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);

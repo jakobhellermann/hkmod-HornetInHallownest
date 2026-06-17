@@ -26,12 +26,20 @@
         <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.26.0" PrivateAssets="all"/>
     </ItemGroup>
 
-    <!-- The in-progress HeroController port (Silksong/Decompiled + Adapt) doesn't compile yet — park it out of the
-         build so the working mod (Playground + visual Hornet) keeps building. Re-include once the port is finished
-         (or wired via the B2 prefixed-assembly route). -->
+    <!-- B1 hand-port parked (incomplete + its Silksong.* types would collide with the B2 prefixed reference DLLs). -->
     <ItemGroup>
         <Compile Remove="Silksong/Decompiled/**/*.cs"/>
         <Compile Remove="Silksong/Adapt/**/*.cs"/>
+    </ItemGroup>
+
+    <!-- B2 retry: Silksong's Assembly-CSharp + firstpass, IL-prefixed to Silksong.* with cross-refs rewritten. -->
+    <ItemGroup>
+        <Reference Include="Silksong.AssemblyCSharp" Private="true">
+            <HintPath>lib/Silksong.AssemblyCSharp.dll</HintPath>
+        </Reference>
+        <Reference Include="Silksong.AssemblyCSharpfirstpass" Private="true">
+            <HintPath>lib/Silksong.AssemblyCSharpfirstpass.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
 
@@ -94,5 +102,10 @@
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+        <!-- Deploy all B2 libs (prefixed Silksong game assemblies + the Unity-package/Silksong-only deps HK lacks). -->
+        <ItemGroup>
+            <B2Lib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
+        </ItemGroup>
+        <Copy SourceFiles="@(B2Lib)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
     </Target>
 </Project>

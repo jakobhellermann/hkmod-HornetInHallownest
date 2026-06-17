@@ -1,43 +1,67 @@
 using Mono.Cecil;
 
-// Prefix every type namespace in an assembly with a prefix (e.g. "Silksong"), and optionally rename the assembly
-// itself (to avoid the assembly-name colliding with HK's same-named one when both are referenced).
+// Prefix the namespaces of a SET of assemblies with <prefix>, rename each assembly, and rewrite cross-references
+// among the set so they keep resolving. Shared/un-listed dependencies (UnityEngine, TeamCherry.*, PlayMaker, …) are
+// left untouched and bind to whatever is loaded at runtime.
 //
-// Usage: SilksongPrefixer <input.dll> <output.dll> <namespacePrefix> <newAssemblyName> [--managed <dir>]
-//
-// Prefixing only TYPE DEFINITIONS in the main module is enough for intra-assembly references (they point at the same
-// TypeDefinition) and for external consumers (they see the new namespaces). Cross-assembly references to OTHER
-// (un-prefixed) assemblies are left untouched.
+// Usage: SilksongPrefixer <prefix> <outDir> --managed <dir> <in1.dll> <in2.dll> ...
+//   Each <inN.dll> is renamed to "<prefix>.<SanitizedAssemblyName>" and its types to "<prefix>.<originalNamespace>".
 
 if (args.Length < 4) {
-    Console.Error.WriteLine("usage: SilksongPrefixer <input.dll> <output.dll> <prefix> <newAssemblyName> [--managed <dir>]");
+    Console.Error.WriteLine("usage: SilksongPrefixer <prefix> <outDir> --managed <dir> <dll>...");
     return 1;
 }
 
-var input = args[0];
-var output = args[1];
-var prefix = args[2];
-var newAssemblyName = args[3];
-var managed = Path.GetDirectoryName(Path.GetFullPath(input))!;
-for (var i = 4; i < args.Length - 1; i++)
-    if (args[i] == "--managed") managed = args[i + 1];
+var prefix = args[0];
+var outDir = args[1];
+string? managed = null;
+var inputs = new List<string>();
+for (var i = 2; i < args.Length; i++) {
+    if (args[i] == "--managed") { managed = args[++i]; continue; }
+    inputs.Add(args[i]);
+}
+managed ??= Path.GetDirectoryName(Path.GetFullPath(inputs[0]))!;
+Directory.CreateDirectory(outDir);
 
 var resolver = new DefaultAssemblyResolver();
 resolver.AddSearchDirectory(managed);
+var readerParams = new ReaderParameters { AssemblyResolver = resolver };
 
-var asm = AssemblyDefinition.ReadAssembly(input, new ReaderParameters { AssemblyResolver = resolver });
+string NewName(string original) => prefix + "." + original.Replace("-", "").Replace(".", "");
+string Prefix(string ns) => ns.Length == 0 ? prefix : prefix + "." + ns;
 
-// Rename the assembly so it doesn't clash with HK's same-named assembly when both are referenced.
-asm.Name.Name = newAssemblyName;
-asm.MainModule.Name = newAssemblyName + ".dll";
+// Read all inputs; build original-name -> new-name map for the set.
+var asms = inputs.Select(p => AssemblyDefinition.ReadAssembly(p, readerParams)).ToList();
+var rename = asms.ToDictionary(a => a.Name.Name, a => NewName(a.Name.Name));
 
-var renamed = 0;
-foreach (var type in asm.MainModule.Types) {
-    if (type.Name == "<Module>") continue;
-    type.Namespace = string.IsNullOrEmpty(type.Namespace) ? prefix : prefix + "." + type.Namespace;
-    renamed++;
+foreach (var asm in asms) {
+    var module = asm.MainModule;
+
+    // 1. Rename cross-references to other in-set assemblies (scope of all their type refs follows automatically).
+    var inSetRefs = new HashSet<AssemblyNameReference>();
+    foreach (var r in module.AssemblyReferences)
+        if (rename.TryGetValue(r.Name, out var nn)) { r.Name = nn; inSetRefs.Add(r); }
+
+    // 2. Prefix this assembly's own type definitions.
+    foreach (var t in module.Types) {
+        if (t.Name == "<Module>") continue;
+        t.Namespace = Prefix(t.Namespace);
+    }
+
+    // 3. Prefix the namespace of type references that point at in-set assemblies (cross-assembly type refs).
+    foreach (var tr in module.GetTypeReferences()) {
+        if (tr.DeclaringType != null) continue; // nested: namespace lives on the declaring type
+        if (tr.Scope is AssemblyNameReference anr && inSetRefs.Contains(anr))
+            tr.Namespace = Prefix(tr.Namespace);
+    }
+
+    // 4. Rename the assembly itself.
+    var newName = rename[asm.Name.Name];
+    asm.Name.Name = newName;
+    module.Name = newName + ".dll";
+    var outPath = Path.Combine(outDir, newName + ".dll");
+    asm.Write(outPath);
+    Console.WriteLine($"wrote {outPath} ({module.Types.Count} types)");
 }
 
-asm.Write(output);
-Console.WriteLine($"prefixed {renamed} top-level types -> '{prefix}.*', assembly '{newAssemblyName}', wrote {output}");
 return 0;
