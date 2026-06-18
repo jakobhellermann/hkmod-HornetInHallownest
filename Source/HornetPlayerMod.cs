@@ -44,6 +44,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/fsm-state", _ => BundleSpike.FsmState());
         DebugServer.MapPost("/load-gamecameras", (_, respond) => BundleSpike.LoadGameCamerasCo(respond));
         DebugServer.MapGet("/fsm-dump", req => BundleSpike.FsmDump(req["name"] ?? "Sprint"));
+        DebugServer.MapGet("/gc-dump", _ => BundleSpike.GcDump());
         DebugServer.MapPost("/load-save", req => {
             var slot = int.TryParse(req["slot"], out var s) ? s : 0;
             GameManager.instance.LoadGameFromUI(slot); // HK's GameManager: full UI load (transition + scene)

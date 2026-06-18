@@ -340,14 +340,36 @@ internal static class BundleSpike {
         };
     }
 
-    // Load + instantiate Silksong's _GameCameras rig (the repacked bundle). Its components bind to Silksong.* via the
-    // remapped monoscripts (load reload-all-deps first so the closure + RemappedMonoScripts are resident). Instantiating
-    // it lets GameCameras.instance resolve (its Awake is just the singleton). Camera handover/GM wiring comes after.
-    // Load Silksong's _GameCameras rig (scene-mode bundle), mirroring the HK Modding API's Preloader: LoadScene
-    // additive, wait for it (LoadScene completes end-of-frame, not synchronously), deactivate roots, Instantiate the
-    // live fully-resolved _GameCameras (cloning a LIVE scene object resolves its refs — unlike a prefab ASSET, which
-    // crashed), DontDestroyOnLoad it, register the singleton, unload the scene. Coroutine route (spans frames). The
-    // scene's dep closure must be resident first (reload-all-deps with the Menu_Title deps).
+    // Load Silksong's _GameCameras rig (scene-mode bundle, repacked with --disable so the root loads INACTIVE → no
+    // child FSM Awake/Update runs, which is what froze the frame before). LoadScene additive, wait for it (the scene
+    // activates end-of-frame, not synchronously), then MOVE the live _GameCameras root out via DontDestroyOnLoad —
+    // this reparents it into the DDOL scene, so UnloadSceneAsync drops the rest while the root survives with ZERO
+    // copy. (Earlier we Object.Instantiate'd it; cloning the full 6216-object rig is what hung the frame — the
+    // user's "normally not that expensive" was the tell.) The root stays inactive; activating + camera handover is a
+    // deliberate later step. Load reload-all-deps with the Menu_Title closure first so externals resolve.
+    // Inspect the moved _GameCameras root: which component types are present (+ owning assembly) and how many slots are
+    // null (missing scripts = MonoScript didn't bind to a loaded type). Tells us if GameCameras resolved to Silksong.*.
+    internal static object GcDump() {
+        if (gameCamerasGo == null) return new { error = "not loaded" };
+        var comps = gameCamerasGo.GetComponentsInChildren<Component>(true);
+        var missing = comps.Count(c => c == null);
+        var byType = comps.Where(c => c != null)
+            .GroupBy(c => c.GetType().FullName + "  @" + c.GetType().Assembly.GetName().Name)
+            .OrderByDescending(g => g.Count())
+            .Select(g => new { type = g.Key, count = g.Count() })
+            .ToArray();
+        var gcLike = comps.Where(c => c != null && c.GetType().Name == "GameCameras")
+            .Select(c => c.GetType().AssemblyQualifiedName).ToArray();
+        return new {
+            root = gameCamerasGo.name,
+            totalComponents = comps.Length,
+            missingScripts = missing,
+            gameCamerasTypes = gcLike,
+            children = gameCamerasGo.transform.Cast<Transform>().Select(t => t.name).ToArray(),
+            types = byType,
+        };
+    }
+
     internal static IEnumerator LoadGameCamerasCo(System.Action<object?> respond) {
         if (gameCamerasGo != null) { respond(new { error = "already loaded" }); yield break; }
         var b = AssetBundle.LoadFromFile(GameCamerasBundlePath);
@@ -362,27 +384,29 @@ internal static class BundleSpike {
         while (!scene.isLoaded && guard++ < 300) yield return null;
         if (!scene.isLoaded) { respond(new { error = "scene never loaded", sceneName }); yield break; }
         var roots = scene.GetRootGameObjects();
-        foreach (var go in roots) go.SetActive(false);
         var src = roots.FirstOrDefault(r => r.name.ToLowerInvariant().Contains("gamecameras"));
         if (src == null) {
             USceneManager.UnloadSceneAsync(scene);
             respond(new { error = "no _GameCameras root", roots = roots.Select(r => r.name).ToArray() });
             yield break;
         }
-        var inst = Object.Instantiate(src);
-        inst.name = "Silksong_GameCameras";
-        Object.DontDestroyOnLoad(inst);
-        gameCamerasGo = inst;
-        var gcComp = inst.GetComponentInChildren<Silksong::GameCameras>(true);
+        // Report whether --disable held (root should be inactive). MOVE, don't clone.
+        var wasActive = src.activeSelf;
+        src.SetActive(false); // belt-and-suspenders: never let its FSMs tick before we're ready
+        src.name = "Silksong_GameCameras";
+        Object.DontDestroyOnLoad(src); // reparents into the DontDestroyOnLoad scene; survives the unload below
+        gameCamerasGo = src;
+        var gcComp = src.GetComponentInChildren<Silksong::GameCameras>(true);
         if (gcComp != null)
             typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
                 ?.SetValue(null, gcComp);
         USceneManager.UnloadSceneAsync(scene);
         respond(new {
             ok = true, sceneName,
+            rootWasActiveOnLoad = wasActive, // expect false if --disable worked
             gcComponentFound = gcComp != null,
             instanceResolved = Silksong::GameCameras.SilentInstance != null,
-            components = inst.GetComponentsInChildren<Component>(true).Length,
+            components = src.GetComponentsInChildren<Component>(true).Length,
         });
     }
 
