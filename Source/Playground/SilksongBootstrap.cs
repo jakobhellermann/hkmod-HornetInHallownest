@@ -1,5 +1,6 @@
 extern alias Silksong;
 using System;
+using System.Reflection;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -11,6 +12,7 @@ namespace HornetPlayer.Playground;
 // gm.GetComponent<InputHandler>()). Grown iteratively as spawn-real reveals the next missing field.
 internal static class SilksongBootstrap {
     private static GameObject? gmGo;
+    private static GameObject? poolGo;
     private static bool done;
 
     internal static void Ensure() {
@@ -26,7 +28,28 @@ internal static class SilksongBootstrap {
             // GO is inactive => InputHandler.Awake never runs, so inputActions stays null and every input check
             // (CanAttackAction, ListenForAttack/Dash/... FSM actions) NullRefs. Construct it like InputHandler does.
             ih.inputActions = new Silksong::HeroActions();
+
+            // gm.cameraCtrl (private-set property) is null -> SendHeroInPosition's gm.cameraCtrl.ResetStartTimer()
+            // NullRefs. Provide a bare CameraController (on the inactive GO => no heavy Awake); ResetStartTimer just
+            // sets a float. Assign via the property's backing field.
+            var camCtrl = gmGo.AddComponent<Silksong::CameraController>();
+            typeof(Silksong::GameManager).GetField("<cameraCtrl>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(gm, camCtrl);
+
+            // gm.sm (CustomSceneManager, private-set) is null -> GetTotalFrostSpeed's gm.sm.FrostSpeed NullRefs (and
+            // other per-scene env reads). Bare instance => default scene settings (FrostSpeed 0 etc.).
+            var sm = gmGo.AddComponent<Silksong::CustomSceneManager>();
+            typeof(Silksong::GameManager).GetField("<sm>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(gm, sm);
+
             Object.DontDestroyOnLoad(gmGo);
+
+            // ObjectPool singleton: ObjectPool.CountPooled derefs ObjectPool.instance. Its getter does
+            // FindObjectOfType<ObjectPool>(), so the pool must be on an ACTIVE GO (Awake sets _instance, and
+            // pooledObjects is inline-initialized). Separate GO since gmGo is inactive.
+            poolGo = new GameObject("Silksong_ObjectPool");
+            poolGo.AddComponent<Silksong::ObjectPool>();
+            Object.DontDestroyOnLoad(poolGo);
 
             Silksong::GameManager._instance = gm;
             gm.isPaused = false;
@@ -41,6 +64,7 @@ internal static class SilksongBootstrap {
 
     internal static void Cleanup() {
         if (gmGo != null) { Object.Destroy(gmGo); gmGo = null; }
+        if (poolGo != null) { Object.Destroy(poolGo); poolGo = null; }
         Silksong::GameManager._instance = null;
         done = false;
     }
