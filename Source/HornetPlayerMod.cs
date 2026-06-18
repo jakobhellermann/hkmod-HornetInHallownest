@@ -49,6 +49,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/test-addcomponent", _ => BundleSpike.TestAddComponent());
         DebugServer.MapPost("/load-gamecameras-asset", req => BundleSpike.LoadGameCamerasAsset(req["instantiate"] == "true"));
         DebugServer.MapPost("/test-minimal-binding", _ => BundleSpike.LoadMinimalBindingTest());
+        DebugServer.MapPost("/activate-gamecameras", _ => BundleSpike.ActivateGameCameras());
+        DebugServer.MapPost("/restore-camera", _ => BundleSpike.RestoreCamera());
         DebugServer.MapPost("/load-save", req => {
             var slot = int.TryParse(req["slot"], out var s) ? s : 0;
             GameManager.instance.LoadGameFromUI(slot); // HK's GameManager: full UI load (transition + scene)

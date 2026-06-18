@@ -478,6 +478,57 @@ internal static class BundleSpike {
         return new { results };
     }
 
+    // Activate the instantiated GameCameras rig: register GameCameras._instance, unparent from the inactive holder,
+    // DontDestroyOnLoad, SetActive(true). FSMs/CameraController will run (and likely complain about GameManager) —
+    // first visible-fruit step. Reports the cameras (name/depth/enabled) so we can do the handover next.
+    // Emergency: destroy any orphaned Silksong camera rig (survives hot-reload via DontDestroyOnLoad while the static
+    // ref resets to null, so Cleanup misses it -> black screen). Found by name. HK's camera then renders again.
+    internal static object RestoreCamera() {
+        int destroyed = 0;
+        foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>()) {
+            if (go == null) continue;
+            if (go.name == "Silksong_GameCameras" || go.name == "hp_gc_holder") {
+                Object.Destroy(go);
+                destroyed++;
+            }
+        }
+        gameCamerasGo = null;
+        return new { destroyed, hkMainCam = Camera.main != null ? Camera.main.name : null };
+    }
+
+    internal static object ActivateGameCameras() {
+        if (gameCamerasGo == null) {
+            var loaded = LoadGameCamerasAsset(true);
+            if (gameCamerasGo == null) return new { error = "load+instantiate failed", loaded };
+        }
+        var go = gameCamerasGo!;
+        go.transform.SetParent(null, true);
+        Object.DontDestroyOnLoad(go);
+        var gc = go.GetComponentInChildren<Silksong::GameCameras>(true);
+        if (gc != null)
+            typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
+                ?.SetValue(null, gc);
+        go.SetActive(true);
+
+        // CameraController NullRefs every frame (needs GameManager.instance + camTarget we don't have). Disable it and
+        // drive the camera ourselves: a simple follow that pins the main camera to Hornet's position each LateUpdate.
+        foreach (var cc in go.GetComponentsInChildren<Silksong::CameraController>(true)) cc.enabled = false;
+        var mainCam = go.GetComponentsInChildren<Camera>(true).FirstOrDefault(c => c.name == "tk2dCamera");
+        if (mainCam != null && mainCam.GetComponent<GameCamerasFollow>() == null)
+            mainCam.gameObject.AddComponent<GameCamerasFollow>().cam = mainCam.transform;
+
+        var cams = go.GetComponentsInChildren<Camera>(true)
+            .Select(c => new { name = c.name, depth = c.depth, enabled = c.enabled, c.cullingMask, active = c.gameObject.activeInHierarchy })
+            .ToArray();
+        return new {
+            ok = true,
+            instanceResolved = Silksong::GameCameras.SilentInstance != null,
+            following = mainCam != null,
+            cameras = cams,
+            hkMainCam = Camera.main != null ? Camera.main.name : null,
+        };
+    }
+
     internal static IEnumerator LoadGameCamerasCo(System.Action<object?> respond, string? variant = null) {
         if (gameCamerasGo != null) { respond(new { error = "already loaded" }); yield break; }
         var path = variant == "noprune" ? GameCamerasNoPrunePath : GameCamerasBundlePath;
