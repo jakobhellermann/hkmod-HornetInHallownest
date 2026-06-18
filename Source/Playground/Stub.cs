@@ -36,6 +36,11 @@ internal static class Stub {
         // isn't alive in our context (InControl InputManager not initialized) -> NullRef in PlayerAction.WasPressed.
         // For a no-input bring-up we no-op them all (no input -> they'd fire no events anyway). Category stub.
         SkipAllInNamespace("HutongGames.PlayMaker.Actions", "ListenFor", "OnUpdate");
+        // AddSilk -> GameCameras.instance.silkSpool (silk meter UI); GameCameras isn't bootstrapped. UI, not needed
+        // for no-input bring-up. TODO: bootstrap GameCameras/silkSpool for the UI/combat phase.
+        Skip(typeof(Silksong::HeroController), "AddSilk");
+        Skip(typeof(Silksong::HeroController), "SetupDeliveryItems"); // delivery-quest setup entry — quests irrelevant
+        Skip(typeof(Silksong::DeliveryQuestItem), "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
         // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.
