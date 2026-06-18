@@ -42,6 +42,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.Start(host, DebugServerPort);
 
         SilksongLoadSpike.Run();
+        Stub.Install();
         BundleSpike.Run();
     }
 
@@ -49,6 +50,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         SilksongLoadSpike.Cleanup();
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
+        Stub.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
