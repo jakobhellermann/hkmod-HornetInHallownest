@@ -41,6 +41,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/scan-serializable", _ => BundleSpike.ScanSerializable());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/diag-input", _ => BundleSpike.DiagInput());
+        DebugServer.MapGet("/fsm-state", _ => BundleSpike.FsmState());
         DebugServer.MapPost("/load-save", req => {
             var slot = int.TryParse(req["slot"], out var s) ? s : 0;
             GameManager.instance.LoadGameFromUI(slot); // HK's GameManager: full UI load (transition + scene)

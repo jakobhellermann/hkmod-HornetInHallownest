@@ -1,4 +1,5 @@
 extern alias Silksong;
+extern alias SilksongPM;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -267,14 +268,56 @@ internal static class BundleSpike {
         object CsB(string n) => cs2?.GetType().GetField(n, BindingFlags.Instance | BindingFlags.Public)?.GetValue(cs2)!;
         var pd = Field("playerData") as Silksong::PlayerData;
         var canDash = (bool?)t.GetMethod("CanDash", BF, null, Type.EmptyTypes, null)?.Invoke(hc, null);
+        // Verify the buttonQueueTimers fix actually reached the hero's live InputHandler.
+        var ih = Field("inputHandler");
+        var bqtField = ih?.GetType().GetField("buttonQueueTimers", BF);
+        var bqt = bqtField?.GetValue(ih) as Array;
         return new {
             enabled = comp.enabled, activeAndEnabled = comp.isActiveAndEnabled,
+            inputQueue = new { ihNull = ih == null, fieldFound = bqtField != null, bqtNull = bqt == null, len = bqt?.Length ?? -1 },
             move_input = Field("move_input"), hero_state = Field("hero_state")?.ToString(),
             dash = new {
                 canDash, hasDash = pd?.hasDash, dashCooldownTimer = Field("dashCooldownTimer"),
                 preventDash = CsB("preventDash"), dashing = CsB("dashing"), airDashed = Field("airDashed"),
                 onGround = CsB("onGround"),
             },
+        };
+    }
+
+    // Ground truth on Hornet's FSMs: how many PlayMakerFSM components, how many enabled / active-in-hierarchy /
+    // actually running (have an active state) / carrying MissingActions (unresolved). Answers "are the FSMs enabled
+    // and running, free of resolution failures?".
+    internal static object FsmState() {
+        if (real == null) return new { error = "not spawned" };
+        var hc = real.GetComponentInChildren<Silksong::HeroController>();
+        var hcB = hc as Behaviour;
+        var fsms = real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true);
+        int enabled = 0, activeInHier = 0, withState = 0, withMissing = 0;
+        var sample = new List<object>();
+        foreach (var f in fsms) {
+            var b = (Behaviour)(object)f;
+            var en = b.enabled;
+            var act = b.gameObject.activeInHierarchy;
+            if (en) enabled++;
+            if (act) activeInHier++;
+            string? state = null;
+            try { state = f.Fsm?.ActiveStateName; } catch { }
+            if (!string.IsNullOrEmpty(state)) withState++;
+            var missing = false;
+            try {
+                foreach (var st in f.FsmStates) {
+                    foreach (var a in st.Actions)
+                        if (a.GetType().Name == "MissingAction") { missing = true; break; }
+                    if (missing) break;
+                }
+            } catch { }
+            if (missing) withMissing++;
+            if (sample.Count < 60) sample.Add(new { name = f.FsmName, en, act, state, missing });
+        }
+        return new {
+            hero = new { enabled = hcB?.enabled, activeAndEnabled = hcB?.isActiveAndEnabled, activeInHierarchy = hcB?.gameObject.activeInHierarchy },
+            fsms = new { total = fsms.Length, enabled, activeInHier, running = withState, withMissingActions = withMissing },
+            sample,
         };
     }
 
