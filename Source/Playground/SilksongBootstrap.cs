@@ -23,9 +23,29 @@ internal static class SilksongBootstrap {
         done = true;
         try {
             var pd = Silksong::PlayerData.instance; // create/get the PlayerData singleton
-            // Fresh PlayerData has every ability false. HeroController.CanDash() gates on playerData.hasDash, so dash
-            // never fires without it. Grant the basic movement ability (other abilities can be added the same way).
-            pd.hasDash = true;
+            // Fresh PlayerData has every ability locked (e.g. HeroController.CanDash() gates on playerData.hasDash).
+            // Grant Hornet's full movement + combat kit so every move is usable in the playground.
+            pd.hasDash = true;          // dash (Swift Step)
+            pd.hasWalljump = true;      // wall jump
+            pd.hasDoubleJump = true;    // double jump
+            pd.hasBrolly = true;        // float / glide (umbrella)
+            pd.hasSuperJump = true;     // needle super-jump
+            pd.hasHarpoonDash = true;   // silk harpoon dash
+            pd.hasChargeSlash = true;   // charge slash (nail art)
+            pd.hasQuill = true;
+            pd.hasParry = true;
+            pd.hasNeedolin = true;
+            pd.hasNeedleThrow = true;
+            pd.hasThreadSphere = true;
+            pd.hasSilkSpecial = true;   // silk special / arts
+            pd.hasSilkCharge = true;
+            pd.hasSilkBomb = true;
+            pd.hasSilkBossNeedle = true;
+            pd.hasNeedolinMemoryPowerup = true;
+            // Silk resource so silk-cost abilities can actually fire.
+            pd.silkMax = 9;
+            pd.silk = 9;
+            pd.silkSpecialLevel = 1;
 
             gmGo = new GameObject("Silksong_GameManager");
             gmGo.SetActive(false); // inactive => GameManager/InputHandler Awake never runs
@@ -35,6 +55,16 @@ internal static class SilksongBootstrap {
             // (CanAttackAction, ListenForAttack/Dash/... FSM actions) NullRefs. Construct it like InputHandler does.
             ih.inputActions = new Silksong::HeroActions();
             InputActions = ih.inputActions;
+
+            // InputHandler.OnAwake (which allocates buttonQueueTimers) never runs on our inactive GO, so
+            // GetWasButtonPressedQueued NullRefs. Many of Hornet's FSMs (sprint, brolly/float, …) and HeroController
+            // read queued input that way, stalling FSM-driven moves the moment they hand off to that path. Allocate the
+            // array (sized by the HeroActionButton enum) so it returns "nothing queued" instead of throwing.
+            var habType = typeof(Silksong::GlobalEnums.HeroActionButton);
+            var habLen = 0;
+            foreach (int v in Enum.GetValues(habType)) habLen = Math.Max(habLen, v + 1);
+            typeof(Silksong::InputHandler).GetField("buttonQueueTimers", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(ih, new float[habLen]);
 
             // gm.cameraCtrl (private-set property) is null -> SendHeroInPosition's gm.cameraCtrl.ResetStartTimer()
             // NullRefs. Provide a bare CameraController (on the inactive GO => no heavy Awake); ResetStartTimer just
