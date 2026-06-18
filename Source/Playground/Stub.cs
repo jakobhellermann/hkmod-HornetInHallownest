@@ -46,6 +46,11 @@ internal static class Stub {
         // gruntAudioTable.SpawnAndPlayOneShot in HeroDash NullRefs in RandomAudioClipTable.CanPlay (audio tables not
         // set up) -> aborts the dash before cState.dashing is set. Stub the spawn extension (no SFX during bring-up).
         Skip(typeof(Silksong::RandomAudioClipTableExtensions), "SpawnAndPlayOneShot");
+        // CheckForBump delegates to bumpChecker (null, not set up) -> NullRef EVERY FixedUpdate inside Dash(), before
+        // `dash_timer -= dt`, so the timer never decrements, FinishedDashing never fires -> stuck dashing forever. The
+        // wrapper discards the out-results (`out var _`), so stubbing is behaviorally free; Unity colliders still
+        // handle real collision.
+        Skip(typeof(Silksong::HeroController), "CheckForBump");
         Skip(typeof(Silksong::DeliveryQuestItem), "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
