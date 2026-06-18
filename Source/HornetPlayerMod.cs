@@ -47,7 +47,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/gc-dump", _ => BundleSpike.GcDump());
         DebugServer.MapGet("/probe-types", req => BundleSpike.ProbeTypes(req["name"] ?? "GameCameras"));
         DebugServer.MapGet("/test-addcomponent", _ => BundleSpike.TestAddComponent());
-        DebugServer.MapPost("/load-gamecameras-asset", _ => BundleSpike.LoadGameCamerasAsset());
+        DebugServer.MapPost("/load-gamecameras-asset", req => BundleSpike.LoadGameCamerasAsset(req["instantiate"] == "true"));
         DebugServer.MapPost("/test-minimal-binding", _ => BundleSpike.LoadMinimalBindingTest());
         DebugServer.MapPost("/load-save", req => {
             var slot = int.TryParse(req["slot"], out var s) ? s : 0;

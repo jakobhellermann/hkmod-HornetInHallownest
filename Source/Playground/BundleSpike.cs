@@ -418,7 +418,9 @@ internal static class BundleSpike {
 
     // Asset-mode control: LoadAsset the _GameCameras prefab (NOT a scene), inspect component binding directly without
     // Instantiate. Mirrors how the hero loads (asset-mode, binds). Reports whether GameCameras binds + missing count.
-    internal static object LoadGameCamerasAsset() {
+    internal static object LoadGameCamerasAsset(bool instantiate = false) {
+        var mono = AssetBundle.LoadFromFile(RemappedMonoScripts);
+        if (mono != null) bundles.Add(mono);
         var ab = AssetBundle.LoadFromFile(GameCamerasAssetPath);
         if (ab == null) return new { error = "LoadFromFile failed", path = GameCamerasAssetPath };
         bundles.Add(ab);
@@ -427,9 +429,22 @@ internal static class BundleSpike {
         if (name == null) return new { error = "no gamecameras asset", names };
         var asset = ab.LoadAsset<GameObject>(name);
         if (asset == null) return new { error = "LoadAsset returned null", name };
-        var comps = asset.GetComponentsInChildren<Component>(true);
+
+        var target = asset;
+        if (instantiate) {
+            // Instantiate under an INACTIVE parent so component Awakes/FSMs don't run during the clone — this tests
+            // purely whether Object.Instantiate (Internal_CloneSingle) still crashes now that refs resolve + bind.
+            var holder = new GameObject("hp_gc_holder");
+            holder.SetActive(false);
+            var inst = Object.Instantiate(asset, holder.transform);
+            inst.name = "Silksong_GameCameras";
+            Object.DontDestroyOnLoad(holder);
+            gameCamerasGo = inst;
+            target = inst;
+        }
+        var comps = target.GetComponentsInChildren<Component>(true);
         return new {
-            assetMode = true, name,
+            assetMode = true, instantiated = instantiate, name,
             gameCamerasBinds = comps.Any(c => c != null && c.GetType().Name == "GameCameras"),
             missingScripts = comps.Count(c => c == null),
             totalComponents = comps.Length,
