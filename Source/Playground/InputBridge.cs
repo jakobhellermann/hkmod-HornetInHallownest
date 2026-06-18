@@ -39,6 +39,7 @@ internal sealed class InputDriver : MonoBehaviour {
     private ulong tick;
     private static MethodInfo? moveVectorUpdate;
     private static FieldInfo? isGameplaySceneField;
+    private static FieldInfo? gameStateField;
 
     private static readonly (string name, KeyCode key)[] Map = {
         ("left", KeyCode.LeftArrow), ("right", KeyCode.RightArrow),
@@ -48,6 +49,19 @@ internal sealed class InputDriver : MonoBehaviour {
 
     private void Update() {
         try {
+            // Respect the host (HK) pause. We force Hornet's GameManager.GameState = PLAYING so her input pipeline runs,
+            // but that means she keeps processing input even when HK is paused (timeScale 0). Mirror the host pause onto
+            // her GameManager (PAUSED) and stop driving input while frozen, so she freezes too (e.g. to inspect state).
+            var paused = Time.timeScale <= 0.0001f;
+            var ssGm = Silksong::GameManager.instance;
+            if (ssGm != null) {
+                gameStateField ??= typeof(Silksong::GameManager)
+                    .GetField("<GameState>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance);
+                gameStateField?.SetValue(ssGm,
+                    paused ? Silksong::GlobalEnums.GameState.PAUSED : Silksong::GlobalEnums.GameState.PLAYING);
+            }
+            if (paused) return;
+
             // HeroController.LookForInput() early-returns while `isGameplayScene` is false; Start set it false (our
             // bootstrap gm.IsGameplayScene() returned false), so re-assert it true each frame to keep input flowing.
             var hero = BundleSpike.RealHero;
