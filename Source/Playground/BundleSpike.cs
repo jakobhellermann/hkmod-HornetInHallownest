@@ -215,6 +215,66 @@ internal static class BundleSpike {
         return new { ok = true, despawned = true };
     }
 
+    // The live spawned HeroController (in the DontDestroyOnLoad follower).
+    internal static Silksong::HeroController? RealHero =>
+        real != null ? real.GetComponentInChildren<Silksong::HeroController>() : null;
+
+    // Dump the live spawned Hornet's movement state (reachable directly via `real`; /inspect can't, it's DontDestroyOnLoad).
+    internal static object HeroState() {
+        if (real == null) return new { error = "not spawned" };
+        var hc = real.GetComponentInChildren<Silksong::HeroController>();
+        if (hc == null) return new { error = "no HeroController" };
+        var t = hc.GetType();
+        object F(string n) => t.GetField(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(hc);
+        var cs = F("cState");
+        object CS(string n) => cs?.GetType().GetField(n, BindingFlags.Instance | BindingFlags.Public)?.GetValue(cs);
+        var pos = ((Component)hc).transform.position;
+        var rb = F("rb2d") as Rigidbody2D;
+        var ia = SilksongBootstrap.InputActions;
+        var mv = ia?.MoveVector.Vector ?? default;
+        return new {
+            move_input = F("move_input"), hero_state = F("hero_state")?.ToString(),
+            transitionState = F("transitionState")?.ToString(), isGameplayScene = F("isGameplayScene"),
+            gameState = (F("gm") is { } g ? g.GetType().GetProperty("GameState")?.GetValue(g)?.ToString() : "gm-null"),
+            inputBlocked = (bool?)t.GetMethod("IsInputBlocked", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.Invoke(hc, null),
+            onGround = CS("onGround"), jumping = CS("jumping"), falling = CS("falling"),
+            facingRight = CS("facingRight"), dashing = CS("dashing"), attacking = CS("attacking"),
+            controlReqlinquished = F("controlReqlinquished"), acceptingInput = F("acceptingInput"),
+            pos = new { pos.x, pos.y }, vel = rb != null ? new { rb.linearVelocity.x, rb.linearVelocity.y } : null,
+            // input chain diagnostics: are our InControl commits landing?
+            ia_null = ia == null,
+            ia_same = ia != null && ReferenceEquals(ia, (F("inputHandler") as Silksong::InputHandler)?.inputActions),
+            right = ia?.Right.IsPressed, left = ia?.Left.IsPressed, jumpWasPressed = ia?.Jump.WasPressed,
+            moveVec = new { mv.x, mv.y },
+        };
+    }
+
+    // Pin down why move_input stays 0: call UpdateMoveInput (trivial assign) and LookForInput (the gated caller)
+    // directly, catching exceptions, and report move_input after each.
+    internal static object DiagInput() {
+        if (real == null) return new { error = "not spawned" };
+        var hc = real.GetComponentInChildren<Silksong::HeroController>();
+        if (hc == null) return new { error = "no HeroController" };
+        var t = hc.GetType();
+        const BindingFlags BF = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        object MoveInput() => t.GetField("move_input", BF)?.GetValue(hc)!;
+        string Invoke(string name) {
+            try { t.GetMethod(name, BF, null, Type.EmptyTypes, null)!.Invoke(hc, null); return "ok"; }
+            catch (Exception e) { return (e.InnerException ?? e).ToString(); }
+        }
+        var comp = (Behaviour)(object)hc;
+        var before = MoveInput();
+        var updRes = Invoke("UpdateMoveInput");
+        var afterUpdate = MoveInput();
+        var lookRes = Invoke("LookForInput");
+        var afterLook = MoveInput();
+        var updateRes = Invoke("Update"); // does the game's own Update throw before reaching LookForInput?
+        return new {
+            enabled = comp.enabled, activeAndEnabled = comp.isActiveAndEnabled, activeInHierarchy = comp.gameObject.activeInHierarchy,
+            before, updRes, afterUpdate, lookRes, afterLook, updateRes,
+        };
+    }
+
     internal static void Run() {
         if (bundles.Count > 0) {
             Log.Info("[BundleSpike] already loaded, skipping");

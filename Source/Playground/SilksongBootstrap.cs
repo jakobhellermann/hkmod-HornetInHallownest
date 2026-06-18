@@ -58,6 +58,10 @@ internal static class SilksongBootstrap {
             Silksong::GameManager._instance = gm;
             gm.isPaused = false;
             gm.playerData = pd;
+            // HeroController.LookForInput() early-returns unless gm.GameState == PLAYING -> no move/jump/dash input.
+            // Set the backing field directly (SetState() would fire transition events/cascade).
+            typeof(Silksong::GameManager).GetField("<GameState>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(gm, Silksong::GlobalEnums.GameState.PLAYING);
 
             Log.Info($"[Bootstrap] GameManager.instance={(Silksong::GameManager.instance != null)}, " +
                      $"playerData={pd != null}, inputHandler={(gm.GetComponent<Silksong::InputHandler>() != null)}");

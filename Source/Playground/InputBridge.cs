@@ -38,6 +38,7 @@ internal static class InputBridge {
 internal sealed class InputDriver : MonoBehaviour {
     private ulong tick;
     private static MethodInfo? moveVectorUpdate;
+    private static FieldInfo? isGameplaySceneField;
 
     private static readonly (string name, KeyCode key)[] Map = {
         ("left", KeyCode.LeftArrow), ("right", KeyCode.RightArrow),
@@ -47,6 +48,18 @@ internal sealed class InputDriver : MonoBehaviour {
 
     private void Update() {
         try {
+            // HeroController.LookForInput() early-returns while `isGameplayScene` is false; Start set it false (our
+            // bootstrap gm.IsGameplayScene() returned false), so re-assert it true each frame to keep input flowing.
+            var hero = BundleSpike.RealHero;
+            if (hero != null) {
+                // The component is spawned disabled (Start's non-gameplay path / SendHeroInPosition never ran), so
+                // Unity never calls HeroController.Update -> no input is ever read. Force it enabled.
+                if (!hero.enabled) hero.enabled = true;
+                isGameplaySceneField ??= typeof(Silksong::HeroController)
+                    .GetField("isGameplayScene", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                isGameplaySceneField?.SetValue(hero, true);
+            }
+
             var ia = SilksongBootstrap.InputActions;
             if (ia == null) return;
             tick++;
