@@ -24,6 +24,10 @@ internal static class BundleSpike {
     // same CAB name as the original so the prefab's m_Script PPtrs resolve to it.
     private const string RemappedMonoScripts =
         "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/monoscripts.silksong.bundle";
+    // Silksong's _GameCameras rig (camera + HUD) repacked from Menu_Title (unity-scene-repacker addressable mode).
+    // Its MonoScripts live in CAB 283454ff -> covered by RemappedMonoScripts; deps overlap the hero closure.
+    private const string GameCamerasBundlePath =
+        "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/gamecameras.silksong.bundle";
 
     private static readonly string[] DepBundles = {
         RemappedMonoScripts,                          // remapped MonoScripts -> Silksong.*
@@ -46,6 +50,7 @@ internal static class BundleSpike {
     private static AssetBundle? bundle; // the prefab bundle
     private static GameObject? heroPrefab;
     private static GameObject? real;
+    private static GameObject? gameCamerasGo;
 
 
     // Instantiate the FULL prefab ACTIVE (no stripping) so every component's Awake/Start runs against our prefixed
@@ -332,6 +337,42 @@ internal static class BundleSpike {
         };
     }
 
+    // Load + instantiate Silksong's _GameCameras rig (the repacked bundle). Its components bind to Silksong.* via the
+    // remapped monoscripts (load reload-all-deps first so the closure + RemappedMonoScripts are resident). Instantiating
+    // it lets GameCameras.instance resolve (its Awake is just the singleton). Camera handover/GM wiring comes after.
+    internal static object LoadGameCameras() {
+        if (gameCamerasGo != null) return new { error = "already loaded" };
+        var b = AssetBundle.LoadFromFile(GameCamerasBundlePath);
+        if (b == null) return new { error = "LoadFromFile failed (build it: just repack-gamecameras)" };
+        bundles.Add(b);
+        var names = b.GetAllAssetNames();
+        Log.Info($"[GameCameras] {names.Length} assets: {string.Join(", ", names.Take(10))}");
+        var name = names.FirstOrDefault(n => n.ToLowerInvariant().Contains("gamecameras"));
+        if (name == null) return new { error = "no _GameCameras asset", assets = names };
+        var prefab = b.LoadAsset<GameObject>(name);
+        if (prefab == null) return new { error = $"LoadAsset<GameObject>({name}) null" };
+        // Instantiate INACTIVE: the clone itself needs the dep closure resident (reload-all-deps first) or it crashes
+        // natively reading unresolved external PPtrs. Keeping it inactive also stops the rig's Awakes (cameras + ~100
+        // HUD FSMs) from running yet — they'd NullRef without full runtime context. We register the singleton by hand
+        // (GameCameras.instance's FindObjectOfType skips inactive) so it resolves; camera activation/handover is next.
+        var staging = new GameObject("gc_staging");
+        staging.SetActive(false);
+        var inst = Object.Instantiate(prefab, staging.transform);
+        inst.name = "Silksong_GameCameras";
+        var gcComp = inst.GetComponentInChildren<Silksong::GameCameras>(true);
+        if (gcComp != null)
+            typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
+                ?.SetValue(null, gcComp);
+        Object.DontDestroyOnLoad(staging);
+        gameCamerasGo = staging;
+        return new {
+            ok = true, asset = name,
+            gcComponentFound = gcComp != null,
+            instanceResolved = Silksong::GameCameras.SilentInstance != null,
+            components = inst.GetComponentsInChildren<Component>(true).Length,
+        };
+    }
+
     internal static void Run() {
         if (bundles.Count > 0) {
             Log.Info("[BundleSpike] already loaded, skipping");
@@ -496,6 +537,7 @@ internal static class BundleSpike {
 
     internal static void Cleanup() {
         if (real != null) { Object.Destroy(real); real = null; }
+        if (gameCamerasGo != null) { Object.Destroy(gameCamerasGo); gameCamerasGo = null; }
 
         foreach (var b in bundles)
             if (b != null) b.Unload(true);
