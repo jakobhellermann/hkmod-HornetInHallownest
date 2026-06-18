@@ -107,18 +107,20 @@
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <!-- The two PREFIXED Silksong game assemblies must go to Managed/ ROOT, not Mods/: Unity only resolves nested
-             custom-[Serializable] types from assemblies registered in ScriptingAssemblies.json, which it loads from
-             Managed root at startup. In Mods/ (+ registered) the types still come out null (verified). Placing them in
-             Mods would also double-load (registered copy + Modding-API copy). One-time setup adds them to
-             ScriptingAssemblies.json — see docs/experiment-scriptingassemblies.md. -->
-        <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/Silksong.AssemblyCSharp.dll;$(MSBuildProjectDirectory)/lib/Silksong.AssemblyCSharpfirstpass.dll"
-              DestinationFolder="$(HollowKnightRefs)" SkipUnchangedFiles="true"/>
-        <!-- The remaining B2 libs (Unity-package / Silksong-only deps HK lacks) go to Mods/ alongside the mod dll. -->
+        <!-- ALL B2 libs go to Managed/ ROOT, not Mods/:
+             - The two PREFIXED Silksong assemblies (Silksong.AssemblyCSharp + firstpass) MUST be there because Unity
+               only resolves nested custom-[Serializable] types from assemblies registered in ScriptingAssemblies.json,
+               which it loads from Managed root at startup (in Mods/, even registered, the fields come out null —
+               verified). One-time setup adds them to ScriptingAssemblies.json — see docs/experiment-scriptingassemblies.md.
+             - The remaining deps (Unity.Addressables, TeamCherry.Splines, …) MUST sit next to them: the Managed-root
+               assembly resolves its dependencies from Managed root, not from Mods/ (a Modding-API probe path). With the
+               deps left in Mods/, loading e.g. Silksong.PlayerData throws TypeLoadException (Unity.Addressables not
+               found) and the whole bootstrap fails.
+             Only HornetPlayer.dll itself stays in Mods/ (the Modding API loads mods from there); it binds to the
+             Managed-root copies at runtime. No double-load (the libs are not in Mods/). -->
         <ItemGroup>
-            <B2Lib Include="$(MSBuildProjectDirectory)/lib/*.dll"
-                   Exclude="$(MSBuildProjectDirectory)/lib/Silksong.AssemblyCSharp.dll;$(MSBuildProjectDirectory)/lib/Silksong.AssemblyCSharpfirstpass.dll"/>
+            <B2Lib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
         </ItemGroup>
-        <Copy SourceFiles="@(B2Lib)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="@(B2Lib)" DestinationFolder="$(HollowKnightRefs)" SkipUnchangedFiles="true"/>
     </Target>
 </Project>
