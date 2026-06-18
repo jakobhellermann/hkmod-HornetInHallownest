@@ -34,6 +34,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             return new { ok = true };
         });
         DebugServer.MapPost("/play-clip", req => BundleSpike.PlayClip(req["name"]));
+        DebugServer.MapPost("/spawn-real", _ => BundleSpike.SpawnReal());
+        DebugServer.MapPost("/despawn-real", _ => BundleSpike.DespawnReal());
         DebugServer.Start(host, DebugServerPort);
 
         SilksongLoadSpike.Run();

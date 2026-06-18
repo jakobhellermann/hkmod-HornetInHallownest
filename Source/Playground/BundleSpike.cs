@@ -33,6 +33,8 @@ internal static class BundleSpike {
     private static AssetBundle? bundle; // the prefab bundle
     private static readonly List<GameObject> spawned = new();
     private static tk2dSpriteAnimator? puppetAnim;
+    private static GameObject? heroPrefab;
+    private static GameObject? real;
 
     // Play a clip on the spawned puppet by (partial, case-insensitive) name — used to prove provenance by triggering
     // Silksong-exclusive moves (Needolin, Bind Silk, …) and for general animation debugging.
@@ -46,6 +48,39 @@ internal static class BundleSpike {
         if (clip == null) return new { error = $"no clip matching '{name}'" };
         puppetAnim.Play(clip);
         return new { ok = true, playing = clip.name };
+    }
+
+    // Instantiate the FULL prefab ACTIVE (no stripping) so every component's Awake/Start runs against our prefixed
+    // Silksong.* types. Unity swallows per-component Awake exceptions into Player.log — that log is the "what's
+    // missing" list (e.g. GameManager.instance null, input/camera singletons absent).
+    internal static object SpawnReal() {
+        if (heroPrefab == null) return new { error = "hero prefab not loaded" };
+        if (real != null) { Object.Destroy(real); real = null; }
+
+        GameObject inst;
+        try {
+            inst = Object.Instantiate(heroPrefab); // active → Awake/Start run synchronously
+        } catch (Exception e) {
+            Log.Error($"[SpawnReal] Instantiate threw: {e}");
+            return new { error = e.Message };
+        }
+        inst.name = "Hornet_Real";
+        real = inst;
+
+        var hk = Object.FindFirstObjectByType<HeroController>();
+        if (hk != null) inst.transform.position = hk.transform.position + new Vector3(3f, 0f, 0f);
+
+        var comps = inst.GetComponents<Component>();
+        var alive = comps.Count(c => c != null);
+        Log.Info($"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; Silksong.HeroController.instance set: {Silksong.HeroController.instance != null}");
+        return new { ok = true, components = comps.Length, alive };
+    }
+
+    internal static object DespawnReal() {
+        if (real == null) return new { ok = true, note = "nothing to despawn" };
+        Object.Destroy(real);
+        real = null;
+        return new { ok = true, despawned = true };
     }
 
     internal static void Run() {
@@ -86,6 +121,7 @@ internal static class BundleSpike {
             Log.Error("[BundleSpike] LoadAsset returned null");
             return;
         }
+        heroPrefab = prefab;
 
         // b2 validation: before stripping, log how the prefab's root components bind. With the remapped monoscripts
         // bundle, Silksong scripts should resolve to Silksong.* (assembly Silksong.AssemblyCSharp) — not HK's
@@ -190,6 +226,7 @@ internal static class BundleSpike {
     }
 
     internal static void Cleanup() {
+        if (real != null) { Object.Destroy(real); real = null; }
         foreach (var go in spawned)
             if (go != null) Object.Destroy(go);
         spawned.Clear();
