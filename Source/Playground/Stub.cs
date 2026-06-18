@@ -24,18 +24,18 @@ internal static class Stub {
         Skip(typeof(Silksong::HeroWaterController), "Update");                                  // per-frame
         Skip(typeof(Silksong::PersonalObjectPool), "OnStart");                                  // Start
         Skip(typeof(Silksong::HeroAnimationController), "UpdateToolEquipFlags");                // Start
-        Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.ListenForTauntV2), "OnUpdate");     // FSM action, per-frame
         // Tool-equipment subsystem isn't initialized -> IsToolEquipped NullRefs; stub the root (no tools equipped),
         // which should cascade-fix ToolItem.IsEquipped / CheckIfToolEquipped / ToolEquipChecker / HeroWispLantern.
         Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped");
         Skip(typeof(Silksong::KeepWorldScalePositive), "OnEnable");
-        Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.SetPolygonCollider), "OnEnter");
         Skip(typeof(Silksong::HeroNailImbuement), "Awake");
         Skip(typeof(Silksong::FollowTransform), "OnEnable");
-        // Input-listener FSM actions (ListenForAttack/Dash/QuickMap/Superdash/…) read InControl input state that
-        // isn't alive in our context (InControl InputManager not initialized) -> NullRef in PlayerAction.WasPressed.
-        // For a no-input bring-up we no-op them all (no input -> they'd fire no events anyway). Category stub.
-        SkipAllInNamespace("HutongGames.PlayMaker.Actions", "ListenFor", "OnUpdate");
+        // NOTE: the PlayMaker-ACTION stubs (SetPolygonCollider.OnEnter, ListenForTauntV2/ListenFor* OnUpdate) were
+        // removed. They were workarounds for the pre-B era when those actions MIS-RESOLVED to HK's same-named versions
+        // (wrong field layout -> NullRef). With Silksong.PlayMaker isolation they resolve to the correct Silksong
+        // versions, so they must RUN: a stubbed action never calls Finish(), hanging its FSM state forever (e.g. Sprint
+        // stuck in "Cancel All", never returning to Idle to accept DASHED), and stubbed ListenFor* suppress the very
+        // input->FSM events the moves need. Input is alive now (InputDriver + buttonQueueTimers).
         // AddSilk -> GameCameras.instance.silkSpool (silk meter UI); GameCameras isn't bootstrapped. UI, not needed
         // for no-input bring-up. TODO: bootstrap GameCameras/silkSpool for the UI/combat phase.
         Skip(typeof(Silksong::HeroController), "AddSilk");

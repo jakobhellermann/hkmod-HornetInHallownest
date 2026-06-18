@@ -321,6 +321,32 @@ internal static class BundleSpike {
         };
     }
 
+    // Dump a named FSM's full state machine (active state, every state's transitions + action types, global
+    // transitions) so we can see why a move-FSM (e.g. Sprint) sits where it does and what event should advance it.
+    internal static object FsmDump(string name) {
+        if (real == null) return new { error = "not spawned" };
+        var fsms = real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true);
+        SilksongPM::PlayMakerFSM? target = null;
+        foreach (var f in fsms)
+            if (string.Equals(f.FsmName, name, StringComparison.OrdinalIgnoreCase)) { target = f; break; }
+        if (target == null)
+            return new { error = "fsm not found", available = fsms.Select(f => f.FsmName).Distinct().ToArray() };
+        var fsm = target.Fsm;
+        var states = new List<object>();
+        foreach (var st in fsm.States) {
+            var trans = st.Transitions.Select(tr => $"{tr.EventName} -> {tr.ToState}").ToArray();
+            var actions = st.Actions.Select(a => a.GetType().Name).ToArray();
+            states.Add(new { name = st.Name, active = st.Name == fsm.ActiveStateName, trans, actions });
+        }
+        return new {
+            fsmName = target.FsmName,
+            enabled = ((Behaviour)(object)target).enabled,
+            activeState = fsm.ActiveStateName,
+            globalTransitions = fsm.GlobalTransitions.Select(tr => $"{tr.EventName} -> {tr.ToState}").ToArray(),
+            states,
+        };
+    }
+
     internal static void Run() {
         if (bundles.Count > 0) {
             Log.Info("[BundleSpike] already loaded, skipping");
