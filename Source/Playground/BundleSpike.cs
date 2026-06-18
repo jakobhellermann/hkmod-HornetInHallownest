@@ -264,7 +264,8 @@ internal static class BundleSpike {
                 ? "[SilksongRemap]   <null/missing-script>"
                 : $"[SilksongRemap]   {c.GetType().FullName} [{c.GetType().Assembly.GetName().Name}]");
 
-        SpawnPuppet(prefab);
+        // Puppet (stripped tk2d-only visual) was the early provenance spike; the real HeroController spawn supersedes
+        // it. Skip it so only the real Hornet is in the scene. (SpawnPuppet/PlayClip kept for ad-hoc use via routes.)
     }
 
     // Component type names kept on the puppet root; everything else (gameplay scripts that would false-bind to HK's

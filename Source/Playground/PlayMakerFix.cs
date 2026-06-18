@@ -41,12 +41,22 @@ internal static class PlayMakerFix {
             Type?[] types;
             try { types = asm.GetTypes(); }
             catch (ReflectionTypeLoadException e) { types = e.Types; }
+            // SCOPED: only seed Silksong-EXCLUSIVE action names. PlayMaker (typeLookup/ActionTypeLookup) is shared
+            // with HK; seeding a name HK ALSO has would make HK's own FSMs (scene fade/darkness on entry+respawn)
+            // resolve OUR version -> they break (screen stays dark). So skip any name HK's Assembly-CSharp defines —
+            // those keep resolving to HK's. Hornet's Silksong-only actions still resolve to ours.
             var map = new System.Collections.Generic.Dictionary<string, Type>();
+            var collisions = new System.Collections.Generic.List<string>();
             foreach (var t in types) {
                 var ns = t?.Namespace;
                 if (ns != "HutongGames.PlayMaker.Actions" && ns != "HutongGames.PlayMaker") continue;
-                map[t!.FullName!] = t;
+                if (Type.GetType(t!.FullName + ", Assembly-CSharp") != null) { collisions.Add(t.FullName!); continue; }
+                map[t.FullName!] = t;
             }
+            // Un-clobber any colliding names a previous (unscoped) seed wrote, so HK's FSMs re-resolve to HK's.
+            RemoveFrom(typeof(ReflectionUtils), "typeLookup", collisions);
+            RemoveFrom(typeof(ActionData), "ActionTypeLookup", collisions);
+            Log.Info($"[PlayMakerFix] {collisions.Count} colliding action names left to HK (scoped seed)");
 
             // Seed BOTH caches: ReflectionUtils.typeLookup (used by GetGlobalType) AND ActionData.ActionTypeLookup
             // (GetActionType's OWN cache, checked first — HK's menu FSMs populate it with HK's colliding versions
@@ -58,6 +68,12 @@ internal static class PlayMakerFix {
         } catch (Exception e) {
             Log.Error($"[PlayMakerFix] seed failed: {e}");
         }
+    }
+
+    private static void RemoveFrom(Type owner, string field, System.Collections.Generic.List<string> keys) {
+        var dict = (IDictionary?)owner.GetField(field, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null);
+        if (dict == null) return;
+        foreach (var k in keys) if (dict.Contains(k)) dict.Remove(k);
     }
 
     private static bool SeedInto(Type owner, string field, System.Collections.Generic.Dictionary<string, Type> map) {

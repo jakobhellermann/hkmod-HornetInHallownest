@@ -89,6 +89,9 @@
         <Reference Include="UnityEngine.JSONSerializeModule" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.JSONSerializeModule.dll</HintPath>
         </Reference>
+        <Reference Include="UnityEngine.InputLegacyModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.InputLegacyModule.dll</HintPath>
+        </Reference>
         <!-- MonoMod RuntimeDetour (+ Cecil) for runtime method stubbing via ILHook (no HookGen, no Harmony). -->
         <Reference Include="MonoMod.RuntimeDetour" Private="false">
             <HintPath>$(HollowKnightRefs)/MonoMod.RuntimeDetour.dll</HintPath>

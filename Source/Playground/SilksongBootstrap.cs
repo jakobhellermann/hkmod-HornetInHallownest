@@ -15,6 +15,9 @@ internal static class SilksongBootstrap {
     private static GameObject? poolGo;
     private static bool done;
 
+    // The HeroActions InControl set we create; InputBridge drives its actions from the keyboard each frame.
+    internal static Silksong::HeroActions? InputActions { get; private set; }
+
     internal static void Ensure() {
         if (done) return;
         done = true;
@@ -28,6 +31,7 @@ internal static class SilksongBootstrap {
             // GO is inactive => InputHandler.Awake never runs, so inputActions stays null and every input check
             // (CanAttackAction, ListenForAttack/Dash/... FSM actions) NullRefs. Construct it like InputHandler does.
             ih.inputActions = new Silksong::HeroActions();
+            InputActions = ih.inputActions;
 
             // gm.cameraCtrl (private-set property) is null -> SendHeroInPosition's gm.cameraCtrl.ResetStartTimer()
             // NullRefs. Provide a bare CameraController (on the inactive GO => no heavy Awake); ResetStartTimer just

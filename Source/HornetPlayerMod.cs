@@ -39,11 +39,23 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/diagnose-awake", _ => BundleSpike.DiagnoseAwake());
         DebugServer.MapPost("/reload-all-deps", req => BundleSpike.ReloadWithAllDeps(req["list"] ?? "/tmp/deps.txt"));
         DebugServer.MapPost("/scan-serializable", _ => BundleSpike.ScanSerializable());
+        DebugServer.MapPost("/load-save", req => {
+            var slot = int.TryParse(req["slot"], out var s) ? s : 0;
+            GameManager.instance.LoadGameFromUI(slot); // HK's GameManager: full UI load (transition + scene)
+            return new { ok = true, slot };
+        });
+        DebugServer.MapPost("/press", req => {
+            var a = (req["a"] ?? "right").ToLowerInvariant(); // left/right/up/down/jump/attack/dash
+            if (!int.TryParse(req["frames"], out var f) || f <= 0) f = 60;
+            InputBridge.Press(a, f); // debug-drive an InControl action for f frames (no physical key needed)
+            return new { action = a, frames = f };
+        });
         DebugServer.Start(host, DebugServerPort);
 
         SilksongLoadSpike.Run();   // touches Silksong types -> assembly is now in the AppDomain
         PlayMakerFix.Apply();
         Stub.Install();
+        InputBridge.Install();
         BundleSpike.Run();
     }
 
@@ -53,6 +65,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         SilksongBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();
         Stub.Cleanup();
+        InputBridge.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
