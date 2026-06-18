@@ -40,6 +40,20 @@ internal sealed class InputDriver : MonoBehaviour {
     private static MethodInfo? moveVectorUpdate;
     private static FieldInfo? isGameplaySceneField;
     private static FieldInfo? gameStateField;
+    private static FieldInfo? fixedUpdateCycleField;
+
+    // Silksong's CustomPlayerLoop (which increments FixedUpdateCycle) is never injected into HK's PlayerLoop, so the
+    // counter is stuck. Many FSM actions gate work on it (`if (lastUpdateCycle == FixedUpdateCycle) return;`) — e.g.
+    // CheckCollisionSide, which fires the Sprint FSM's LAND event; with the counter frozen it runs once then bails
+    // forever, so Hornet stays in air-sprint on the ground. Advance it each FixedUpdate (any monotonic change works).
+    private void FixedUpdate() {
+        try {
+            fixedUpdateCycleField ??= typeof(Silksong::CustomPlayerLoop)
+                .GetField("<FixedUpdateCycle>k__BackingField", BindingFlags.NonPublic | BindingFlags.Static);
+            if (fixedUpdateCycleField != null)
+                fixedUpdateCycleField.SetValue(null, (int)fixedUpdateCycleField.GetValue(null)! + 1);
+        } catch (System.Exception e) { Log.Error($"[InputDriver.FixedUpdate] {e}"); }
+    }
 
     private static readonly (string name, KeyCode key)[] Map = {
         ("left", KeyCode.LeftArrow), ("right", KeyCode.RightArrow),
