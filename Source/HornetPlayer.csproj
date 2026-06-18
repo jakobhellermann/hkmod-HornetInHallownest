@@ -34,10 +34,12 @@
 
     <!-- B2 retry: Silksong's Assembly-CSharp + firstpass, IL-prefixed to Silksong.* with cross-refs rewritten. -->
     <ItemGroup>
-        <Reference Include="Silksong.AssemblyCSharp" Private="true">
+        <!-- Assembly-only rename: types keep their original (global) names, colliding with HK's Assembly-CSharp.
+             The `Silksong` extern alias disambiguates them in our code (Silksong::HeroController vs HK's HeroController). -->
+        <Reference Include="Silksong.AssemblyCSharp" Private="true" Aliases="Silksong">
             <HintPath>lib/Silksong.AssemblyCSharp.dll</HintPath>
         </Reference>
-        <Reference Include="Silksong.AssemblyCSharpfirstpass" Private="true">
+        <Reference Include="Silksong.AssemblyCSharpfirstpass" Private="true" Aliases="Silksong">
             <HintPath>lib/Silksong.AssemblyCSharpfirstpass.dll</HintPath>
         </Reference>
     </ItemGroup>

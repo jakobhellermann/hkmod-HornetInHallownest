@@ -1,3 +1,4 @@
+extern alias Silksong;
 using System;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -11,16 +12,16 @@ internal static class SilksongLoadSpike {
     private static GameObject? host;
 
     internal static void Run() {
-        Try("typeof HeroController", () => typeof(Silksong.HeroController));
-        Try("typeof GameManager", () => typeof(Silksong.GameManager));   // failed in the single-DLL attempt
-        Try("typeof GameCameras", () => typeof(Silksong.GameCameras));
-        Try("typeof PlayerData", () => typeof(Silksong.PlayerData));
+        Try("typeof HeroController", () => typeof(Silksong::HeroController));
+        Try("typeof GameManager", () => typeof(Silksong::GameManager));   // failed in the single-DLL attempt
+        Try("typeof GameCameras", () => typeof(Silksong::GameCameras));
+        Try("typeof PlayerData", () => typeof(Silksong::PlayerData));
 
         try {
             host = new GameObject("SilksongLoadSpike");
             host.SetActive(false);
-            var comp = host.AddComponent<Silksong.HeroController>();
-            Log.Info($"[SilksongLoad] AddComponent<Silksong.HeroController> OK — non-null={comp != null}");
+            var comp = host.AddComponent<Silksong::HeroController>();
+            Log.Info($"[SilksongLoad] AddComponent<HeroController> OK — non-null={comp != null}");
         } catch (Exception e) {
             Log.Error($"[SilksongLoad] AddComponent FAILED: {e.GetType().Name}: {e.Message}");
         }

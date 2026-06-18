@@ -1,3 +1,4 @@
+extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -75,7 +76,7 @@ internal static class BundleSpike {
         var inst = Object.Instantiate(heroPrefab, staging.transform);
         inst.name = "Hornet_Real";
 
-        var hc = inst.GetComponent<Silksong.HeroController>();
+        var hc = inst.GetComponent<Silksong::HeroController>();
         if (hc != null) {
             // wallClingEffect.SetActive(false) at the end of Awake NullRefs when the field is unset.
             EnsureChildField(hc, "wallClingEffect");
@@ -93,7 +94,7 @@ internal static class BundleSpike {
 
         var comps = inst.GetComponents<Component>();
         var alive = comps.Count(c => c != null);
-        Log.Info($"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; Silksong.HeroController.instance set: {Silksong.HeroController.instance != null}");
+        Log.Info($"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; HeroController.instance set: {(Silksong::HeroController.instance != null)}");
         return new { ok = true, components = comps.Length, alive };
     }
 
@@ -131,7 +132,7 @@ internal static class BundleSpike {
         var staging = new GameObject("hp_diag");
         staging.SetActive(false);
         var inst = Object.Instantiate(heroPrefab, staging.transform);
-        var hc = inst.GetComponent<Silksong.HeroController>();
+        var hc = inst.GetComponent<Silksong::HeroController>();
 
         // Dump null reference-type fields (candidates Awake may deref). Only those whose type is a UnityEngine.Object
         // or array/collection — value types/strings/primitives are noise.
@@ -166,8 +167,8 @@ internal static class BundleSpike {
         // If Unity can't construct ConfigGroup at deserialize time, it drops the whole `configs` array to null.
         try {
             var asm = hc.GetType().Assembly;
-            var cgType = asm.GetType("Silksong.HeroController+ConfigGroup");
-            var cfgType = asm.GetType("Silksong.HeroControllerConfig");
+            var cgType = asm.GetType("HeroController+ConfigGroup");
+            var cfgType = asm.GetType("HeroControllerConfig");
             Log.Info($"[DiagnoseAwake] typeof ConfigGroup={cgType != null}, HeroControllerConfig={cfgType != null}");
             if (cgType != null) {
                 var instCg = System.Activator.CreateInstance(cgType);
@@ -181,7 +182,7 @@ internal static class BundleSpike {
         // public fields, Unity CAN reflect/serialize the type (so bundle-transfer skip is something else, and
         // repopulation via JsonUtility.FromJson is viable); if it returns "{}", Unity ignores the type entirely.
         try {
-            var cgType = hc.GetType().Assembly.GetType("Silksong.HeroController+ConfigGroup");
+            var cgType = hc.GetType().Assembly.GetType("HeroController+ConfigGroup");
             var cg = System.Activator.CreateInstance(cgType!);
             cgType!.GetField("ActiveRoot")?.SetValue(cg, inst); // a non-null UnityEngine.Object public field
             var json = UnityEngine.JsonUtility.ToJson(cg);
@@ -386,7 +387,7 @@ internal static class BundleSpike {
         var staging = new GameObject("hp_depcheck");
         staging.SetActive(false);
         var inst = Object.Instantiate(heroPrefab, staging.transform);
-        var hc = inst.GetComponent<Silksong.HeroController>();
+        var hc = inst.GetComponent<Silksong::HeroController>();
         var fi = hc.GetType().GetField("configs", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
         var arr = (System.Array?)fi?.GetValue(hc);
         // Also probe whether an external PPtr now resolves (jumpEffectPrefab) vs before.
@@ -396,6 +397,61 @@ internal static class BundleSpike {
         Log.Info($"[ReloadAllDeps] configs: null={arr == null}, length={configsLen}; jumpEffectPrefab resolved={jumpResolved}");
         Object.DestroyImmediate(staging);
         return new { depsOk = ok, depsFailed = fail, configsNull = arr == null, configsLength = configsLen, jumpEffectResolved = jumpResolved };
+    }
+
+    // Systemic-scope probe: across EVERY component in the instantiated prefab, find Unity-serialized fields whose
+    // (element) type is a custom [Serializable] class from our Silksong assemblies (i.e. NOT a UnityEngine.Object
+    // PPtr, NOT a primitive/string/enum, NOT a UnityEngine value type like Vector2). Report how many are null/empty
+    // vs populated. If the custom-serializable fields are overwhelmingly null while PPtr fields bind, the transfer
+    // gap is systemic — not specific to HeroController.configs.
+    internal static object ScanSerializable() {
+        if (heroPrefab == null) return new { error = "no prefab" };
+        var staging = new GameObject("hp_scan");
+        staging.SetActive(false);
+        var inst = Object.Instantiate(heroPrefab, staging.transform);
+
+        // Only REFERENCE-type custom-serializable fields are informative (value-type structs are never null).
+        var populatedTypes = new HashSet<string>();
+        var nullTypes = new HashSet<string>();
+        int populated = 0, nullCount = 0;
+        foreach (var comp in inst.GetComponentsInChildren<Component>(true)) {
+            if (comp == null) continue;
+            var ct = comp.GetType();
+            var asm = ct.Assembly.GetName().Name;
+            if (asm != "Silksong.AssemblyCSharp" && asm != "Silksong.AssemblyCSharpfirstpass") continue;
+            foreach (var fi in ct.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+                if (!IsUnitySerialized(fi)) continue;
+                var et = ElementType(fi.FieldType);
+                if (!IsCustomSerializable(et) || et.IsValueType) continue; // reference types only
+                var val = fi.GetValue(comp);
+                var empty = val == null || (val is System.Array a && a.Length == 0);
+                var label = $"{et.Name}{(fi.FieldType.IsArray ? "[]" : "")}";
+                if (empty) { nullCount++; nullTypes.Add(label); } else { populated++; populatedTypes.Add(label); }
+            }
+        }
+        Object.DestroyImmediate(staging);
+        Log.Info($"[ScanSerializable] reference-type custom-serializable: {populated} populated, {nullCount} null");
+        Log.Info($"[ScanSerializable] POPULATED types: {string.Join(", ", populatedTypes.OrderBy(x => x))}");
+        Log.Info($"[ScanSerializable] NULL types: {string.Join(", ", nullTypes.OrderBy(x => x))}");
+        return new { populated, nullCount, populatedTypes = populatedTypes.OrderBy(x => x), nullTypes = nullTypes.OrderBy(x => x) };
+    }
+
+    private static bool IsUnitySerialized(System.Reflection.FieldInfo fi) {
+        if (fi.IsStatic) return false;
+        if (fi.IsPublic) return !fi.IsNotSerialized;
+        return fi.GetCustomAttributes(typeof(SerializeField), true).Length > 0;
+    }
+
+    private static System.Type ElementType(System.Type t) =>
+        t.IsArray ? t.GetElementType()! :
+        (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(List<>)) ? t.GetGenericArguments()[0] : t;
+
+    private static bool IsCustomSerializable(System.Type t) {
+        if (t == null || t.IsPrimitive || t.IsEnum || t == typeof(string)) return false;
+        if (typeof(UnityEngine.Object).IsAssignableFrom(t)) return false; // PPtr — handled natively
+        var asm = t.Assembly.GetName().Name;
+        if (asm != "Silksong.AssemblyCSharp" && asm != "Silksong.AssemblyCSharpfirstpass") return false;
+        return t.IsSerializable; // [Serializable] custom class/struct from our assembly
     }
 
     internal static void Cleanup() {

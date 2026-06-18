@@ -38,6 +38,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/despawn-real", _ => BundleSpike.DespawnReal());
         DebugServer.MapPost("/diagnose-awake", _ => BundleSpike.DiagnoseAwake());
         DebugServer.MapPost("/reload-all-deps", req => BundleSpike.ReloadWithAllDeps(req["list"] ?? "/tmp/deps.txt"));
+        DebugServer.MapPost("/scan-serializable", _ => BundleSpike.ScanSerializable());
         DebugServer.Start(host, DebugServerPort);
 
         SilksongLoadSpike.Run();
