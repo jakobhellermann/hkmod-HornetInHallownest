@@ -1,11 +1,14 @@
 extern alias Silksong;
 extern alias SilksongPM;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
+using USceneManager = UnityEngine.SceneManagement.SceneManager;
 
 namespace HornetPlayer.Playground;
 
@@ -340,37 +343,47 @@ internal static class BundleSpike {
     // Load + instantiate Silksong's _GameCameras rig (the repacked bundle). Its components bind to Silksong.* via the
     // remapped monoscripts (load reload-all-deps first so the closure + RemappedMonoScripts are resident). Instantiating
     // it lets GameCameras.instance resolve (its Awake is just the singleton). Camera handover/GM wiring comes after.
-    internal static object LoadGameCameras() {
-        if (gameCamerasGo != null) return new { error = "already loaded" };
+    // Load Silksong's _GameCameras rig (scene-mode bundle), mirroring the HK Modding API's Preloader: LoadScene
+    // additive, wait for it (LoadScene completes end-of-frame, not synchronously), deactivate roots, Instantiate the
+    // live fully-resolved _GameCameras (cloning a LIVE scene object resolves its refs — unlike a prefab ASSET, which
+    // crashed), DontDestroyOnLoad it, register the singleton, unload the scene. Coroutine route (spans frames). The
+    // scene's dep closure must be resident first (reload-all-deps with the Menu_Title deps).
+    internal static IEnumerator LoadGameCamerasCo(System.Action<object?> respond) {
+        if (gameCamerasGo != null) { respond(new { error = "already loaded" }); yield break; }
         var b = AssetBundle.LoadFromFile(GameCamerasBundlePath);
-        if (b == null) return new { error = "LoadFromFile failed (build it: just repack-gamecameras)" };
+        if (b == null) { respond(new { error = "LoadFromFile failed (just repack-gamecameras)" }); yield break; }
         bundles.Add(b);
-        var names = b.GetAllAssetNames();
-        Log.Info($"[GameCameras] {names.Length} assets: {string.Join(", ", names.Take(10))}");
-        var name = names.FirstOrDefault(n => n.ToLowerInvariant().Contains("gamecameras"));
-        if (name == null) return new { error = "no _GameCameras asset", assets = names };
-        var prefab = b.LoadAsset<GameObject>(name);
-        if (prefab == null) return new { error = $"LoadAsset<GameObject>({name}) null" };
-        // Instantiate INACTIVE: the clone itself needs the dep closure resident (reload-all-deps first) or it crashes
-        // natively reading unresolved external PPtrs. Keeping it inactive also stops the rig's Awakes (cameras + ~100
-        // HUD FSMs) from running yet — they'd NullRef without full runtime context. We register the singleton by hand
-        // (GameCameras.instance's FindObjectOfType skips inactive) so it resolves; camera activation/handover is next.
-        var staging = new GameObject("gc_staging");
-        staging.SetActive(false);
-        var inst = Object.Instantiate(prefab, staging.transform);
+        var scenePaths = b.GetAllScenePaths();
+        if (scenePaths.Length == 0) { respond(new { error = "no scenes in bundle (repack with --mode scene)" }); yield break; }
+        var sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePaths[0]);
+        USceneManager.LoadScene(sceneName, LoadSceneMode.Additive);
+        var scene = USceneManager.GetSceneByName(sceneName);
+        var guard = 0;
+        while (!scene.isLoaded && guard++ < 300) yield return null;
+        if (!scene.isLoaded) { respond(new { error = "scene never loaded", sceneName }); yield break; }
+        var roots = scene.GetRootGameObjects();
+        foreach (var go in roots) go.SetActive(false);
+        var src = roots.FirstOrDefault(r => r.name.ToLowerInvariant().Contains("gamecameras"));
+        if (src == null) {
+            USceneManager.UnloadSceneAsync(scene);
+            respond(new { error = "no _GameCameras root", roots = roots.Select(r => r.name).ToArray() });
+            yield break;
+        }
+        var inst = Object.Instantiate(src);
         inst.name = "Silksong_GameCameras";
+        Object.DontDestroyOnLoad(inst);
+        gameCamerasGo = inst;
         var gcComp = inst.GetComponentInChildren<Silksong::GameCameras>(true);
         if (gcComp != null)
             typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
                 ?.SetValue(null, gcComp);
-        Object.DontDestroyOnLoad(staging);
-        gameCamerasGo = staging;
-        return new {
-            ok = true, asset = name,
+        USceneManager.UnloadSceneAsync(scene);
+        respond(new {
+            ok = true, sceneName,
             gcComponentFound = gcComp != null,
             instanceResolved = Silksong::GameCameras.SilentInstance != null,
             components = inst.GetComponentsInChildren<Component>(true).Length,
-        };
+        });
     }
 
     internal static void Run() {
