@@ -31,6 +31,14 @@ internal static class BundleSpike {
     // Its MonoScripts live in CAB 283454ff -> covered by RemappedMonoScripts; deps overlap the hero closure.
     private const string GameCamerasBundlePath =
         "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/gamecameras.silksong.bundle";
+    // Control: full Menu_Title repacked WITHOUT pruning (everything disabled). Used to isolate whether the prune step
+    // breaks MonoScript binding — load via /load-gamecameras?bundle=noprune.
+    private const string GameCamerasNoPrunePath =
+        "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/gamecameras-noprune.silksong.bundle";
+    // Control: _GameCameras repacked in ASSET mode (like the hero prefab). Loaded via LoadAsset (no scene), inspected
+    // without Instantiate. If GameCameras binds here but not in scene mode -> scene-mode pack is the culprit.
+    private const string GameCamerasAssetPath =
+        "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/gamecameras-asset.silksong.bundle";
 
     private static readonly string[] DepBundles = {
         RemappedMonoScripts,                          // remapped MonoScripts -> Silksong.*
@@ -370,10 +378,96 @@ internal static class BundleSpike {
         };
     }
 
-    internal static IEnumerator LoadGameCamerasCo(System.Action<object?> respond) {
+    // Collision probe: list every loaded type with this simple name across all AppDomain assemblies. If a Silksong
+    // type (GameCameras) shares its (namespace, class) with an HK Assembly-CSharp type, Unity's MonoBehaviour binding
+    // may resolve the scene's m_Script to the wrong assembly -> "missing script". Compare a colliding name vs a
+    // Silksong-only one (TMProOld.TextMeshPro) to confirm the pattern.
+    internal static object ProbeTypes(string simpleName) {
+        var hits = new List<object>();
+        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies()) {
+            Type[] types;
+            try { types = asm.GetTypes(); } catch { continue; }
+            foreach (var t in types) {
+                if (t.Name == simpleName)
+                    hits.Add(new { asm = asm.GetName().Name, full = t.FullName });
+            }
+        }
+        return new { simpleName, count = hits.Count, hits };
+    }
+
+    // Decisive: can Unity instantiate these types as components at all? AddComponent goes through Unity's scripting
+    // backend (same type registry that binds serialized MonoScripts). If GameCameras AddComponent SUCCEEDS while the
+    // scene's serialized GameCameras is "missing script", the gap is serialized-bind (cross-build hash / MonoScript
+    // matching), not the type. Tests a missing-cluster type + a bound control.
+    internal static object TestAddComponent() {
+        var results = new List<object>();
+        var go = new GameObject("hp_addcomp_test");
+        go.SetActive(false);
+        foreach (var t in new[] {
+            typeof(Silksong::GameCameras), typeof(Silksong::CameraController),
+            typeof(Silksong::GameManager),
+        }) {
+            string? err = null; string? added = null;
+            try { var c = go.AddComponent(t); added = c?.GetType().FullName; }
+            catch (Exception e) { err = e.GetType().Name + ": " + e.Message; }
+            results.Add(new { type = t.FullName, asm = t.Assembly.GetName().Name, added, err });
+        }
+        Object.DestroyImmediate(go);
+        return new { results };
+    }
+
+    // Asset-mode control: LoadAsset the _GameCameras prefab (NOT a scene), inspect component binding directly without
+    // Instantiate. Mirrors how the hero loads (asset-mode, binds). Reports whether GameCameras binds + missing count.
+    internal static object LoadGameCamerasAsset() {
+        var ab = AssetBundle.LoadFromFile(GameCamerasAssetPath);
+        if (ab == null) return new { error = "LoadFromFile failed", path = GameCamerasAssetPath };
+        bundles.Add(ab);
+        var names = ab.GetAllAssetNames();
+        var name = names.FirstOrDefault(n => n.ToLowerInvariant().Contains("gamecameras"));
+        if (name == null) return new { error = "no gamecameras asset", names };
+        var asset = ab.LoadAsset<GameObject>(name);
+        if (asset == null) return new { error = "LoadAsset returned null", name };
+        var comps = asset.GetComponentsInChildren<Component>(true);
+        return new {
+            assetMode = true, name,
+            gameCamerasBinds = comps.Any(c => c != null && c.GetType().Name == "GameCameras"),
+            missingScripts = comps.Count(c => c == null),
+            totalComponents = comps.Length,
+        };
+    }
+
+    // Minimal binding test: load a hand-built bundle with one GameObject+MonoBehaviour per test script (m_Script ->
+    // CAB-283454ff monoscripts, base fields only). Isolates pure script binding from scene/closure complexity. Needs
+    // only the remapped monoscripts bundle resident.
+    private const string MinimalBundlePath =
+        "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/minimal-binding-test.silksong.bundle";
+
+    internal static object LoadMinimalBindingTest() {
+        var mono = AssetBundle.LoadFromFile(RemappedMonoScripts); // null if already loaded; CAB-283454ff resident either way
+        if (mono != null) bundles.Add(mono);
+        var tb = AssetBundle.LoadFromFile(MinimalBundlePath);
+        if (tb == null) return new { error = "LoadFromFile failed (build: cargo run --example build_minimal_bundle)" };
+        bundles.Add(tb);
+        var results = new List<object>();
+        foreach (var n in tb.GetAllAssetNames()) {
+            var go = tb.LoadAsset<GameObject>(n);
+            if (go == null) { results.Add(new { asset = n, error = "LoadAsset null" }); continue; }
+            var comps = go.GetComponents<Component>();
+            results.Add(new {
+                asset = n,
+                total = comps.Length,
+                missing = comps.Count(c => c == null),
+                bound = comps.Where(c => c != null).Select(c => c.GetType().FullName).ToArray(),
+            });
+        }
+        return new { results };
+    }
+
+    internal static IEnumerator LoadGameCamerasCo(System.Action<object?> respond, string? variant = null) {
         if (gameCamerasGo != null) { respond(new { error = "already loaded" }); yield break; }
-        var b = AssetBundle.LoadFromFile(GameCamerasBundlePath);
-        if (b == null) { respond(new { error = "LoadFromFile failed (just repack-gamecameras)" }); yield break; }
+        var path = variant == "noprune" ? GameCamerasNoPrunePath : GameCamerasBundlePath;
+        var b = AssetBundle.LoadFromFile(path);
+        if (b == null) { respond(new { error = "LoadFromFile failed (just repack-gamecameras)", path }); yield break; }
         bundles.Add(b);
         var scenePaths = b.GetAllScenePaths();
         if (scenePaths.Length == 0) { respond(new { error = "no scenes in bundle (repack with --mode scene)" }); yield break; }
