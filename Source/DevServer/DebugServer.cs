@@ -3,8 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using HornetPlayer.Playground; // Log
 
-namespace HornetPlayer.Playground;
+namespace HornetPlayer.DevServer;
 
 // Returns a DevResponse for full control, or any object which is serialized to JSON. Runs on the main thread.
 public delegate object? RouteHandler(DevRequest request);

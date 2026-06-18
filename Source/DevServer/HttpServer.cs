@@ -6,8 +6,9 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using HornetPlayer.Playground; // Log
 
-namespace HornetPlayer.Playground;
+namespace HornetPlayer.DevServer;
 
 // Requests arrive on a background thread; handlers must run on the Unity main thread. Each request is queued and the
 // listener thread blocks on a TaskCompletionSource until Update() (main thread) runs the handler.

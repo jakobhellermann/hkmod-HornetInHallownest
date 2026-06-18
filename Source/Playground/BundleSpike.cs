@@ -44,24 +44,9 @@ internal static class BundleSpike {
 
     private static readonly List<AssetBundle> bundles = new();
     private static AssetBundle? bundle; // the prefab bundle
-    private static readonly List<GameObject> spawned = new();
-    private static tk2dSpriteAnimator? puppetAnim;
     private static GameObject? heroPrefab;
     private static GameObject? real;
 
-    // Play a clip on the spawned puppet by (partial, case-insensitive) name — used to prove provenance by triggering
-    // Silksong-exclusive moves (Needolin, Bind Silk, …) and for general animation debugging.
-    internal static object PlayClip(string? name) {
-        if (puppetAnim == null) return new { error = "no puppet spawned" };
-        var clips = puppetAnim.Library?.clips;
-        if (clips == null) return new { error = "no clip library" };
-        if (string.IsNullOrEmpty(name))
-            return new { clips = clips.Select(c => c.name).ToArray() };
-        var clip = clips.FirstOrDefault(c => c.name.ToLowerInvariant().Contains(name!.ToLowerInvariant()));
-        if (clip == null) return new { error = $"no clip matching '{name}'" };
-        puppetAnim.Play(clip);
-        return new { ok = true, playing = clip.name };
-    }
 
     // Instantiate the FULL prefab ACTIVE (no stripping) so every component's Awake/Start runs against our prefixed
     // Silksong.* types. Unity swallows per-component Awake exceptions into Player.log — that log is the "what's
@@ -396,99 +381,8 @@ internal static class BundleSpike {
                 ? "[SilksongRemap]   <null/missing-script>"
                 : $"[SilksongRemap]   {c.GetType().FullName} [{c.GetType().Assembly.GetName().Name}]");
 
-        // Puppet (stripped tk2d-only visual) was the early provenance spike; the real HeroController spawn supersedes
-        // it. Skip it so only the real Hornet is in the scene. (SpawnPuppet/PlayClip kept for ad-hoc use via routes.)
     }
 
-    // Component type names kept on the puppet root; everything else (gameplay scripts that would false-bind to HK's
-    // same-named classes, FSMs, audio, colliders, attach points) is stripped before the object is ever activated.
-    private static readonly string[] KeepComponents =
-        { "tk2dSprite", "tk2dSpriteAnimator", "MeshRenderer", "MeshFilter" };
-
-    private static void SpawnPuppet(GameObject prefab) {
-        // Instantiate under an INACTIVE parent so no Awake/OnEnable runs until we've stripped the dangerous scripts
-        // (HK's real HeroController.Awake would otherwise run on Silksong data → crash).
-        var staging = new GameObject("hp_staging");
-        staging.SetActive(false);
-        var inst = Object.Instantiate(prefab, staging.transform);
-        inst.name = "Hornet_Visual";
-
-        // First visual: just the body on the root. Drop the whole effect/slash/audio subtree.
-        for (var i = inst.transform.childCount - 1; i >= 0; i--)
-            Object.DestroyImmediate(inst.transform.GetChild(i).gameObject);
-
-        var stripped = 0;
-        foreach (var c in inst.GetComponents<Component>()) {
-            if (c == null || c is Transform) continue;
-            var name = c.GetType().Name;
-            if (KeepComponents.Contains(name)) continue;
-            try {
-                Object.DestroyImmediate(c);
-                stripped++;
-            } catch (Exception e) {
-                Log.Error($"[BundleSpike] strip {name}: {e.Message}");
-            }
-        }
-        Log.Info($"[BundleSpike] stripped {stripped} components; root now: {string.Join(", ", inst.GetComponents<Component>().Where(c => c != null).Select(c => c.GetType().Name))}");
-
-        // Active follower; reparenting the instance onto it activates the instance (only tk2d Awake runs now).
-        var follower = new GameObject("HornetPuppet");
-        Object.DontDestroyOnLoad(follower);
-        follower.AddComponent<HornetPuppet>();
-        inst.transform.SetParent(follower.transform, false);
-        inst.transform.localPosition = Vector3.zero; // prefab root carries a baked-in offset; sit it on the follower
-        Object.DestroyImmediate(staging);
-        spawned.Add(follower);
-
-        var anim = inst.GetComponent<tk2dSpriteAnimator>();
-        puppetAnim = anim;
-        if (anim == null) {
-            Log.Error("[BundleSpike] no tk2dSpriteAnimator on root after strip");
-            return;
-        }
-
-        var clips = anim.Library != null ? anim.Library.clips : null;
-        if (clips == null || clips.Length == 0) {
-            Log.Error("[BundleSpike] tk2dSpriteAnimator has no clips/library");
-            return;
-        }
-        Log.Info($"[BundleSpike] {clips.Length} clips. First 30: {string.Join(", ", clips.Take(30).Select(c => c.name))}");
-
-        var idle = clips.FirstOrDefault(c => c.name.ToLowerInvariant().Contains("idle")) ?? clips[0];
-        anim.Play(idle);
-        Log.Info($"[BundleSpike] playing clip '{idle.name}' — Hornet_Visual spawned");
-
-        // The bundle's shaders don't survive the cross-game load (material shader = Hidden/InternalErrorShader →
-        // pink). HK ships "tk2d/BlendVertexColor", so re-point every collection material at it.
-        RemapShaders(inst);
-    }
-
-    private static void RemapShaders(GameObject inst) {
-        var tk2d = Shader.Find("tk2d/BlendVertexColor");
-        if (tk2d == null) {
-            Log.Error("[BundleSpike] Shader.Find('tk2d/BlendVertexColor') failed");
-            return;
-        }
-
-        var fixedCount = 0;
-        void Fix(Material[]? mats) {
-            if (mats == null) return;
-            foreach (var m in mats)
-                if (m != null && (m.shader == null || !m.shader.isSupported)) {
-                    m.shader = tk2d;
-                    fixedCount++;
-                }
-        }
-
-        var sprite = inst.GetComponent<tk2dSprite>();
-        var coll = sprite != null ? sprite.Collection : null;
-        if (coll != null) {
-            Fix(coll.materials);
-            Fix(coll.materialInsts);
-        }
-        Fix(inst.GetComponent<Renderer>()?.sharedMaterials);
-        Log.Info($"[BundleSpike] remapped {fixedCount} materials to tk2d/BlendVertexColor");
-    }
 
     // One-shot test for the user's hypothesis: is `configs` null because the prefab's external PPtrs aren't resolved?
     // Full reload with the ENTIRE addressables dependency closure resident BEFORE LoadAsset (so every external PPtr
@@ -602,9 +496,6 @@ internal static class BundleSpike {
 
     internal static void Cleanup() {
         if (real != null) { Object.Destroy(real); real = null; }
-        foreach (var go in spawned)
-            if (go != null) Object.Destroy(go);
-        spawned.Clear();
 
         foreach (var b in bundles)
             if (b != null) b.Unload(true);

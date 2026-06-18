@@ -1,6 +1,6 @@
 using System.Collections.Specialized;
 
-namespace HornetPlayer.Playground;
+namespace HornetPlayer.DevServer;
 
 public class DevRequest(string path, string httpMethod, NameValueCollection query, string? body) {
     public string Path { get; } = path;

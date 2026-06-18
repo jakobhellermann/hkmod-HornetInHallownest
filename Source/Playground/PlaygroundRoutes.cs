@@ -7,6 +7,7 @@ using System.Reflection;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
+using HornetPlayer.DevServer;
 namespace HornetPlayer.Playground;
 
 // Game-agnostic debug routes: scene inspection, field/method poking, screenshots. A port of DevUtils' DevRoutes,

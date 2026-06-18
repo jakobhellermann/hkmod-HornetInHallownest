@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+using HornetPlayer.DevServer;
 namespace HornetPlayer.Playground;
 
 // MonoBehaviour that lives on a DontDestroyOnLoad GameObject. It pumps the debug server's request queue each frame on

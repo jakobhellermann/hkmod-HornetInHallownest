@@ -3,6 +3,7 @@ using HornetPlayer.Playground;
 using Modding;
 using UnityEngine;
 
+using HornetPlayer.DevServer;
 namespace HornetPlayer;
 
 public class HornetPlayerMod : Mod, ITogglableMod {
@@ -33,7 +34,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             BundleSpike.Run();
             return new { ok = true };
         });
-        DebugServer.MapPost("/play-clip", req => BundleSpike.PlayClip(req["name"]));
         DebugServer.MapPost("/spawn-real", _ => BundleSpike.SpawnReal());
         DebugServer.MapPost("/despawn-real", _ => BundleSpike.DespawnReal());
         DebugServer.MapPost("/diagnose-awake", _ => BundleSpike.DiagnoseAwake());
