@@ -30,6 +30,11 @@ internal static class Stub {
         Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped");
         Skip(typeof(Silksong::KeepWorldScalePositive), "OnEnable");
         Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.SetPolygonCollider), "OnEnter");
+        Skip(typeof(Silksong::HeroNailImbuement), "Awake");
+        Skip(typeof(Silksong::FollowTransform), "OnEnable");
+        // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
+        // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
+        // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.
     }
 
     // Stub every method named `method` on `type` (all overloads/visibilities) to log-once + return default.
