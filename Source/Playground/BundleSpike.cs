@@ -68,6 +68,7 @@ internal static class BundleSpike {
     internal static object SpawnReal() {
         if (heroPrefab == null) return new { error = "hero prefab not loaded" };
         SilksongBootstrap.Ensure();
+        GlobalSettingsBootstrap.Apply(); // assign GlobalSettings _instance from the loaded SOs (bypass Addressables)
         if (real != null) { Object.Destroy(real); real = null; }
 
         // Instantiate INACTIVE so we can patch null fields (missing-environment refs) before Awake runs, then activate.

@@ -51,6 +51,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         SilksongLoadSpike.Cleanup();
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
+        GlobalSettingsBootstrap.Cleanup();
         Stub.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
