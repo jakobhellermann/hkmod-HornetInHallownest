@@ -410,30 +410,39 @@ internal static class BundleSpike {
         staging.SetActive(false);
         var inst = Object.Instantiate(heroPrefab, staging.transform);
 
-        // Only REFERENCE-type custom-serializable fields are informative (value-type structs are never null).
-        var populatedTypes = new HashSet<string>();
-        var nullTypes = new HashSet<string>();
-        int populated = 0, nullCount = 0;
+        // Group reference-type custom-serializable fields by the OWNING component's assembly. The control is
+        // TeamCherry.TK2D (e.g. tk2dSpriteCollectionData.spriteDefinitions : tk2dSpriteDefinition[]): HK-native, NOT
+        // renamed, NOT runtime-injected, but loaded from the SAME bundle (same version skew). If tk2d's nested data
+        // populates while Silksong.AssemblyCSharp's stays null, the gap is specific to our renamed/injected assembly.
+        var perAsm = new Dictionary<string, (int withData, int empty)>();
+        var examples = new List<string>();
         foreach (var comp in inst.GetComponentsInChildren<Component>(true)) {
             if (comp == null) continue;
             var ct = comp.GetType();
-            var asm = ct.Assembly.GetName().Name;
-            if (asm != "Silksong.AssemblyCSharp" && asm != "Silksong.AssemblyCSharpfirstpass") continue;
             foreach (var fi in ct.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
                 if (!IsUnitySerialized(fi)) continue;
                 var et = ElementType(fi.FieldType);
                 if (!IsCustomSerializable(et) || et.IsValueType) continue; // reference types only
+                var asm = et.Assembly.GetName().Name; // group by the FIELD TYPE's assembly (main vs firstpass vs ...)
                 var val = fi.GetValue(comp);
-                var empty = val == null || (val is System.Array a && a.Length == 0);
-                var label = $"{et.Name}{(fi.FieldType.IsArray ? "[]" : "")}";
-                if (empty) { nullCount++; nullTypes.Add(label); } else { populated++; populatedTypes.Add(label); }
+                var hasData = val != null
+                    && !(val is System.Array a && a.Length == 0)
+                    && !(val is System.Collections.IList l && l.Count == 0);
+                perAsm.TryGetValue(asm, out var cur);
+                perAsm[asm] = hasData ? (cur.withData + 1, cur.empty) : (cur.withData, cur.empty + 1);
+                if (!hasData && examples.Count < 30) examples.Add($"NULL {asm}: {ct.Name}.{fi.Name} = {et.FullName}");
             }
         }
         Object.DestroyImmediate(staging);
-        Log.Info($"[ScanSerializable] reference-type custom-serializable: {populated} populated, {nullCount} null");
-        Log.Info($"[ScanSerializable] POPULATED types: {string.Join(", ", populatedTypes.OrderBy(x => x))}");
-        Log.Info($"[ScanSerializable] NULL types: {string.Join(", ", nullTypes.OrderBy(x => x))}");
-        return new { populated, nullCount, populatedTypes = populatedTypes.OrderBy(x => x), nullTypes = nullTypes.OrderBy(x => x) };
+        Log.Info("[ScanSerializable] reference-type custom-serializable, per owning assembly (withData / empty-or-null):");
+        foreach (var kv in perAsm.OrderBy(k => k.Key))
+            Log.Info($"[ScanSerializable]   {kv.Key}: {kv.Value.withData} withData, {kv.Value.empty} empty/null");
+        foreach (var e in examples) Log.Info($"[ScanSerializable]   POPULATED {e}");
+        return new {
+            perAssembly = perAsm.OrderBy(k => k.Key)
+                .Select(k => new { asm = k.Key, withData = k.Value.Item1, empty = k.Value.Item2 }).ToList(),
+            examples,
+        };
     }
 
     private static bool IsUnitySerialized(System.Reflection.FieldInfo fi) {
@@ -446,12 +455,15 @@ internal static class BundleSpike {
         t.IsArray ? t.GetElementType()! :
         (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(List<>)) ? t.GetGenericArguments()[0] : t;
 
+    // A game-content custom [Serializable] class (not a UnityEngine.Object PPtr, not a primitive/string/enum, not a
+    // BCL/UnityEngine type). Scans every assembly so we can compare native (TeamCherry.*) vs renamed (Silksong.*).
     private static bool IsCustomSerializable(System.Type t) {
         if (t == null || t.IsPrimitive || t.IsEnum || t == typeof(string)) return false;
         if (typeof(UnityEngine.Object).IsAssignableFrom(t)) return false; // PPtr — handled natively
+        if (!t.IsSerializable) return false;
         var asm = t.Assembly.GetName().Name;
-        if (asm != "Silksong.AssemblyCSharp" && asm != "Silksong.AssemblyCSharpfirstpass") return false;
-        return t.IsSerializable; // [Serializable] custom class/struct from our assembly
+        if (asm.StartsWith("System") || asm.StartsWith("Unity") || asm == "mscorlib" || asm == "netstandard") return false;
+        return true;
     }
 
     internal static void Cleanup() {

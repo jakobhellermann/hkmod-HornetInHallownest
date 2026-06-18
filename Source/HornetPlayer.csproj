@@ -107,9 +107,17 @@
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <!-- Deploy all B2 libs (prefixed Silksong game assemblies + the Unity-package/Silksong-only deps HK lacks). -->
+        <!-- The two PREFIXED Silksong game assemblies must go to Managed/ ROOT, not Mods/: Unity only resolves nested
+             custom-[Serializable] types from assemblies registered in ScriptingAssemblies.json, which it loads from
+             Managed root at startup. In Mods/ (+ registered) the types still come out null (verified). Placing them in
+             Mods would also double-load (registered copy + Modding-API copy). One-time setup adds them to
+             ScriptingAssemblies.json — see docs/experiment-scriptingassemblies.md. -->
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/Silksong.AssemblyCSharp.dll;$(MSBuildProjectDirectory)/lib/Silksong.AssemblyCSharpfirstpass.dll"
+              DestinationFolder="$(HollowKnightRefs)" SkipUnchangedFiles="true"/>
+        <!-- The remaining B2 libs (Unity-package / Silksong-only deps HK lacks) go to Mods/ alongside the mod dll. -->
         <ItemGroup>
-            <B2Lib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
+            <B2Lib Include="$(MSBuildProjectDirectory)/lib/*.dll"
+                   Exclude="$(MSBuildProjectDirectory)/lib/Silksong.AssemblyCSharp.dll;$(MSBuildProjectDirectory)/lib/Silksong.AssemblyCSharpfirstpass.dll"/>
         </ItemGroup>
         <Copy SourceFiles="@(B2Lib)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
     </Target>
