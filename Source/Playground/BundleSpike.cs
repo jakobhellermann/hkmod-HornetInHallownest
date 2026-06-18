@@ -27,6 +27,16 @@ internal static class BundleSpike {
         RemappedMonoScripts,                          // remapped MonoScripts -> Silksong.*
         Aa + "herocollections_assets_shared.bundle",  // tk2dSpriteCollectionData + materials
         Aa + "herodynamic_assets_all.bundle",         // tk2dSpriteAnimation (the clip library)
+        Aa + "herostatic_assets_all.bundle",          // hero static assets / effect prefabs
+        Aa + "herosfxstatic_assets_all.bundle",       // hero sfx / effect prefabs
+        Aa + "herocollections_assets_tools.bundle",   // tool sprite collections
+        Aa + "herocollections_assets_crestarchitect.bundle",
+        Aa + "herocollections_assets_crestbeast.bundle",
+        Aa + "herocollections_assets_crestcloakless.bundle",
+        Aa + "herocollections_assets_crestreaper.bundle",
+        Aa + "herocollections_assets_crestshaman.bundle",
+        Aa + "herocollections_assets_crestwanderer.bundle",
+        Aa + "herocollections_assets_crestwitch.bundle",
     };
     private const string PrefabBundlePath = Aa + "heroloading_assets_all.bundle";
 
@@ -69,6 +79,7 @@ internal static class BundleSpike {
         if (hc != null) {
             // wallClingEffect.SetActive(false) at the end of Awake NullRefs when the field is unset.
             EnsureChildField(hc, "wallClingEffect");
+            EnsureEmptyConfigs(hc);
         }
 
         var follower = new GameObject("HornetReal"); // active parent → activating the instance runs Awake/Start
@@ -84,6 +95,19 @@ internal static class BundleSpike {
         var alive = comps.Count(c => c != null);
         Log.Info($"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; Silksong.HeroController.instance set: {Silksong.HeroController.instance != null}");
         return new { ok = true, components = comps.Length, alive };
+    }
+
+    // Unity drops nested custom-serializable arrays (configs/specialConfigs : ConfigGroup[]) when the prefab loads
+    // cross-build (MonoScript bound to the renamed Silksong.* assembly), leaving them null — Awake's `array.Length`
+    // loop then NullRefs. Init them to empty so Awake completes. NOTE: this loses combat/crest config setup; real
+    // values must be repopulated later (the data exists in the bundle, recoverable via rabex).
+    private static void EnsureEmptyConfigs(Component owner) {
+        foreach (var name in new[] { "configs", "specialConfigs" }) {
+            var fi = owner.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (fi == null || fi.GetValue(owner) != null) continue;
+            fi.SetValue(owner, System.Array.CreateInstance(fi.FieldType.GetElementType()!, 0));
+            Log.Info($"[SpawnReal] initialized null array field '{name}' to empty");
+        }
     }
 
     // If a (private, serialized) GameObject field is null, give it a throwaway child so Awake's
@@ -118,7 +142,56 @@ internal static class BundleSpike {
         }
         Log.Info($"[DiagnoseAwake] {nulls.Count} null ref-fields: {string.Join(", ", nulls.Take(60))}");
 
+        // The first array deref in Awake is `configs`/`specialConfigs` loops (array[i].Setup()). Report their shape.
+        foreach (var fn in new[] { "configs", "specialConfigs" }) {
+            var arr = (System.Array?)hc.GetType().GetField(fn, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.GetValue(hc);
+            if (arr == null) { Log.Info($"[DiagnoseAwake] {fn} = NULL"); continue; }
+            var nullElems = 0;
+            for (var i = 0; i < arr.Length; i++) if (arr.GetValue(i) == null) nullElems++;
+            Log.Info($"[DiagnoseAwake] {fn}.Length={arr.Length}, nullElements={nullElems}");
+        }
+
+        // Decisive binding test: are serialized fields applied at all? wallClingEffect/vignette/heroBox are internal
+        // child PPtrs that MUST resolve within the instantiated prefab. If null while the child object exists, the
+        // MonoBehaviour serialized data was not applied (MonoScript/type-tree binding gap).
+        foreach (var fn in new[] { "wallClingEffect", "vignette", "heroBox" }) {
+            var fi = hc.GetType().GetField(fn, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            var val = fi?.GetValue(hc) as UnityEngine.Object;
+            Log.Info($"[DiagnoseAwake] field {fn}: bound={(val != null)}");
+        }
+        var childExists = inst.transform.Find("Effects/Tool_wall_cling_effect") != null;
+        Log.Info($"[DiagnoseAwake] child 'Effects/Tool_wall_cling_effect' exists in prefab: {childExists}");
+
+        // Probe: can the nested ConfigGroup type and its Config field type (HeroControllerConfig) actually load?
+        // If Unity can't construct ConfigGroup at deserialize time, it drops the whole `configs` array to null.
+        try {
+            var asm = hc.GetType().Assembly;
+            var cgType = asm.GetType("Silksong.HeroController+ConfigGroup");
+            var cfgType = asm.GetType("Silksong.HeroControllerConfig");
+            Log.Info($"[DiagnoseAwake] typeof ConfigGroup={cgType != null}, HeroControllerConfig={cfgType != null}");
+            if (cgType != null) {
+                var instCg = System.Activator.CreateInstance(cgType);
+                Log.Info($"[DiagnoseAwake] new ConfigGroup() OK = {instCg != null}");
+            }
+        } catch (Exception e) {
+            Log.Info($"[DiagnoseAwake] ConfigGroup type/ctor FAILED: {(e.InnerException ?? e).GetType().Name}: {(e.InnerException ?? e).Message}");
+        }
+
+        // Probe Unity's managed serializer on our runtime-loaded ConfigGroup type. If JsonUtility round-trips the
+        // public fields, Unity CAN reflect/serialize the type (so bundle-transfer skip is something else, and
+        // repopulation via JsonUtility.FromJson is viable); if it returns "{}", Unity ignores the type entirely.
+        try {
+            var cgType = hc.GetType().Assembly.GetType("Silksong.HeroController+ConfigGroup");
+            var cg = System.Activator.CreateInstance(cgType!);
+            cgType!.GetField("ActiveRoot")?.SetValue(cg, inst); // a non-null UnityEngine.Object public field
+            var json = UnityEngine.JsonUtility.ToJson(cg);
+            Log.Info($"[DiagnoseAwake] JsonUtility.ToJson(ConfigGroup) = {json}");
+        } catch (Exception e) {
+            Log.Info($"[DiagnoseAwake] JsonUtility probe failed: {(e.InnerException ?? e).Message}");
+        }
+
         EnsureChildField(hc, "wallClingEffect");
+        EnsureEmptyConfigs(hc);
         var awake = hc.GetType().GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic);
         string result;
         try {
@@ -280,6 +353,49 @@ internal static class BundleSpike {
         }
         Fix(inst.GetComponent<Renderer>()?.sharedMaterials);
         Log.Info($"[BundleSpike] remapped {fixedCount} materials to tk2d/BlendVertexColor");
+    }
+
+    // One-shot test for the user's hypothesis: is `configs` null because the prefab's external PPtrs aren't resolved?
+    // Full reload with the ENTIRE addressables dependency closure resident BEFORE LoadAsset (so every external PPtr
+    // resolves), then report configs. If configs flips null->populated, unresolved externals WERE the cause.
+    internal static object ReloadWithAllDeps(string listPath) {
+        Cleanup();
+        if (!System.IO.File.Exists(listPath)) return new { error = $"no list at {listPath}" };
+
+        var monoB = AssetBundle.LoadFromFile(RemappedMonoScripts);
+        if (monoB != null) bundles.Add(monoB);
+
+        int ok = 0, fail = 0, skipped = 0;
+        foreach (var raw in System.IO.File.ReadAllLines(listPath)) {
+            var name = raw.Trim();
+            if (name.Length == 0) continue;
+            // Skip the ORIGINAL monoscripts (would conflict with our remapped CAB) and heroloading (loaded below).
+            if (name.Contains("monoscripts") || name.Contains("heroloading")) { skipped++; continue; }
+            var b = AssetBundle.LoadFromFile(Aa + name);
+            if (b != null) { bundles.Add(b); ok++; } else fail++;
+        }
+        Log.Info($"[ReloadAllDeps] deps loaded: {ok} ok, {fail} failed, {skipped} skipped");
+
+        bundle = AssetBundle.LoadFromFile(PrefabBundlePath);
+        if (bundle == null) return new { error = "heroloading load failed" };
+        bundles.Add(bundle);
+        var heroName = bundle.GetAllAssetNames().FirstOrDefault(n => n.ToLowerInvariant().Contains("hero_hornet"));
+        heroPrefab = heroName != null ? bundle.LoadAsset<GameObject>(heroName) : null;
+        if (heroPrefab == null) return new { error = "Hero_Hornet LoadAsset failed" };
+
+        var staging = new GameObject("hp_depcheck");
+        staging.SetActive(false);
+        var inst = Object.Instantiate(heroPrefab, staging.transform);
+        var hc = inst.GetComponent<Silksong.HeroController>();
+        var fi = hc.GetType().GetField("configs", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        var arr = (System.Array?)fi?.GetValue(hc);
+        // Also probe whether an external PPtr now resolves (jumpEffectPrefab) vs before.
+        var jf = hc.GetType().GetField("jumpEffectPrefab", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        var jumpResolved = (jf?.GetValue(hc) as UnityEngine.Object) != null;
+        var configsLen = arr?.Length ?? -1;
+        Log.Info($"[ReloadAllDeps] configs: null={arr == null}, length={configsLen}; jumpEffectPrefab resolved={jumpResolved}");
+        Object.DestroyImmediate(staging);
+        return new { depsOk = ok, depsFailed = fail, configsNull = arr == null, configsLength = configsLen, jumpEffectResolved = jumpResolved };
     }
 
     internal static void Cleanup() {

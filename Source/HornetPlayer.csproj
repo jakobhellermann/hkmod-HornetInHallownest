@@ -84,6 +84,9 @@
         <Reference Include="UnityEngine.CoreModule" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.CoreModule.dll</HintPath>
         </Reference>
+        <Reference Include="UnityEngine.JSONSerializeModule" Private="false">
+            <HintPath>$(HollowKnightRefs)/UnityEngine.JSONSerializeModule.dll</HintPath>
+        </Reference>
         <Reference Include="UnityEngine.ImageConversionModule" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.ImageConversionModule.dll</HintPath>
         </Reference>
