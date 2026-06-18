@@ -23,7 +23,7 @@ for (var i = 2; i < args.Length; i++) {
 managed ??= Path.GetDirectoryName(Path.GetFullPath(inputs[0]))!;
 Directory.CreateDirectory(outDir);
 
-var resolver = new DefaultAssemblyResolver();
+var resolver = new InMemoryResolver();
 resolver.AddSearchDirectory(managed);
 var readerParams = new ReaderParameters { AssemblyResolver = resolver };
 
@@ -39,20 +39,40 @@ var rename = asms.ToDictionary(a => a.Name.Name, a => NewName(a.Name.Name));
 // working — PlayMaker looks up FsmStateActions by full type name, and Unity resolves nested [Serializable] classes
 // by name too; prefixing namespaces broke both. The shadow seam still holds: a renamed assembly's internal type
 // references (e.g. HeroController -> GameManager) resolve within the same (renamed) assembly, not to HK's.
+// Pass 1: rename every assembly (self + cross-references to other in-set assemblies). Done for ALL before writing
+// any, so that when an assembly that references another in-set one is written, the reference already points at the
+// final new name and the renamed target can be resolved from memory (registered below) — independent of write order.
 foreach (var asm in asms) {
     var module = asm.MainModule;
-
     // Rename cross-references to other in-set assemblies (the scope of all their type refs follows automatically).
     foreach (var r in module.AssemblyReferences)
         if (rename.TryGetValue(r.Name, out var nn)) r.Name = nn;
-
     // Rename the assembly itself.
     var newName = rename[asm.Name.Name];
     asm.Name.Name = newName;
     module.Name = newName + ".dll";
-    var outPath = Path.Combine(outDir, newName + ".dll");
+}
+
+// Register the renamed in-memory assemblies so cross-references (e.g. Silksong.AssemblyCSharp -> Silksong.PlayMaker)
+// resolve to them at write time, even though no file exists yet on disk. Cecil resolves referenced assemblies during
+// Write; without this it would fail on the not-yet-written renamed target.
+foreach (var asm in asms) resolver.Add(asm);
+
+// Pass 2: write.
+foreach (var asm in asms) {
+    var outPath = Path.Combine(outDir, asm.Name.Name + ".dll");
     asm.Write(outPath);
-    Console.WriteLine($"wrote {outPath} ({module.Types.Count} types)");
+    Console.WriteLine($"wrote {outPath} ({asm.MainModule.Types.Count} types)");
 }
 
 return 0;
+
+// Resolver that serves the in-memory (renamed) assemblies by their new simple name, so cross-references between the
+// prefixed set resolve at write time before any file exists. Falls back to the base directory search for everything
+// else (UnityEngine, etc.).
+class InMemoryResolver : DefaultAssemblyResolver {
+    private readonly Dictionary<string, AssemblyDefinition> registered = new();
+    public void Add(AssemblyDefinition asm) => registered[asm.Name.Name] = asm;
+    public override AssemblyDefinition Resolve(AssemblyNameReference name) =>
+        registered.TryGetValue(name.Name, out var asm) ? asm : base.Resolve(name);
+}

@@ -4,8 +4,11 @@
 #  - Every other managed assembly Silksong has but HK lacks (Unity packages: Addressables/ResourceManager/Burst/
 #    Collections/Mathematics/Timeline/… + Coffee.SoftMaskForUGUI, TeamCherry.Splines, Newtonsoft.Json.UnityConverters):
 #    copied verbatim (HK lacks them, so no collision; they're engine-agnostic and load fine).
-# Shared assemblies (UnityEngine*, TeamCherry.TK2D/PlayMaker/Newtonsoft, System/Mono) are NOT copied — Silksong.* binds
-# to HK's at runtime (and tk2d MUST stay shared so the ported HeroController and the asset-bundle agree on tk2d types).
+# Shared assemblies (UnityEngine*, TeamCherry.TK2D/Newtonsoft, System/Mono) are NOT copied — Silksong.* binds to HK's
+# at runtime (and tk2d MUST stay shared so the ported HeroController and the asset-bundle agree on tk2d types).
+#  - PlayMaker is the exception: it is PREFIXED (Silksong.PlayMaker), NOT shared. HK and Silksong ship different
+#    PlayMaker versions and a shared one means a single global action-type lookup serving both games -> name
+#    collisions break each other's FSMs. Prefixing gives Silksong its own isolated PlayMaker runtime.
 #
 # Re-run after a Silksong update to regenerate. Output (Source/lib/*.dll) is gitignored.
 set -euo pipefail
@@ -17,10 +20,10 @@ LIB="$HERE/../Source/lib"
 mkdir -p "$LIB"
 rm -f "$LIB"/*.dll
 
-echo "== prefixing Assembly-CSharp + firstpass -> Silksong.* =="
+echo "== prefixing Assembly-CSharp + firstpass + PlayMaker -> Silksong.* =="
 dotnet run -c Release --project "$HERE/SilksongPrefixer" -- \
   Silksong "$LIB" --managed "$SS" \
-  "$SS/Assembly-CSharp.dll" "$SS/Assembly-CSharp-firstpass.dll"
+  "$SS/Assembly-CSharp.dll" "$SS/Assembly-CSharp-firstpass.dll" "$SS/PlayMaker.dll"
 
 echo "== copying Silksong-only / Unity-package deps HK lacks =="
 n=0

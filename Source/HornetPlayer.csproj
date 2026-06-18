@@ -42,6 +42,12 @@
         <Reference Include="Silksong.AssemblyCSharpfirstpass" Private="true" Aliases="Silksong">
             <HintPath>lib/Silksong.AssemblyCSharpfirstpass.dll</HintPath>
         </Reference>
+        <!-- Silksong's PlayMaker, prefixed so it doesn't collide with HK's shared PlayMaker. Its HutongGames.PlayMaker.*
+             types share full names with HK's, so the `SilksongPM` extern alias disambiguates (SilksongPM::...ActionData
+             vs HK's ActionData). PlayMakerFix seeds its isolated type caches so Hornet's FSMs resolve to Silksong. -->
+        <Reference Include="Silksong.PlayMaker" Private="true" Aliases="SilksongPM">
+            <HintPath>lib/Silksong.PlayMaker.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
 
