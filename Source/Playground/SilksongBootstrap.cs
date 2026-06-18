@@ -66,6 +66,15 @@ internal static class SilksongBootstrap {
             typeof(Silksong::InputHandler).GetField("buttonQueueTimers", BindingFlags.NonPublic | BindingFlags.Instance)
                 ?.SetValue(ih, new float[habLen]);
 
+            // FSM input actions (GetWasButtonPressedQueued, …) read the InputHandler via
+            // ManagerSingleton<InputHandler>.Instance, whose fallback is FindAnyObjectByType<T>() — which EXCLUDES
+            // inactive objects, so it never finds our ih on the inactive bootstrap GO (-> NullRef in the action).
+            // HeroController reaches ih directly (gm.GetComponent), which is why basic input worked but FSM actions
+            // didn't. Register ih as the singleton so the FSM path resolves too.
+            typeof(Silksong::ManagerSingleton<Silksong::InputHandler>)
+                .GetProperty("UnsafeInstance", BindingFlags.Public | BindingFlags.Static)
+                ?.GetSetMethod(true)?.Invoke(null, new object[] { ih });
+
             // gm.cameraCtrl (private-set property) is null -> SendHeroInPosition's gm.cameraCtrl.ResetStartTimer()
             // NullRefs. Provide a bare CameraController (on the inactive GO => no heavy Awake); ResetStartTimer just
             // sets a float. Assign via the property's backing field.

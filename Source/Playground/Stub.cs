@@ -51,6 +51,9 @@ internal static class Stub {
         // wrapper discards the out-results (`out var _`), so stubbing is behaviorally free; Unity colliders still
         // handle real collision.
         Skip(typeof(Silksong::HeroController), "CheckForBump");
+        // SetParticleScale.OnUpdate (ticked every frame via SetParticleScaleCallbackHooks) derefs a null parentBody
+        // (Rigidbody2D.IsAwake) -> per-frame NullRef. Cosmetic particle scaling -> stub.
+        Skip(typeof(Silksong::SetParticleScale), "OnUpdate");
         Skip(typeof(Silksong::DeliveryQuestItem), "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
