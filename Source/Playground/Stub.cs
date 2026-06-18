@@ -32,9 +32,28 @@ internal static class Stub {
         Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.SetPolygonCollider), "OnEnter");
         Skip(typeof(Silksong::HeroNailImbuement), "Awake");
         Skip(typeof(Silksong::FollowTransform), "OnEnable");
+        // Input-listener FSM actions (ListenForAttack/Dash/QuickMap/Superdash/…) read InControl input state that
+        // isn't alive in our context (InControl InputManager not initialized) -> NullRef in PlayerAction.WasPressed.
+        // For a no-input bring-up we no-op them all (no input -> they'd fire no events anyway). Category stub.
+        SkipAllInNamespace("HutongGames.PlayMaker.Actions", "ListenFor", "OnUpdate");
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
         // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.
+    }
+
+    // Stub `method` on every Silksong type in `ns` whose name starts with `prefix` (category stub).
+    internal static void SkipAllInNamespace(string ns, string prefix, string method) {
+        Type?[] types;
+        try { types = typeof(Silksong::HeroController).Assembly.GetTypes(); }
+        catch (ReflectionTypeLoadException e) { types = e.Types; }
+        var n = 0;
+        foreach (var t in types) {
+            if (t?.Namespace != ns || !t.Name.StartsWith(prefix)) continue;
+            if (t.GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) == null) continue;
+            Skip(t, method);
+            n++;
+        }
+        Log.Info($"[Stub] category {ns}.{prefix}*::{method} -> {n} types");
     }
 
     // Stub every method named `method` on `type` (all overloads/visibilities) to log-once + return default.

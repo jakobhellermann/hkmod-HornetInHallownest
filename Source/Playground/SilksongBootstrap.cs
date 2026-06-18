@@ -22,7 +22,10 @@ internal static class SilksongBootstrap {
             gmGo = new GameObject("Silksong_GameManager");
             gmGo.SetActive(false); // inactive => GameManager/InputHandler Awake never runs
             var gm = gmGo.AddComponent<Silksong::GameManager>();
-            gmGo.AddComponent<Silksong::InputHandler>(); // so gm.GetComponent<InputHandler>() resolves
+            var ih = gmGo.AddComponent<Silksong::InputHandler>(); // so gm.GetComponent<InputHandler>() resolves
+            // GO is inactive => InputHandler.Awake never runs, so inputActions stays null and every input check
+            // (CanAttackAction, ListenForAttack/Dash/... FSM actions) NullRefs. Construct it like InputHandler does.
+            ih.inputActions = new Silksong::HeroActions();
             Object.DontDestroyOnLoad(gmGo);
 
             Silksong::GameManager._instance = gm;
