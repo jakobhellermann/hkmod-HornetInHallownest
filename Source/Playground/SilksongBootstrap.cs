@@ -18,6 +18,10 @@ internal static class SilksongBootstrap {
     // The HeroActions InControl set we create; InputBridge drives its actions from the keyboard each frame.
     internal static Silksong::HeroActions? InputActions { get; private set; }
 
+    // The bootstrap InputHandler. Exposed so InputBridge can run the per-frame InputHandler bookkeeping that never
+    // happens (its GO is inactive, so InputHandler.Update doesn't run) — e.g. clearing ForceDreamNailRePress.
+    internal static Silksong::InputHandler? Handler { get; private set; }
+
     internal static void Ensure() {
         if (done) return;
         done = true;
@@ -55,6 +59,7 @@ internal static class SilksongBootstrap {
             // (CanAttackAction, ListenForAttack/Dash/... FSM actions) NullRefs. Construct it like InputHandler does.
             ih.inputActions = new Silksong::HeroActions();
             InputActions = ih.inputActions;
+            Handler = ih;
 
             // InputHandler.OnAwake (which allocates buttonQueueTimers) never runs on our inactive GO, so
             // GetWasButtonPressedQueued NullRefs. Many of Hornet's FSMs (sprint, brolly/float, …) and HeroController

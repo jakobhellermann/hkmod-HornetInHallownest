@@ -96,6 +96,13 @@ internal sealed class InputDriver : MonoBehaviour {
             var pd = Silksong::PlayerData.instance;
             if (pd != null) pd.silk = pd.silkMax;
 
+            // RegainControl sets InputHandler.ForceDreamNailRePress=true; it's normally cleared in InputHandler.Update
+            // (which never runs on our inactive GO), so it stays true and ListenForDreamNail skips forever -> needolin
+            // (DreamNail) never fires. Replicate the clear: drop it once DreamNail isn't held.
+            var ih = SilksongBootstrap.Handler;
+            if (ih != null && ih.inputActions != null && !ih.inputActions.DreamNail.IsPressed)
+                ih.ForceDreamNailRePress = false;
+
             var ia = SilksongBootstrap.InputActions;
             if (ia == null) return;
             tick++;
