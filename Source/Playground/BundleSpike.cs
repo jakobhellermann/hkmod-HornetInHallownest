@@ -108,6 +108,16 @@ internal static class BundleSpike {
         staging.SetActive(false);
         var inst = Object.Instantiate(heroPrefab, staging.transform);
         var hc = inst.GetComponent<Silksong.HeroController>();
+
+        // Dump null reference-type fields (candidates Awake may deref). Only those whose type is a UnityEngine.Object
+        // or array/collection — value types/strings/primitives are noise.
+        var nulls = new List<string>();
+        foreach (var fi in hc.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+            if (fi.FieldType.IsValueType || fi.FieldType == typeof(string)) continue;
+            if (fi.GetValue(hc) == null) nulls.Add($"{fi.FieldType.Name} {fi.Name}");
+        }
+        Log.Info($"[DiagnoseAwake] {nulls.Count} null ref-fields: {string.Join(", ", nulls.Take(60))}");
+
         EnsureChildField(hc, "wallClingEffect");
         var awake = hc.GetType().GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic);
         string result;
