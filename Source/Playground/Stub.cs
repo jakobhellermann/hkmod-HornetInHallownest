@@ -40,6 +40,12 @@ internal static class Stub {
         // for no-input bring-up. TODO: bootstrap GameCameras/silkSpool for the UI/combat phase.
         Skip(typeof(Silksong::HeroController), "AddSilk");
         Skip(typeof(Silksong::HeroController), "SetupDeliveryItems"); // delivery-quest setup entry — quests irrelevant
+        // StartDashEffect activates dashBurstPrefab/airDashEffect (unresolved external effect prefabs) -> NullRef,
+        // aborting HeroDash after cState.dashing is set but before cooldown/FSM. Purely cosmetic -> stub so dash runs.
+        Skip(typeof(Silksong::HeroController), "StartDashEffect");
+        // gruntAudioTable.SpawnAndPlayOneShot in HeroDash NullRefs in RandomAudioClipTable.CanPlay (audio tables not
+        // set up) -> aborts the dash before cState.dashing is set. Stub the spawn extension (no SFX during bring-up).
+        Skip(typeof(Silksong::RandomAudioClipTableExtensions), "SpawnAndPlayOneShot");
         Skip(typeof(Silksong::DeliveryQuestItem), "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).

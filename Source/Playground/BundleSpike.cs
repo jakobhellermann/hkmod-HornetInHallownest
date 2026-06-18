@@ -249,29 +249,28 @@ internal static class BundleSpike {
         };
     }
 
-    // Pin down why move_input stays 0: call UpdateMoveInput (trivial assign) and LookForInput (the gated caller)
-    // directly, catching exceptions, and report move_input after each.
+    // READ-ONLY input/dash diagnostics: enabled-state + CanDash() (a pure query) + its gating fields. Does NOT invoke
+    // Update/LookForInput/HeroDashPressed — those mutate hero state (and Update's FailSafeChecks can destroy the hero).
     internal static object DiagInput() {
         if (real == null) return new { error = "not spawned" };
         var hc = real.GetComponentInChildren<Silksong::HeroController>();
         if (hc == null) return new { error = "no HeroController" };
         var t = hc.GetType();
         const BindingFlags BF = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-        object MoveInput() => t.GetField("move_input", BF)?.GetValue(hc)!;
-        string Invoke(string name) {
-            try { t.GetMethod(name, BF, null, Type.EmptyTypes, null)!.Invoke(hc, null); return "ok"; }
-            catch (Exception e) { return (e.InnerException ?? e).ToString(); }
-        }
         var comp = (Behaviour)(object)hc;
-        var before = MoveInput();
-        var updRes = Invoke("UpdateMoveInput");
-        var afterUpdate = MoveInput();
-        var lookRes = Invoke("LookForInput");
-        var afterLook = MoveInput();
-        var updateRes = Invoke("Update"); // does the game's own Update throw before reaching LookForInput?
+        object Field(string n) => t.GetField(n, BF)?.GetValue(hc)!;
+        var cs2 = Field("cState");
+        object CsB(string n) => cs2?.GetType().GetField(n, BindingFlags.Instance | BindingFlags.Public)?.GetValue(cs2)!;
+        var pd = Field("playerData") as Silksong::PlayerData;
+        var canDash = (bool?)t.GetMethod("CanDash", BF, null, Type.EmptyTypes, null)?.Invoke(hc, null);
         return new {
-            enabled = comp.enabled, activeAndEnabled = comp.isActiveAndEnabled, activeInHierarchy = comp.gameObject.activeInHierarchy,
-            before, updRes, afterUpdate, lookRes, afterLook, updateRes,
+            enabled = comp.enabled, activeAndEnabled = comp.isActiveAndEnabled,
+            move_input = Field("move_input"), hero_state = Field("hero_state")?.ToString(),
+            dash = new {
+                canDash, hasDash = pd?.hasDash, dashCooldownTimer = Field("dashCooldownTimer"),
+                preventDash = CsB("preventDash"), dashing = CsB("dashing"), airDashed = Field("airDashed"),
+                onGround = CsB("onGround"),
+            },
         };
     }
 

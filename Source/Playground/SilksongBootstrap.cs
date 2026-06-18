@@ -23,6 +23,9 @@ internal static class SilksongBootstrap {
         done = true;
         try {
             var pd = Silksong::PlayerData.instance; // create/get the PlayerData singleton
+            // Fresh PlayerData has every ability false. HeroController.CanDash() gates on playerData.hasDash, so dash
+            // never fires without it. Grant the basic movement ability (other abilities can be added the same way).
+            pd.hasDash = true;
 
             gmGo = new GameObject("Silksong_GameManager");
             gmGo.SetActive(false); // inactive => GameManager/InputHandler Awake never runs
