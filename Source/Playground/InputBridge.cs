@@ -59,10 +59,10 @@ internal sealed class InputDriver : MonoBehaviour {
         ("left", KeyCode.LeftArrow), ("right", KeyCode.RightArrow),
         ("up", KeyCode.UpArrow), ("down", KeyCode.DownArrow),
         ("jump", KeyCode.Z), ("attack", KeyCode.X), ("dash", KeyCode.C),
-        ("superdash", KeyCode.V), // harpoon dash
-        ("cast", KeyCode.B),      // silk skill / special
-        ("quickcast", KeyCode.F), // quick tool / needle throw
-        ("dreamnail", KeyCode.G), // needolin
+        ("superdash", KeyCode.S), // harpoon dash
+        ("cast", KeyCode.F),      // silk skill / special
+        ("quickcast", KeyCode.G), // needle throw / quick tool
+        ("dreamnail", KeyCode.D), // needolin
     };
 
     private void Update() {
@@ -91,6 +91,10 @@ internal sealed class InputDriver : MonoBehaviour {
                     .GetField("isGameplayScene", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 isGameplaySceneField?.SetValue(hero, true);
             }
+
+            // Infinite silk for testing: top it up every frame so silk-cost abilities (harpoon/skills) always fire.
+            var pd = Silksong::PlayerData.instance;
+            if (pd != null) pd.silk = pd.silkMax;
 
             var ia = SilksongBootstrap.InputActions;
             if (ia == null) return;
