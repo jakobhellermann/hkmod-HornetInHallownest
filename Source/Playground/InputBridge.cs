@@ -59,6 +59,10 @@ internal sealed class InputDriver : MonoBehaviour {
         ("left", KeyCode.LeftArrow), ("right", KeyCode.RightArrow),
         ("up", KeyCode.UpArrow), ("down", KeyCode.DownArrow),
         ("jump", KeyCode.Z), ("attack", KeyCode.X), ("dash", KeyCode.C),
+        ("superdash", KeyCode.V), // harpoon dash
+        ("cast", KeyCode.B),      // silk skill / special
+        ("quickcast", KeyCode.F), // quick tool / needle throw
+        ("dreamnail", KeyCode.G), // needolin
     };
 
     private void Update() {
@@ -111,6 +115,8 @@ internal sealed class InputDriver : MonoBehaviour {
 
     private static SsAction? ActionFor(SsActions ia, string name) => name switch {
         "left" => ia.Left, "right" => ia.Right, "up" => ia.Up, "down" => ia.Down,
-        "jump" => ia.Jump, "attack" => ia.Attack, "dash" => ia.Dash, _ => null,
+        "jump" => ia.Jump, "attack" => ia.Attack, "dash" => ia.Dash,
+        "superdash" => ia.SuperDash, "cast" => ia.Cast, "quickcast" => ia.QuickCast, "dreamnail" => ia.DreamNail,
+        _ => null,
     };
 }
