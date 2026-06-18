@@ -219,6 +219,10 @@ internal static class BundleSpike {
     internal static Silksong::HeroController? RealHero =>
         real != null ? real.GetComponentInChildren<Silksong::HeroController>() : null;
 
+    // Root of the spawned Hornet subtree. PlayMakerFix uses it to tell Hornet's FSMs (resolve actions to Silksong)
+    // from HK's FSMs (resolve to HK) — every FSM under here is Silksong-authored.
+    internal static GameObject? HornetRoot => real;
+
     // Dump the live spawned Hornet's movement state (reachable directly via `real`; /inspect can't, it's DontDestroyOnLoad).
     internal static object HeroState() {
         if (real == null) return new { error = "not spawned" };

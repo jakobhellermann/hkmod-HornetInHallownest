@@ -66,6 +66,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();
+        PlayMakerFix.Cleanup();
         Stub.Cleanup();
         InputBridge.Cleanup();
         DebugServer.Stop();

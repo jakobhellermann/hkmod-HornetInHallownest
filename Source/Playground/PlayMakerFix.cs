@@ -1,85 +1,134 @@
 extern alias Silksong;
 using System;
 using System.Collections;
-using System.Linq;
+using System.Collections.Generic;
 using System.Reflection;
 using HutongGames.PlayMaker;
+using MonoMod.RuntimeDetour;
 
 namespace HornetPlayer.Playground;
 
-// PlayMaker resolves FSM action types by full name via ReflectionUtils.GetGlobalType. Two problems for us (we use
-// HK's PlayMaker — PlayMakerFSM's MonoScript isn't remapped):
-//  1. Its fallback assembly scan is cached ONCE (assemblyNames/loadedAssemblies) before our runtime-loaded
-//     Silksong.AssemblyCSharp is in the AppDomain -> Silksong-only actions never found -> "Could Not Create Action".
-//  2. GetGlobalType tries `Type.GetType(name + ",Assembly-CSharp")` FIRST, so any action name that exists in BOTH
-//     HK and Silksong (e.g. SetPolygonCollider) resolves to HK's version (wrong field layout -> NullRef in OnEnter).
-// Fix: seed PlayMaker's `typeLookup` (checked FIRST in GetGlobalType) with Silksong.AssemblyCSharp's action types,
-// so every game action resolves to OUR version. Also reset the stale assembly cache for non-action GetGlobalType
-// lookups (FsmObject/enum types, etc.).
+// HK and Silksong share ONE PlayMaker.dll, so PlayMaker's action-type resolution is global: ActionData.GetActionType
+// maps an action name -> a single Type, cached in the shared ActionTypeLookup. Both games define ~the same action
+// names in their own Assembly-CSharp (HK) / Silksong.AssemblyCSharp. A single name->Type map cannot serve both:
+//   - leave a colliding name to HK  -> Hornet's FSM gets HK's action (wrong field layout) -> NullRef
+//   - seed a colliding name to Silksong -> HK's FSM (bench/stag/scene-transition) gets Silksong's action -> NullRef
+// (The old global-seed approach hit exactly this and broke HK benches/stag/darkness-on-transition.)
+//
+// Clean separation: resolve actions PER-FSM by ownership. LoadActions(FsmState) is the funnel that creates a state's
+// actions and carries state.Fsm (-> owning GameObject). We hook it to flag "this FSM belongs to the spawned Hornet"
+// (its GameObject is under BundleSpike.HornetRoot), and hook GetActionType to honor that flag: Hornet FSMs resolve
+// from Silksong.AssemblyCSharp (our own map/cache, never touching the shared one); every other FSM resolves exactly
+// as vanilla HK. Hashcodes then match on both sides (each FSM gets its own game's action type).
+//
+// NOTE: only ACTION types are separated here. Enum/FsmObject types referenced inside Silksong actions still go through
+// ReflectionUtils.GetGlobalType (shared) — a follow-up if those collide.
 internal static class PlayMakerFix {
+    private static readonly List<Hook> hooks = new();
+
+    // Set true (saved/restored) for the duration of a LoadActions call whose FSM belongs to Hornet.
+    [ThreadStatic] private static bool resolvingHornetFsm;
+
+    // Lazily-built name -> Silksong action Type, plus a resolve cache. Our own; the shared ActionTypeLookup stays
+    // HK-only.
+    private static Dictionary<string, Type>? silksongActions;
+    private static readonly Dictionary<string, Type?> silksongResolveCache = new();
+
     internal static void Apply() {
-        ResetTypeCache();
-        SeedSilksongActionTypes();
-    }
-
-    private static void ResetTypeCache() {
         try {
-            var t = typeof(ReflectionUtils);
-            var f = BindingFlags.NonPublic | BindingFlags.Static;
-            t.GetField("assemblyNames", f)?.SetValue(null, null);
-            t.GetField("loadedAssemblies", f)?.SetValue(null, null);
-            Log.Info("[PlayMakerFix] ReflectionUtils assembly cache reset");
+            PurgeSilksongEntries();
+            InstallHooks();
+            Log.Info("[PlayMakerFix] per-FSM action resolution installed (Hornet -> Silksong, everything else -> HK)");
         } catch (Exception e) {
-            Log.Error($"[PlayMakerFix] cache reset failed: {e}");
+            Log.Error($"[PlayMakerFix] Apply failed: {e}");
         }
     }
 
-    private static void SeedSilksongActionTypes() {
-        try {
-            // Build name -> Silksong type map for the game's PlayMaker action/util types.
-            var asm = typeof(Silksong::HeroController).Assembly; // Silksong.AssemblyCSharp
-            Type?[] types;
-            try { types = asm.GetTypes(); }
-            catch (ReflectionTypeLoadException e) { types = e.Types; }
-            // SCOPED: only seed Silksong-EXCLUSIVE action names. PlayMaker (typeLookup/ActionTypeLookup) is shared
-            // with HK; seeding a name HK ALSO has would make HK's own FSMs (scene fade/darkness on entry+respawn)
-            // resolve OUR version -> they break (screen stays dark). So skip any name HK's Assembly-CSharp defines —
-            // those keep resolving to HK's. Hornet's Silksong-only actions still resolve to ours.
-            var map = new System.Collections.Generic.Dictionary<string, Type>();
-            var collisions = new System.Collections.Generic.List<string>();
-            foreach (var t in types) {
-                var ns = t?.Namespace;
-                if (ns != "HutongGames.PlayMaker.Actions" && ns != "HutongGames.PlayMaker") continue;
-                if (Type.GetType(t!.FullName + ", Assembly-CSharp") != null) { collisions.Add(t.FullName!); continue; }
-                map[t.FullName!] = t;
-            }
-            // Un-clobber any colliding names a previous (unscoped) seed wrote, so HK's FSMs re-resolve to HK's.
-            RemoveFrom(typeof(ReflectionUtils), "typeLookup", collisions);
-            RemoveFrom(typeof(ActionData), "ActionTypeLookup", collisions);
-            Log.Info($"[PlayMakerFix] {collisions.Count} colliding action names left to HK (scoped seed)");
-
-            // Seed BOTH caches: ReflectionUtils.typeLookup (used by GetGlobalType) AND ActionData.ActionTypeLookup
-            // (GetActionType's OWN cache, checked first — HK's menu FSMs populate it with HK's colliding versions
-            // before our seed, so seeding only ReflectionUtils wasn't enough). Both keyed by full action name; our
-            // Silksong types override HK's, so colliding actions (e.g. SetPolygonCollider) resolve to OUR layout.
-            var seededRefl = SeedInto(typeof(ReflectionUtils), "typeLookup", map);
-            var seededAction = SeedInto(typeof(ActionData), "ActionTypeLookup", map);
-            Log.Info($"[PlayMakerFix] seeded {map.Count} Silksong action types (typeLookup={seededRefl}, ActionTypeLookup={seededAction})");
-        } catch (Exception e) {
-            Log.Error($"[PlayMakerFix] seed failed: {e}");
-        }
+    internal static void Cleanup() {
+        foreach (var h in hooks) h.Dispose();
+        hooks.Clear();
+        resolvingHornetFsm = false;
     }
 
-    private static void RemoveFrom(Type owner, string field, System.Collections.Generic.List<string> keys) {
+    // The shared caches live in PlayMaker.dll (not reloaded on hot-reload), so an earlier global-seed run can leave
+    // Silksong action types cached against names HK FSMs use. Remove any Silksong-typed entries so HK re-resolves to
+    // its own — without this, a hot-reload wouldn't undo the old pollution (and a restart would still hit it once the
+    // mod re-ran the old seed).
+    private static void PurgeSilksongEntries() {
+        var silksongAsm = typeof(Silksong::HeroController).Assembly;
+        PurgeFrom(typeof(ActionData), "ActionTypeLookup", silksongAsm);
+        PurgeFrom(typeof(ReflectionUtils), "typeLookup", silksongAsm);
+    }
+
+    private static void PurgeFrom(Type owner, string field, Assembly silksongAsm) {
         var dict = (IDictionary?)owner.GetField(field, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null);
         if (dict == null) return;
-        foreach (var k in keys) if (dict.Contains(k)) dict.Remove(k);
+        var stale = new List<object>();
+        foreach (DictionaryEntry e in dict)
+            if (e.Value is Type t && t.Assembly == silksongAsm) stale.Add(e.Key);
+        foreach (var k in stale) dict.Remove(k);
+        if (stale.Count > 0) Log.Info($"[PlayMakerFix] purged {stale.Count} stale Silksong entries from {owner.Name}.{field}");
     }
 
-    private static bool SeedInto(Type owner, string field, System.Collections.Generic.Dictionary<string, Type> map) {
-        var dict = (IDictionary?)owner.GetField(field, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null);
-        if (dict == null) { Log.Error($"[PlayMakerFix] {owner.Name}.{field} not found"); return false; }
-        foreach (var kv in map) dict[kv.Key] = kv.Value;
-        return true;
+    private static void InstallHooks() {
+        var loadActions = typeof(ActionData).GetMethod("LoadActions",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(FsmState) }, null);
+        var getActionType = typeof(ActionData).GetMethod("GetActionType",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static, null, new[] { typeof(string) }, null);
+        if (loadActions == null || getActionType == null)
+            throw new InvalidOperationException($"PlayMaker methods not found (LoadActions={loadActions != null}, GetActionType={getActionType != null})");
+
+        hooks.Add(new Hook(loadActions,
+            new Func<Func<ActionData, FsmState, FsmStateAction[]>, ActionData, FsmState, FsmStateAction[]>(LoadActionsHook)));
+        hooks.Add(new Hook(getActionType,
+            new Func<Func<string, Type>, string, Type>(GetActionTypeHook)));
+    }
+
+    // Flag whether the state's FSM is Hornet's, for the duration of action loading (save/restore handles nested loads).
+    private static FsmStateAction[] LoadActionsHook(
+        Func<ActionData, FsmState, FsmStateAction[]> orig, ActionData self, FsmState state) {
+        var prev = resolvingHornetFsm;
+        resolvingHornetFsm = IsHornetFsm(state?.Fsm);
+        try { return orig(self, state); }
+        finally { resolvingHornetFsm = prev; }
+    }
+
+    // For Hornet FSMs, resolve the action name from Silksong.AssemblyCSharp; otherwise vanilla (HK) resolution.
+    private static Type GetActionTypeHook(Func<string, Type> orig, string actionName) {
+        if (resolvingHornetFsm) {
+            var t = ResolveSilksongAction(actionName);
+            if (t != null) return t;
+        }
+        return orig(actionName);
+    }
+
+    private static bool IsHornetFsm(Fsm? fsm) {
+        var root = BundleSpike.HornetRoot;
+        if (fsm == null || root == null) return false;
+        var go = fsm.GameObject;
+        return go != null && go.transform.IsChildOf(root.transform);
+    }
+
+    private static Type? ResolveSilksongAction(string actionName) {
+        if (silksongResolveCache.TryGetValue(actionName, out var cached)) return cached;
+        silksongActions ??= BuildSilksongActionMap();
+        silksongActions.TryGetValue(actionName, out var t);
+        silksongResolveCache[actionName] = t;
+        return t;
+    }
+
+    private static Dictionary<string, Type> BuildSilksongActionMap() {
+        var map = new Dictionary<string, Type>();
+        var asm = typeof(Silksong::HeroController).Assembly;
+        Type?[] types;
+        try { types = asm.GetTypes(); }
+        catch (ReflectionTypeLoadException e) { types = e.Types; }
+        var actionBase = typeof(FsmStateAction);
+        foreach (var t in types) {
+            if (t == null || t.IsAbstract || !actionBase.IsAssignableFrom(t)) continue;
+            map[t.FullName!] = t;
+        }
+        Log.Info($"[PlayMakerFix] built Silksong action map: {map.Count} types");
+        return map;
     }
 }
