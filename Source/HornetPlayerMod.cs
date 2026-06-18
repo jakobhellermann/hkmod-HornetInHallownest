@@ -36,6 +36,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/play-clip", req => BundleSpike.PlayClip(req["name"]));
         DebugServer.MapPost("/spawn-real", _ => BundleSpike.SpawnReal());
         DebugServer.MapPost("/despawn-real", _ => BundleSpike.DespawnReal());
+        DebugServer.MapPost("/diagnose-awake", _ => BundleSpike.DiagnoseAwake());
         DebugServer.Start(host, DebugServerPort);
 
         SilksongLoadSpike.Run();
@@ -45,6 +46,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
     public void Unload() {
         SilksongLoadSpike.Cleanup();
         BundleSpike.Cleanup();
+        SilksongBootstrap.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;

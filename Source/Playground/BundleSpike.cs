@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -55,25 +56,71 @@ internal static class BundleSpike {
     // missing" list (e.g. GameManager.instance null, input/camera singletons absent).
     internal static object SpawnReal() {
         if (heroPrefab == null) return new { error = "hero prefab not loaded" };
+        SilksongBootstrap.Ensure();
         if (real != null) { Object.Destroy(real); real = null; }
 
-        GameObject inst;
-        try {
-            inst = Object.Instantiate(heroPrefab); // active → Awake/Start run synchronously
-        } catch (Exception e) {
-            Log.Error($"[SpawnReal] Instantiate threw: {e}");
-            return new { error = e.Message };
-        }
+        // Instantiate INACTIVE so we can patch null fields (missing-environment refs) before Awake runs, then activate.
+        var staging = new GameObject("hp_real_staging");
+        staging.SetActive(false);
+        var inst = Object.Instantiate(heroPrefab, staging.transform);
         inst.name = "Hornet_Real";
-        real = inst;
 
+        var hc = inst.GetComponent<Silksong.HeroController>();
+        if (hc != null) {
+            // wallClingEffect.SetActive(false) at the end of Awake NullRefs when the field is unset.
+            EnsureChildField(hc, "wallClingEffect");
+        }
+
+        var follower = new GameObject("HornetReal"); // active parent → activating the instance runs Awake/Start
+        Object.DontDestroyOnLoad(follower);
         var hk = Object.FindFirstObjectByType<HeroController>();
-        if (hk != null) inst.transform.position = hk.transform.position + new Vector3(3f, 0f, 0f);
+        follower.transform.position = hk != null ? hk.transform.position + new Vector3(3f, 0f, 0f) : Vector3.zero;
+        inst.transform.SetParent(follower.transform, false);
+        inst.transform.localPosition = Vector3.zero;
+        Object.DestroyImmediate(staging);
+        real = follower;
 
         var comps = inst.GetComponents<Component>();
         var alive = comps.Count(c => c != null);
         Log.Info($"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; Silksong.HeroController.instance set: {Silksong.HeroController.instance != null}");
         return new { ok = true, components = comps.Length, alive };
+    }
+
+    // If a (private, serialized) GameObject field is null, give it a throwaway child so Awake's
+    // `field.SetActive(...)`-style derefs don't NullRef. Used to patch missing-environment refs before activation.
+    private static void EnsureChildField(Component owner, string field) {
+        var fi = owner.GetType().GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (fi == null || fi.FieldType != typeof(GameObject)) return;
+        if (fi.GetValue(owner) != null) return;
+        var dummy = new GameObject(field);
+        dummy.transform.SetParent(owner.transform, false);
+        dummy.SetActive(false);
+        fi.SetValue(owner, dummy);
+        Log.Info($"[SpawnReal] patched null field '{field}' with dummy child");
+    }
+
+    // Pinpoint the Awake NullRef: instantiate inactive, invoke the private Awake via reflection inside try/catch so we
+    // get the full inner stack trace (Unity's log only shows the top frame for inlined throws).
+    internal static object DiagnoseAwake() {
+        if (heroPrefab == null) return new { error = "no prefab" };
+        SilksongBootstrap.Ensure();
+        var staging = new GameObject("hp_diag");
+        staging.SetActive(false);
+        var inst = Object.Instantiate(heroPrefab, staging.transform);
+        var hc = inst.GetComponent<Silksong.HeroController>();
+        EnsureChildField(hc, "wallClingEffect");
+        var awake = hc.GetType().GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic);
+        string result;
+        try {
+            awake!.Invoke(hc, null);
+            result = "Awake completed (no throw)";
+        } catch (Exception e) {
+            var inner = e.InnerException ?? e;
+            result = inner.ToString();
+        }
+        Object.DestroyImmediate(staging);
+        Log.Info($"[DiagnoseAwake] {result}");
+        return new { result };
     }
 
     internal static object DespawnReal() {

@@ -55,6 +55,51 @@ foreach (var asm in asms) {
             tr.Namespace = Prefix(tr.Namespace);
     }
 
+    // 3.5 Prefix type references buried in custom-attribute arguments (enum-typed args, typeof(...)). Cecil's rename
+    //     of type defs/refs doesn't touch these — the attribute blob stores them by full name, so the runtime fails
+    //     to decode them at type load (e.g. GlobalEnums.MapZone). Mutating the TypeReference + re-emitting fixes it.
+    var mod = module;
+    void PrefixRef(TypeReference? tr) {
+        if (tr is GenericInstanceType git) {
+            foreach (var ga in git.GenericArguments) PrefixRef(ga);
+            return;
+        }
+        if (tr is null || tr.IsGenericParameter || tr.DeclaringType != null) return;
+        var inSet = ReferenceEquals(tr.Scope, mod) || (tr.Scope is AssemblyNameReference a && inSetRefs.Contains(a));
+        if (inSet && tr.Namespace != prefix && !tr.Namespace.StartsWith(prefix + "."))
+            tr.Namespace = Prefix(tr.Namespace);
+    }
+    void FixArg(CustomAttributeArgument arg) {
+        PrefixRef(arg.Type);
+        if (arg.Value is TypeReference vtr) PrefixRef(vtr);
+        else if (arg.Value is CustomAttributeArgument[] arr)
+            foreach (var a2 in arr) FixArg(a2);
+    }
+    void FixAttrs(ICustomAttributeProvider? p) {
+        if (p is null || !p.HasCustomAttributes) return;
+        foreach (var ca in p.CustomAttributes) {
+            foreach (var a in ca.ConstructorArguments) FixArg(a);
+            foreach (var f in ca.Fields) FixArg(f.Argument);
+            foreach (var pr in ca.Properties) FixArg(pr.Argument);
+        }
+    }
+    FixAttrs(asm);
+    FixAttrs(module);
+    var stack = new Stack<TypeDefinition>(module.Types);
+    while (stack.Count > 0) {
+        var t = stack.Pop();
+        FixAttrs(t);
+        foreach (var n in t.NestedTypes) stack.Push(n);
+        foreach (var f in t.Fields) FixAttrs(f);
+        foreach (var pr in t.Properties) FixAttrs(pr);
+        foreach (var ev in t.Events) FixAttrs(ev);
+        foreach (var m in t.Methods) {
+            FixAttrs(m);
+            FixAttrs(m.MethodReturnType);
+            foreach (var par in m.Parameters) FixAttrs(par);
+        }
+    }
+
     // 4. Rename the assembly itself.
     var newName = rename[asm.Name.Name];
     asm.Name.Name = newName;
