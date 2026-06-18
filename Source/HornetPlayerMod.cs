@@ -41,7 +41,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/scan-serializable", _ => BundleSpike.ScanSerializable());
         DebugServer.Start(host, DebugServerPort);
 
-        SilksongLoadSpike.Run();
+        SilksongLoadSpike.Run();   // touches Silksong types -> assembly is now in the AppDomain
+        PlayMakerFix.Apply();
         Stub.Install();
         BundleSpike.Run();
     }
