@@ -38,22 +38,6 @@ internal static class InputBridge {
 internal sealed class InputDriver : MonoBehaviour {
     private ulong tick;
     private static MethodInfo? moveVectorUpdate;
-    private static FieldInfo? isGameplaySceneField;
-    private static FieldInfo? gameStateField;
-    private static FieldInfo? fixedUpdateCycleField;
-
-    // Silksong's CustomPlayerLoop (which increments FixedUpdateCycle) is never injected into HK's PlayerLoop, so the
-    // counter is stuck. Many FSM actions gate work on it (`if (lastUpdateCycle == FixedUpdateCycle) return;`) — e.g.
-    // CheckCollisionSide, which fires the Sprint FSM's LAND event; with the counter frozen it runs once then bails
-    // forever, so Hornet stays in air-sprint on the ground. Advance it each FixedUpdate (any monotonic change works).
-    private void FixedUpdate() {
-        try {
-            fixedUpdateCycleField ??= typeof(Silksong::CustomPlayerLoop)
-                .GetField("<FixedUpdateCycle>k__BackingField", BindingFlags.NonPublic | BindingFlags.Static);
-            if (fixedUpdateCycleField != null)
-                fixedUpdateCycleField.SetValue(null, (int)fixedUpdateCycleField.GetValue(null)! + 1);
-        } catch (System.Exception e) { Log.Error($"[InputDriver.FixedUpdate] {e}"); }
-    }
 
     private static readonly (string name, KeyCode key)[] Map = {
         ("left", KeyCode.LeftArrow), ("right", KeyCode.RightArrow),
@@ -67,41 +51,8 @@ internal sealed class InputDriver : MonoBehaviour {
 
     private void Update() {
         try {
-            // Respect the host (HK) pause. We force Hornet's GameManager.GameState = PLAYING so her input pipeline runs,
-            // but that means she keeps processing input even when HK is paused (timeScale 0). Mirror the host pause onto
-            // her GameManager (PAUSED) and stop driving input while frozen, so she freezes too (e.g. to inspect state).
-            var paused = Time.timeScale <= 0.0001f;
-            var ssGm = Silksong::GameManager.instance;
-            if (ssGm != null) {
-                gameStateField ??= typeof(Silksong::GameManager)
-                    .GetField("<GameState>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance);
-                gameStateField?.SetValue(ssGm,
-                    paused ? Silksong::GlobalEnums.GameState.PAUSED : Silksong::GlobalEnums.GameState.PLAYING);
-            }
-            if (paused) return;
-
-            // HeroController.LookForInput() early-returns while `isGameplayScene` is false; Start set it false (our
-            // bootstrap gm.IsGameplayScene() returned false), so re-assert it true each frame to keep input flowing.
-            var hero = BundleSpike.RealHero;
-            if (hero != null) {
-                // The component is spawned disabled (Start's non-gameplay path / SendHeroInPosition never ran), so
-                // Unity never calls HeroController.Update -> no input is ever read. Force it enabled.
-                if (!hero.enabled) hero.enabled = true;
-                isGameplaySceneField ??= typeof(Silksong::HeroController)
-                    .GetField("isGameplayScene", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-                isGameplaySceneField?.SetValue(hero, true);
-            }
-
-            // Infinite silk for testing: top it up every frame so silk-cost abilities (harpoon/skills) always fire.
-            var pd = Silksong::PlayerData.instance;
-            if (pd != null) pd.silk = pd.silkMax;
-
-            // RegainControl sets InputHandler.ForceDreamNailRePress=true; it's normally cleared in InputHandler.Update
-            // (which never runs on our inactive GO), so it stays true and ListenForDreamNail skips forever -> needolin
-            // (DreamNail) never fires. Replicate the clear: drop it once DreamNail isn't held.
-            var ih = SilksongBootstrap.Handler;
-            if (ih != null && ih.inputActions != null && !ih.inputActions.DreamNail.IsPressed)
-                ih.ForceDreamNailRePress = false;
+            // Don't drive input while HK is paused (HornetEnvironmentAdapter mirrors PAUSED to her GameManager).
+            if (Time.timeScale <= 0.0001f) return;
 
             var ia = SilksongBootstrap.InputActions;
             if (ia == null) return;

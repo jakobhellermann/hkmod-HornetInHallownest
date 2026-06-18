@@ -60,6 +60,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         PlayMakerFix.Apply();
         Stub.Install();
         InputBridge.Install();
+        HornetEnvironmentAdapter.Install();
         BundleSpike.Run();
     }
 
@@ -71,6 +72,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         PlayMakerFix.Cleanup();
         Stub.Cleanup();
         InputBridge.Cleanup();
+        HornetEnvironmentAdapter.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
