@@ -95,6 +95,16 @@ internal static class BundleSpike {
         Object.DestroyImmediate(staging);
         real = follower;
 
+        // Disable Hornet's standalone screen Vignette (child SpriteRenderer, sprite "vignette_large_v01", sorting
+        // layer "Vignette"): a huge black sprite with a transparent hole pinned to the hero. In Silksong the camera
+        // rig drives it; here it runs standalone and blacks out everything outside the hole. We keep HK's environment,
+        // so just turn it off.
+        var vignette = inst.transform.Find("Vignette");
+        if (vignette != null) {
+            vignette.gameObject.SetActive(false);
+            Log.Info("[SpawnReal] disabled standalone Vignette (radial screen darkening)");
+        }
+
         var comps = inst.GetComponents<Component>();
         var alive = comps.Count(c => c != null);
         Log.Info($"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; HeroController.instance set: {(Silksong::HeroController.instance != null)}");
@@ -481,6 +491,50 @@ internal static class BundleSpike {
     // Activate the instantiated GameCameras rig: register GameCameras._instance, unparent from the inactive holder,
     // DontDestroyOnLoad, SetActive(true). FSMs/CameraController will run (and likely complain about GameManager) —
     // first visible-fruit step. Reports the cameras (name/depth/enabled) so we can do the handover next.
+    // Enumerate every loaded assembly that defines PlayMaker actions (FsmStateAction subclasses) + which PlayMaker the
+    // base resolves to. Assemblies whose base is the ORIGINAL "PlayMaker" (not Silksong.PlayMaker) are what Hornet's
+    // isolated FSMs can't use -> the set we'd need to prefix to cover all of Hornet's actions.
+    // Why is HeroController.sprintFSM null on the spawned Hornet? It's a SERIALIZED field (prefab-wired, not located at
+    // runtime). Report the serialized FSM fields' null-ness + enumerate the actual PlayMakerFSMs in Hornet's hierarchy
+    // (by Fsm.Name) so we can tell: FSM present-but-unwired, FSM missing, or FSM component didn't bind.
+    internal static object ProbeHeroFsms() {
+        var hc = RealHero;
+        if (hc == null) return new { error = "not spawned" };
+        string? FsmName(SilksongPM::PlayMakerFSM? f) => f == null ? null : f.FsmName;
+        var fsms = HornetRoot!.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true)
+            .Select(f => new { go = f.gameObject.name, fsm = f.FsmName })
+            .ToArray();
+        return new {
+            serializedFields = new {
+                sprintFSM = FsmName(hc.sprintFSM),
+                toolsFSM = FsmName(hc.toolsFSM),
+                dashBurst = FsmName(hc.dashBurst),
+                spellControl = FsmName(hc.spellControl),
+            },
+            fsmCount = fsms.Length,
+            sprintLike = fsms.Where(f => f.fsm != null && (f.fsm.ToLowerInvariant().Contains("sprint") || f.go.ToLowerInvariant().Contains("sprint"))).ToArray(),
+            allFsms = fsms.Select(f => $"{f.go}::{f.fsm}").OrderBy(s => s).ToArray(),
+        };
+    }
+
+    internal static object ProbeActions() {
+        var byAsm = new Dictionary<string, List<string>>();
+        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies()) {
+            Type[] types;
+            try { types = asm.GetTypes(); } catch { continue; }
+            foreach (var t in types) {
+                Type? b = t.BaseType;
+                while (b != null && b.Name != "FsmStateAction") b = b.BaseType;
+                if (b == null) continue;
+                var key = $"{asm.GetName().Name}  (base@{b.Assembly.GetName().Name})";
+                if (!byAsm.TryGetValue(key, out var l)) byAsm[key] = l = new List<string>();
+                l.Add(t.Name);
+            }
+        }
+        return byAsm.Select(kv => new { asm = kv.Key, count = kv.Value.Count, sample = kv.Value.Take(6).ToArray() })
+            .OrderByDescending(x => x.count).ToArray();
+    }
+
     // Emergency: destroy any orphaned Silksong camera rig (survives hot-reload via DontDestroyOnLoad while the static
     // ref resets to null, so Cleanup misses it -> black screen). Found by name. HK's camera then renders again.
     internal static object RestoreCamera() {

@@ -13,6 +13,12 @@ setup-libs:
 remap-monoscripts:
     cd {{unity}}/rabex-env && cargo run --release --example remap_monoscripts
 
+# Regenerate the Hero_Hornet addressable dependency closure (505 bundles) that reload-all-deps loads before spawn-real.
+# Committed so it survives reboots (was a fragile /tmp file before).
+hero-deps:
+    cd {{unity}}/rabex-env && cargo run --release --example addressable_asset_deps -- Hero_Hornet > {{lib}}/hornet-deps.txt
+    @echo "wrote {{lib}}/hornet-deps.txt ($(wc -l < {{lib}}/hornet-deps.txt) bundles)"
+
 # Repack Silksong's _GameCameras rig (camera + HUD) from Menu_Title into a loadable bundle for HK.
 # NOTE: Menu_Title is an ADDRESSABLE scene; stock unity-scene-repacker only reads classic levelN files, so it needs
 # the addressable-scene path added (see CLAUDE.md). MonoScripts in the output then need remapping to Silksong.* too.

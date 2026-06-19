@@ -21,7 +21,6 @@ internal static class PlayMakerFix {
     internal static void Apply() {
         try {
             SeedSilksongPlayMaker();
-            PurgeSilksongFromHk();
         } catch (Exception e) {
             Log.Error($"[PlayMakerFix] Apply failed: {e}");
         }
@@ -36,6 +35,17 @@ internal static class PlayMakerFix {
         var map = new Dictionary<string, Type>();
         AddTypes(map, typeof(Silksong::HeroController).Assembly);                     // Silksong.AssemblyCSharp
         AddTypes(map, typeof(SilksongPM::HutongGames.PlayMaker.ActionData).Assembly); // Silksong.PlayMaker
+
+        // PlayMaker actions also live in 3 small shared assemblies we prefixed (FadeNestedFadeGroup, GetLocalisedString,
+        // ConditionalExpression). They aren't referenced by the mod, so load them from lib — else they resolve to the
+        // original-PlayMaker variant via GetGlobalType's loaded-assemblies fallback (type mismatch -> can't create).
+        const string lib = "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/";
+        foreach (var name in new[] {
+            "Silksong.TeamCherryNestedFadeGroup", "Silksong.TeamCherryLocalization", "Silksong.ConditionalExpression",
+        }) {
+            try { AddTypes(map, Assembly.LoadFrom(lib + name + ".dll")); }
+            catch (Exception e) { Log.Error($"[PlayMakerFix] load {name}: {e.Message}"); }
+        }
 
         var seededRefl = SeedInto(SilksongStatic(typeof(SilksongPM::HutongGames.PlayMaker.ReflectionUtils), "typeLookup"), map);
         var seededAction = SeedInto(SilksongStatic(typeof(SilksongPM::HutongGames.PlayMaker.ActionData), "ActionTypeLookup"), map);
@@ -59,25 +69,4 @@ internal static class PlayMakerFix {
         return map.Count;
     }
 
-    // Defensive: an earlier build (global seed / per-FSM hook era) may have cached Silksong action types in HK's
-    // SHARED PlayMaker caches, which survive hot-reload (PlayMaker.dll isn't reloaded). Remove any Silksong-typed
-    // entries so HK re-resolves to its own. With the prefix in place this is normally a no-op.
-    private static void PurgeSilksongFromHk() {
-        var silksongAsms = new HashSet<Assembly> {
-            typeof(Silksong::HeroController).Assembly,
-            typeof(SilksongPM::HutongGames.PlayMaker.ActionData).Assembly,
-        };
-        PurgeFrom(typeof(HutongGames.PlayMaker.ActionData), "ActionTypeLookup", silksongAsms);
-        PurgeFrom(typeof(HutongGames.PlayMaker.ReflectionUtils), "typeLookup", silksongAsms);
-    }
-
-    private static void PurgeFrom(Type owner, string field, HashSet<Assembly> silksongAsms) {
-        var dict = (IDictionary?)owner.GetField(field, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null);
-        if (dict == null) return;
-        var stale = new List<object>();
-        foreach (DictionaryEntry e in dict)
-            if (e.Value is Type t && silksongAsms.Contains(t.Assembly)) stale.Add(e.Key);
-        foreach (var k in stale) dict.Remove(k);
-        if (stale.Count > 0) Log.Info($"[PlayMakerFix] purged {stale.Count} stale Silksong entries from HK {owner.Name}.{field}");
-    }
 }

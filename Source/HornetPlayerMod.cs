@@ -37,7 +37,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/spawn-real", _ => BundleSpike.SpawnReal());
         DebugServer.MapPost("/despawn-real", _ => BundleSpike.DespawnReal());
         DebugServer.MapPost("/diagnose-awake", _ => BundleSpike.DiagnoseAwake());
-        DebugServer.MapPost("/reload-all-deps", req => BundleSpike.ReloadWithAllDeps(req["list"] ?? "/tmp/deps.txt"));
+        DebugServer.MapPost("/reload-all-deps", req => BundleSpike.ReloadWithAllDeps(
+            req["list"] ?? "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/hornet-deps.txt"));
         DebugServer.MapPost("/scan-serializable", _ => BundleSpike.ScanSerializable());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/diag-input", _ => BundleSpike.DiagInput());
@@ -51,6 +52,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/test-minimal-binding", _ => BundleSpike.LoadMinimalBindingTest());
         DebugServer.MapPost("/activate-gamecameras", _ => BundleSpike.ActivateGameCameras());
         DebugServer.MapPost("/restore-camera", _ => BundleSpike.RestoreCamera());
+        DebugServer.MapGet("/probe-actions", _ => BundleSpike.ProbeActions());
+        DebugServer.MapGet("/probe-hero-fsms", _ => BundleSpike.ProbeHeroFsms());
         DebugServer.MapPost("/load-save", req => {
             var slot = int.TryParse(req["slot"], out var s) ? s : 0;
             GameManager.instance.LoadGameFromUI(slot); // HK's GameManager: full UI load (transition + scene)
@@ -64,7 +67,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         });
         DebugServer.Start(host, DebugServerPort);
 
-        SilksongLoadSpike.Run();   // touches Silksong types -> assembly is now in the AppDomain
+        // SilksongLoadSpike.Run();   // touches Silksong types -> assembly is now in the AppDomain
         PlayMakerFix.Apply();
         Stub.Install();
         InputBridge.Install();

@@ -41,7 +41,10 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
 
             // Mirror HK's pause onto Silksong's GameManager so the hero pipeline (LookForInput gates on GameState)
             // freezes with HK instead of running through the pause.
-            var gm = Silksong::GameManager.instance;
+            // Read the static field directly (O(1)), NOT the `instance` getter (LogErrors every frame while null) and
+            // NOT SilentInstance (does FindObjectOfType every call while null — expensive, and never finds our inactive
+            // gm anyway). SilksongBootstrap.Ensure sets _instance when it creates the gm; before that it's null (skip).
+            var gm = Silksong::GameManager._instance;
             if (gm != null) {
                 gameStateField ??= typeof(Silksong::GameManager)
                     .GetField("<GameState>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance);

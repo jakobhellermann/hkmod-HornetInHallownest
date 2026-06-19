@@ -29,6 +29,11 @@ internal static class GlobalSettingsBootstrap {
             var f = baseT?.GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
             if (f == null) continue;
             f.SetValue(null, so);
+            // CRITICAL: Get() gates on _foundInstance — `if (!_foundInstance) { ...Addressables (missing) -> empty
+            // CreateInstance<T>()...; _foundInstance = true; } return _instance;`. Without setting _foundInstance our
+            // _instance is ignored on the first Get(), which then caches an EMPTY SO (null tool refs -> NullRefs in
+            // GetTotalFrostSpeed/GetMaxFallVelocity). Set it so Get() returns our real, populated SO.
+            baseT?.GetField("_foundInstance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, true);
             Log.Info($"[GlobalSettings] {so.GetType().Name}._instance <- '{so.name}'");
             n++;
         }
