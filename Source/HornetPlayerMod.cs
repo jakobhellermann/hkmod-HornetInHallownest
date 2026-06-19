@@ -54,6 +54,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/test-minimal-binding", _ => BundleSpike.LoadMinimalBindingTest());
         DebugServer.MapPost("/activate-gamecameras", _ => BundleSpike.ActivateGameCameras());
         DebugServer.MapPost("/restore-camera", _ => BundleSpike.RestoreCamera());
+        DebugServer.MapGet("/dump-localization", _ => ResourcesShim.DumpLocalization());
+        DebugServer.MapGet("/load-res", req => ResourcesShim.LoadRes(req["path"] ?? ""));
+        DebugServer.MapPost("/reload-resbundle", _ => { ResourcesShim.Reload(); return new { ok = true }; });
         DebugServer.MapGet("/probe-actions", _ => BundleSpike.ProbeActions());
         DebugServer.MapGet("/probe-hero-fsms", _ => BundleSpike.ProbeHeroFsms());
         DebugServer.MapPost("/load-save", req => {
