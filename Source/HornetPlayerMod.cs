@@ -57,6 +57,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/dump-localization", _ => ResourcesShim.DumpLocalization());
         DebugServer.MapGet("/load-res", req => ResourcesShim.LoadRes(req["path"] ?? ""));
         DebugServer.MapPost("/reload-resbundle", _ => { ResourcesShim.Reload(); return new { ok = true }; });
+        DebugServer.MapPost("/addr-init", _ => AddressablesBootstrap.Ensure());
+        DebugServer.MapGet("/addr-load", req => AddressablesBootstrap.Load(req["key"] ?? "GlobalPool"));
         DebugServer.MapGet("/probe-actions", _ => BundleSpike.ProbeActions());
         DebugServer.MapGet("/probe-hero-fsms", _ => BundleSpike.ProbeHeroFsms());
         DebugServer.MapPost("/load-save", req => {
@@ -73,6 +75,11 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.Start(host, DebugServerPort);
 
         // SilksongLoadSpike.Run();   // touches Silksong types -> assembly is now in the AppDomain
+        // FIRST: register Silksong's Addressables catalog into HK's empty runtime, BEFORE any Silksong code triggers a
+        // (failing) addressables access. Once init fails in a process it stays poisoned (hasStartedInitialization=true,
+        // empty locators) and can't be re-init'd, so this must run at Initialize on a fresh process — a hot-reload of
+        // our DLL won't undo a poisoned Addressables runtime (Addressables lives in the engine DLL, one per process).
+        AddressablesBootstrap.Ensure();
         ResourcesShim.Install();       // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
         PlayMakerFix.Apply();
         Stub.Install();
@@ -84,6 +91,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
     public void Unload() {
         SilksongLoadSpike.Cleanup();
         ResourcesShim.Cleanup();
+        AddressablesBootstrap.Cleanup();
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();

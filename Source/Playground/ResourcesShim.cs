@@ -23,6 +23,27 @@ internal static class ResourcesShim {
     private static AssetBundle? bundle;
     private static readonly HashSet<string> loggedMiss = new();
     private static readonly HashSet<string> loggedServe = new();
+    private static readonly HashSet<string> loggedShadow = new();
+
+    // Diagnostic: when HK's original Resources.Load serves a path that the Silksong bundle ALSO contains, that's a
+    // potential COLLISION — Silksong code calling this path silently gets HK's asset. Invisible normally (an orig hit
+    // logs nothing); with this on we log each such key once as SHADOWED to enumerate the real collision set hit at
+    // runtime (vs theoretical bundle∩HK). `Contains` is a cheap key lookup (no asset load). Default OFF — already used
+    // it once (load-save slot 1 → reload-all-deps → spawn-real, in a gameplay scene). FINDING: the only runtime
+    // collision is `PlayMakerPrefs` — loaded UNTYPED (`Resources.Load("PlayMakerPrefs")` → typeof(Object)), so HK's
+    // same-named asset wins and Silksong's `as PlayMakerPrefs` cast yields null. Benign (PlayMaker debug prefs, no
+    // crash). Everything else self-disambiguates: typed loads like `Resources.Load("PlayMakerGlobals",
+    // typeof(SilksongPM.PlayMakerGlobals))` miss HK (no asset of that Silksong type) and fall through to the bundle.
+    // Flip to true and reproduce if you suspect a new collision.
+    internal static bool LogShadowed = true;
+
+    // When set, the shim serves from the Silksong bundle BEFORE HK's original Resources.Load (instead of only on a
+    // miss). Needed because some paths exist in BOTH games (e.g. Languages/EN_General — both are Team Cherry titles):
+    // by default HK's original wins, so Silksong's Language would read HK's sheets. We can't route by caller without a
+    // stacktrace (and via MonoMod the calling assembly is unreliable), so instead we scope by TIME: set this only while
+    // Silksong's own localization is loading (Stub.Install wraps the cctor trigger). HK's localization initializes at
+    // HK boot, before our mod, so it's never inside this window and keeps reading HK's sheets. See Stub.Install.
+    internal static bool PreferBundle;
 
     internal static void Install() {
         if (hook != null) return;
@@ -37,31 +58,57 @@ internal static class ResourcesShim {
     }
 
     private static Object Detour(Func<string, Type, Object> orig, string path, Type type) {
-        var res = orig(path, type);
-        if (res != null || bundle == null || string.IsNullOrEmpty(path)) return res;
+        if (bundle == null || string.IsNullOrEmpty(path)) return orig(path, type);
 
-        // Serve from the Silksong resources bundle (lowercase key). LoadAsset binds MonoBehaviours to the Silksong.*
-        // types via the bundle's embedded, remapped monoscripts + per-entry preload table.
+        if (PreferBundle) {
+            // Silksong is loading its own assets: prefer the bundle over HK's same-path original.
+            var served = ServeFromBundle(path, type);
+            if (served != null) return served;
+            var res = orig(path, type);
+            if (res == null && loggedMiss.Add(path.ToLowerInvariant()))
+                Log.Error($"[Resources.Load] MISS '{path}' as {type?.Name} (not in bundle, prefer-bundle)");
+            return res;
+        }
+
+        // Default: HK's original wins; only fall back to the bundle on a miss.
+        var orig0 = orig(path, type);
+        if (orig0 != null) {
+            if (LogShadowed) {
+                var k = path.ToLowerInvariant();
+                if (bundle.Contains(k) && loggedShadow.Add(k))
+                    Log.Info($"[Resources.Load] SHADOWED '{path}' as {type?.Name} — served by HK, Silksong bundle also has it");
+            }
+            return orig0;
+        }
+        var bundleAsset = ServeFromBundle(path, type);
+        if (bundleAsset != null) return bundleAsset;
+        if (loggedMiss.Add(path.ToLowerInvariant()))
+            Log.Error($"[Resources.Load] MISS '{path}' as {type?.Name} (not in bundle)");
+        return orig0;
+    }
+
+    // Load `path` from the Silksong resources bundle (lowercase key, Unity's container convention). LoadAsset binds
+    // MonoBehaviours to the Silksong.* types via the bundle's embedded, remapped monoscripts + per-entry preload table.
+    // Returns null on a bundle miss; logs each distinct SERVE once. MISS logging is the caller's job (it depends on
+    // whether the original also missed).
+    private static Object? ServeFromBundle(string path, Type type) {
         var key = path.ToLowerInvariant();
         Object served;
-        try { served = type != null ? bundle.LoadAsset(key, type) : bundle.LoadAsset(key); }
-        catch (Exception e) { Log.Error($"[ResShim] LoadAsset '{key}' threw: {e.Message}"); return res; }
-
-        if (served != null) {
-            if (loggedServe.Add(key))
-                Log.Info($"[Resources.Load] SERVE '{path}' as {type?.Name} <- silksong-resources.bundle");
-            return served;
-        }
-        if (loggedMiss.Add(key)) Log.Error($"[Resources.Load] MISS '{path}' as {type?.Name} (not in bundle)");
-        return res;
+        try { served = type != null ? bundle!.LoadAsset(key, type) : bundle!.LoadAsset(key); }
+        catch (Exception e) { Log.Error($"[ResShim] LoadAsset '{key}' threw: {e.Message}"); return null; }
+        if (served != null && loggedServe.Add(key))
+            Log.Info($"[Resources.Load] SERVE '{path}' as {type?.Name} <- silksong-resources.bundle");
+        return served;
     }
 
     internal static void Cleanup() {
+        PreferBundle = false;
         hook?.Dispose();
         hook = null;
         if (bundle != null) { bundle.Unload(true); bundle = null; }
         loggedMiss.Clear();
         loggedServe.Clear();
+        loggedShadow.Clear();
     }
 
     // Debug: reload silksong-resources.bundle from disk WITHOUT touching the hook, so we can iterate on the bundle
@@ -70,6 +117,7 @@ internal static class ResourcesShim {
         if (bundle != null) { bundle.Unload(true); bundle = null; }
         loggedMiss.Clear();
         loggedServe.Clear();
+        loggedShadow.Clear();
         bundle = AssetBundle.LoadFromFile(BundlePath);
         Log.Info(bundle != null
             ? $"[ResShim] reloaded bundle ({bundle.GetAllAssetNames().Length} assets)"

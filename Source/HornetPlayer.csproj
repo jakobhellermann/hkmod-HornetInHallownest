@@ -48,6 +48,12 @@
         <Reference Include="Silksong.PlayMaker" Private="true" Aliases="SilksongPM">
             <HintPath>lib/Silksong.PlayMaker.dll</HintPath>
         </Reference>
+        <!-- Silksong's TeamCherry.Localization, prefixed. Its TeamCherry.Localization.Language is a SEPARATE type from
+             HK's shared TeamCherry.Localization.Language, so the `SilksongLoc` extern alias disambiguates. Needed so
+             Stub can no-op Silksong's Language.SendMonoMessage (see Stub.Install). -->
+        <Reference Include="Silksong.TeamCherryLocalization" Private="true" Aliases="SilksongLoc">
+            <HintPath>lib/Silksong.TeamCherryLocalization.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
 
@@ -82,6 +88,12 @@
         </Reference>
         <Reference Include="UnityEngine.UI" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.UI.dll</HintPath>
+        </Reference>
+        <Reference Include="Unity.Addressables" Private="false">
+            <HintPath>$(HollowKnightRefs)/Unity.Addressables.dll</HintPath>
+        </Reference>
+        <Reference Include="Unity.ResourceManager" Private="false">
+            <HintPath>$(HollowKnightRefs)/Unity.ResourceManager.dll</HintPath>
         </Reference>
         <Reference Include="TeamCherry.Localization" Private="false">
             <HintPath>$(HollowKnightRefs)/TeamCherry.Localization.dll</HintPath>

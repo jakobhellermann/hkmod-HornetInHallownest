@@ -1,7 +1,9 @@
 extern alias Silksong;
+extern alias SilksongLoc;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
@@ -21,6 +23,29 @@ internal static class Stub {
     // The methods that NullRef on spawn because the full game runtime isn't set up (callees, leaf methods).
     // Identified from Player.log on a real spawn — see TODO.md / docs.
     internal static void Install() {
+        // Silksong's REMAPPED TeamCherry.Localization.Language is a SEPARATE type from HK's shared one. Its static ctor
+        // runs LoadAvailableLanguages() + LoadLanguage() -> DoSwitch, which loads the localization sheets (the data we
+        // WANT) and ends with SendMonoMessage("ChangedLanguage", Silksong.LanguageCode): a scene-wide
+        // FindObjectsOfType<GameObject>() + BroadcastMessage that hits HK's own SetTextMeshProGameText/FontManager,
+        // whose ChangedLanguage(HK.LanguageCode) can't bind a Silksong.LanguageCode arg -> MissingMethodException
+        // (present-but-mismatched receiver; DontRequireReceiver doesn't save it). Stubbing SendMonoMessage routes all
+        // FUTURE broadcasts (live language switches) into the no-op. The catch: installing this hook makes MonoMod's
+        // GetFunctionPointer force Language's type-init, so the cctor runs (loads the sheets — good) and fires its ONE
+        // broadcast BEFORE our detour is wired -> exactly ONE MissingMethodException at startup, unavoidably (we proved
+        // hooking the .cctor itself also self-triggers it). Accepted as a single, understood startup error.
+        //
+        // We also use this controlled cctor trigger as the prefer-bundle WINDOW (see ResourcesShim.PreferBundle):
+        // Silksong's Languages/*_General sheets exist in BOTH HK's Resources and our bundle, and by default HK wins ->
+        // Silksong would read HK's strings. Setting PreferBundle here makes the cctor's sheet loads come from the
+        // Silksong bundle; HK's localization already initialized at HK boot (outside this window) and is unaffected.
+        var lang = typeof(SilksongLoc::TeamCherry.Localization.Language);
+        ResourcesShim.PreferBundle = true;
+        try {
+            Skip(lang, "SendMonoMessage");                                  // installs stub; its GetFunctionPointer also forces type-init
+            RuntimeHelpers.RunClassConstructor(lang.TypeHandle);           // ensure the cctor ran inside the window (no-op if already)
+        } finally {
+            ResourcesShim.PreferBundle = false;
+        }
         Skip(typeof(Silksong::HeroWaterController), "Update");                                  // per-frame
         Skip(typeof(Silksong::PersonalObjectPool), "OnStart");                                  // Start
         Skip(typeof(Silksong::HeroAnimationController), "UpdateToolEquipFlags");                // Start
