@@ -23,17 +23,19 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         LoadedInstance = this;
 
         Playground.Log.Sink = msg => Log(msg);
+        
+        Log("Initializing");
 
         playgroundHost = new GameObject("HornetPlayer.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
         var host = playgroundHost.AddComponent<PlaygroundHost>();
 
         PlaygroundRoutes.Register();
-        DebugServer.MapPost("/respawn-hornet", _ => {
+        /*DebugServer.MapPost("/respawn-hornet", _ => {
             BundleSpike.Cleanup();
             BundleSpike.Run();
             return new { ok = true };
-        });
+        });*/
         DebugServer.MapPost("/spawn-real", _ => BundleSpike.SpawnReal());
         DebugServer.MapPost("/despawn-real", _ => BundleSpike.DespawnReal());
         DebugServer.MapPost("/diagnose-awake", _ => BundleSpike.DiagnoseAwake());
@@ -68,15 +70,17 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.Start(host, DebugServerPort);
 
         // SilksongLoadSpike.Run();   // touches Silksong types -> assembly is now in the AppDomain
+        ResourcesShim.Install();       // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
         PlayMakerFix.Apply();
         Stub.Install();
         InputBridge.Install();
         HornetEnvironmentAdapter.Install();
-        BundleSpike.Run();
+        // BundleSpike.Run();
     }
 
     public void Unload() {
         SilksongLoadSpike.Cleanup();
+        ResourcesShim.Cleanup();
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();

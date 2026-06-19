@@ -22,7 +22,14 @@ internal static class GlobalSettingsBootstrap {
         if (bundle == null) { Log.Error("[GlobalSettings] LoadFromFile failed"); return 0; }
 
         var n = 0;
-        foreach (var so in bundle.LoadAllAssets<ScriptableObject>()) {
+        // Do NOT LoadAllAssets: this is a catch-all bundle (quests, particles, …). Loading every ScriptableObject runs
+        // their OnEnable — MainQuest.OnEnable -> QuestType.Create -> LocalisedString -> Localization cctor (throws), and
+        // we don't want those side-effects anyway. Load ONLY the "Global … Settings" assets by name.
+        foreach (var name in bundle.GetAllAssetNames()) {
+            var lower = name.ToLowerInvariant();
+            if (!(lower.Contains("global") && lower.Contains("settings"))) continue;
+            var so = bundle.LoadAsset<ScriptableObject>(name);
+            if (so == null) continue;
             // A GlobalSettings SO's runtime type derives from GlobalSettingsBase<ThatType>, which holds the private
             // static _instance that the Get() accessor returns.
             var baseT = so.GetType().BaseType;
