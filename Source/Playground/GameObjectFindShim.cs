@@ -22,8 +22,24 @@ internal static class GameObjectFindShim {
     private static readonly List<Hook> hooks = new();
     private static readonly HashSet<string> logged = new();
 
-    // Set true during Silksong-driven windows (e.g. around spawn) to TAG those lookups in the log — not to change returns.
-    internal static bool Active;
+    // Set true ONLY while Silksong code we control the entry of is executing (e.g. around the hero's SetActive(true),
+    // which synchronously runs HeroController.Awake -> UpdateConfig -> FSM events -> FindGameObject). While true, name/tag
+    // lookups are INTERCEPTED: a known key (e.g. "CameraTarget") resolves to the Silksong object; anything else returns
+    // null + a log (fail loud — never silently hand Silksong code HK's same-named object). While false (HK's own per-frame
+    // code), lookups pass through to Unity unchanged. Keep the window TIGHT (one Silksong entry point at a time) so HK's
+    // finds are never intercepted. Extend to specific Update methods later as their lookups surface.
+    internal static bool CalledFromSilksongContext;
+
+    // Known Silksong TAGS -> the Silksong object they should resolve to (tag namespace, used by FindWithTag).
+    private static GameObject? ResolveTag(string tag) => tag switch {
+        "CameraTarget" => GameCamerasBootstrap.CameraTargetGo, // Sprint FSM's FindGameObject(tag) -> needs Silksong's CameraTarget (has SetSprint)
+        _ => null,
+    };
+
+    // Known Silksong NAMES -> the Silksong object (name namespace, used by GameObject.Find). Separate from tags on purpose.
+    private static GameObject? ResolveName(string name) => name switch {
+        _ => null,
+    };
 
     internal static void Install() {
         if (hooks.Count > 0) return;
@@ -40,13 +56,21 @@ internal static class GameObjectFindShim {
         catch (Exception e) { Log.Error($"[Find] hook failed {label}: {e.Message}"); }
     }
 
+    // One-off diagnostic: set to a name/tag (e.g. "CameraTarget") to dump the managed call stack ONCE when that
+    // lookup fires — reveals WHO calls it (the FSM action / component). Set via /find-trace?key=CameraTarget.
+    internal static string? TraceKey;
+
     private static GameObject FindDetour(Func<string, GameObject> orig, string name) {
+        MaybeTrace(name);
+        if (CalledFromSilksongContext) return Intercept("Find", name, ResolveName(name))!;
         var r = orig(name);
         LogOnce("Find", name, r);
         return r;
     }
 
     private static GameObject TagDetour(Func<string, GameObject> orig, string tag) {
+        MaybeTrace(tag);
+        if (CalledFromSilksongContext) return Intercept("FindWithTag", tag, ResolveTag(tag))!;
         GameObject r;
         try { r = orig(tag); }
         catch (Exception e) {
@@ -58,12 +82,29 @@ internal static class GameObjectFindShim {
         return r;
     }
 
+    // In Silksong context: resolve known keys to the Silksong object; block the rest to null (+log once) so Silksong
+    // code never silently picks up HK's same-named object. Unknown blocks are the to-do list for the Resolve() map.
+    private static GameObject? Intercept(string method, string key, GameObject? redirect) {
+        if (logged.Add("ctx:" + method + "|" + key))
+            Log.Info(redirect != null
+                ? $"[Find] {method}('{key}') -> REDIRECT '{redirect.name}' (silksong-context)"
+                : $"[Find] {method}('{key}') -> null (silksong-context, no Resolve mapping — BLOCKED; add to map if needed)");
+        return redirect;
+    }
+
+    private static void MaybeTrace(string key) {
+        try {
+            if (TraceKey == null || key != TraceKey || !logged.Add("trace:" + key)) return;
+            Log.Info($"[Find] CALLER of '{key}':\n{Environment.StackTrace}");
+        } catch { }
+    }
+
     private static void LogOnce(string method, string key, GameObject? result) {
         try {
             var k = method + "|" + key;
             if (!logged.Add(k)) return;
-            var ctx = Active ? "silksong-window" : "boot/hk";
-            Log.Info($"[Find] {method}('{key}') -> {(result != null ? "'" + result.name + "'" : "null")}  [{ctx}]");
+            // Only reached in the passthrough path (HK context); Silksong-context lookups go through Intercept.
+            Log.Info($"[Find] {method}('{key}') -> {(result != null ? "'" + result.name + "'" : "null")}  [passthrough]");
         } catch { /* never break a find */ }
     }
 
@@ -71,6 +112,6 @@ internal static class GameObjectFindShim {
         foreach (var h in hooks) h.Dispose();
         hooks.Clear();
         logged.Clear();
-        Active = false;
+        CalledFromSilksongContext = false;
     }
 }

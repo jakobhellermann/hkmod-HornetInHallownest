@@ -50,6 +50,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapGet("/probe-cameratarget", _ => BundleSpike.ProbeCameraTarget());
         DebugServer.MapGet("/probe-sprint-target", _ => BundleSpike.ProbeSprintTarget());
+        DebugServer.MapGet("/find-trace", req => { GameObjectFindShim.TraceKey = req["key"]; return new { traceKey = GameObjectFindShim.TraceKey }; });
         DebugServer.MapGet("/gc-dump", _ => BundleSpike.GcDump());
         DebugServer.MapGet("/probe-types", req => BundleSpike.ProbeTypes(req["name"] ?? "GameCameras"));
         DebugServer.MapGet("/test-addcomponent", _ => BundleSpike.TestAddComponent());

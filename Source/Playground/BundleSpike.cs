@@ -118,8 +118,11 @@ internal static class BundleSpike {
         inst.transform.position = hk != null ? hk.transform.position + new Vector3(3f, 0f, 0f) : Vector3.zero;
         Object.DontDestroyOnLoad(inst);
         Object.DestroyImmediate(staging);
-        GameObjectFindShim.Active = true; // tag the Silksong-driven finds that fire as the hero's FSMs/components Awake
-        inst.SetActive(true);
+        // Tight Silksong-context window: SetActive(true) synchronously runs HeroController.Awake -> UpdateConfig -> FSM
+        // events -> FindGameObject, whose name/tag lookups must resolve to Silksong objects (or null), not HK's.
+        GameObjectFindShim.CalledFromSilksongContext = true;
+        try { inst.SetActive(true); }
+        finally { GameObjectFindShim.CalledFromSilksongContext = false; }
         real = inst;
 
         // Disable Hornet's standalone screen Vignette (child SpriteRenderer, sprite "vignette_large_v01", sorting
@@ -248,7 +251,6 @@ internal static class BundleSpike {
     }
 
     internal static object DespawnReal() {
-        GameObjectFindShim.Active = false;
         if (real == null) return new { ok = true, note = "nothing to despawn" };
         Object.Destroy(real);
         real = null;
