@@ -49,6 +49,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/fsm-dump", req => BundleSpike.FsmDump(req["name"] ?? "Sprint"));
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapGet("/probe-cameratarget", _ => BundleSpike.ProbeCameraTarget());
+        DebugServer.MapGet("/probe-sprint-target", _ => BundleSpike.ProbeSprintTarget());
         DebugServer.MapGet("/gc-dump", _ => BundleSpike.GcDump());
         DebugServer.MapGet("/probe-types", req => BundleSpike.ProbeTypes(req["name"] ?? "GameCameras"));
         DebugServer.MapGet("/test-addcomponent", _ => BundleSpike.TestAddComponent());
@@ -85,6 +86,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         // our DLL won't undo a poisoned Addressables runtime (Addressables lives in the engine DLL, one per process).
         AddressablesBootstrap.Ensure();
         ResourcesShim.Install();       // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
+        GameObjectFindShim.Install();  // LOG-ONLY: surface name/tag GameObject lookups (cross-game collision hazard)
         PlayMakerFix.Apply();
         Stub.Install();
         InputBridge.Install();
@@ -95,6 +97,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
     public void Unload() {
         SilksongLoadSpike.Cleanup();
         ResourcesShim.Cleanup();
+        GameObjectFindShim.Cleanup();
         AddressablesBootstrap.Cleanup();
         GameCamerasBootstrap.Cleanup();
         BundleSpike.Cleanup();

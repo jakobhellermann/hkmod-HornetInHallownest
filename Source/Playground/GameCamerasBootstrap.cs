@@ -21,6 +21,12 @@ internal static class GameCamerasBootstrap {
     private const string RigName = "Silksong_GameCameras";
     private static GameObject? rig;
 
+    // Silksong's CameraTarget GameObject (on the rig). Silksong hero FSMs reference a "Camera Target" via a serialized
+    // FsmGameObject whose cross-game PPtr is lost -> they'd fall back to GameObject.Find("Camera Target") and hit HK's
+    // same-named object (HK's CameraTarget has no SetSprint -> "Method Name is invalid"). Rewire those refs to THIS.
+    internal static GameObject? CameraTargetGo =>
+        rig != null ? rig.GetComponentInChildren<Silksong::CameraTarget>(true)?.gameObject : null;
+
     // Hot-reload safe: the rig is DontDestroyOnLoad and survives our DLL reload (our `rig` static does not). Reuse the
     // existing rig instead of spawning a duplicate. Found by its unique instance name (the prefab is "_GameCameras").
     private static GameObject? FindExistingRig() {

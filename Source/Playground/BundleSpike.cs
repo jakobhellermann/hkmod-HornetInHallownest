@@ -117,6 +117,7 @@ internal static class BundleSpike {
         inst.transform.position = hk != null ? hk.transform.position + new Vector3(3f, 0f, 0f) : Vector3.zero;
         Object.DontDestroyOnLoad(inst);
         Object.DestroyImmediate(staging);
+        GameObjectFindShim.Active = true; // tag the Silksong-driven finds that fire as the hero's FSMs/components Awake
         inst.SetActive(true);
         real = inst;
 
@@ -246,6 +247,7 @@ internal static class BundleSpike {
     }
 
     internal static object DespawnReal() {
+        GameObjectFindShim.Active = false;
         if (real == null) return new { ok = true, note = "nothing to despawn" };
         Object.Destroy(real);
         real = null;
@@ -376,6 +378,59 @@ internal static class BundleSpike {
                 .Select(m => m.Name + "(" + string.Join(",", m.GetParameters().Select(p => p.ParameterType.Name)) + ")").ToArray(),
         };
         return new { heroGoHasCameraTarget = ct != null, cameraTarget = ctInfo, heroRootComponents = roots };
+    }
+
+    // Resolve, at runtime, exactly what the Sprint FSM's CallMethodProper("CameraTarget","SetSprint") targets: its
+    // FsmOwnerDefault option, the GameObject GetOwnerDefaultTarget() returns, and the type/assembly of the CameraTarget
+    // component found there (+ whether it exposes SetSprint). This nails why we get "Method Name is invalid" despite the
+    // hero having no CameraTarget — i.e. which OTHER object (likely HK's) the lookup lands on.
+    internal static object ProbeSprintTarget() {
+        if (real == null) return new { error = "not spawned" };
+        var results = new List<object>();
+        foreach (var f in real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true)) {
+            foreach (var st in f.FsmStates) {
+                foreach (var a in st.Actions) {
+                    var t = a.GetType();
+                    if (t.Name != "CallMethodProper") continue;
+                    var mn = t.GetField("methodName", BindingFlags.Instance | BindingFlags.Public)?.GetValue(a);
+                    var mnVal = mn?.GetType().GetProperty("Value")?.GetValue(mn) as string;
+                    if (mnVal != "SetSprint") continue;
+                    var beh = t.GetField("behaviour", BindingFlags.Instance | BindingFlags.Public)?.GetValue(a);
+                    var behVal = beh?.GetType().GetProperty("Value")?.GetValue(beh) as string ?? "";
+                    var owner = t.GetField("gameObject", BindingFlags.Instance | BindingFlags.Public)?.GetValue(a)
+                        as SilksongPM::HutongGames.PlayMaker.FsmOwnerDefault;
+                    GameObject? resolved = null;
+                    string? ownerOption = null, specified = null, ownerVarName = null;
+                    bool ownerUseVariable = false;
+                    if (owner != null) {
+                        ownerOption = owner.OwnerOption.ToString();
+                        var fgo = owner.GameObject;            // FsmGameObject (NamedVariable)
+                        ownerUseVariable = fgo != null && fgo.UseVariable;
+                        ownerVarName = fgo?.Name;              // the variable/name slot
+                        specified = fgo?.Value != null ? fgo.Value.name : null;
+                        try { resolved = f.Fsm.GetOwnerDefaultTarget(owner); } catch (Exception e) { ownerOption += " (resolve threw: " + e.Message + ")"; }
+                    }
+                    object comp = "n/a";
+                    if (resolved != null) {
+                        var ct = resolved.GetComponent(behVal);
+                        comp = ct == null ? "MISSING on resolved GO" : new {
+                            type = ct.GetType().FullName, asm = ct.GetType().Assembly.GetName().Name,
+                            hasSetSprint = ct.GetType().GetMethod("SetSprint") != null,
+                        };
+                    }
+                    results.Add(new { fsm = f.FsmName, state = st.Name, behaviour = behVal, ownerOption, ownerUseVariable, ownerVarName, specified, resolvedGo = resolved?.name, found = comp });
+                }
+            }
+            // Also dump the Sprint FSM's GameObject variables (who might hold the resolved "Camera Target") + action
+            // types per state (to spot a Find/SetGameObject that populates it by name).
+            if (f.FsmName == "Sprint") {
+                var vars = f.Fsm.Variables.GameObjectVariables
+                    .Select(v => new { v.Name, value = v.Value != null ? v.Value.name : null, asm = v.Value != null ? (object?)null : null }).ToArray();
+                var actionTypes = f.FsmStates.SelectMany(s => s.Actions.Select(x => x.GetType().Name)).Distinct().OrderBy(x => x).ToArray();
+                results.Add(new { sprintFsmVars = vars, sprintActionTypes = actionTypes });
+            }
+        }
+        return new { count = results.Count, results };
     }
 
     // Find which FSM/state/action references a string `needle` (e.g. a method name like "SetSprint"). Scans every
