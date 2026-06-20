@@ -65,6 +65,8 @@ internal sealed class InputDriver : MonoBehaviour {
 
             // Don't drive input while HK is paused (HornetEnvironmentAdapter mirrors PAUSED to her GameManager).
             if (Time.timeScale <= 0.0001f) return;
+            // Only feed Hornet's actions while she's the active character; otherwise HK's Knight is in control.
+            if (!HeroSwitch.HornetActive) return;
 
             var ia = SilksongBootstrap.InputActions;
             if (ia == null) return;

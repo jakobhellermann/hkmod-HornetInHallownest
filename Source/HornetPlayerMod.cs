@@ -72,6 +72,14 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             GameManager.instance.LoadGameFromUI(slot); // HK's GameManager: full UI load (transition + scene)
             return new { ok = true, slot };
         });
+        DebugServer.MapPost("/switch", req => {
+            var who = (req["who"] ?? "").ToLowerInvariant();
+            return who switch {
+                "knight" => HeroSwitch.SetActive(ActiveHero.Knight),
+                "hornet" => HeroSwitch.SetActive(ActiveHero.Hornet),
+                _ => HeroSwitch.Toggle(),
+            };
+        });
         DebugServer.MapPost("/press", req => {
             var a = (req["a"] ?? "right").ToLowerInvariant(); // left/right/up/down/jump/attack/dash
             if (!int.TryParse(req["frames"], out var f) || f <= 0) f = 60;
@@ -92,6 +100,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         Stub.Install();
         InputBridge.Install();
         HornetEnvironmentAdapter.Install();
+        HeroSwitch.Install();
         // BundleSpike.Run();
     }
 
@@ -108,6 +117,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         Stub.Cleanup();
         InputBridge.Cleanup();
         HornetEnvironmentAdapter.Cleanup();
+        HeroSwitch.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;

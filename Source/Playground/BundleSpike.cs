@@ -135,6 +135,10 @@ internal static class BundleSpike {
             Log.Info("[SpawnReal] disabled standalone Vignette (radial screen darkening)");
         }
 
+        // Apply the current active-hero state to the freshly spawned Hornet (default Knight => Hornet spawns inert but
+        // visible). Switch control with Tab or POST /switch.
+        HeroSwitch.SetActive(HeroSwitch.Active);
+
         var comps = inst.GetComponents<Component>();
         var alive = comps.Count(c => c != null);
         Log.Info($"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; HeroController.instance set: {(Silksong::HeroController.instance != null)}");
@@ -370,7 +374,7 @@ internal static class BundleSpike {
         var hc = RealHero;
         if (hc == null) return new { error = "not spawned" };
         var go = ((Component)hc).gameObject;
-        var ct = go.GetComponent("CameraTarget");
+        var ct = go.GetComponent(typeof(Silksong::CameraTarget).Name);
         var roots = go.GetComponents<Component>().Where(c => c != null)
             .Select(c => c.GetType().Name + " [" + c.GetType().Assembly.GetName().Name + "]").ToArray();
         object? ctInfo = ct == null ? null : new {
@@ -511,7 +515,7 @@ internal static class BundleSpike {
             .OrderByDescending(g => g.Count())
             .Select(g => new { type = g.Key, count = g.Count() })
             .ToArray();
-        var gcLike = comps.Where(c => c != null && c.GetType().Name == "GameCameras")
+        var gcLike = comps.Where(c => c != null && c.GetType().Name == nameof(GameCameras))
             .Select(c => c.GetType().AssemblyQualifiedName).ToArray();
         return new {
             root = gameCamerasGo.name,
@@ -590,7 +594,7 @@ internal static class BundleSpike {
         var comps = target.GetComponentsInChildren<Component>(true);
         return new {
             assetMode = true, instantiated = instantiate, name,
-            gameCamerasBinds = comps.Any(c => c != null && c.GetType().Name == "GameCameras"),
+            gameCamerasBinds = comps.Any(c => c != null && c.GetType().Name == nameof(GameCameras)),
             missingScripts = comps.Count(c => c == null),
             totalComponents = comps.Length,
         };
@@ -702,7 +706,7 @@ internal static class BundleSpike {
         // CameraController NullRefs every frame (needs GameManager.instance + camTarget we don't have). Disable it and
         // drive the camera ourselves: a simple follow that pins the main camera to Hornet's position each LateUpdate.
         foreach (var cc in go.GetComponentsInChildren<Silksong::CameraController>(true)) cc.enabled = false;
-        var mainCam = go.GetComponentsInChildren<Camera>(true).FirstOrDefault(c => c.name == "tk2dCamera");
+        var mainCam = go.GetComponentsInChildren<Camera>(true).FirstOrDefault(c => c.name == nameof(tk2dCamera));
         if (mainCam != null && mainCam.GetComponent<GameCamerasFollow>() == null)
             mainCam.gameObject.AddComponent<GameCamerasFollow>().cam = mainCam.transform;
 
@@ -917,7 +921,7 @@ internal static class BundleSpike {
         if (typeof(UnityEngine.Object).IsAssignableFrom(t)) return false; // PPtr — handled natively
         if (!t.IsSerializable) return false;
         var asm = t.Assembly.GetName().Name;
-        if (asm.StartsWith("System") || asm.StartsWith("Unity") || asm == "mscorlib" || asm == "netstandard") return false;
+        if (asm.StartsWith(nameof(System)) || asm.StartsWith(nameof(Unity)) || asm == "mscorlib" || asm == "netstandard") return false;
         return true;
     }
 

@@ -55,8 +55,10 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
 
             // HeroController: Start's non-gameplay path left the component disabled + isGameplayScene=false (our gm
             // isn't a "gameplay scene"), so Unity never ticks Update / LookForInput early-returns. Re-assert both.
+            // Only drive Hornet while SHE is the active character; when Knight is active she stays inert (HeroSwitch
+            // disabled her HeroController + Rigidbody) so we must NOT force-enable her here.
             var hero = BundleSpike.RealHero;
-            if (hero != null) {
+            if (hero != null && HeroSwitch.HornetActive) {
                 if (!hero.enabled) hero.enabled = true;
                 isGameplaySceneField ??= typeof(Silksong::HeroController)
                     .GetField("isGameplayScene", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
