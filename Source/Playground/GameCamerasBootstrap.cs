@@ -27,16 +27,20 @@ internal static class GameCamerasBootstrap {
             var prefab = Addressables.LoadAssetAsync<GameObject>("_GameCameras").WaitForCompletion();
             if (prefab == null) return new { error = "_GameCameras load returned null" };
 
-            // Instantiate under an INACTIVE holder so we can neuter before any Awake runs, then activate.
+            // Instantiate under an INACTIVE holder so nothing Awakes; we keep the rig DORMANT (see below).
             var holder = new GameObject("hp_gc_holder");
             holder.SetActive(false);
             var inst = Object.Instantiate(prefab, holder.transform);
             inst.name = "Silksong_GameCameras";
 
-            int cams = 0, listeners = 0, controllers = 0;
+            int cams = 0, listeners = 0, controllers = 0, blur = 0;
             foreach (var c in inst.GetComponentsInChildren<Camera>(true)) { c.enabled = false; cams++; }
             foreach (var a in inst.GetComponentsInChildren<AudioListener>(true)) { a.enabled = false; listeners++; }
             foreach (var cc in inst.GetComponentsInChildren<Silksong::CameraController>(true)) { cc.enabled = false; controllers++; }
+            // Per-frame cosmetic background-blur: NullRefs every frame without the scene's BlurPlanes / a real camera
+            // setup (BlurManager.Update + LightBlurredBackground.LateUpdate -> BlurPlane.ClosestBlurPlane). Off.
+            foreach (var b in inst.GetComponentsInChildren<Silksong::BlurManager>(true)) { b.enabled = false; blur++; }
+            foreach (var b in inst.GetComponentsInChildren<Silksong::LightBlurredBackground>(true)) { b.enabled = false; blur++; }
 
             // HUD subtree: present but dormant for now.
             var hud = FindByName(inst.transform, "Hud Canvas");
@@ -47,18 +51,24 @@ internal static class GameCamerasBootstrap {
             if (gc != null)
                 typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, gc);
 
+            // Keep the rig DORMANT: setting _instance + the prefab-serialized fields (cameras, cameraTarget, …) is all
+            // Silksong's code reads off GameCameras.instance — those are live on an inactive GameObject. Activating it
+            // instead runs GameCameras.Awake/Start (DontDestroyOnLoad on this + gs.LoadOverscanSettings() where gs is
+            // null -> NullRef) and every child Update/LateUpdate (blur, FSMs, HUD) — all of which we don't want yet.
+            // SetActive(false) BEFORE reparenting so it stays inactive as a root (else SetParent(null) would activate it
+            // and fire Awake). Revive selectively (HudCamera + Hud Canvas, with gs wired) when the HUD is brought online.
+            inst.SetActive(false);
             inst.transform.SetParent(null, false);
             Object.DontDestroyOnLoad(inst);
             Object.DestroyImmediate(holder);
-            inst.SetActive(true);
             rig = inst;
 
             var instanceSet = Silksong::GameCameras.SilentInstance != null;
-            Log.Info($"[GameCameras] rig up: instance={instanceSet}, neutered cams={cams} listeners={listeners} controllers={controllers}, hudDormant={hud != null}");
+            Log.Info($"[GameCameras] rig up: instance={instanceSet}, neutered cams={cams} listeners={listeners} controllers={controllers} blur={blur}, hudDormant={hud != null}");
             return new {
                 ok = true,
                 instanceSet,
-                neutered = new { cameras = cams, audioListeners = listeners, cameraControllers = controllers },
+                neutered = new { cameras = cams, audioListeners = listeners, cameraControllers = controllers, blur },
                 hudDormant = hud != null,
                 cameraTarget = inst.GetComponentInChildren<Silksong::CameraTarget>(true) != null,
             };
