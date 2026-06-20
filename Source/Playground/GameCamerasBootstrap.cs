@@ -154,10 +154,18 @@ internal static class GameCamerasBootstrap {
         // double-render). NOTE: activating the subtree runs InstantiateOnAwake on Health etc. — that's where the
         // transient "(Game Object '<null>')" missing-script warnings come from (harmless: those clones are discarded).
         if (cam != null) cam.enabled = false;
-        hudCam.gameObject.SetActive(true);
-        FindByName(hudCam, "Hud Canvas")?.gameObject.SetActive(true);
+        // The HudCamera subtree contains FAR more than the in-game HUD: under "In-game" sit Inventory / Quick Map /
+        // Game Map Rendering / DialogueManager / Prompts / Menus panes that NullRef on Awake without their managers
+        // (ToolItemManager #6, gm.tilemap, quest/tool lists, button-skin input). The ONLY in-game HUD is "Anchor TL"
+        // (Health + silk under it). Deactivate In-game's other children BEFORE activating HudCamera, so those panes
+        // never Awake (a child set inactive while its parent chain is inactive won't fire Awake on activation).
         inGame = FindByName(hudCam, "In-game");      // cache the HUD content container for per-frame visibility toggling
-        inGame?.gameObject.SetActive(true);          // the in-game HUD container (Health/Thread/…)
+        if (inGame != null)
+            foreach (Transform c in inGame)
+                if (c.name != "Anchor TL") c.gameObject.SetActive(false);
+        hudCam.gameObject.SetActive(true);
+        inGame?.gameObject.SetActive(true);          // the in-game HUD container (now only Anchor TL = Health/silk)
+        FindByName(hudCam, "Hud Canvas")?.gameObject.SetActive(true);
         var layerFixes = RemapSortingLayers(hudCam);
 
         // Silk meter: the HUD's OWN SilkSpool (Thread/Spool) has the visual refs (capR/seg1/silkChunkPrefab); our

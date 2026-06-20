@@ -65,6 +65,10 @@ internal static class Stub {
         // for no-input bring-up. TODO: bootstrap GameCameras/silkSpool for the UI/combat phase.
         Skip(typeof(Silksong::HeroController), "AddSilk");
         Skip(typeof(Silksong::HeroController), "SetupDeliveryItems"); // delivery-quest setup entry — quests irrelevant
+        // The HUD's DeliveryHudIcon.OnPreUpdateDisplay calls DeliveryQuestItem.GetActiveItems() -> NullRef (delivery-quest
+        // system deliberately off, see above). Skip it: currentItem stays null -> RadialHudIcon.GetIsActive() is false ->
+        // the icon hides itself. (No deliveries to show anyway.)
+        Skip(typeof(Silksong::DeliveryHudIcon), "OnPreUpdateDisplay");
         // StartDashEffect activates dashBurstPrefab/airDashEffect (unresolved external effect prefabs) -> NullRef,
         // aborting HeroDash after cState.dashing is set but before cooldown/FSM. Purely cosmetic -> stub so dash runs.
         Skip(typeof(Silksong::HeroController), "StartDashEffect");
@@ -90,6 +94,10 @@ internal static class Stub {
         // gm.gameSettings, assigned only in SetupGameRefs (which we never run) -> null -> NullRef on activating the rig.
         // Overscan is cosmetic and HK owns the camera; skip Start so the rig can come up ACTIVE (HUD FSMs self-init).
         Skip(typeof(Silksong::GameCameras), "Start");
+        // HUDCamera.OnEnable does `ih = GameManager.instance.inputHandler; ih.PauseAllowed` -> NullRef (our bootstrap GM's
+        // inputHandler field isn't wired) + Invoke("MoveMenuToHudCamera") (menu plumbing we don't need). Skip — none of
+        // it matters for the in-game HUD (health/silk render regardless).
+        Skip(typeof(Silksong::HUDCamera), "OnEnable");
         // GameCameras.Awake is just `_instance = this; DontDestroyOnLoad(this)` — but our rig lives under an inactive
         // holder (so we can neuter before activating), so `this` is non-root -> "DontDestroyOnLoad only works for root
         // GameObjects" warning. Skip Awake; GameCamerasBootstrap sets _instance itself (before activation, so child HUD
