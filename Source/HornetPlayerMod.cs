@@ -37,6 +37,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/scan-serializable", _ => BundleSpike.ScanSerializable());
         DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
+        DebugServer.MapGet("/toolmgr", _ => ToolItemManagerBootstrap.Diag());
         DebugServer.MapGet("/diag-input", _ => BundleSpike.DiagInput());
         DebugServer.MapGet("/fsm-state", _ => BundleSpike.FsmState());
         DebugServer.MapGet("/fsm-dump", req => BundleSpike.FsmDump(req["name"] ?? "Sprint"));
@@ -138,6 +139,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         UIManagerBootstrap.Cleanup();
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
+        ToolItemManagerBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();
         PlayMakerFix.Cleanup();
         Stub.Cleanup();

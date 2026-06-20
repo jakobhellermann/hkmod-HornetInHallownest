@@ -16,10 +16,31 @@ internal static class GlobalSettingsBootstrap {
         "/home/jakob/.local/share/Steam/steamapps/common/Hollow Knight Silksong/Hollow Knight Silksong_Data/StreamingAssets/aa/StandaloneLinux64/globalsettings_assets_all.bundle";
 
     private static AssetBundle? bundle;
+    // True only when WE loaded the bundle via LoadFromFile (so Cleanup may Unload it). False when we reused a bundle
+    // Addressables already mounted — Addressables owns it; unloading it would break the live catalog.
+    private static bool ownsBundle;
 
     internal static int Apply() {
-        if (bundle == null) bundle = AssetBundle.LoadFromFile(BundlePath);
-        if (bundle == null) { Log.Error("[GlobalSettings] LoadFromFile failed"); return 0; }
+        if (bundle == null) {
+            // ToolItemManagerBootstrap loads `_GameManager` via Addressables (runs just before us in SpawnReal), and
+            // globalsettings_assets_all IS in its dep closure -> the Silksong catalog already mounted this bundle. A
+            // second LoadFromFile of the same files throws "another AssetBundle with the same files is already loaded".
+            // Reuse the mounted one (and leave ownership with Addressables). Addressables names its bundles by HASH,
+            // not "globalsettings", so match by CONTENT (an asset path with global+settings), not by bundle.name.
+            int scanned = 0;
+            foreach (var b in AssetBundle.GetAllLoadedAssetBundles()) {
+                if (b == null) continue;
+                scanned++;
+                foreach (var an in b.GetAllAssetNames()) {
+                    var l = an.ToLowerInvariant();
+                    if (l.Contains("global") && l.Contains("settings")) { bundle = b; break; }
+                }
+                if (bundle != null) break;
+            }
+            if (bundle == null) { bundle = AssetBundle.LoadFromFile(BundlePath); ownsBundle = true; Log.Info($"[GlobalSettings] LoadFromFile (no mounted bundle among {scanned} loaded)"); }
+            else Log.Info($"[GlobalSettings] reusing mounted bundle '{bundle.name}' (scanned {scanned} loaded)");
+        }
+        if (bundle == null) { Log.Error("[GlobalSettings] bundle not available"); return 0; }
 
         var n = 0;
         // Do NOT LoadAllAssets: this is a catch-all bundle (quests, particles, …). Loading every ScriptableObject runs
@@ -49,6 +70,9 @@ internal static class GlobalSettingsBootstrap {
     }
 
     internal static void Cleanup() {
-        if (bundle != null) { bundle.Unload(true); bundle = null; }
+        // Only unload a bundle WE loaded. If we reused the Addressables-mounted one, leave it to Addressables.
+        if (bundle != null && ownsBundle) bundle.Unload(true);
+        bundle = null;
+        ownsBundle = false;
     }
 }

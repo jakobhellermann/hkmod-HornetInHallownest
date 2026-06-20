@@ -42,6 +42,7 @@ internal static class BundleSpike {
         EnsureHeroPrefab();
         if (heroPrefab == null) return new { error = "Hero_Hornet load via Addressables failed" };
         SilksongBootstrap.Ensure();
+        ToolItemManagerBootstrap.Ensure(); // #6: surgical ToolItemManager singleton (tools/crests/nail-art data source)
         GlobalSettingsBootstrap.Apply(); // assign GlobalSettings _instance from the loaded SOs (bypass Addressables)
         GameCamerasBootstrap.Ensure();   // GameCameras.instance + CameraTarget BEFORE the hero's FSMs Awake (else camera errors)
         PlayMakerUnity2dBootstrap.Ensure(); // "PlayMaker Unity 2D" manager so collision/trigger proxies don't disable themselves
