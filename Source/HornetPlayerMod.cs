@@ -59,6 +59,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/reload-resbundle", _ => { ResourcesShim.Reload(); return new { ok = true }; });
         DebugServer.MapPost("/addr-init", _ => AddressablesBootstrap.Ensure());
         DebugServer.MapGet("/addr-load", req => AddressablesBootstrap.Load(req["key"] ?? "GlobalPool"));
+        DebugServer.MapGet("/addr-load-hero", _ => AddressablesBootstrap.LoadHero());
         DebugServer.MapGet("/probe-actions", _ => BundleSpike.ProbeActions());
         DebugServer.MapGet("/probe-hero-fsms", _ => BundleSpike.ProbeHeroFsms());
         DebugServer.MapPost("/load-save", req => {

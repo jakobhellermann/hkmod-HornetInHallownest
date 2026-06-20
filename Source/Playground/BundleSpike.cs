@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 using USceneManager = UnityEngine.SceneManagement.SceneManager;
@@ -64,11 +65,25 @@ internal static class BundleSpike {
     private static GameObject? gameCamerasGo;
 
 
+    // Load the Hero_Hornet prefab via Addressables (Silksong's catalog, registered by AddressablesBootstrap). This is
+    // the option-A path that replaces the manual DepBundles + heroloading LoadFromFile (Run/ReloadWithAllDeps):
+    // Addressables pulls the full dependency closure AND owns every bundle, so there's no double-load conflict with the
+    // game's own runtime addressables loads (GameManager.EnsureGlobalPool -> "GlobalPool", etc.). The monoscripts
+    // redirect in AddressablesBootstrap makes all m_Script PPtrs bind to Silksong.* (verified: 63/63 root components
+    // bound, 0 missing, 0 HK Assembly-CSharp). No /reload-all-deps needed.
+    private static void EnsureHeroPrefab() {
+        if (heroPrefab != null) return;
+        AddressablesBootstrap.Ensure();
+        heroPrefab = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
+        if (heroPrefab != null) Log.Info("[BundleSpike] Hero_Hornet loaded via Addressables");
+    }
+
     // Instantiate the FULL prefab ACTIVE (no stripping) so every component's Awake/Start runs against our prefixed
     // Silksong.* types. Unity swallows per-component Awake exceptions into Player.log — that log is the "what's
     // missing" list (e.g. GameManager.instance null, input/camera singletons absent).
     internal static object SpawnReal() {
-        if (heroPrefab == null) return new { error = "hero prefab not loaded" };
+        EnsureHeroPrefab();
+        if (heroPrefab == null) return new { error = "Hero_Hornet load via Addressables failed" };
         SilksongBootstrap.Ensure();
         GlobalSettingsBootstrap.Apply(); // assign GlobalSettings _instance from the loaded SOs (bypass Addressables)
         if (real != null) { Object.Destroy(real); real = null; }
