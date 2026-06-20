@@ -54,7 +54,7 @@ internal sealed class InputDriver : MonoBehaviour {
             // T = teleport Hornet to HK's Knight (so she's where the camera/player is). Works even while paused.
             if (Input.GetKeyDown(KeyCode.T)) {
                 var hornet = BundleSpike.HornetRoot;
-                var knight = global::HeroController.instance;
+                var knight = global::HeroController.UnsafeInstance;
                 if (hornet != null && knight != null) {
                     hornet.transform.position = knight.transform.position;
                     Log.Info($"[InputDriver] teleported Hornet -> Knight at {knight.transform.position}");

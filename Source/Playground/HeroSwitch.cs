@@ -51,8 +51,8 @@ internal static class HeroSwitch {
         canInteractHook?.Dispose(); canInteractHook = null;
         if (go != null) { Object.Destroy(go); go = null; }
         Active = ActiveHero.Knight; // leave HK's Knight controllable after unload
-        SetInert(global::HeroController.instance != null ? global::HeroController.instance.gameObject : null, false);
-        RetargetCamera(global::HeroController.instance != null ? global::HeroController.instance.transform : null);
+        SetInert(global::HeroController.UnsafeInstance != null ? global::HeroController.UnsafeInstance.gameObject : null, false);
+        RetargetCamera(global::HeroController.UnsafeInstance != null ? global::HeroController.UnsafeInstance.transform : null);
     }
 
     internal static object Toggle() => SetActive(HornetActive ? ActiveHero.Knight : ActiveHero.Hornet);
@@ -64,7 +64,7 @@ internal static class HeroSwitch {
 
         var prev = Active;
         Active = who;
-        var knightGo = global::HeroController.instance != null ? global::HeroController.instance.gameObject : null;
+        var knightGo = global::HeroController.UnsafeInstance != null ? global::HeroController.UnsafeInstance.gameObject : null;
         var hornetGo = BundleSpike.HornetRoot;
 
         // Knight inert when Hornet is active, and vice-versa. Hornet's enabled state is owned per-frame by
@@ -186,7 +186,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
     private bool pendingSnap;
 
     private void Update() {
-        var knight = global::HeroController.instance;
+        var knight = global::HeroController.UnsafeInstance;
 
         // Detect a scene change; defer the Hornet snap until the Knight has actually been placed at the new entry.
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
@@ -218,6 +218,16 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
             ? BundleSpike.HornetRoot?.transform
             : (knight != null ? knight.transform : null);
         HeroSwitch.RetargetCamera(follow);
+
+        // HUD follows the active hero: Hornet's HUD (if brought up) while she's active, HK's Knight HUD otherwise. Synced
+        // per-frame (cheap, SetActive-on-change) because HK re-enables its hudCanvas on every scene entry — same reason
+        // the vignette is synced here. When Hornet's HUD isn't up yet, leave HK's alone (don't blank the screen).
+        if (GameCamerasBootstrap.HornetHudReady) {
+            GameCamerasBootstrap.SetHornetHudVisible(HeroSwitch.HornetActive);
+            GameCamerasBootstrap.SetHkHudVisible(!HeroSwitch.HornetActive);
+        } else {
+            GameCamerasBootstrap.SetHkHudVisible(true); // no Hornet HUD -> always show HK's
+        }
     }
 
     private static void SnapHornetToKnight(global::HeroController knight) {

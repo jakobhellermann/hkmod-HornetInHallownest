@@ -15,7 +15,7 @@ internal class GameCamerasFollow : MonoBehaviour {
             // Prefer the spawned Hornet; fall back to HK's Knight so the camera follows whoever the player is.
             var hornet = BundleSpike.HornetRoot;
             if (hornet != null) target = hornet.transform;
-            else if (global::HeroController.instance != null) target = global::HeroController.instance.transform;
+            else if (global::HeroController.UnsafeInstance != null) target = global::HeroController.UnsafeInstance.transform;
             else return;
             if (cam == null || target == null) return;
             var p = target.position;

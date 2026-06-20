@@ -86,6 +86,16 @@ internal static class Stub {
         Skip(typeof(Silksong::GameManager), "FadeSceneIn");
         // SimpleFadeOut::SetColor throws nullref, because Awake is never ran
         Skip(typeof(Silksong::CameraController), "ScreenFlash");
+        // GameCameras.Start does only `gs.LoadOverscanSettings(); SetOverscan(gs.overScanAdjustment)` — gs is
+        // gm.gameSettings, assigned only in SetupGameRefs (which we never run) -> null -> NullRef on activating the rig.
+        // Overscan is cosmetic and HK owns the camera; skip Start so the rig can come up ACTIVE (HUD FSMs self-init).
+        Skip(typeof(Silksong::GameCameras), "Start");
+        // GameCameras.Awake is just `_instance = this; DontDestroyOnLoad(this)` — but our rig lives under an inactive
+        // holder (so we can neuter before activating), so `this` is non-root -> "DontDestroyOnLoad only works for root
+        // GameObjects" warning. Skip Awake; GameCamerasBootstrap sets _instance itself (before activation, so child HUD
+        // FSMs resolve GameCameras.instance) and DDOLs the holder. Without skipping, Awake would also Destroy our rig if
+        // _instance was pre-set to a different object — skipping removes that hazard too.
+        Skip(typeof(Silksong::GameCameras), "Awake");
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
         // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.

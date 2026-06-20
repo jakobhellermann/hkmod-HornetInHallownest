@@ -54,6 +54,15 @@ internal static class SilksongBootstrap {
             pd.silkMax = 9;
             pd.silk = 9;
             pd.silkSpecialLevel = 1;
+            // Health: the HUD's Health FSM enables N mask MeshRenderers for N health; with health/maxHealth at their
+            // default 0 every mask renderer stays disabled (masks active-in-hierarchy but Renderer.enabled=false) ->
+            // no health visible. Grant a full bar so the FSM enables the masks on HUD bring-up.
+            pd.maxHealth = 5;
+            pd.health = 5;
+            // The health-mask FSM (health_display) waits in "First Pause" and self-sends "SHOW HP" (-> appear) gated on
+            // PlayerData.bindCutscenePlayed — the game sets this after the intro bind cutscene; until then the HUD health
+            // stays hidden. We skip the intro, so set it true -> masks self-appear on HUD bring-up (no manual drive).
+            pd.bindCutscenePlayed = true;
 
             gmGo = new GameObject("Silksong_GameManager");
             gmGo.SetActive(false); // inactive => GameManager/InputHandler Awake never runs
@@ -104,6 +113,19 @@ internal static class SilksongBootstrap {
             var spool = gmGo.AddComponent<Silksong::SilkSpool>();
             typeof(Silksong::SilkSpool).GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)
                 ?.GetSetMethod(true)?.Invoke(null, new object[] { spool });
+
+            // HUD bring-up needs: UpdateBatcher (batched HUD components like JitterSelf do
+            // GameManager.instance.GetComponent<UpdateBatcher>().Add(this) -> NullRef without it) + TMP_Settings.
+            gmGo.AddComponent<Silksong::UpdateBatcher>();
+
+            // TMProOld.TMP_Settings.instance does untyped Resources.Load("TMP Settings") -> HK's same-named asset wins,
+            // `as Silksong.TMP_Settings` -> null -> defaultStyleSheet NullRefs from HUD text. Force-load Silksong's from
+            // the bundle (PreferBundle window, same trick as localization) so s_Instance caches the correct-typed asset.
+            try {
+                ResourcesShim.PreferBundle = true;
+                Silksong::TMProOld.TMP_Settings.LoadDefaultSettings();
+            } catch (Exception e) { Log.Error($"[Bootstrap] TMP_Settings load: {e.Message}"); }
+            finally { ResourcesShim.PreferBundle = false; }
 
             // Platform.Current (private static `current`, set only during Silksong's boot which we never run) is null ->
             // the hero's EnterScene prologue derefs Platform.Current.EnterSceneWait -> NullRef. Assign an UNINITIALIZED

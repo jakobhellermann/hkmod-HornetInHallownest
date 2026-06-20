@@ -32,33 +32,25 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         var host = playgroundHost.AddComponent<PlaygroundHost>();
 
         PlaygroundRoutes.Register();
-        /*DebugServer.MapPost("/respawn-hornet", _ => {
-            BundleSpike.Cleanup();
-            BundleSpike.Run();
-            return new { ok = true };
-        });*/
         DebugServer.MapPost("/spawn-real", _ => BundleSpike.SpawnReal());
         DebugServer.MapPost("/despawn-real", _ => BundleSpike.DespawnReal());
-        DebugServer.MapPost("/diagnose-awake", _ => BundleSpike.DiagnoseAwake());
-        DebugServer.MapPost("/reload-all-deps", req => BundleSpike.ReloadWithAllDeps(
-            req["list"] ?? "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/hornet-deps.txt"));
         DebugServer.MapPost("/scan-serializable", _ => BundleSpike.ScanSerializable());
+        DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/diag-input", _ => BundleSpike.DiagInput());
         DebugServer.MapGet("/fsm-state", _ => BundleSpike.FsmState());
-        DebugServer.MapPost("/load-gamecameras", (req, respond) => BundleSpike.LoadGameCamerasCo(respond, req["bundle"]));
         DebugServer.MapGet("/fsm-dump", req => BundleSpike.FsmDump(req["name"] ?? "Sprint"));
+        DebugServer.MapGet("/fsm-dump-any", req => BundleSpike.FsmDumpAny(req["name"] ?? "health_display"));
+        DebugServer.MapGet("/fsm-dump-hk", req => BundleSpike.FsmDumpHk(req["name"] ?? "Bell Control"));
+        DebugServer.MapPost("/fsm-event", req => BundleSpike.SendFsmEvent(req["name"] ?? "health_display", req["event"] ?? "HUD APPEAR RESET"));
+        DebugServer.MapGet("/fsm-list", req => BundleSpike.FsmList(req["path"] ?? "Hud Canvas"));
+        DebugServer.MapPost("/hud-health", (req, respond) => BundleSpike.DriveHealthHud(respond)); // drive the health-mask appear chain over frames
+        DebugServer.MapGet("/find-event-senders", req => BundleSpike.FindEventSenders(req["event"] ?? "SHOW HP"));
+        DebugServer.MapGet("/fsm-state-actions", req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause"));
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapGet("/probe-cameratarget", _ => BundleSpike.ProbeCameraTarget());
         DebugServer.MapGet("/probe-sprint-target", _ => BundleSpike.ProbeSprintTarget());
         DebugServer.MapGet("/find-trace", req => { GameObjectFindShim.TraceKey = req["key"]; return new { traceKey = GameObjectFindShim.TraceKey }; });
-        DebugServer.MapGet("/gc-dump", _ => BundleSpike.GcDump());
-        DebugServer.MapGet("/probe-types", req => BundleSpike.ProbeTypes(req["name"] ?? "GameCameras"));
-        DebugServer.MapGet("/test-addcomponent", _ => BundleSpike.TestAddComponent());
-        DebugServer.MapPost("/load-gamecameras-asset", req => BundleSpike.LoadGameCamerasAsset(req["instantiate"] == "true"));
-        DebugServer.MapPost("/test-minimal-binding", _ => BundleSpike.LoadMinimalBindingTest());
-        DebugServer.MapPost("/activate-gamecameras", _ => BundleSpike.ActivateGameCameras());
-        DebugServer.MapPost("/restore-camera", _ => BundleSpike.RestoreCamera());
         DebugServer.MapGet("/dump-localization", _ => ResourcesShim.DumpLocalization());
         DebugServer.MapGet("/load-res", req => ResourcesShim.LoadRes(req["path"] ?? ""));
         DebugServer.MapPost("/reload-resbundle", _ => { ResourcesShim.Reload(); return new { ok = true }; });
@@ -66,6 +58,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/addr-load", req => AddressablesBootstrap.Load(req["key"] ?? "GlobalPool"));
         DebugServer.MapGet("/addr-load-hero", _ => AddressablesBootstrap.LoadHero());
         DebugServer.MapPost("/gamecameras-init", _ => GameCamerasBootstrap.Ensure());
+        DebugServer.MapPost("/hud", req => GameCamerasBootstrap.BringUpHud((req["on"] ?? "true").ToLowerInvariant() != "false"));
         DebugServer.MapGet("/probe-actions", _ => BundleSpike.ProbeActions());
         DebugServer.MapGet("/probe-hero-fsms", _ => BundleSpike.ProbeHeroFsms());
         DebugServer.MapPost("/load-save", req => {
@@ -103,9 +96,12 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         GameObjectFindShim.Install();  // LOG-ONLY: surface name/tag GameObject lookups (cross-game collision hazard)
         PlayMakerFix.Apply();
         Stub.Install();
+        CustomPlayerLoopBootstrap.Ensure();   // install Silksong's real LateFixedUpdate phase (drives DamageEnemies + cycle-gated FSMs)
         InputBridge.Install();
         HornetEnvironmentAdapter.Install();
         HeroSwitch.Install();
+        EnemyDamageBridge.Install();    // forward Hornet's Silksong nail damage onto HK enemies/breakables (cross-game responder bridge)
+        DamagesEnemyFsmShim.Install();  // stand in for the HK "damages_enemy" FSM that HK breakables read off Hornet's slash
         // BundleSpike.Run();
 
         // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so
@@ -118,7 +114,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         while (true) {
             // HK's hero: null at the menu, set + isHeroInPosition once a gameplay scene has placed it. Gate on
             // isHeroInPosition so we don't spawn mid-transition (before the scene/entry is ready).
-            var knight = HeroController.instance;
+            var knight = HeroController.UnsafeInstance; // UnsafeInstance: no "Couldn't find a Hero" log spam at the menu
             if (knight != null && knight.isHeroInPosition) {
                 if (BundleSpike.HornetRoot == null) {
                     try {
@@ -138,6 +134,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         GameObjectFindShim.Cleanup();
         AddressablesBootstrap.Cleanup();
         GameCamerasBootstrap.Cleanup();
+        UIManagerBootstrap.Cleanup();
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();
@@ -146,6 +143,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         InputBridge.Cleanup();
         HornetEnvironmentAdapter.Cleanup();
         HeroSwitch.Cleanup();
+        EnemyDamageBridge.Cleanup();
+        DamagesEnemyFsmShim.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
