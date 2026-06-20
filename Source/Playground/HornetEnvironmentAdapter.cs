@@ -23,6 +23,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static FieldInfo? isGameplaySceneField;
     private static FieldInfo? gameStateField;
     private static FieldInfo? fixedUpdateCycleField;
+    private static MethodInfo? updateButtonQueueingMethod;
 
     internal static void Install() {
         if (go != null) return;
@@ -69,11 +70,30 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
             var pd = Silksong::PlayerData.instance;
             if (pd != null) pd.silk = pd.silkMax;
 
-            // RegainControl sets InputHandler.ForceDreamNailRePress=true; it's normally cleared in InputHandler.Update
-            // (never runs on the inactive GO), so ListenForDreamNail would skip forever -> clear it once unheld.
+            // --- The bookkeeping half of InputHandler.Update ---
+            // InputHandler.Update never ticks (its GO is inactive). Its body splits cleanly in two: per-frame
+            // bookkeeping the hero pipeline needs, and environment coupling we deliberately reject (SetCursorVisible
+            // touches the OS cursor HK owns; UpdateActiveController -> SetupGamepadUIInputActions rebinds gamepad UI;
+            // inputActions.Pause.WasPressed -> gm.PauseGameToggle runs *Silksong's* pause). So we don't run Update();
+            // we run its bookkeeping methods by reflection — after InputDriver (-10000) commits WasPressed, before
+            // HeroController/FSMs read it (this component is -9000). Add further Update-maintained state HERE.
             var ih = SilksongBootstrap.Handler;
-            if (ih?.inputActions != null && !ih.inputActions.DreamNail.IsPressed)
-                ih.ForceDreamNailRePress = false;
+            if (ih != null) {
+                // UpdateButtonQueueing(): maintains buttonQueueTimers[] — the ~0.1s queued-press window read by
+                // GetWasButtonPressedQueued. With it frozen, every GetWasButtonPressedQueued returns false, so any
+                // FSM/HeroController path that consumes queued input silently stalls (e.g. Sprint FSM Ground Sprint
+                // R/L listens for JUMP this way -> jump/attack-out-of-sprint never fired; no error, because the normal
+                // CanJump/CanAttack path is intentionally off during sprint with hero_state=no_input).
+                updateButtonQueueingMethod ??= typeof(Silksong::InputHandler)
+                    .GetMethod("UpdateButtonQueueing", BindingFlags.Instance | BindingFlags.NonPublic);
+                updateButtonQueueingMethod?.Invoke(ih, null);
+
+                // PlayingInput()'s sole effect: clear ForceDreamNailRePress once DreamNail is released (RegainControl
+                // sets it; only Update clears it, so ListenForDreamNail would skip forever). Inlined (not the real
+                // method) to avoid its CheatManager.IsOpen static read, which needn't be initialized here.
+                if (ih.inputActions != null && !ih.inputActions.DreamNail.IsPressed)
+                    ih.ForceDreamNailRePress = false;
+            }
         } catch (Exception e) { Log.Error($"[EnvAdapter] {e}"); }
     }
 

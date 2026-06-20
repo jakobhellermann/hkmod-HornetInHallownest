@@ -15,8 +15,11 @@ internal static class SilksongBootstrap {
     private static GameObject? poolGo;
     private static bool done;
 
-    // The HeroActions InControl set we create; InputBridge drives its actions from the keyboard each frame.
-    internal static Silksong::HeroActions? InputActions { get; private set; }
+    // The HeroActions InControl set InputBridge drives each frame. Pass-through to the live Handler.inputActions (NOT a
+    // cached snapshot): if anything ever re-runs InputHandler.OnAwake/Setup it reassigns inputActions, and a snapshot
+    // would silently drift — InputDriver driving the old set while the hero reads the new one (move_input=0,
+    // ia_same=false). Always dereferencing Handler keeps driver and hero on the same object by construction.
+    internal static Silksong::HeroActions? InputActions => Handler?.inputActions;
 
     // The bootstrap InputHandler. Exposed so InputBridge can run the per-frame InputHandler bookkeeping that never
     // happens (its GO is inactive, so InputHandler.Update doesn't run) — e.g. clearing ForceDreamNailRePress.
@@ -58,7 +61,6 @@ internal static class SilksongBootstrap {
             // GO is inactive => InputHandler.Awake never runs, so inputActions stays null and every input check
             // (CanAttackAction, ListenForAttack/Dash/... FSM actions) NullRefs. Construct it like InputHandler does.
             ih.inputActions = new Silksong::HeroActions();
-            InputActions = ih.inputActions;
             Handler = ih;
 
             // InputHandler.OnAwake (which allocates buttonQueueTimers) never runs on our inactive GO, so
@@ -116,9 +118,14 @@ internal static class SilksongBootstrap {
     }
 
     internal static void Cleanup() {
-        if (gmGo != null) { Object.Destroy(gmGo); gmGo = null; }
-        if (poolGo != null) { Object.Destroy(poolGo); poolGo = null; }
+        // DestroyImmediate (not Destroy): Unload->Initialize runs synchronously in one frame, so deferred end-of-frame
+        // Destroys would leave the old GM/InputHandler alive while Initialize rebuilds — the spawned hero (and FSM
+        // singleton lookups) could then bind to the stale instances. Tear down synchronously so a hot-reload state
+        // equals a clean startup. Also null the static refs (InputActions/Handler) so nothing dangles into the dead GO.
+        if (gmGo != null) { Object.DestroyImmediate(gmGo); gmGo = null; }
+        if (poolGo != null) { Object.DestroyImmediate(poolGo); poolGo = null; }
         Silksong::GameManager._instance = null;
+        Handler = null; // InputActions is computed from Handler, so this clears it too
         done = false;
     }
 }

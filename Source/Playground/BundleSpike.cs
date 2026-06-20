@@ -256,7 +256,9 @@ internal static class BundleSpike {
 
     internal static object DespawnReal() {
         if (real == null) return new { ok = true, note = "nothing to despawn" };
-        Object.Destroy(real);
+        // DestroyImmediate so a follow-up /spawn-real (or a hot-reload) never races the deferred end-of-frame Destroy —
+        // a lingering old hero re-grabs singletons and orphans the input binding (ia_same=false). Matches SpawnReal.
+        Object.DestroyImmediate(real);
         real = null;
         return new { ok = true, despawned = true };
     }
@@ -282,11 +284,17 @@ internal static class BundleSpike {
         var rb = F("rb2d") as Rigidbody2D;
         var ia = SilksongBootstrap.InputActions;
         var mv = ia?.MoveVector.Vector ?? default;
+        // Pure gate queries (no mutation) — these are exactly what Update checks before HeroJump()/DoAttack().
+        bool? Q(string n) => (bool?)t.GetMethod(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)?.Invoke(hc, null);
         return new {
             move_input = F("move_input"), hero_state = F("hero_state")?.ToString(),
             transitionState = F("transitionState")?.ToString(), isGameplayScene = F("isGameplayScene"),
             gameState = (F("gm") is { } g ? g.GetType().GetProperty("GameState")?.GetValue(g)?.ToString() : "gm-null"),
             inputBlocked = (bool?)t.GetMethod("IsInputBlocked", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.Invoke(hc, null),
+            // The decisive trio for "can't jump/attack while sprinting": dashing & isSprinting gate the predicates,
+            // canJump/canAttack are the actual answers. canInput rules out the transition/pause gate.
+            canJump = Q("CanJump"), canAttack = Q("CanAttack"), canDash = Q("CanDash"), canInput = Q("CanInput"),
+            isSprinting = CS("isSprinting"), sprintBufferSteps = F("sprintBufferSteps"),
             onGround = CS("onGround"), jumping = CS("jumping"), falling = CS("falling"),
             facingRight = CS("facingRight"), dashing = CS("dashing"), attacking = CS("attacking"),
             controlReqlinquished = F("controlReqlinquished"), acceptingInput = F("acceptingInput"),
@@ -296,6 +304,11 @@ internal static class BundleSpike {
             ia_same = ia != null && ReferenceEquals(ia, (F("inputHandler") as Silksong::InputHandler)?.inputActions),
             right = ia?.Right.IsPressed, left = ia?.Left.IsPressed, jumpWasPressed = ia?.Jump.WasPressed,
             moveVec = new { mv.x, mv.y },
+            // Pinpoint an ia_same=false: is the hero bound to OUR bootstrap Handler/gm at all? If handlerIsHeros=false
+            // the hero found a different InputHandler (different gm) — then the fix is the binding, not inputActions.
+            handlerIsHeros = ReferenceEquals(SilksongBootstrap.Handler, F("inputHandler")),
+            gmIsBootstrap = ReferenceEquals(Silksong::GameManager._instance, F("gm")),
+            heroHandlerNull = F("inputHandler") == null,
         };
     }
 
@@ -926,8 +939,11 @@ internal static class BundleSpike {
     }
 
     internal static void Cleanup() {
-        if (real != null) { Object.Destroy(real); real = null; }
-        if (gameCamerasGo != null) { Object.Destroy(gameCamerasGo); gameCamerasGo = null; }
+        // DestroyImmediate (not Destroy): Unload->Initialize is synchronous in one frame, so a deferred Destroy would
+        // leave the old DontDestroyOnLoad hero alive into the next Initialize — orphaned, holding stale gm/inputHandler
+        // refs (the move_input=0 / ia_same=false uncontrollable-hero bug). Same reason SpawnReal uses DestroyImmediate.
+        if (real != null) { Object.DestroyImmediate(real); real = null; }
+        if (gameCamerasGo != null) { Object.DestroyImmediate(gameCamerasGo); gameCamerasGo = null; }
 
         foreach (var b in bundles)
             if (b != null) b.Unload(true);
