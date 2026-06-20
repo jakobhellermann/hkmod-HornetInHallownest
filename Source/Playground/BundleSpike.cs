@@ -344,6 +344,7 @@ internal static class BundleSpike {
             var missing = false;
             try {
                 foreach (var st in f.FsmStates) {
+                    if (!st.ActionsLoaded) continue; // accessing .Actions on an uninitialized FSM (fsm==null) logs "Fsm not initialized" + a broken LoadActions (NullRef) — skip
                     foreach (var a in st.Actions)
                         if (a.GetType().Name == "MissingAction") { missing = true; break; }
                     if (missing) break;
@@ -389,6 +390,7 @@ internal static class BundleSpike {
         var results = new List<object>();
         foreach (var f in real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true)) {
             foreach (var st in f.FsmStates) {
+                if (!st.ActionsLoaded) continue; // don't trigger LoadActions on uninitialized FSMs (NullRef spam)
                 foreach (var a in st.Actions) {
                     var t = a.GetType();
                     if (t.Name != "CallMethodProper") continue;
@@ -442,6 +444,7 @@ internal static class BundleSpike {
         var hits = new List<object>();
         foreach (var f in real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true)) {
             foreach (var st in f.FsmStates) {
+                if (!st.ActionsLoaded) continue; // don't trigger LoadActions on uninitialized FSMs (NullRef spam)
                 foreach (var a in st.Actions) {
                     var fields = new Dictionary<string, string>();
                     var match = false;
@@ -474,7 +477,8 @@ internal static class BundleSpike {
         var states = new List<object>();
         foreach (var st in fsm.States) {
             var trans = st.Transitions.Select(tr => $"{tr.EventName} -> {tr.ToState}").ToArray();
-            var actions = st.Actions.Select(a => a.GetType().Name).ToArray();
+            // accessing .Actions on an uninitialized FSM logs "Fsm not initialized" + a broken LoadActions (NullRef).
+            var actions = st.ActionsLoaded ? st.Actions.Select(a => a.GetType().Name).ToArray() : new[] { "<not loaded>" };
             states.Add(new { name = st.Name, active = st.Name == fsm.ActiveStateName, trans, actions });
         }
         return new {
