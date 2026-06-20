@@ -72,6 +72,11 @@ internal static class HeroSwitch {
         var hk = hero.GetComponent<global::HeroController>();
         if (hk != null) {
             hk.enabled = !inert;
+            // HeroController.enabled=false stops its Update, but the Knight's input-driven FSMs (Superdash/cdash, cast,
+            // dream nail, focus) are SEPARATE components that read HeroController.CanSuperDash() etc. — all gated on
+            // controlReqlinquished. So an inert Knight still cdashes on input unless we relinquish control. Use HK's
+            // native RelinquishControl (sets controlReqlinquished + IgnoreInput + ResetMotion); RegainControl restores.
+            if (inert) hk.RelinquishControl(); else hk.RegainControl();
             // The Knight's screen-edge vignette would otherwise keep darkening the view while she's the inactive hero;
             // kill the renderer + its FSM (so nothing re-enables it), restore when she's active again.
             if (hk.vignette != null) hk.vignette.enabled = !inert;
