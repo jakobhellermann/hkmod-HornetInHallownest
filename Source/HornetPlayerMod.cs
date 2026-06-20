@@ -38,6 +38,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/toolmgr", _ => ToolItemManagerBootstrap.Diag());
+        DebugServer.MapGet("/colmgr", _ => CollectableItemManagerBootstrap.Ensure());
         DebugServer.MapGet("/diag-input", _ => BundleSpike.DiagInput());
         DebugServer.MapGet("/fsm-state", _ => BundleSpike.FsmState());
         DebugServer.MapGet("/fsm-dump", req => BundleSpike.FsmDump(req["name"] ?? "Sprint"));
@@ -48,6 +49,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/hud-health", (req, respond) => BundleSpike.DriveHealthHud(respond)); // drive the health-mask appear chain over frames
         DebugServer.MapGet("/find-event-senders", req => BundleSpike.FindEventSenders(req["event"] ?? "SHOW HP"));
         DebugServer.MapGet("/fsm-state-actions", req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause"));
+        DebugServer.MapGet("/fsm-vars", req => BundleSpike.FsmVars(req["name"] ?? "Bind"));
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapGet("/probe-cameratarget", _ => BundleSpike.ProbeCameraTarget());
         DebugServer.MapGet("/probe-sprint-target", _ => BundleSpike.ProbeSprintTarget());
@@ -104,6 +106,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         EnemyDamageBridge.Install();    // forward Hornet's Silksong nail damage onto HK enemies/breakables (cross-game responder bridge)
         DamagesEnemyFsmShim.Install();  // stand in for the HK "damages_enemy" FSM that HK breakables read off Hornet's slash
         PogoNonBounceShim.Install();    // honour HK's NonBouncer so Hornet doesn't pogo off HK-non-pogoable objects (bell, …)
+        ContactDamageBridge.Install();  // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
+        FreezeMomentFix.Install();
         // BundleSpike.Run();
 
         // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so
@@ -151,6 +155,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         EnemyDamageBridge.Cleanup();
         DamagesEnemyFsmShim.Cleanup();
         PogoNonBounceShim.Cleanup();
+        ContactDamageBridge.Cleanup();
+        FreezeMomentFix.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;

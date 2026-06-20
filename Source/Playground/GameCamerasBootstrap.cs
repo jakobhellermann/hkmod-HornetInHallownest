@@ -80,8 +80,13 @@ internal static class GameCamerasBootstrap {
             // their Awake. GameCameras.Awake is skipped in Stub (it would warn "DontDestroyOnLoad on non-root" since our
             // rig is under the holder); we DDOL the holder instead, below.
             var gc = inst.GetComponentInChildren<Silksong::GameCameras>(true);
-            if (gc != null)
+            if (gc != null) {
                 typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, gc);
+                // Wire gm.gameCams (public field, set by GameManager.SetupGameRefs which we don't run) -> several paths
+                // deref it (e.g. inventory open's SetPausedState gameCams.StopCameraShake, HUD). GameManager.instance is
+                // already up (SilksongBootstrap ran before us in SpawnReal).
+                if (Silksong::GameManager.instance != null) Silksong::GameManager.instance.gameCams = gc;
+            }
 
             Object.DontDestroyOnLoad(holder);
             rig = inst;

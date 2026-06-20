@@ -32,6 +32,8 @@ internal static class InputBridge {
     // Debug drive (for /press): force an action pressed for `frames` ticks, so we can demo without a physical key.
     internal static readonly Dictionary<string, int> Forced = new();
     internal static void Press(string action, int frames) { Forced[action] = frames; }
+
+    internal static int OpenInvWasPressedCount;  // diagnostic: did the driver produce an OpenInventory WasPressed edge?
 }
 
 [DefaultExecutionOrder(-10000)] // run before HeroController.Update so WasPressed lands the same frame
@@ -44,9 +46,11 @@ internal sealed class InputDriver : MonoBehaviour {
         ("up", KeyCode.UpArrow), ("down", KeyCode.DownArrow),
         ("jump", KeyCode.Z), ("attack", KeyCode.X), ("dash", KeyCode.C),
         ("superdash", KeyCode.S), // harpoon dash
-        ("cast", KeyCode.F),      // silk skill / special
+        ("cast", KeyCode.A),      // bind/heal + silk skill (Silksong's Cast action; Bind FSM ListenForCast)
         ("quickcast", KeyCode.G), // needle throw / quick tool
         ("dreamnail", KeyCode.D), // needolin
+        ("openinventory", KeyCode.K), // open the inventory (Inv pane); ListenForInventoryShortcut reads OpenInventory.WasPressed (K: I/O collide with HK's own inventory)
+        ("opentools", KeyCode.L),     // open the Tools/Crests pane directly
     };
 
     private void Update() {
@@ -76,6 +80,7 @@ internal sealed class InputDriver : MonoBehaviour {
                 var pressed = Input.GetKey(key) || Consume(name);
                 ActionFor(ia, name)?.CommitWithState(pressed, tick, dt);
             }
+            if (ia.OpenInventory.WasPressed) Log.Info($"[InputDriver] OpenInventory.WasPressed edge #{++InputBridge.OpenInvWasPressedCount}");
             // Recompute the MoveVector (TwoAxis) from the freshly-committed Left/Right/Up/Down. Update is internal.
             moveVectorUpdate ??= ia.MoveVector.GetType().GetMethod("Update",
                 BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(ulong), typeof(float) }, null);
@@ -93,6 +98,7 @@ internal sealed class InputDriver : MonoBehaviour {
         "left" => ia.Left, "right" => ia.Right, "up" => ia.Up, "down" => ia.Down,
         "jump" => ia.Jump, "attack" => ia.Attack, "dash" => ia.Dash,
         "superdash" => ia.SuperDash, "cast" => ia.Cast, "quickcast" => ia.QuickCast, "dreamnail" => ia.DreamNail,
+        "openinventory" => ia.OpenInventory, "opentools" => ia.OpenInventoryTools,
         _ => null,
     };
 }

@@ -405,10 +405,38 @@ internal static class BundleSpike {
         return new { needle, count = hits.Count, hits };
     }
 
-    // Dump a named FSM's full state machine (active state, every state's transitions + action types, global
-    // transitions) so we can see why a move-FSM (e.g. Sprint) sits where it does and what event should advance it.
-    // Dump every action's field name->value for one state of an FSM (by name). Reveals e.g. which PlayerData bool a
-    // PlayerDataBoolTest checks before sending "SHOW HP".
+    // Dump a Silksong FSM's bool/int/float variables (name=value) — to inspect gate vars like "Bind Locked".
+    internal static object FsmVars(string fsmName) {
+        foreach (var f in Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>()) {
+            if (f == null || !string.Equals(f.FsmName, fsmName, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!f.gameObject.activeInHierarchy) continue;
+            var vars = f.FsmVariables;
+            var d = new Dictionary<string, string>();
+            foreach (var b in vars.BoolVariables) d[b.Name] = "bool:" + b.Value;
+            foreach (var n in vars.IntVariables) d[n.Name] = "int:" + n.Value;
+            foreach (var ff in vars.FloatVariables) d[ff.Name] = "float:" + ff.Value;
+            return new { fsm = fsmName, go = f.gameObject.name, vars = d };
+        }
+        return new { error = "fsm not found" };
+    }
+
+    // Readable repr of a PlayMaker action field: FsmEvent -> "evt:NAME", named Fsm vars -> "name=value", else ToString.
+    private static string? FsmFieldRepr(object v) {
+        var vt = v.GetType();
+        var nameP = vt.GetProperty("Name");
+        if (nameP != null) {
+            var nm = nameP.GetValue(v) as string;
+            if (vt.Name == "FsmEvent") return string.IsNullOrEmpty(nm) ? null : "evt:" + nm;
+            var valP = vt.GetProperty("Value");
+            if (valP != null) {
+                object? val = null; try { val = valP.GetValue(v); } catch { }
+                return (string.IsNullOrEmpty(nm) ? "" : nm + "=") + (val?.ToString() ?? "?");
+            }
+        }
+        var s = v.ToString();
+        return (!string.IsNullOrEmpty(s) && s != vt.FullName) ? s : null;
+    }
+
     internal static object DumpStateActions(string fsmName, string stateName) {
         foreach (var f in Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>()) {
             if (f == null || !string.Equals(f.FsmName, fsmName, StringComparison.OrdinalIgnoreCase)) continue;
@@ -426,8 +454,8 @@ internal static class BundleSpike {
                     foreach (var fi in a.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
                         object? v; try { v = fi.GetValue(a); } catch { continue; }
                         if (v == null) continue;
-                        var s = v.ToString();
-                        if (!string.IsNullOrEmpty(s) && s != fi.FieldType.FullName) fields[fi.Name] = s.Length > 60 ? s.Substring(0, 60) : s;
+                        var repr = FsmFieldRepr(v);
+                        if (!string.IsNullOrEmpty(repr)) fields[fi.Name] = repr!.Length > 60 ? repr.Substring(0, 60) : repr;
                     }
                     acts.Add(new { action = a.GetType().Name, fields });
                 }

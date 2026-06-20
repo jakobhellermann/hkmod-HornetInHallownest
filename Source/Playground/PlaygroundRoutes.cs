@@ -18,7 +18,7 @@ public static class PlaygroundRoutes {
     public static void Register() {
         DebugServer.MapGet("/scene-tree", _ => SceneTree());
         DebugServer.MapGet("/screenshot", (AsyncRouteHandler)((_, respond) => Screenshot(respond)));
-        DebugServer.MapGet("/inspect", req => Inspect(req["path"]));
+        DebugServer.MapGet("/inspect", req => Inspect(req["path"], req["depth"]));
         DebugServer.MapPost("/set-active", req => SetActive(req["name"], req["path"], req["active"]));
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
         DebugServer.MapPost("/invoke", req => Invoke(req["path"], req["method"]));
@@ -51,7 +51,11 @@ public static class PlaygroundRoutes {
         respond(DevResponse.Bytes(png, "image/png"));
     }
 
-    private static object Inspect(string? rawPath) {
+    private static object Inspect(string? rawPath, string? depthStr) {
+        // Default depth 1: each field/property VALUE is expanded one level, so nested plain data (e.g. cState =
+        // HeroControllerStates) shows its members instead of stringifying to the type name. Unity objects + primitives
+        // stop the recursion, so it stays bounded. ?depth=N for deeper.
+        var depth = int.TryParse(depthStr, out var d) ? Math.Max(0, d) : 1;
         var (path, error) = ParsePath(rawPath);
         if (error != null) return error;
 
@@ -74,11 +78,11 @@ public static class PlaygroundRoutes {
 
         for (var type = comp.GetType(); type != null && type != typeof(object); type = type.BaseType) {
             foreach (var field in type.GetFields(MemberFlags | BindingFlags.DeclaredOnly))
-                fields[$"{field.DeclaringType?.Name}.{field.Name}"] = SafeValue(() => field.GetValue(comp));
+                fields[$"{field.DeclaringType?.Name}.{field.Name}"] = SafeFmt(() => field.GetValue(comp), depth);
 
             foreach (var prop in type.GetProperties(MemberFlags | BindingFlags.DeclaredOnly)) {
                 if (!prop.CanRead) continue;
-                properties[$"{prop.DeclaringType?.Name}.{prop.Name}"] = SafeValue(() => prop.GetValue(comp));
+                properties[$"{prop.DeclaringType?.Name}.{prop.Name}"] = SafeFmt(() => prop.GetValue(comp), depth);
             }
         }
 
@@ -141,8 +145,12 @@ public static class PlaygroundRoutes {
         var args = new object[parms.Length];
         for (var i = 0; i < parms.Length; i++)
             args[i] = parms[i].DefaultValue ?? Activator.CreateInstance(parms[i].ParameterType)!;
-        method.Invoke(comp, args);
-        return new { ok = true, invoked = methodName };
+        object? result;
+        try { result = method.Invoke(comp, args); }
+        catch (Exception e) { return new { ok = false, invoked = methodName, error = (e.InnerException ?? e).Message }; }
+        // Return the actual result (expanded one level), not just "ok" — the whole point of invoking a bool/struct
+        // getter like CanOpenInventory() is to SEE what it returns.
+        return new { ok = true, invoked = methodName, returnType = method.ReturnType.Name, returned = Format(result, 1) };
     }
 
     private static (ComponentPath? path, object? error) ParsePath(string? raw) {
@@ -170,18 +178,40 @@ public static class PlaygroundRoutes {
         return (target, comp, null);
     }
 
-    // Primitives pass through; anything else is stringified so Newtonsoft can't recurse into deep Unity graphs.
-    private static object? SafeValue(Func<object?> getter) {
-        object? value;
-        try {
-            value = getter();
-        } catch (Exception e) {
-            return $"<error: {e.Message}>";
-        }
+    // Get a value safely (catching getter exceptions) and format it bounded to `depth`.
+    private static object? SafeFmt(Func<object?> getter, int depth) {
+        try { return Format(getter(), depth); }
+        catch (Exception e) { return $"<error: {e.Message}>"; }
+    }
 
-        return value switch {
-            null or bool or int or float or double or string => value,
-            _ => value.ToString()
-        };
+    // Bounded value formatter. Primitives/strings/enums pass through. A UnityEngine.Object becomes "Type:name" and is
+    // NEVER expanded — recursing the scene/component graph (Transform->children->components->…) would explode. Plain
+    // (non-Unity) classes/structs expand their instance fields, one level per remaining `depth`; collections list their
+    // elements (capped). Since recursion stops at Unity objects + primitives, `depth` bounds the output. This is what
+    // lets /inspect show cState (HeroControllerStates) as its bools instead of the bare type name.
+    private static object? Format(object? value, int depth) {
+        switch (value) {
+            case null or bool or int or float or double or string: return value;
+        }
+        var t = value.GetType();
+        if (t.IsEnum || t.IsPrimitive) return value.ToString();                 // long/byte/enum/…
+        if (value is Object uo) return $"{t.Name}:{uo.name}";                    // UnityEngine.Object — don't recurse
+        if (value is Vector2 or Vector3 or Vector4 or Quaternion or Color) return value.ToString();
+        if (depth <= 0) return value.ToString();
+
+        if (value is IDictionary) return value.ToString();                       // skip (rare; avoid key formatting)
+        if (value is IEnumerable en) {
+            var items = new List<object?>();
+            foreach (var item in en) {
+                if (items.Count >= 64) { items.Add("…(truncated)"); break; }
+                items.Add(Format(item, depth - 1));
+            }
+            return items;
+        }
+        // Plain class/struct: expand instance fields one level down.
+        var dict = new Dictionary<string, object?>();
+        foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            dict[f.Name] = SafeFmt(() => f.GetValue(value), depth - 1);
+        return dict.Count > 0 ? dict : value.ToString();
     }
 }

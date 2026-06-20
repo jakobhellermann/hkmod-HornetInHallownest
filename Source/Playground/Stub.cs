@@ -117,6 +117,12 @@ internal static class Stub {
         // These are MAP unlock indicators in the inventory; with no map they're correctly "locked" -> get_IsUnlocked
         // returns false (default), which also makes IsAutoNavSelectable false so OnEnable's EvaluateAutoNav skips them.
         Skip(typeof(Silksong::InventoryItemWideMapZone), "get_IsUnlocked");
+        // Inventory open is decoupled from Silksong's global pause (chosen "overlay" approach): GameManager.SetPausedState
+        // does SetTimeScale(0) — which would freeze HK's world AND our InputDriver (it bails at timeScale<=0, so the
+        // inventory couldn't be navigated) — plus gameCams.StopCameraShake()/ui.AudioGoToPauseMenu() (HK owns time/pause/
+        // audio). No-op it: the inventory still opens (SetIsInventoryOpen sets isInventoryOpen + AddInputBlocker around
+        // this), just as an overlay over the live world instead of pausing. Vanilla pause semantics can be added later.
+        Skip(typeof(Silksong::GameManager), "SetPausedState");
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
         // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.
