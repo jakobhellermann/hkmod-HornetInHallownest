@@ -29,14 +29,22 @@ internal static class AddressablesBootstrap {
     private const string RemappedMonoScripts =
         "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/monoscripts.silksong.bundle";
 
-    private static bool initialized;
-
     // HK's addressables runtime path (= Addressables.RuntimePath), e.g. <hk>/hollow_knight_Data/StreamingAssets/aa.
     private static string HkAa => (Application.streamingAssetsPath + "/aa").Replace('\\', '/');
+    private static string CatalogId => SilksongAa + "/catalog.bin";
+
+    // Hot-reload safe: the registered locator + the InternalIdTransformFunc live in Unity's ResourceManager, which
+    // survives our DLL reload — a `static bool initialized` would reset per reload and re-register a DUPLICATE locator.
+    // So the source of truth is the ResourceManager's locator list, not a static flag.
+    private static bool CatalogRegistered() {
+        foreach (var loc in Addressables.ResourceLocators)
+            if (loc.LocatorId == CatalogId) return true;
+        return false;
+    }
 
     internal static object Ensure() {
         try {
-            if (initialized) return new { ok = true, note = "already initialized" };
+            if (CatalogRegistered()) return new { ok = true, note = "already registered" };
 
             var hkAa = HkAa;
             // Redirect any internal id resolved under HK's empty aa -> Silksong's aa. Applies to catalog.bin + every
@@ -72,14 +80,14 @@ internal static class AddressablesBootstrap {
 
             // Load Silksong's catalog directly (bypasses settings catalog-location discovery). Bundle ids inside resolve
             // via {RuntimePath} -> HK aa -> our InternalIdTransformFunc -> Silksong aa.
-            var cat = Addressables.LoadContentCatalogAsync(SilksongAa + "/catalog.bin", autoReleaseHandle: false);
+            var cat = Addressables.LoadContentCatalogAsync(CatalogId, autoReleaseHandle: false);
             cat.WaitForCompletion();
-            initialized = cat.Status == AsyncOperationStatus.Succeeded;
-            var locatorKeys = cat.Status == AsyncOperationStatus.Succeeded && cat.Result != null ? cat.Result.LocatorId : null;
+            var ok = cat.Status == AsyncOperationStatus.Succeeded;
+            var locatorKeys = ok && cat.Result != null ? cat.Result.LocatorId : null;
             // NOTE: settings-init is EXPECTED to report Failed (its catalog-location discovery comes up empty); the real
             // success signal is loadCatalog=Succeeded — that's the registered Silksong locator. Not an error.
             Log.Info($"[Addressables] Silksong catalog registered: loadCatalog={cat.Status} (settings-init={initStatus}, expected-Failed; locator={locatorKeys})");
-            return new { ok = initialized, init = initStatus, catalog = cat.Status.ToString(), locator = locatorKeys };
+            return new { ok, init = initStatus, catalog = cat.Status.ToString(), locator = locatorKeys };
         } catch (Exception e) {
             var ex = e.InnerException ?? e;
             Log.Error($"[Addressables] init failed: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
@@ -90,7 +98,7 @@ internal static class AddressablesBootstrap {
     // Test helper: actually load a key and report what came back. GET /addr-load?key=GlobalPool
     internal static object Load(string key) {
         try {
-            if (!initialized) Ensure();
+            Ensure(); // idempotent (CatalogRegistered guard)
             var h = Addressables.LoadAssetAsync<GameObject>(key);
             var obj = h.WaitForCompletion();
             var r = new { key, status = h.Status.ToString(), loaded = obj != null, name = obj != null ? obj.name : null };

@@ -18,11 +18,27 @@ namespace HornetPlayer.Playground;
 // — its many FSMs need PlayerData/silk wiring and would spam. Revive it when the HUD is brought online. CameraTarget
 // stays live (its lookahead feeds HK's camera follow later).
 internal static class GameCamerasBootstrap {
+    private const string RigName = "Silksong_GameCameras";
     private static GameObject? rig;
+
+    // Hot-reload safe: the rig is DontDestroyOnLoad and survives our DLL reload (our `rig` static does not). Reuse the
+    // existing rig instead of spawning a duplicate. Found by its unique instance name (the prefab is "_GameCameras").
+    private static GameObject? FindExistingRig() {
+        foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
+            if (go != null && go.name == RigName && go.scene.IsValid()) return go;
+        return null;
+    }
 
     internal static object Ensure() {
         try {
-            if (rig != null) return new { ok = true, note = "already", instanceSet = Silksong::GameCameras.SilentInstance != null };
+            rig ??= FindExistingRig();
+            if (rig != null) {
+                // Re-point GameCameras._instance in case it dangled across the reload (Silksong-assembly static).
+                var existing = rig.GetComponentInChildren<Silksong::GameCameras>(true);
+                if (existing != null && Silksong::GameCameras.SilentInstance == null)
+                    typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, existing);
+                return new { ok = true, note = "reused existing rig", instanceSet = Silksong::GameCameras.SilentInstance != null };
+            }
             AddressablesBootstrap.Ensure();
             var prefab = Addressables.LoadAssetAsync<GameObject>("_GameCameras").WaitForCompletion();
             if (prefab == null) return new { error = "_GameCameras load returned null" };
@@ -31,7 +47,7 @@ internal static class GameCamerasBootstrap {
             var holder = new GameObject("hp_gc_holder");
             holder.SetActive(false);
             var inst = Object.Instantiate(prefab, holder.transform);
-            inst.name = "Silksong_GameCameras";
+            inst.name = RigName;
 
             int cams = 0, listeners = 0, controllers = 0, blur = 0;
             foreach (var c in inst.GetComponentsInChildren<Camera>(true)) { c.enabled = false; cams++; }
@@ -86,6 +102,11 @@ internal static class GameCamerasBootstrap {
     }
 
     internal static void Cleanup() {
-        if (rig != null) { Object.Destroy(rig); rig = null; }
+        // DestroyImmediate (synchronous) so the rig is gone before a hot-reload's Initialize runs Ensure again — a
+        // deferred Object.Destroy could leave it alive into the next generation, where FindExistingRig would then reuse
+        // a doomed object. Also clear GameCameras._instance (Silksong-assembly static) so it doesn't dangle.
+        rig ??= FindExistingRig();
+        if (rig != null) { Object.DestroyImmediate(rig); rig = null; }
+        typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, null);
     }
 }

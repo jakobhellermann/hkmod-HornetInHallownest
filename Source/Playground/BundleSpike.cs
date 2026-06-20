@@ -357,6 +357,27 @@ internal static class BundleSpike {
         };
     }
 
+    // Probe what the Sprint FSM's CallMethodProper("CameraTarget","SetSprint") actually resolves to on the live hero:
+    // does the hero GO have a CameraTarget component (runtime-added?), what TYPE/assembly is it, and does that type
+    // expose SetSprint? Answers whether "Method Name is invalid" is a wrong-type CameraTarget vs an overload/param miss.
+    internal static object ProbeCameraTarget() {
+        var hc = RealHero;
+        if (hc == null) return new { error = "not spawned" };
+        var go = ((Component)hc).gameObject;
+        var ct = go.GetComponent("CameraTarget");
+        var roots = go.GetComponents<Component>().Where(c => c != null)
+            .Select(c => c.GetType().Name + " [" + c.GetType().Assembly.GetName().Name + "]").ToArray();
+        object? ctInfo = ct == null ? null : new {
+            type = ct.GetType().FullName,
+            asm = ct.GetType().Assembly.GetName().Name,
+            getMethodSetSprint = ct.GetType().GetMethod("SetSprint") != null,
+            sprintMethods = ct.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                .Where(m => m.Name.IndexOf("Sprint", StringComparison.OrdinalIgnoreCase) >= 0)
+                .Select(m => m.Name + "(" + string.Join(",", m.GetParameters().Select(p => p.ParameterType.Name)) + ")").ToArray(),
+        };
+        return new { heroGoHasCameraTarget = ct != null, cameraTarget = ctInfo, heroRootComponents = roots };
+    }
+
     // Find which FSM/state/action references a string `needle` (e.g. a method name like "SetSprint"). Scans every
     // action's FsmString/string fields across the spawned hero's FSMs and dumps all string fields of the matching
     // action (so a CallMethodProper match shows both its methodName AND its `behaviour` target). For root-causing
