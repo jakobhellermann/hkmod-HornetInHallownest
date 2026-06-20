@@ -91,6 +91,12 @@ internal static class HeroSwitch {
             // touch controlReqlinquished: it's coupled to HK's door-entry chain (which still reads the Knight) and would
             // break Hornet's door transitions — that consumer gets patched on the Hornet side instead.
             SetAbilityFsms(hk, !inert);
+            // A Hornet-started transition relinquishes the Knight (HK sets controlReqlinquished at transition start), but
+            // with the Knight inert its EnterScene never reaches the RegainControl at the end -> the flag sticks and
+            // blocks the Knight's double jump / abilities (CanDoubleJump etc. gate on !controlReqlinquished) until a bench
+            // RegainControl. When the Knight becomes active again, restore control (RegainControl is a near-no-op if it
+            // already has control).
+            if (!inert) hk.RegainControl();
             // The Knight's screen-edge vignette would otherwise keep darkening the view while she's the inactive hero;
             // kill the renderer + its FSM (so nothing re-enables it), restore when she's active again.
             if (hk.vignette != null) hk.vignette.enabled = !inert;
