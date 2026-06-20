@@ -87,6 +87,7 @@ internal static class BundleSpike {
         SilksongBootstrap.Ensure();
         GlobalSettingsBootstrap.Apply(); // assign GlobalSettings _instance from the loaded SOs (bypass Addressables)
         GameCamerasBootstrap.Ensure();   // GameCameras.instance + CameraTarget BEFORE the hero's FSMs Awake (else camera errors)
+        PlayMakerUnity2dBootstrap.Ensure(); // "PlayMaker Unity 2D" manager so collision/trigger proxies don't disable themselves
         // Tear down the previous spawn SYNCHRONOUSLY. Object.Destroy is deferred to end-of-frame, so the old hero would
         // still be alive when the new one's Awake runs below — its "an instance already exists" singleton branch
         // (HeroController.instance / GameManager.hero_ctrl) then skips ~3 render-relevant components, and the instance
