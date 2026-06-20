@@ -102,6 +102,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         HeroSwitch.Install();
         EnemyDamageBridge.Install();    // forward Hornet's Silksong nail damage onto HK enemies/breakables (cross-game responder bridge)
         DamagesEnemyFsmShim.Install();  // stand in for the HK "damages_enemy" FSM that HK breakables read off Hornet's slash
+        PogoNonBounceShim.Install();    // honour HK's NonBouncer so Hornet doesn't pogo off HK-non-pogoable objects (bell, …)
         // BundleSpike.Run();
 
         // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so
@@ -145,6 +146,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         HeroSwitch.Cleanup();
         EnemyDamageBridge.Cleanup();
         DamagesEnemyFsmShim.Cleanup();
+        PogoNonBounceShim.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
