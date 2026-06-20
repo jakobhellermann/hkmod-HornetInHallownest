@@ -24,10 +24,15 @@ echo "== prefixing Assembly-CSharp + firstpass + PlayMaker + TeamCherry action a
 # TeamCherry.NestedFadeGroup / TeamCherry.Localization / ConditionalExpression define PlayMaker actions
 # (FadeNestedFadeGroup, GetLocalisedString, ConditionalExpression). They must be prefixed so their actions derive
 # from Silksong.PlayMaker (else Hornet's isolated FSMs can't instantiate them -> "Could Not Create Action").
+# TeamCherry.SharedUtils exposes PlayMaker-typed helpers (Extensions.GetSafe(FsmOwnerDefault, FsmStateAction), …) that
+# Hornet's actions call. Bound to HK's PlayMaker (HK ships it too) the overload's param types don't match Silksong's
+# PlayMaker -> MissingMethodException at the call site. Prefixing rewrites its PlayMaker refs to Silksong.PlayMaker so
+# the Silksong-typed overload exists (and the call sites resolve to Silksong.TeamCherrySharedUtils).
 dotnet run -c Release --project "$HERE/SilksongPrefixer" -- \
   Silksong "$LIB" --managed "$SS" \
   "$SS/Assembly-CSharp.dll" "$SS/Assembly-CSharp-firstpass.dll" "$SS/PlayMaker.dll" \
-  "$SS/TeamCherry.NestedFadeGroup.dll" "$SS/TeamCherry.Localization.dll" "$SS/ConditionalExpression.dll"
+  "$SS/TeamCherry.NestedFadeGroup.dll" "$SS/TeamCherry.Localization.dll" "$SS/ConditionalExpression.dll" \
+  "$SS/TeamCherry.SharedUtils.dll"
 
 echo "== copying Silksong-only / Unity-package deps HK lacks =="
 n=0
