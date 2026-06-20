@@ -1,5 +1,7 @@
 extern alias Silksong;
+using System;
 using System.Reflection;
+using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -20,6 +22,7 @@ internal enum ActiveHero { Knight, Hornet }
 internal static class HeroSwitch {
     private static GameObject? go;
     private static FieldInfo? heroTransformField;
+    private static Hook? canInteractHook;
 
     internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
     internal static bool HornetActive => Active == ActiveHero.Hornet;
@@ -29,10 +32,23 @@ internal static class HeroSwitch {
         go = new GameObject("HornetPlayer.HeroSwitch");
         go.AddComponent<CameraSwitchDriver>();
         Object.DontDestroyOnLoad(go);
+
+        // Seam consumer redirect (Policy B): HK's interact gate HeroController.CanInteract() reads the Knight's state
+        // (controlReqlinquished/onGround/transitioning). While Hornet is active the Knight is correctly relinquished/inert,
+        // so doors/NPCs/benches asking the Knight get "no" -> Hornet's "Enter" prompt flashes but nothing happens. The
+        // Knight's relinquished state is RIGHT; the consumer is wrong to read it. Redirect to the active hero: Hornet's
+        // own CanInteract() when she's active, else the Knight's. One spot covers all interactables. (Catches FSM/
+        // reflection callers too, since the detour replaces the method.)
+        canInteractHook = new Hook(
+            typeof(global::HeroController).GetMethod(nameof(global::HeroController.CanInteract)),
+            (Func<Func<global::HeroController, bool>, global::HeroController, bool>)((orig, self) =>
+                HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.CanInteract() : orig(self)));
+
         Log.Info("[HeroSwitch] installed (Tab toggles Knight<->Hornet; /switch route)");
     }
 
     internal static void Cleanup() {
+        canInteractHook?.Dispose(); canInteractHook = null;
         if (go != null) { Object.Destroy(go); go = null; }
         Active = ActiveHero.Knight; // leave HK's Knight controllable after unload
         SetInert(global::HeroController.instance != null ? global::HeroController.instance.gameObject : null, false);
