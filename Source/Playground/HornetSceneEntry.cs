@@ -34,6 +34,11 @@ internal static class HornetSceneEntry {
     // in both games). customEntryFSM is left null -> PrepareEntry/BeforeEntry/AfterEntry are no-ops.
     private static GameObject BuildGate(global::TransitionPoint hk) {
         var go = new GameObject(hk.name);
+        // INACTIVE: Silksong's TransitionPoint.Awake (base.Awake / OnSceneLintUpgrade) NullRefs without the Silksong
+        // scene-setup env, and we only need the gate as a data carrier for EnterScene (which reads fields + calls
+        // PrepareEntry/GetGatePosition directly — none require Awake). Inactive => Awake never runs (and Unity won't
+        // call OnDestroy on a never-awoken component either, so teardown is clean too).
+        go.SetActive(false);
         go.transform.position = hk.transform.position;
         var tp = go.AddComponent<Silksong::TransitionPoint>();
         tp.entryOffset = hk.entryOffset;
