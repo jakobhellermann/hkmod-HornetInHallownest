@@ -60,6 +60,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/addr-init", _ => AddressablesBootstrap.Ensure());
         DebugServer.MapGet("/addr-load", req => AddressablesBootstrap.Load(req["key"] ?? "GlobalPool"));
         DebugServer.MapGet("/addr-load-hero", _ => AddressablesBootstrap.LoadHero());
+        DebugServer.MapPost("/gamecameras-init", _ => GameCamerasBootstrap.Ensure());
         DebugServer.MapGet("/probe-actions", _ => BundleSpike.ProbeActions());
         DebugServer.MapGet("/probe-hero-fsms", _ => BundleSpike.ProbeHeroFsms());
         DebugServer.MapPost("/load-save", req => {
@@ -93,6 +94,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         SilksongLoadSpike.Cleanup();
         ResourcesShim.Cleanup();
         AddressablesBootstrap.Cleanup();
+        GameCamerasBootstrap.Cleanup();
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();
