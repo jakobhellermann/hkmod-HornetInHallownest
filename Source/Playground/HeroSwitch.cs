@@ -46,6 +46,7 @@ internal static class HeroSwitch {
         if (who == ActiveHero.Hornet && hornet == null)
             return new { error = "Hornet not spawned (POST /spawn-real first)", active = Active.ToString() };
 
+        var prev = Active;
         Active = who;
         var knightGo = global::HeroController.instance != null ? global::HeroController.instance.gameObject : null;
         var hornetGo = BundleSpike.HornetRoot;
@@ -55,6 +56,18 @@ internal static class HeroSwitch {
         SetInert(knightGo, who != ActiveHero.Knight);
         SetInert(hornetGo, who != ActiveHero.Hornet);
         if (hornet != null) hornet.enabled = who == ActiveHero.Hornet; // adapter re-asserts true while HornetActive
+
+        // Hand off in place: move the newly-active hero to where the previously-active one stood, so control + camera
+        // stay on the same spot (only the character changes). Skip when re-applying the same hero (e.g. at spawn).
+        if (who != prev) {
+            var newT = who == ActiveHero.Hornet ? hornetGo?.transform : knightGo?.transform;
+            var oldT = prev == ActiveHero.Hornet ? hornetGo?.transform : knightGo?.transform;
+            if (newT != null && oldT != null && newT != oldT) {
+                newT.position = oldT.position;
+                var rb = newT.GetComponent<Rigidbody2D>();
+                if (rb != null && rb.simulated) rb.linearVelocity = Vector2.zero;
+            }
+        }
 
         var follow = who == ActiveHero.Hornet ? hornetGo?.transform : knightGo?.transform;
         RetargetCamera(follow);
@@ -72,11 +85,12 @@ internal static class HeroSwitch {
         var hk = hero.GetComponent<global::HeroController>();
         if (hk != null) {
             hk.enabled = !inert;
-            // HeroController.enabled=false stops its Update, but the Knight's input-driven FSMs (Superdash/cdash, cast,
-            // dream nail, focus) are SEPARATE components that read HeroController.CanSuperDash() etc. — all gated on
-            // controlReqlinquished. So an inert Knight still cdashes on input unless we relinquish control. Use HK's
-            // native RelinquishControl (sets controlReqlinquished + IgnoreInput + ResetMotion); RegainControl restores.
-            if (inert) hk.RelinquishControl(); else hk.RegainControl();
+            // Seam policy B (Hornet is the real hero): turn the inert Knight genuinely OFF. enabled=false stops its
+            // Update, but its ability FSMs (Superdash/cdash, Spell Control, Nail Arts) are SEPARATE components that
+            // listen for HK input independently and fire -> cdash leak. Disable them directly. We deliberately do NOT
+            // touch controlReqlinquished: it's coupled to HK's door-entry chain (which still reads the Knight) and would
+            // break Hornet's door transitions — that consumer gets patched on the Hornet side instead.
+            SetAbilityFsms(hk, !inert);
             // The Knight's screen-edge vignette would otherwise keep darkening the view while she's the inactive hero;
             // kill the renderer + its FSM (so nothing re-enables it), restore when she's active again.
             if (hk.vignette != null) hk.vignette.enabled = !inert;
@@ -105,6 +119,15 @@ internal static class HeroSwitch {
             if (d != null && d.GetType().Name == "HeroAnimationController") d.enabled = !inert;
         foreach (var a in hero.GetComponentsInChildren<tk2dSpriteAnimator>(true)) { if (inert) a.Pause(); else a.Resume(); }
         foreach (var a in hero.GetComponentsInChildren<Animator>(true)) a.enabled = !inert;
+    }
+
+    // The Knight's standalone input-listening ability FSMs: they fire independently of HeroController.enabled, so they
+    // must be disabled to stop the inert Knight from cdashing/casting/nail-arting on shared input. (NOT controlReqlinquished
+    // — that's coupled to HK's door-entry; see SetInert.)
+    private static readonly string[] AbilityFsms = { "Superdash", "Spell Control", "Nail Arts" };
+    private static void SetAbilityFsms(global::HeroController hk, bool enabled) {
+        foreach (var fsm in hk.GetComponents<global::PlayMakerFSM>())
+            if (System.Array.IndexOf(AbilityFsms, fsm.FsmName) >= 0) fsm.enabled = enabled;
     }
 
     // Point HK's CameraTarget at `t` so HK's native camera chain follows it. Idempotent + cheap (one reflected set).
@@ -151,13 +174,15 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
 
         if (Input.GetKeyDown(KeyCode.Tab)) HeroSwitch.Toggle();
 
-        // While Hornet is the active hero the Knight is inert and off-camera. HK re-enables his screen vignette
-        // (vignette_large_v01) on every scene entry; centered on the off-camera Knight it then blacks out a hard-edged
-        // chunk of the view. SetInert kills it once at switch, but the transition re-enables it — so re-assert each
-        // frame (disabling vignetteFSM too, else it re-enables the renderer).
-        if (HeroSwitch.HornetActive && knight != null) {
-            if (knight.vignette != null && knight.vignette.enabled) knight.vignette.enabled = false;
-            if (knight.vignetteFSM != null && knight.vignetteFSM.enabled) knight.vignetteFSM.enabled = false;
+        // The inert, off-camera Knight's Vignette must be fully off (its black plates otherwise frame HK's screen
+        // centered on the off-screen Knight). Toggle the whole Vignette GAMEOBJECT, not just hk.vignette.enabled: the
+        // hard border is the `black_solid` plates under "Darkness Border", which are SEPARATE child SpriteRenderers the
+        // component-level disable misses (deactivating the GO also stops the vignetteFSM that re-enables them). Sync to
+        // the active hero each frame — HK re-enables it on every scene entry, and the Knight needs it back when active.
+        if (knight != null && knight.vignette != null) {
+            var vigGo = knight.vignette.gameObject;
+            var shouldBeOn = !HeroSwitch.HornetActive;
+            if (vigGo.activeSelf != shouldBeOn) vigGo.SetActive(shouldBeOn);
         }
 
         var follow = HeroSwitch.HornetActive
