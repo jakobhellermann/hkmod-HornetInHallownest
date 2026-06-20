@@ -86,7 +86,12 @@ internal static class BundleSpike {
         if (heroPrefab == null) return new { error = "Hero_Hornet load via Addressables failed" };
         SilksongBootstrap.Ensure();
         GlobalSettingsBootstrap.Apply(); // assign GlobalSettings _instance from the loaded SOs (bypass Addressables)
-        if (real != null) { Object.Destroy(real); real = null; }
+        // Tear down the previous spawn SYNCHRONOUSLY. Object.Destroy is deferred to end-of-frame, so the old hero would
+        // still be alive when the new one's Awake runs below — its "an instance already exists" singleton branch
+        // (HeroController.instance / GameManager.hero_ctrl) then skips ~3 render-relevant components, and the instance
+        // ref ping-pongs across the deferred destroys -> the spawn alternates 71-visible / 68-invisible. DestroyImmediate
+        // clears the old hero (and its singleton refs via OnDestroy) before we instantiate -> every spawn starts clean.
+        if (real != null) { Object.DestroyImmediate(real); real = null; }
 
         // Instantiate INACTIVE so we can patch null fields (missing-environment refs) before Awake runs, then activate.
         var staging = new GameObject("hp_real_staging");
