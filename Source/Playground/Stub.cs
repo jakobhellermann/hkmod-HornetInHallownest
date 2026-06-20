@@ -84,6 +84,14 @@ internal static class Stub {
         // (Rigidbody2D.IsAwake) -> per-frame NullRef. Cosmetic particle scaling -> stub.
         Skip(typeof(Silksong::SetParticleScale), "OnUpdate");
         Skip(typeof(Silksong::DeliveryQuestItem), "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
+        // Superjump's "Hit Roof Hard" state calls DeliveryQuestItem.TakeHit() via CallStaticMethod (slamming the ceiling
+        // damages carried delivery items). TakeHit() -> TakeHit(int) -> GetActiveItems() -> QuestManager/CollectableItemManager
+        // (deliveries/quest subsystem off, see DeliveryHudIcon above) -> NullRef. It throws at action index 0, aborting the
+        // rest of "Hit Roof Hard" (incl. the Tk2dPlayAnimationWithEvents) so the follow-up "Hit Roof" state's
+        // Tk2dWatchAnimationEvents waits forever for an animation event that never fires -> Hornet stuck in soar pose at the
+        // ceiling, no fall. Both overloads are void -> clean no-op (Skip stubs all overloads). GetActiveItems itself can't be
+        // stubbed here (returns IEnumerable -> default null -> callers foreach over null -> NullRef again).
+        Skip(typeof(Silksong::DeliveryQuestItem), "TakeHit");
         // Hornet's EnterScene (HornetSceneEntry) -> EnterHeroSubFadeUp calls gm.FadeSceneIn(): Silksong's own scene fade,
         // which fights HK's fade (HK owns the camera/fade) and needs Silksong's fade FSM/camera context we don't run.
         // No-op it; HK fades the scene.
