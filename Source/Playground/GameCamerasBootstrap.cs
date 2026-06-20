@@ -77,12 +77,13 @@ internal static class GameCamerasBootstrap {
             // Silksong's code reads off GameCameras.instance — those are live on an inactive GameObject. Activating it
             // instead runs GameCameras.Awake/Start (DontDestroyOnLoad on this + gs.LoadOverscanSettings() where gs is
             // null -> NullRef) and every child Update/LateUpdate (blur, FSMs, HUD) — all of which we don't want yet.
-            // SetActive(false) BEFORE reparenting so it stays inactive as a root (else SetParent(null) would activate it
-            // and fire Awake). Revive selectively (HudCamera + Hud Canvas, with gs wired) when the HUD is brought online.
+            // Persist the rig by DontDestroyOnLoad-ing the inactive HOLDER and keeping inst as its child — do NOT reparent
+            // inst to root: SetParent fires OnTransformParentChanged on its NestedFadeGroup components, whose setMatBlocks
+            // cache is null (Awake never ran on the inactive rig) -> NullRef in OnAlphaChanged. No reparent, no callback.
+            // GameCameras._instance + the serialized fields are readable on the inactive GO regardless of hierarchy depth.
+            // Revive selectively (HudCamera + Hud Canvas, with gs wired) when the HUD is brought online.
             inst.SetActive(false);
-            inst.transform.SetParent(null, false);
-            Object.DontDestroyOnLoad(inst);
-            Object.DestroyImmediate(holder);
+            Object.DontDestroyOnLoad(holder);
             rig = inst;
 
             var instanceSet = Silksong::GameCameras.SilentInstance != null;
@@ -112,7 +113,9 @@ internal static class GameCamerasBootstrap {
         // deferred Object.Destroy could leave it alive into the next generation, where FindExistingRig would then reuse
         // a doomed object. Also clear GameCameras._instance (Silksong-assembly static) so it doesn't dangle.
         rig ??= FindExistingRig();
-        if (rig != null) { Object.DestroyImmediate(rig); rig = null; }
+        // Destroy the persisted root (the inactive holder), which owns the rig as a child — not just `rig` itself, or the
+        // holder would leak. root == rig in the degenerate case where rig is already a root.
+        if (rig != null) { Object.DestroyImmediate(rig.transform.root.gameObject); rig = null; }
         typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, null);
     }
 }
