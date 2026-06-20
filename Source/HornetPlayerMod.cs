@@ -47,6 +47,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/fsm-state", _ => BundleSpike.FsmState());
         DebugServer.MapPost("/load-gamecameras", (req, respond) => BundleSpike.LoadGameCamerasCo(respond, req["bundle"]));
         DebugServer.MapGet("/fsm-dump", req => BundleSpike.FsmDump(req["name"] ?? "Sprint"));
+        DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapGet("/gc-dump", _ => BundleSpike.GcDump());
         DebugServer.MapGet("/probe-types", req => BundleSpike.ProbeTypes(req["name"] ?? "GameCameras"));
         DebugServer.MapGet("/test-addcomponent", _ => BundleSpike.TestAddComponent());

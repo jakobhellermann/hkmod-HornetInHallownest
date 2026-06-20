@@ -357,6 +357,33 @@ internal static class BundleSpike {
         };
     }
 
+    // Find which FSM/state/action references a string `needle` (e.g. a method name like "SetSprint"). Scans every
+    // action's FsmString/string fields across the spawned hero's FSMs and dumps all string fields of the matching
+    // action (so a CallMethodProper match shows both its methodName AND its `behaviour` target). For root-causing
+    // "Method Name is invalid" / "missing behaviour" style PlayMaker errors.
+    internal static object FindFsmAction(string needle) {
+        if (real == null) return new { error = "not spawned" };
+        var hits = new List<object>();
+        foreach (var f in real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true)) {
+            foreach (var st in f.FsmStates) {
+                foreach (var a in st.Actions) {
+                    var fields = new Dictionary<string, string>();
+                    var match = false;
+                    foreach (var fi in a.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public)) {
+                        var v = fi.GetValue(a);
+                        if (v == null) continue;
+                        var s = v.GetType().Name == "FsmString" ? v.GetType().GetProperty("Value")?.GetValue(v) as string : v as string;
+                        if (string.IsNullOrEmpty(s)) continue;
+                        fields[fi.Name] = s;
+                        if (s!.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0) match = true;
+                    }
+                    if (match) hits.Add(new { fsm = f.FsmName, go = f.gameObject.name, state = st.Name, action = a.GetType().Name, fields });
+                }
+            }
+        }
+        return new { needle, count = hits.Count, hits };
+    }
+
     // Dump a named FSM's full state machine (active state, every state's transitions + action types, global
     // transitions) so we can see why a move-FSM (e.g. Sprint) sits where it does and what event should advance it.
     internal static object FsmDump(string name) {
