@@ -1,7 +1,6 @@
 extern alias Silksong;
 using System.Reflection;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace HornetPlayer.Playground;
@@ -118,14 +117,41 @@ internal static class HeroSwitch {
 // Drives the active-hero switch: Tab toggles; re-asserts the camera target each frame (cheap) so it survives HK
 // re-grabbing HeroController.instance on scene init. Early execution order so the retarget lands before
 // CameraTarget.Update (order 0) reads heroTransform the same frame.
+//
+// Scene transitions: only HK's Knight is HK's transition vehicle — it gets relocated to the new scene's entry gate.
+// Hornet is DontDestroyOnLoad and keeps her old world coordinates, so after a transition she's stranded in random
+// geometry / off in nirvana, and the camera (following her, or her after a Tab) points there. So on every scene change
+// we snap Hornet onto the Knight once HK reports the Knight is positioned (isHeroInPosition), which keeps both heroes in
+// the playable area of the new scene.
 [DefaultExecutionOrder(-8000)]
 internal sealed class CameraSwitchDriver : MonoBehaviour {
+    private string? lastScene;
+    private bool pendingSnap;
+
     private void Update() {
+        var knight = global::HeroController.instance;
+
+        // Detect a scene change; defer the Hornet snap until the Knight has actually been placed at the new entry.
+        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        if (scene != lastScene) { lastScene = scene; pendingSnap = true; }
+        if (pendingSnap && knight != null && knight.isHeroInPosition) {
+            SnapHornetToKnight(knight);
+            pendingSnap = false;
+        }
+
         if (Input.GetKeyDown(KeyCode.Tab)) HeroSwitch.Toggle();
 
         var follow = HeroSwitch.HornetActive
             ? BundleSpike.HornetRoot?.transform
-            : (global::HeroController.instance != null ? global::HeroController.instance.transform : null);
+            : (knight != null ? knight.transform : null);
         HeroSwitch.RetargetCamera(follow);
+    }
+
+    private static void SnapHornetToKnight(global::HeroController knight) {
+        var hornet = BundleSpike.HornetRoot;
+        if (hornet == null) return;
+        hornet.transform.position = knight.transform.position;
+        var rb = hornet.GetComponent<Rigidbody2D>();
+        if (rb != null && rb.simulated) rb.linearVelocity = Vector2.zero; // don't carry pre-transition momentum
     }
 }
