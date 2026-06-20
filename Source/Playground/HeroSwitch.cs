@@ -151,6 +151,15 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
 
         if (Input.GetKeyDown(KeyCode.Tab)) HeroSwitch.Toggle();
 
+        // While Hornet is the active hero the Knight is inert and off-camera. HK re-enables his screen vignette
+        // (vignette_large_v01) on every scene entry; centered on the off-camera Knight it then blacks out a hard-edged
+        // chunk of the view. SetInert kills it once at switch, but the transition re-enables it — so re-assert each
+        // frame (disabling vignetteFSM too, else it re-enables the renderer).
+        if (HeroSwitch.HornetActive && knight != null) {
+            if (knight.vignette != null && knight.vignette.enabled) knight.vignette.enabled = false;
+            if (knight.vignetteFSM != null && knight.vignetteFSM.enabled) knight.vignetteFSM.enabled = false;
+        }
+
         var follow = HeroSwitch.HornetActive
             ? BundleSpike.HornetRoot?.transform
             : (knight != null ? knight.transform : null);
