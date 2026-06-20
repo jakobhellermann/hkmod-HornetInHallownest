@@ -1,6 +1,7 @@
 extern alias Silksong;
 using System;
 using System.Reflection;
+using System.Runtime.Serialization;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -94,6 +95,24 @@ internal static class SilksongBootstrap {
             var sm = gmGo.AddComponent<Silksong::CustomSceneManager>();
             typeof(Silksong::GameManager).GetField("<sm>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
                 ?.SetValue(gm, sm);
+
+            // SilkSpool singleton: silk-cost FSM actions (AddUsingSilk/RemoveUsingSilk in Superjump etc.) deref
+            // SilkSpool.Instance, which is set in Awake — never runs on the inactive GO. Without it AddUsingSilk.OnEnter
+            // NullRefs and, being a PlayMaker action, never calls Finish() -> the FSM state hangs -> hero stuck until
+            // respawn. A bare instance with Instance set manually is enough: usingSilk is inline-initialized, RefreshSilk
+            // early-returns while the HUD spool is undrawn (hasDrawnSpool=false), RefreshBindNotch no-ops (bindNotch null).
+            var spool = gmGo.AddComponent<Silksong::SilkSpool>();
+            typeof(Silksong::SilkSpool).GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)
+                ?.GetSetMethod(true)?.Invoke(null, new object[] { spool });
+
+            // Platform.Current (private static `current`, set only during Silksong's boot which we never run) is null ->
+            // the hero's EnterScene prologue derefs Platform.Current.EnterSceneWait -> NullRef. Assign an UNINITIALIZED
+            // DesktopPlatform (no Awake/ctor, so no Steam/save-system init): EnterScene only reads EnterSceneWait
+            // (base => 0f, no field access), so an empty instance suffices. Also force SceneEntryWait >= 0 (default is
+            // -0.1f) so the entry has zero startup delay.
+            typeof(Silksong::Platform).GetField("current", BindingFlags.NonPublic | BindingFlags.Static)
+                ?.SetValue(null, FormatterServices.GetUninitializedObject(typeof(Silksong::DesktopPlatform)));
+            Silksong::CheatManager.SceneEntryWait = 0f;
 
             Object.DontDestroyOnLoad(gmGo);
 

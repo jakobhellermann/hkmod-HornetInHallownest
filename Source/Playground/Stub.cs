@@ -80,6 +80,10 @@ internal static class Stub {
         // (Rigidbody2D.IsAwake) -> per-frame NullRef. Cosmetic particle scaling -> stub.
         Skip(typeof(Silksong::SetParticleScale), "OnUpdate");
         Skip(typeof(Silksong::DeliveryQuestItem), "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
+        // Hornet's EnterScene (HornetSceneEntry) -> EnterHeroSubFadeUp calls gm.FadeSceneIn(): Silksong's own scene fade,
+        // which fights HK's fade (HK owns the camera/fade) and needs Silksong's fade FSM/camera context we don't run.
+        // No-op it; HK fades the scene.
+        Skip(typeof(Silksong::GameManager), "FadeSceneIn");
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
         // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.

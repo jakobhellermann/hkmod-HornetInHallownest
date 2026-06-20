@@ -81,6 +81,10 @@ public class HornetPlayerMod : Mod, ITogglableMod {
                 _ => HeroSwitch.Toggle(),
             };
         });
+        DebugServer.MapPost("/scene-entry", req => {
+            HornetSceneEntry.Enabled = (req["on"] ?? "true").ToLowerInvariant() != "false";
+            return new { realSceneEntry = HornetSceneEntry.Enabled };
+        });
         DebugServer.MapPost("/press", req => {
             var a = (req["a"] ?? "right").ToLowerInvariant(); // left/right/up/down/jump/attack/dash
             if (!int.TryParse(req["frames"], out var f) || f <= 0) f = 60;

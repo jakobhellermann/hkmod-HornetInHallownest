@@ -135,7 +135,12 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         if (scene != lastScene) { lastScene = scene; pendingSnap = true; }
         if (pendingSnap && knight != null && knight.isHeroInPosition) {
-            SnapHornetToKnight(knight);
+            // When Hornet is the active hero, run her REAL Silksong scene-entry (walk/drop-in animation + entry FSMs)
+            // from HK's mirrored gate. When the Knight is active, Hornet is an inert prop -> just relocate her.
+            if (HeroSwitch.HornetActive && HornetSceneEntry.Enabled && knight.sceneEntryGate != null)
+                StartCoroutine(HornetSceneEntry.Run(knight));
+            else
+                SnapHornetToKnight(knight);
             pendingSnap = false;
         }
 
