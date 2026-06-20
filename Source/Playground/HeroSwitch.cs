@@ -112,7 +112,14 @@ internal static class HeroSwitch {
             // blocks the Knight's double jump / abilities (CanDoubleJump etc. gate on !controlReqlinquished) until a bench
             // RegainControl. When the Knight becomes active again, restore control (RegainControl is a near-no-op if it
             // already has control).
-            if (!inert) hk.RegainControl();
+            if (!inert) {
+                hk.RegainControl();
+                // Anim equivalent: HK's transition StopControl's the HeroAnimationController (controlEnabled=false) and
+                // re-StartControl's it at the end — but on the inert Knight that closing StartControl never ran, so HAC
+                // stays controlEnabled=false and freezes on the entry clip ("Exit Door To Idle" stuck mid-frame). Restore
+                // it so HAC drives normal locomotion again. (No-op if already enabled.)
+                hk.GetComponent<global::HeroAnimationController>()?.StartControl();
+            }
             // The Knight's screen-edge vignette would otherwise keep darkening the view while she's the inactive hero;
             // kill the renderer + its FSM (so nothing re-enables it), restore when she's active again.
             if (hk.vignette != null) hk.vignette.enabled = !inert;
