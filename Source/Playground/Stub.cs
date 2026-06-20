@@ -84,6 +84,8 @@ internal static class Stub {
         // which fights HK's fade (HK owns the camera/fade) and needs Silksong's fade FSM/camera context we don't run.
         // No-op it; HK fades the scene.
         Skip(typeof(Silksong::GameManager), "FadeSceneIn");
+        // SimpleFadeOut::SetColor throws nullref, because Awake is never ran
+        Skip(typeof(Silksong::CameraController), "ScreenFlash");
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
         // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.
