@@ -107,14 +107,18 @@ internal static class BundleSpike {
             EnsureEmptyConfigs(hc);
         }
 
-        var follower = new GameObject("HornetReal"); // active parent → activating the instance runs Awake/Start
-        Object.DontDestroyOnLoad(follower);
+        // Make the hero its OWN root (no follower wrapper). HeroController.Awake calls DontDestroyOnLoad(gameObject) to
+        // persist itself; if the hero is a child (of a wrapper), Unity warns "DontDestroyOnLoad only works for root
+        // GameObjects". As a root it persists cleanly + warning-free. Keep it inactive until it's a positioned root,
+        // then activate (so Awake/Start run once, in final state).
         var hk = Object.FindFirstObjectByType<HeroController>();
-        follower.transform.position = hk != null ? hk.transform.position + new Vector3(3f, 0f, 0f) : Vector3.zero;
-        inst.transform.SetParent(follower.transform, false);
-        inst.transform.localPosition = Vector3.zero;
+        inst.SetActive(false);
+        inst.transform.SetParent(null, false);
+        inst.transform.position = hk != null ? hk.transform.position + new Vector3(3f, 0f, 0f) : Vector3.zero;
+        Object.DontDestroyOnLoad(inst);
         Object.DestroyImmediate(staging);
-        real = follower;
+        inst.SetActive(true);
+        real = inst;
 
         // Disable Hornet's standalone screen Vignette (child SpriteRenderer, sprite "vignette_large_v01", sorting
         // layer "Vignette"): a huge black sprite with a transparent hole pinned to the hero. In Silksong the camera
