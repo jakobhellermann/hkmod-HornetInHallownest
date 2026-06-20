@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Collections;
+using System.Reflection;
 using HornetPlayer.Playground;
 using Modding;
 using UnityEngine;
@@ -102,6 +103,29 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         HornetEnvironmentAdapter.Install();
         HeroSwitch.Install();
         // BundleSpike.Run();
+
+        // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so
+        // this brings her back without a manual /spawn-real (and on a fresh boot, fires the first time you load in).
+        // One-shot: it stops after the first auto-spawn, so a later manual /despawn-real stays despawned.
+        host.StartCoroutine(AutoSpawnWhenInGame());
+    }
+
+    private static IEnumerator AutoSpawnWhenInGame() {
+        while (true) {
+            // HK's hero: null at the menu, set + isHeroInPosition once a gameplay scene has placed it. Gate on
+            // isHeroInPosition so we don't spawn mid-transition (before the scene/entry is ready).
+            var knight = HeroController.instance;
+            if (knight != null && knight.isHeroInPosition) {
+                if (BundleSpike.HornetRoot == null) {
+                    try {
+                        BundleSpike.SpawnReal();
+                        Playground.Log.Info("[AutoSpawn] in gameplay scene + Hornet absent -> spawned");
+                    } catch (System.Exception e) { Playground.Log.Error($"[AutoSpawn] {e}"); }
+                }
+                yield break;
+            }
+            yield return new WaitForSeconds(0.5f);
+        }
     }
 
     public void Unload() {
