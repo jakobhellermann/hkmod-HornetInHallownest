@@ -96,6 +96,13 @@ internal static class SilksongBootstrap {
                 .GetProperty("UnsafeInstance", BindingFlags.Public | BindingFlags.Static)
                 ?.GetSetMethod(true)?.Invoke(null, new object[] { ih });
 
+            // gm.inputHandler (private-set property) is assigned in SetupGameRefs (GetComponent<InputHandler>), which we
+            // don't run -> null. UIButtonSkins reads it (ih = GameManager.instance.inputHandler) and logs "Attempting to
+            // get button skins before the Input Handler is ready" when null (inventory button prompts). Assign the
+            // backing field to our bootstrap ih.
+            typeof(Silksong::GameManager).GetField("<inputHandler>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(gm, ih);
+
             // gm.cameraCtrl (private-set property) is null -> SendHeroInPosition's gm.cameraCtrl.ResetStartTimer()
             // NullRefs. Provide a bare CameraController (on the inactive GO => no heavy Awake); ResetStartTimer just
             // sets a float. Assign via the property's backing field.

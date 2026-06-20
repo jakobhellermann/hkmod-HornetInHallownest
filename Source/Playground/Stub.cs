@@ -112,6 +112,11 @@ internal static class Stub {
         // FSMs resolve GameCameras.instance) and DDOLs the holder. Without skipping, Awake would also Destroy our rig if
         // _instance was pre-set to a different object — skipping removes that hazard too.
         Skip(typeof(Silksong::GameCameras), "Awake");
+        // Inventory map-zone items: InventoryItemWideMapZone.IsUnlocked derefs GameManager.instance.gameMap throughout
+        // (IsLostInAbyssPreMap/PostMap + HasAnyMapForZone) -> NullRef (gameMap.gm null; map subsystem out of scope).
+        // These are MAP unlock indicators in the inventory; with no map they're correctly "locked" -> get_IsUnlocked
+        // returns false (default), which also makes IsAutoNavSelectable false so OnEnable's EvaluateAutoNav skips them.
+        Skip(typeof(Silksong::InventoryItemWideMapZone), "get_IsUnlocked");
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
         // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.

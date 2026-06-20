@@ -160,11 +160,26 @@ internal static class GameCamerasBootstrap {
         // (Health + silk under it). Deactivate In-game's other children BEFORE activating HudCamera, so those panes
         // never Awake (a child set inactive while its parent chain is inactive won't fire Awake on activation).
         inGame = FindByName(hudCam, "In-game");      // cache the HUD content container for per-frame visibility toggling
+        // Keep "Anchor TL" (Health/silk HUD) AND "Inventory" (tools/crests/items — its #6 managers are now up). The
+        // remaining In-game children (Quick Map / Game Map Rendering / DialogueManager / Prompts / Menus / vignettes)
+        // still NullRef on Awake without GameMap/QuestManager/etc., so deactivate them before activating HudCamera.
+        Transform? inv = null;
         if (inGame != null)
-            foreach (Transform c in inGame)
+            foreach (Transform c in inGame) {
+                if (c.name == "Inventory") { inv = c; continue; }
                 if (c.name != "Anchor TL") c.gameObject.SetActive(false);
+            }
+        // Inside Inventory keep only the tools/crests/items panes (Inv + Tools + Border); the Map/Quests/Journal panes
+        // need GameMap/QuestManager (map/journal intentionally out of scope — would Awake a wall of NullRefs). Drop them
+        // BEFORE Inventory activates (a child set inactive while its parent chain is inactive won't fire Awake), then
+        // ensure Inventory itself is active so InventoryPaneList/Inv/Tools run their setup.
+        if (inv != null) {
+            foreach (Transform p in inv)
+                if (p.name is "Map" or "Quests" or "Journal") p.gameObject.SetActive(false);
+            inv.gameObject.SetActive(true);
+        }
         hudCam.gameObject.SetActive(true);
-        inGame?.gameObject.SetActive(true);          // the in-game HUD container (now only Anchor TL = Health/silk)
+        inGame?.gameObject.SetActive(true);          // the in-game HUD container (Anchor TL + Inventory)
         FindByName(hudCam, "Hud Canvas")?.gameObject.SetActive(true);
         var layerFixes = RemapSortingLayers(hudCam);
 

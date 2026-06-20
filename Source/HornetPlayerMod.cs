@@ -140,6 +140,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
         ToolItemManagerBootstrap.Cleanup();
+        CollectableItemManagerBootstrap.Cleanup();
+        ManagerSingletonBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();
         PlayMakerFix.Cleanup();
         Stub.Cleanup();
