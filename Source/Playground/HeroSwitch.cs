@@ -236,7 +236,17 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
             pendingSnap = false;
         }
 
-        if (Input.GetKeyDown(KeyCode.Tab)) HeroSwitch.Toggle();
+        // Tab = switch hero. Forbid it while the inventory is open: switching heroes mid-inventory leaves a broken state
+        // (the inventory belongs to the active hero + freezes the world via DisplayFrozenCamera). Detect "inventory open"
+        // by the side effect we already know — DisplayFrozenCamera.Freeze disabled HK's main camera — so block Tab while
+        // the world is frozen rather than half-switch. (Close-then-switch would be nicer but risks the close not running.)
+        if (Input.GetKeyDown(KeyCode.Tab)) {
+            var gcam = global::GameCameras.instance;
+            if (gcam != null && gcam.mainCamera != null && !gcam.mainCamera.enabled)
+                Log.Info("[HeroSwitch] Tab ignored — world frozen (inventory open); close it first");
+            else
+                HeroSwitch.Toggle();
+        }
         TraceTick();
 
         // The inert, off-camera Knight's Vignette must be fully off (its black plates otherwise frame HK's screen
