@@ -102,7 +102,17 @@ internal static class BundleSpike {
         var vignette = inst.transform.Find("Vignette");
         if (vignette != null) {
             vignette.gameObject.SetActive(false);
-            Log.Info("[SpawnReal] disabled standalone Vignette (radial screen darkening)");
+            // Strip HK's "Vignette" tag from Hornet's vignette. HK's SceneManager.orig_Start (runs on every scene load)
+            // does FindGameObjectWithTag("Vignette") then an UNGUARDED LocateFSM(go,"Darkness Control").SendEvent("RESET").
+            // While Hornet is active, HeroSwitch deactivates the Knight's (real, Darkness-Control-bearing) Vignette, so the
+            // tag lookup falls through to Hornet's Silksong vignette — which has a PlayMakerFSM but no "Darkness Control"
+            // -> LocateFSM null -> NullRef every transition (a latent HK bug only WE trigger via the tag collision; the
+            // SetActive(false) above doesn't stick because Hornet's own FSM re-enables the GO). Hornet references her
+            // vignette by field (HeroController.vignette), not tag, and we don't run Silksong's SceneManager, so dropping
+            // the tag is safe for her and removes the cross-game collision: the lookup then returns the Knight's vignette
+            // (or null while it's inert -> HK's `if (vignetteGO)` guard skips cleanly).
+            vignette.gameObject.tag = "Untagged";
+            Log.Info("[SpawnReal] disabled standalone Vignette (radial screen darkening) + cleared its HK \"Vignette\" tag (HK SceneManager.Start collision)");
         }
 
         // Apply the current active-hero state to the freshly spawned Hornet (default Knight => Hornet spawns inert but
