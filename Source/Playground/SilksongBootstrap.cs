@@ -176,6 +176,19 @@ internal static class SilksongBootstrap {
             gm.isPaused = false;
             gm.playerData = pd;
 
+            // More GameManager.Awake/SetupGameRefs bookkeeping we'd otherwise skip:
+            // - gameSettings: SetupGameRefs does `gameSettings = new GameSettings()`. ~40 readers (BlurManager,
+            //   CameraController, AchievementHandler, …) deref gm.gameSettings.* — most are in parts we neuter, but a
+            //   default instance is a cheap, coupling-free safety net against latent NullRefs.
+            // - PlayMakerPrefs.LogPerformanceWarnings: Awake's first line clears it; do the same so the isolated
+            //   Silksong.PlayMaker runtime doesn't emit per-FSM performance warnings (clean-log hygiene).
+            try {
+                gm.gameSettings ??= new Silksong::GameSettings();
+                SilksongPM::PlayMakerPrefs.LogPerformanceWarnings = false;
+            } catch (Exception e) {
+                Log.Error($"[Bootstrap] gameSettings/PlayMakerPrefs: {e.Message}");
+            }
+
             // Replicate the ONE line of GameManager.Awake we otherwise skip — it runs AFTER SetupGameRefs (decomp
             // GameManager.cs:502): set the PlayMaker GLOBAL GameObject var "GameManager" to the GM GO. FSMs resolve a
             // CallMethodProper's target via this global (FsmOwnerDefault -> global "GameManager"); without it the target
