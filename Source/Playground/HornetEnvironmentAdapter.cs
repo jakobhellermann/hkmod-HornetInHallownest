@@ -2,7 +2,6 @@ extern alias Silksong;
 using System;
 using System.Reflection;
 using UnityEngine;
-using Object = UnityEngine.Object;
 
 namespace HornetPlayer.Playground;
 
@@ -23,20 +22,19 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static FieldInfo? isGameplaySceneField;
     private static FieldInfo? gameStateField;
     private static MethodInfo? updateButtonQueueingMethod;
-    private float stuckControlTimer;
-    private float armedWindow;       // seconds left in the post-transition "watch for stuck control" window
+    private float armedWindow; // seconds left in the post-transition "watch for stuck control" window
     private string? lastScene;
+    private float stuckControlTimer;
+    private bool stuckEntryLogged;
 
-    internal static void Install() {
-        if (go != null) return;
-        go = new GameObject("HornetPlayer.EnvironmentAdapter");
-        go.AddComponent<HornetEnvironmentAdapter>();
-        Object.DontDestroyOnLoad(go);
-    }
-
-    internal static void Cleanup() {
-        if (go != null) { Object.Destroy(go); go = null; }
-    }
+    // Log-only watchdog for the bottom-gate (vertical / "up") entry hang. EnterScene's bottom branch ends at
+    // transitionState=DROPPING_DOWN and relies on OnCollisionEnter2D's no_input branch to call FinishedEnteringScene on
+    // landing. If hero_state has left no_input by the time she lands she takes the NORMAL landing path instead, so the
+    // entry never completes: cState.transitioning stays true (Update movement returns early -> frozen) and acceptingInput
+    // stays false, with NO error logged. Surface it so the next occurrence is caught in the log. (Observed 2026-06-21;
+    // root cause = hero_state leaving no_input mid-drop, NOT yet fixed -> restart clears it.) Log-only on purpose: a
+    // forced FinishedEnteringScene here would be the kind of patch-over-root-cause we're avoiding.
+    private float stuckEntryTimer;
 
     private void Update() {
         try {
@@ -54,6 +52,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 gameStateField?.SetValue(gm,
                     paused ? Silksong::GlobalEnums.GameState.PAUSED : Silksong::GlobalEnums.GameState.PLAYING);
             }
+
             if (paused) return;
 
             // HeroController: Start's non-gameplay path left the component disabled + isGameplayScene=false (our gm
@@ -99,7 +98,23 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 if (ih.inputActions != null && !ih.inputActions.DreamNail.IsPressed)
                     ih.ForceDreamNailRePress = false;
             }
-        } catch (Exception e) { Log.Error($"[EnvAdapter] {e}"); }
+        } catch (Exception e) {
+            Log.Error($"[EnvAdapter] {e}");
+        }
+    }
+
+    internal static void Install() {
+        if (go != null) return;
+        go = new GameObject("HornetPlayer.EnvironmentAdapter");
+        go.AddComponent<HornetEnvironmentAdapter>();
+        DontDestroyOnLoad(go);
+    }
+
+    internal static void Cleanup() {
+        if (go != null) {
+            Destroy(go);
+            go = null;
+        }
     }
 
     // Safety net for stuck controlReqlinquished. Her scene-entry (EnterScene) clears the flag via its closing
@@ -113,17 +128,27 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     //   - only when settled (transitionState idle, not mid walk-in), with a debounce.
     private void StuckControlNet(Silksong::HeroController hero) {
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (scene != lastScene) { lastScene = scene; armedWindow = 5f; stuckControlTimer = 0f; }
+        if (scene != lastScene) {
+            lastScene = scene;
+            armedWindow = 5f;
+            stuckControlTimer = 0f;
+        }
+
         if (armedWindow <= 0f) return;
         armedWindow -= Time.deltaTime;
 
         // Don't disarm on the first !controlReqlinquished frame: at scene-change detection the flag may not be set yet
         // (EnterScene sets it a few frames later). Just run the window; the exclusions below keep it from false-firing.
         var cs = hero.cState;
-        var legit = cs.dashing || cs.isSprinting || cs.shadowDashing || cs.superDashing; // these use controlReqlinquished by design
+        var legit = cs.dashing || cs.isSprinting || cs.shadowDashing ||
+                    cs.superDashing; // these use controlReqlinquished by design
         var stuck = hero.controlReqlinquished && !cs.dead && !legit
                     && hero.transitionState == Silksong::GlobalEnums.HeroTransitionState.WAITING_TO_TRANSITION;
-        if (!stuck) { stuckControlTimer = 0f; return; }
+        if (!stuck) {
+            stuckControlTimer = 0f;
+            return;
+        }
+
         stuckControlTimer += Time.deltaTime;
         if (stuckControlTimer > 0.5f) {
             hero.RegainControl();
@@ -133,27 +158,24 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         }
     }
 
-    // Log-only watchdog for the bottom-gate (vertical / "up") entry hang. EnterScene's bottom branch ends at
-    // transitionState=DROPPING_DOWN and relies on OnCollisionEnter2D's no_input branch to call FinishedEnteringScene on
-    // landing. If hero_state has left no_input by the time she lands she takes the NORMAL landing path instead, so the
-    // entry never completes: cState.transitioning stays true (Update movement returns early -> frozen) and acceptingInput
-    // stays false, with NO error logged. Surface it so the next occurrence is caught in the log. (Observed 2026-06-21;
-    // root cause = hero_state leaving no_input mid-drop, NOT yet fixed -> restart clears it.) Log-only on purpose: a
-    // forced FinishedEnteringScene here would be the kind of patch-over-root-cause we're avoiding.
-    private float stuckEntryTimer;
-    private bool stuckEntryLogged;
     private void StuckEntryWatch(Silksong::HeroController hero) {
         var cs = hero.cState;
         var stuck = cs.onGround && cs.transitioning && !hero.acceptingInput
                     && hero.transitionState == Silksong::GlobalEnums.HeroTransitionState.DROPPING_DOWN;
-        if (!stuck) { stuckEntryTimer = 0f; stuckEntryLogged = false; return; }
+        if (!stuck) {
+            stuckEntryTimer = 0f;
+            stuckEntryLogged = false;
+            return;
+        }
+
         stuckEntryTimer += Time.deltaTime;
         if (stuckEntryTimer > 0.75f && !stuckEntryLogged) {
             stuckEntryLogged = true;
-            Log.Error($"[EnvAdapter] STUCK ENTRY: grounded+transitioning+!acceptingInput, transitionState=DROPPING_DOWN, "
-                      + $"hero_state={hero.hero_state} (needs no_input for OnCollisionEnter2D to finish the entry), "
-                      + $"gate={hero.gatePosition}, pos={(UnityEngine.Vector2)hero.transform.position}. "
-                      + "FinishedEnteringScene never ran -> frozen; restart to clear. (bottom-gate entry hang)");
+            Log.Error(
+                $"[EnvAdapter] STUCK ENTRY: grounded+transitioning+!acceptingInput, transitionState=DROPPING_DOWN, "
+                + $"hero_state={hero.hero_state} (needs no_input for OnCollisionEnter2D to finish the entry), "
+                + $"gate={hero.gatePosition}, pos={(Vector2)hero.transform.position}. "
+                + "FinishedEnteringScene never ran -> frozen; restart to clear. (bottom-gate entry hang)");
         }
     }
 

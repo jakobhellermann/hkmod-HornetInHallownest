@@ -33,7 +33,8 @@ internal static class ManagerSingletonBootstrap {
     // Hot-reload safe: brought-up manager GOs are DontDestroyOnLoad and survive our DLL reload (statics reset). Reuse.
     private static GameObject? FindExisting(string goName) {
         foreach (var g in Resources.FindObjectsOfTypeAll<GameObject>())
-            if (g != null && g.name == goName && g.scene.IsValid()) return g;
+            if (g != null && g.name == goName && g.scene.IsValid())
+                return g;
         return null;
     }
 
@@ -48,18 +49,30 @@ internal static class ManagerSingletonBootstrap {
         }
 
         var pf = Prefab();
-        if (pf == null) { Log.Error($"[Manager] _GameManager load returned null (for {managerType.Name})"); return null; }
+        if (pf == null) {
+            Log.Error($"[Manager] _GameManager load returned null (for {managerType.Name})");
+            return null;
+        }
+
         var template = pf.GetComponent(managerType);
-        if (template == null) { Log.Error($"[Manager] {managerType.Name} not found on _GameManager prefab"); return null; }
+        if (template == null) {
+            Log.Error($"[Manager] {managerType.Name} not found on _GameManager prefab");
+            return null;
+        }
 
         var go = new GameObject(goName);
         go.SetActive(false); // inactive -> AddComponent does NOT fire Awake yet; copy fields first
         var mgr = go.AddComponent(managerType);
         foreach (var name in serializedFields) {
             var f = GetField(managerType, name);
-            if (f == null) { Log.Error($"[Manager] {managerType.Name}.{name} field not found"); continue; }
+            if (f == null) {
+                Log.Error($"[Manager] {managerType.Name}.{name} field not found");
+                continue;
+            }
+
             f.SetValue(mgr, f.GetValue(template));
         }
+
         Object.DontDestroyOnLoad(go);
         go.SetActive(true); // -> the manager's real Awake: base.Awake registers the ManagerSingleton, etc.
 
@@ -74,19 +87,24 @@ internal static class ManagerSingletonBootstrap {
             var f = cur.GetField(name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
             if (f != null) return f;
         }
+
         return null;
     }
 
-    private static Type ClosedManagerSingleton(Type managerType) =>
-        typeof(Silksong::ManagerSingleton<>).MakeGenericType(managerType);
+    private static Type ClosedManagerSingleton(Type managerType) {
+        return typeof(Silksong::ManagerSingleton<>).MakeGenericType(managerType);
+    }
 
-    private static object? SilentInstance(Type managerType) =>
-        ClosedManagerSingleton(managerType).GetProperty("SilentInstance", BindingFlags.Public | BindingFlags.Static)
+    private static object? SilentInstance(Type managerType) {
+        return ClosedManagerSingleton(managerType)
+            .GetProperty("SilentInstance", BindingFlags.Public | BindingFlags.Static)
             ?.GetValue(null);
+    }
 
-    private static void SetSingleton(Type managerType, Component mgr) =>
+    private static void SetSingleton(Type managerType, Component mgr) {
         ClosedManagerSingleton(managerType).GetProperty("UnsafeInstance", BindingFlags.Public | BindingFlags.Static)
-            ?.GetSetMethod(true)?.Invoke(null, new object[] { mgr });
+            ?.GetSetMethod(true)?.Invoke(null, [mgr]);
+    }
 
     // DestroyImmediate the brought-up GO (its ManagerSingleton.OnDestroy nulls UnsafeInstance) so a mod toggle-off /
     // hot-reload leaves no leaked manager. Synchronous (not Object.Destroy) so it's gone before a reload's Initialize
@@ -96,5 +114,8 @@ internal static class ManagerSingletonBootstrap {
         if (g != null) Object.DestroyImmediate(g);
     }
 
-    internal static void Cleanup() => prefab = null; // Addressables owns the asset; just drop our ref
+    internal static void Cleanup() {
+        prefab = null;
+        // Addressables owns the asset; just drop our ref
+    }
 }

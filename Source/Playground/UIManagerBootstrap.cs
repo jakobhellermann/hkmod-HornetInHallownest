@@ -21,14 +21,18 @@ internal static class UIManagerBootstrap {
     // Hot-reload safe: the DontDestroyOnLoad holder survives our DLL reload (our static does not) — reuse it.
     private static GameObject? FindExisting() {
         foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
-            if (go != null && go.name == Name && go.scene.IsValid()) return go;
+            if (go != null && go.name == Name && go.scene.IsValid())
+                return go;
         return null;
     }
 
     internal static object Ensure() {
         try {
             ui ??= FindExisting();
-            if (ui != null) { RebindInstance(ui); return new { ok = true, note = "reused", instanceSet = InstanceSet() }; }
+            if (ui != null) {
+                RebindInstance(ui);
+                return new { ok = true, note = "reused", instanceSet = InstanceSet() };
+            }
 
             AddressablesBootstrap.Ensure();
             var prefab = Addressables.LoadAssetAsync<GameObject>("_UIManager").WaitForCompletion();
@@ -50,17 +54,25 @@ internal static class UIManagerBootstrap {
         }
     }
 
-    private static bool InstanceSet() =>
-        typeof(Silksong::UIManager).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null) != null;
+    private static bool InstanceSet() {
+        return typeof(Silksong::UIManager).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
+            ?.GetValue(null) != null;
+    }
 
     private static void RebindInstance(GameObject inst) {
         var uim = inst.GetComponentInChildren<Silksong::UIManager>(true);
         if (uim != null)
-            typeof(Silksong::UIManager).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, uim);
+            typeof(Silksong::UIManager).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
+                ?.SetValue(null, uim);
     }
 
     internal static void Cleanup() {
-        if (ui != null) { Object.DestroyImmediate(ui.transform.root.gameObject); ui = null; }
-        typeof(Silksong::UIManager).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, null);
+        if (ui != null) {
+            Object.DestroyImmediate(ui.transform.root.gameObject);
+            ui = null;
+        }
+
+        typeof(Silksong::UIManager).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
+            ?.SetValue(null, null);
     }
 }

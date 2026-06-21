@@ -33,19 +33,19 @@ internal static class SilksongBootstrap {
             var pd = Silksong::PlayerData.instance; // create/get the PlayerData singleton
             // Fresh PlayerData has every ability locked (e.g. HeroController.CanDash() gates on playerData.hasDash).
             // Grant Hornet's full movement + combat kit so every move is usable in the playground.
-            pd.hasDash = true;          // dash (Swift Step)
-            pd.hasWalljump = true;      // wall jump
-            pd.hasDoubleJump = true;    // double jump
-            pd.hasBrolly = true;        // float / glide (umbrella)
-            pd.hasSuperJump = true;     // needle super-jump
-            pd.hasHarpoonDash = true;   // silk harpoon dash
-            pd.hasChargeSlash = true;   // charge slash (nail art)
+            pd.hasDash = true; // dash (Swift Step)
+            pd.hasWalljump = true; // wall jump
+            pd.hasDoubleJump = true; // double jump
+            pd.hasBrolly = true; // float / glide (umbrella)
+            pd.hasSuperJump = true; // needle super-jump
+            pd.hasHarpoonDash = true; // silk harpoon dash
+            pd.hasChargeSlash = true; // charge slash (nail art)
             pd.hasQuill = true;
             pd.hasParry = true;
             pd.hasNeedolin = true;
             pd.hasNeedleThrow = true;
             pd.hasThreadSphere = true;
-            pd.hasSilkSpecial = true;   // silk special / arts
+            pd.hasSilkSpecial = true; // silk special / arts
             pd.hasSilkCharge = true;
             pd.hasSilkBomb = true;
             pd.hasSilkBossNeedle = true;
@@ -94,26 +94,29 @@ internal static class SilksongBootstrap {
             // didn't. Register ih as the singleton so the FSM path resolves too.
             typeof(Silksong::ManagerSingleton<Silksong::InputHandler>)
                 .GetProperty("UnsafeInstance", BindingFlags.Public | BindingFlags.Static)
-                ?.GetSetMethod(true)?.Invoke(null, new object[] { ih });
+                ?.GetSetMethod(true)?.Invoke(null, [ih]);
 
             // gm.inputHandler (private-set property) is assigned in SetupGameRefs (GetComponent<InputHandler>), which we
             // don't run -> null. UIButtonSkins reads it (ih = GameManager.instance.inputHandler) and logs "Attempting to
             // get button skins before the Input Handler is ready" when null (inventory button prompts). Assign the
             // backing field to our bootstrap ih.
-            typeof(Silksong::GameManager).GetField("<inputHandler>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+            typeof(Silksong::GameManager).GetField("<inputHandler>k__BackingField",
+                    BindingFlags.NonPublic | BindingFlags.Instance)
                 ?.SetValue(gm, ih);
 
             // gm.cameraCtrl (private-set property) is null -> SendHeroInPosition's gm.cameraCtrl.ResetStartTimer()
             // NullRefs. Provide a bare CameraController (on the inactive GO => no heavy Awake); ResetStartTimer just
             // sets a float. Assign via the property's backing field.
             var camCtrl = gmGo.AddComponent<Silksong::CameraController>();
-            typeof(Silksong::GameManager).GetField("<cameraCtrl>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+            typeof(Silksong::GameManager)
+                .GetField("<cameraCtrl>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
                 ?.SetValue(gm, camCtrl);
 
             // gm.sm (CustomSceneManager, private-set) is null -> GetTotalFrostSpeed's gm.sm.FrostSpeed NullRefs (and
             // other per-scene env reads). Bare instance => default scene settings (FrostSpeed 0 etc.).
             var sm = gmGo.AddComponent<Silksong::CustomSceneManager>();
-            typeof(Silksong::GameManager).GetField("<sm>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+            typeof(Silksong::GameManager)
+                .GetField("<sm>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
                 ?.SetValue(gm, sm);
 
             // SilkSpool singleton: silk-cost FSM actions (AddUsingSilk/RemoveUsingSilk in Superjump etc.) deref
@@ -123,7 +126,7 @@ internal static class SilksongBootstrap {
             // early-returns while the HUD spool is undrawn (hasDrawnSpool=false), RefreshBindNotch no-ops (bindNotch null).
             var spool = gmGo.AddComponent<Silksong::SilkSpool>();
             typeof(Silksong::SilkSpool).GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)
-                ?.GetSetMethod(true)?.Invoke(null, new object[] { spool });
+                ?.GetSetMethod(true)?.Invoke(null, [spool]);
 
             // HUD bring-up needs: UpdateBatcher (batched HUD components like JitterSelf do
             // GameManager.instance.GetComponent<UpdateBatcher>().Add(this) -> NullRef without it) + TMP_Settings.
@@ -144,8 +147,11 @@ internal static class SilksongBootstrap {
             try {
                 ResourcesShim.PreferBundle = true;
                 Silksong::TMProOld.TMP_Settings.LoadDefaultSettings();
-            } catch (Exception e) { Log.Error($"[Bootstrap] TMP_Settings load: {e.Message}"); }
-            finally { ResourcesShim.PreferBundle = false; }
+            } catch (Exception e) {
+                Log.Error($"[Bootstrap] TMP_Settings load: {e.Message}");
+            } finally {
+                ResourcesShim.PreferBundle = false;
+            }
 
             // Platform.Current (private static `current`, set only during Silksong's boot which we never run) is null ->
             // the hero's EnterScene prologue derefs Platform.Current.EnterSceneWait -> NullRef. Assign an UNINITIALIZED
@@ -183,8 +189,16 @@ internal static class SilksongBootstrap {
         // Destroys would leave the old GM/InputHandler alive while Initialize rebuilds — the spawned hero (and FSM
         // singleton lookups) could then bind to the stale instances. Tear down synchronously so a hot-reload state
         // equals a clean startup. Also null the static refs (InputActions/Handler) so nothing dangles into the dead GO.
-        if (gmGo != null) { Object.DestroyImmediate(gmGo); gmGo = null; }
-        if (poolGo != null) { Object.DestroyImmediate(poolGo); poolGo = null; }
+        if (gmGo != null) {
+            Object.DestroyImmediate(gmGo);
+            gmGo = null;
+        }
+
+        if (poolGo != null) {
+            Object.DestroyImmediate(poolGo);
+            poolGo = null;
+        }
+
         Silksong::GameManager._instance = null;
         Handler = null; // InputActions is computed from Handler, so this clears it too
         done = false;

@@ -16,5 +16,7 @@ internal static class CollectableItemManagerBootstrap {
         return new { ok = true, instanceSet = Silksong::CollectableItemManager.SilentInstance != null };
     }
 
-    internal static void Cleanup() => ManagerSingletonBootstrap.Destroy(GoName);
+    internal static void Cleanup() {
+        ManagerSingletonBootstrap.Destroy(GoName);
+    }
 }

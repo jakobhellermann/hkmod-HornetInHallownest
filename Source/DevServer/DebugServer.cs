@@ -2,8 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using HornetPlayer.Playground;
 using UnityEngine;
-using HornetPlayer.Playground; // Log
 
 namespace HornetPlayer.DevServer;
 
@@ -21,11 +21,25 @@ public static class DebugServer {
 
     public static bool IsRunning => server != null;
 
-    public static void MapGet(string path, RouteHandler handler) => Add("GET", path, handler, null);
-    public static void MapGet(string path, AsyncRouteHandler handler) => Add("GET", path, null, handler);
-    public static void MapPost(string path, RouteHandler handler) => Add("POST", path, handler, null);
-    public static void MapPost(string path, AsyncRouteHandler handler) => Add("POST", path, null, handler);
-    public static void Map(string method, string path, RouteHandler handler) => Add(method, path, handler, null);
+    public static void MapGet(string path, RouteHandler handler) {
+        Add("GET", path, handler, null);
+    }
+
+    public static void MapGet(string path, AsyncRouteHandler handler) {
+        Add("GET", path, null, handler);
+    }
+
+    public static void MapPost(string path, RouteHandler handler) {
+        Add("POST", path, handler, null);
+    }
+
+    public static void MapPost(string path, AsyncRouteHandler handler) {
+        Add("POST", path, null, handler);
+    }
+
+    public static void Map(string method, string path, RouteHandler handler) {
+        Add(method, path, handler, null);
+    }
 
     private static void Add(string method, string path, RouteHandler? sync, AsyncRouteHandler? async) {
         var normalized = Normalize(path);
@@ -47,7 +61,9 @@ public static class DebugServer {
         }
     }
 
-    public static void Update() => server?.Update();
+    public static void Update() {
+        server?.Update();
+    }
 
     public static void Stop() {
         server?.Dispose();
@@ -55,9 +71,13 @@ public static class DebugServer {
         routes.Clear();
     }
 
-    private static Route? Resolve(string method, string path) => routes.GetValueOrDefault(Key(method, path));
+    private static Route? Resolve(string method, string path) {
+        return routes.GetValueOrDefault(Key(method, path));
+    }
 
-    private static string Key(string method, string path) => method.ToUpperInvariant() + " " + Normalize(path);
+    private static string Key(string method, string path) {
+        return method.ToUpperInvariant() + " " + Normalize(path);
+    }
 
     private static string Normalize(string path) {
         if (string.IsNullOrEmpty(path)) return "/";

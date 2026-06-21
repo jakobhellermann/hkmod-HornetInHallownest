@@ -51,8 +51,12 @@ internal static class ResourcesShim {
         if (bundle == null) Log.Error($"[ResShim] LoadFromFile failed: {BundlePath}");
         else Log.Info($"[ResShim] loaded resources bundle ({bundle.GetAllAssetNames().Length} assets)");
 
-        var mi = typeof(Resources).GetMethod(nameof(Resources.Load), new[] { typeof(string), typeof(Type) });
-        if (mi == null) { Log.Error("[ResShim] Resources.Load(string,Type) not found"); return; }
+        var mi = typeof(Resources).GetMethod(nameof(Resources.Load), [typeof(string), typeof(Type)]);
+        if (mi == null) {
+            Log.Error("[ResShim] Resources.Load(string,Type) not found");
+            return;
+        }
+
         hook = new Hook(mi, (Func<Func<string, Type, Object>, string, Type, Object>)Detour);
         Log.Info("[ResShim] installed Resources.Load(string,Type) hook");
     }
@@ -76,10 +80,13 @@ internal static class ResourcesShim {
             if (LogShadowed) {
                 var k = path.ToLowerInvariant();
                 if (bundle.Contains(k) && loggedShadow.Add(k))
-                    Log.Info($"[Resources.Load] SHADOWED '{path}' as {type?.Name} — served by HK, Silksong bundle also has it");
+                    Log.Info(
+                        $"[Resources.Load] SHADOWED '{path}' as {type?.Name} — served by HK, Silksong bundle also has it");
             }
+
             return orig0;
         }
+
         var bundleAsset = ServeFromBundle(path, type);
         if (bundleAsset != null) return bundleAsset;
         if (loggedMiss.Add(path.ToLowerInvariant()))
@@ -94,8 +101,13 @@ internal static class ResourcesShim {
     private static Object? ServeFromBundle(string path, Type type) {
         var key = path.ToLowerInvariant();
         Object served;
-        try { served = type != null ? bundle!.LoadAsset(key, type) : bundle!.LoadAsset(key); }
-        catch (Exception e) { Log.Error($"[ResShim] LoadAsset '{key}' threw: {e.Message}"); return null; }
+        try {
+            served = type != null ? bundle!.LoadAsset(key, type) : bundle!.LoadAsset(key);
+        } catch (Exception e) {
+            Log.Error($"[ResShim] LoadAsset '{key}' threw: {e.Message}");
+            return null;
+        }
+
         if (served != null && loggedServe.Add(key))
             Log.Info($"[Resources.Load] SERVE '{path}' as {type?.Name} <- silksong-resources.bundle");
         return served;
@@ -105,7 +117,11 @@ internal static class ResourcesShim {
         PreferBundle = false;
         hook?.Dispose();
         hook = null;
-        if (bundle != null) { bundle.Unload(true); bundle = null; }
+        if (bundle != null) {
+            bundle.Unload(true);
+            bundle = null;
+        }
+
         loggedMiss.Clear();
         loggedServe.Clear();
         loggedShadow.Clear();
@@ -114,7 +130,11 @@ internal static class ResourcesShim {
     // Debug: reload silksong-resources.bundle from disk WITHOUT touching the hook, so we can iterate on the bundle
     // (rebuild via repack_resources) and re-test in-game without a hot-reload or game restart. Pair with DumpLocalization.
     internal static void Reload() {
-        if (bundle != null) { bundle.Unload(true); bundle = null; }
+        if (bundle != null) {
+            bundle.Unload(true);
+            bundle = null;
+        }
+
         loggedMiss.Clear();
         loggedServe.Clear();
         loggedShadow.Clear();
@@ -131,19 +151,26 @@ internal static class ResourcesShim {
             var o = Resources.Load(path);
             if (o == null) return new { path, result = "null" };
             var ta = o as TextAsset;
-            return new { path, type = o.GetType().FullName, name = o.name, textLen = ta != null ? ta.bytes.Length : (int?)null };
-        } catch (Exception e) { return new { path, error = e.Message }; }
+            return new {
+                path, type = o.GetType().FullName, o.name, textLen = ta != null ? ta.bytes.Length : (int?)null
+            };
+        } catch (Exception e) {
+            return new { path, error = e.Message };
+        }
     }
 
     // Debug: load the served Silksong LocalizationSettings and read sheetTitles directly — the ground-truth readout for
     // whether the baked typetree deserializes correctly ("General","Map Zones",…) or garbage. Bypasses the Language cctor.
     internal static object DumpLocalization() {
         var t = Type.GetType("TeamCherry.Localization.LocalizationSettings, Silksong.TeamCherryLocalization");
-        if (t == null) return new { error = "type TeamCherry.Localization.LocalizationSettings (Silksong.TeamCherryLocalization) not found" };
+        if (t == null)
+            return new {
+                error = "type TeamCherry.Localization.LocalizationSettings (Silksong.TeamCherryLocalization) not found"
+            };
         var so = Resources.Load("Languages/LocalizationSettings", t);
         if (so == null) return new { error = "Resources.Load returned null", bundleLoaded = bundle != null };
         var f = t.GetField("sheetTitles", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
         var titles = f?.GetValue(so) as string[];
-        return new { name = so.name, type = so.GetType().FullName, count = titles?.Length, sheetTitles = titles };
+        return new { so.name, type = so.GetType().FullName, count = titles?.Length, sheetTitles = titles };
     }
 }

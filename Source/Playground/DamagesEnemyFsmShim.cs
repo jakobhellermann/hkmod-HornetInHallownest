@@ -1,9 +1,11 @@
 extern alias Silksong;
 using System;
 using System.Reflection;
-using HutongGames.PlayMaker;          // HK's PlayMaker (global ref) — Fsm / FsmFloat / FsmInt / FsmVariables
+using HutongGames.PlayMaker;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
+using Object = UnityEngine.Object;
+// HK's PlayMaker (global ref) — Fsm / FsmFloat / FsmInt / FsmVariables
 
 namespace HornetPlayer.Playground;
 
@@ -28,19 +30,16 @@ internal static class DamagesEnemyFsmShim {
     private static FsmFloat? dirVar;
     private static FsmInt? dmgVar;
 
-    private delegate PlayMakerFSM Orig(GameObject go, string fsmName);
-    private delegate PlayMakerFSM Hooked(Orig orig, GameObject go, string fsmName);
-
     internal static void Install() {
         var find = typeof(PlayMakerFSM).GetMethod("FindFsmOnGameObject", BindingFlags.Public | BindingFlags.Static,
-            null, new[] { typeof(GameObject), typeof(string) }, null);
+            null, [typeof(GameObject), typeof(string)], null);
         if (find != null) findHook = new Hook(find, (Hooked)OnLookup);
         else Log.Error("[DamagesEnemyFsmShim] PlayMakerFSM.FindFsmOnGameObject not found");
 
         // ReceivedDamage (and others) locate the FSM via FSMUtility.LocateFSM, which uses GetComponents (NOT
         // FindFsmOnGameObject) — so it needs its own hook. Same (GameObject,string)->PlayMakerFSM signature.
         var locate = typeof(FSMUtility).GetMethod("LocateFSM", BindingFlags.Public | BindingFlags.Static,
-            null, new[] { typeof(GameObject), typeof(string) }, null);
+            null, [typeof(GameObject), typeof(string)], null);
         if (locate != null) locateHook = new Hook(locate, (Hooked)OnLookup);
         else Log.Error("[DamagesEnemyFsmShim] FSMUtility.LocateFSM not found");
 
@@ -71,8 +70,12 @@ internal static class DamagesEnemyFsmShim {
     }
 
     private static int NailDamage() {
-        try { var pd = Silksong::PlayerData.instance; if (pd != null && pd.nailDamage > 0) return pd.nailDamage; }
-        catch { }
+        try {
+            var pd = Silksong::PlayerData.instance;
+            if (pd != null && pd.nailDamage > 0) return pd.nailDamage;
+        } catch {
+        }
+
         return 5;
     }
 
@@ -83,19 +86,30 @@ internal static class DamagesEnemyFsmShim {
         if (dummy != null) return;
         var go = new GameObject("hp_damages_enemy_shim");
         go.SetActive(false);
-        UnityEngine.Object.DontDestroyOnLoad(go);
+        Object.DontDestroyOnLoad(go);
         dummy = go.AddComponent<PlayMakerFSM>();
         var fsm = new Fsm { Name = "damages_enemy" };
         dirVar = new FsmFloat("direction");
         dmgVar = new FsmInt("damageDealt");
-        fsm.Variables.FloatVariables = new[] { dirVar };
-        fsm.Variables.IntVariables = new[] { dmgVar };
+        fsm.Variables.FloatVariables = [dirVar];
+        fsm.Variables.IntVariables = [dmgVar];
         typeof(PlayMakerFSM).GetField("fsm", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(dummy, fsm);
     }
 
     internal static void Cleanup() {
-        findHook?.Dispose(); findHook = null;
-        locateHook?.Dispose(); locateHook = null;
-        if (dummy != null) { UnityEngine.Object.Destroy(dummy.gameObject); dummy = null; dirVar = null; dmgVar = null; }
+        findHook?.Dispose();
+        findHook = null;
+        locateHook?.Dispose();
+        locateHook = null;
+        if (dummy != null) {
+            Object.Destroy(dummy.gameObject);
+            dummy = null;
+            dirVar = null;
+            dmgVar = null;
+        }
     }
+
+    private delegate PlayMakerFSM Orig(GameObject go, string fsmName);
+
+    private delegate PlayMakerFSM Hooked(Orig orig, GameObject go, string fsmName);
 }

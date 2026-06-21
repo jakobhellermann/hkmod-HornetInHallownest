@@ -23,17 +23,28 @@ internal static class CustomPlayerLoopBootstrap {
         try {
             var cpl = typeof(Silksong::CustomPlayerLoop);
             var lateType = cpl.GetNestedType("LateFixedUpdate", BindingFlags.NonPublic);
-            if (lateType == null) { Log.Error("[CustomPlayerLoop] nested LateFixedUpdate type not found"); return; }
+            if (lateType == null) {
+                Log.Error("[CustomPlayerLoop] nested LateFixedUpdate type not found");
+                return;
+            }
+
             if (Contains(PlayerLoop.GetCurrentPlayerLoop(), lateType)) {
                 Log.Info("[CustomPlayerLoop] LateFixedUpdate phase already installed");
                 return;
             }
+
             var setup = cpl.GetMethod("SetupCustomPlayerLoop", BindingFlags.NonPublic | BindingFlags.Static);
-            if (setup == null) { Log.Error("[CustomPlayerLoop] SetupCustomPlayerLoop not found"); return; }
+            if (setup == null) {
+                Log.Error("[CustomPlayerLoop] SetupCustomPlayerLoop not found");
+                return;
+            }
+
             setup.Invoke(null, null);
             var ok = Contains(PlayerLoop.GetCurrentPlayerLoop(), lateType);
             Log.Info($"[CustomPlayerLoop] installed LateFixedUpdate phase (present={ok})");
-        } catch (Exception e) { Log.Error($"[CustomPlayerLoop] {e}"); }
+        } catch (Exception e) {
+            Log.Error($"[CustomPlayerLoop] {e}");
+        }
     }
 
     private static bool Contains(PlayerLoopSystem sys, Type t) {
@@ -41,7 +52,8 @@ internal static class CustomPlayerLoopBootstrap {
         var subs = sys.subSystemList;
         if (subs != null)
             foreach (var s in subs)
-                if (Contains(s, t)) return true;
+                if (Contains(s, t))
+                    return true;
         return false;
     }
 }

@@ -12,7 +12,8 @@ internal static class ToolItemManagerBootstrap {
     private const string GoName = "Silksong_ToolItemManager";
 
     internal static object Ensure() {
-        var mgr = ManagerSingletonBootstrap.BringUp(typeof(Silksong::ToolItemManager), GoName, "toolItems", "crestList");
+        var mgr = ManagerSingletonBootstrap.BringUp(typeof(Silksong::ToolItemManager), GoName, "toolItems",
+            "crestList");
         if (mgr == null) return new { error = "ToolItemManager bring-up failed (see log)" };
         return Diag();
     }
@@ -32,9 +33,11 @@ internal static class ToolItemManagerBootstrap {
             crestNames = crests.Select(c => c.name).ToArray(),
             unlockedToolCount = tools.Count,
             currentCrestID = crestId,
-            getCrestByNameResolves = byName != null,
+            getCrestByNameResolves = byName != null
         };
     }
 
-    internal static void Cleanup() => ManagerSingletonBootstrap.Destroy(GoName);
+    internal static void Cleanup() {
+        ManagerSingletonBootstrap.Destroy(GoName);
+    }
 }

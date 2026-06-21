@@ -1,13 +1,20 @@
 extern alias Silksong;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Reflection;
+using GlobalEnums;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace HornetPlayer.Playground;
 
-internal enum ActiveHero { Knight, Hornet }
+internal enum ActiveHero {
+    Knight,
+    Hornet
+}
 
 // Switch which character the player controls (Knight = HK's hero, Hornet = the spawned Silksong hero). The OTHER stays
 // visible (its renderer keeps drawing) but inert: HeroController disabled (stops input/movement) + Rigidbody2D.simulated
@@ -23,6 +30,11 @@ internal static class HeroSwitch {
     private static GameObject? go;
     private static FieldInfo? heroTransformField;
     private static Hook? canInteractHook;
+
+    // The Knight's standalone input-listening ability FSMs: they fire independently of HeroController.enabled, so they
+    // must be disabled to stop the inert Knight from cdashing/casting/nail-arting on shared input. (NOT controlReqlinquished
+    // — that's coupled to HK's door-entry; see SetInert.)
+    private static readonly string[] AbilityFsms = { "Superdash", "Spell Control", "Nail Arts" };
 
     internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
     internal static bool HornetActive => Active == ActiveHero.Hornet;
@@ -40,22 +52,29 @@ internal static class HeroSwitch {
         // own CanInteract() when she's active, else the Knight's. One spot covers all interactables. (Catches FSM/
         // reflection callers too, since the detour replaces the method.)
         canInteractHook = new Hook(
-            typeof(global::HeroController).GetMethod(nameof(global::HeroController.CanInteract)),
-            (Func<Func<global::HeroController, bool>, global::HeroController, bool>)((orig, self) =>
+            typeof(HeroController).GetMethod(nameof(HeroController.CanInteract)),
+            (Func<Func<HeroController, bool>, HeroController, bool>)((orig, self) =>
                 HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.CanInteract() : orig(self)));
 
         Log.Info("[HeroSwitch] installed (Tab toggles Knight<->Hornet; /switch route)");
     }
 
     internal static void Cleanup() {
-        canInteractHook?.Dispose(); canInteractHook = null;
-        if (go != null) { Object.Destroy(go); go = null; }
+        canInteractHook?.Dispose();
+        canInteractHook = null;
+        if (go != null) {
+            Object.Destroy(go);
+            go = null;
+        }
+
         Active = ActiveHero.Knight; // leave HK's Knight controllable after unload
-        SetInert(global::HeroController.UnsafeInstance != null ? global::HeroController.UnsafeInstance.gameObject : null, false);
-        RetargetCamera(global::HeroController.UnsafeInstance != null ? global::HeroController.UnsafeInstance.transform : null);
+        SetInert(HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.gameObject : null, false);
+        RetargetCamera(HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.transform : null);
     }
 
-    internal static object Toggle() => SetActive(HornetActive ? ActiveHero.Knight : ActiveHero.Hornet);
+    internal static object Toggle() {
+        return SetActive(HornetActive ? ActiveHero.Knight : ActiveHero.Hornet);
+    }
 
     internal static object SetActive(ActiveHero who) {
         var hornet = BundleSpike.RealHero;
@@ -64,7 +83,7 @@ internal static class HeroSwitch {
 
         var prev = Active;
         Active = who;
-        var knightGo = global::HeroController.UnsafeInstance != null ? global::HeroController.UnsafeInstance.gameObject : null;
+        var knightGo = HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.gameObject : null;
         var hornetGo = BundleSpike.HornetRoot;
 
         // Knight inert when Hornet is active, and vice-versa. Hornet's enabled state is owned per-frame by
@@ -98,7 +117,7 @@ internal static class HeroSwitch {
         if (hero == null) return;
         // GetComponent<global::HeroController> only matches HK's Knight (Hornet is a Silksong.HeroController), so the
         // vignette handling below applies exclusively to the Knight.
-        var hk = hero.GetComponent<global::HeroController>();
+        var hk = hero.GetComponent<HeroController>();
         if (hk != null) {
             hk.enabled = !inert;
             // Seam policy B (Hornet is the real hero): turn the inert Knight genuinely OFF. enabled=false stops its
@@ -118,13 +137,15 @@ internal static class HeroSwitch {
                 // re-StartControl's it at the end — but on the inert Knight that closing StartControl never ran, so HAC
                 // stays controlEnabled=false and freezes on the entry clip ("Exit Door To Idle" stuck mid-frame). Restore
                 // it so HAC drives normal locomotion again. (No-op if already enabled.)
-                hk.GetComponent<global::HeroAnimationController>()?.StartControl();
+                hk.GetComponent<HeroAnimationController>()?.StartControl();
             }
+
             // The Knight's screen-edge vignette would otherwise keep darkening the view while she's the inactive hero;
             // kill the renderer + its FSM (so nothing re-enables it), restore when she's active again.
             if (hk.vignette != null) hk.vignette.enabled = !inert;
             if (hk.vignetteFSM != null) hk.vignetteFSM.enabled = !inert;
-        } else {
+        }
+        else {
             // Hornet's "Vignette": the soft radial darkening (its own SpriteRenderer) follows her active state — show it
             // only while she's the active, camera-centred hero.
             var v = hero.transform.Find("Vignette");
@@ -137,6 +158,7 @@ internal static class HeroSwitch {
                 if (border != null) border.gameObject.SetActive(false);
             }
         }
+
         var rb = hero.GetComponent<Rigidbody2D>();
         if (rb != null) rb.simulated = !inert;
 
@@ -145,27 +167,27 @@ internal static class HeroSwitch {
         // PAUSE the tk2d animator instead of disabling it — disabling runs OnDisable->Stop which nulls CurrentClip, so
         // the driver's Play() NullRefs (while inert AND on reactivation). Pause keeps the current clip + frame.
         foreach (var d in hero.GetComponentsInChildren<MonoBehaviour>(true))
-            if (d != null && d.GetType().Name == "HeroAnimationController") d.enabled = !inert;
-        foreach (var a in hero.GetComponentsInChildren<tk2dSpriteAnimator>(true)) { if (inert) a.Pause(); else a.Resume(); }
+            if (d != null && d.GetType().Name == "HeroAnimationController")
+                d.enabled = !inert;
+        foreach (var a in hero.GetComponentsInChildren<tk2dSpriteAnimator>(true))
+            if (inert) a.Pause();
+            else a.Resume();
         foreach (var a in hero.GetComponentsInChildren<Animator>(true)) a.enabled = !inert;
     }
 
-    // The Knight's standalone input-listening ability FSMs: they fire independently of HeroController.enabled, so they
-    // must be disabled to stop the inert Knight from cdashing/casting/nail-arting on shared input. (NOT controlReqlinquished
-    // — that's coupled to HK's door-entry; see SetInert.)
-    private static readonly string[] AbilityFsms = { "Superdash", "Spell Control", "Nail Arts" };
-    private static void SetAbilityFsms(global::HeroController hk, bool enabled) {
-        foreach (var fsm in hk.GetComponents<global::PlayMakerFSM>())
-            if (System.Array.IndexOf(AbilityFsms, fsm.FsmName) >= 0) fsm.enabled = enabled;
+    private static void SetAbilityFsms(HeroController hk, bool enabled) {
+        foreach (var fsm in hk.GetComponents<PlayMakerFSM>())
+            if (Array.IndexOf(AbilityFsms, fsm.FsmName) >= 0)
+                fsm.enabled = enabled;
     }
 
     // Point HK's CameraTarget at `t` so HK's native camera chain follows it. Idempotent + cheap (one reflected set).
     internal static void RetargetCamera(Transform? t) {
         if (t == null) return;
-        var gc = global::GameCameras.instance;
+        var gc = GameCameras.instance;
         var camTarget = gc != null ? gc.cameraTarget : null;
         if (camTarget == null) return;
-        heroTransformField ??= typeof(global::CameraTarget)
+        heroTransformField ??= typeof(CameraTarget)
             .GetField("heroTransform", BindingFlags.Instance | BindingFlags.NonPublic);
         heroTransformField?.SetValue(camTarget, t);
     }
@@ -182,16 +204,27 @@ internal static class HeroSwitch {
 // the playable area of the new scene.
 [DefaultExecutionOrder(-8000)]
 internal sealed class CameraSwitchDriver : MonoBehaviour {
+    // --- Keybind trace recorder (F9 toggles) --- captures Hornet's per-FRAME state (finer than the 12Hz HTTP poll) so a
+    // repro doesn't have to race a fixed poll window. Writes a TSV on stop; read /tmp/hornet_trace_live.tsv afterwards.
+    private const string TracePath = "/tmp/hornet_trace_live.tsv";
+    private bool hkEntryFixed;
     private string? lastScene;
     private bool pendingSnap;
-    private bool hkEntryFixed;
+    private List<string>? traceBuf;
+    private float traceT0;
+    private bool tracing;
 
     private void Update() {
-        var knight = global::HeroController.UnsafeInstance;
+        var knight = HeroController.UnsafeInstance;
 
         // Detect a scene change; defer the Hornet snap until the Knight has actually been placed at the new entry.
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (scene != lastScene) { lastScene = scene; pendingSnap = true; hkEntryFixed = false; }
+        if (scene != lastScene) {
+            lastScene = scene;
+            pendingSnap = true;
+            hkEntryFixed = false;
+        }
+
         CompleteStuckHkVerticalEntry(knight);
         if (pendingSnap && knight != null && knight.isHeroInPosition) {
             // When Hornet is the active hero, run her REAL Silksong scene-entry (walk/drop-in animation + entry FSMs)
@@ -219,7 +252,9 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
 
         var follow = HeroSwitch.HornetActive
             ? BundleSpike.HornetRoot?.transform
-            : (knight != null ? knight.transform : null);
+            : knight != null
+                ? knight.transform
+                : null;
         HeroSwitch.RetargetCamera(follow);
 
         // HUD follows the active hero: Hornet's HUD (if brought up) while she's active, HK's Knight HUD otherwise. Synced
@@ -228,7 +263,8 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         if (GameCamerasBootstrap.HornetHudReady) {
             GameCamerasBootstrap.SetHornetHudVisible(HeroSwitch.HornetActive);
             GameCamerasBootstrap.SetHkHudVisible(!HeroSwitch.HornetActive);
-        } else {
+        }
+        else {
             GameCamerasBootstrap.SetHkHudVisible(true); // no Hornet HUD -> always show HK's
         }
     }
@@ -246,20 +282,22 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
     // timer/threshold — gated to the one branch the inert Knight breaks; self-guarding (gameState flips to PLAYING) plus
     // a once-per-scene flag. NOTE: Hornet's OWN movement freeze on up-entries (she lands but loses no_input so her
     // OnCollisionEnter2D completion is missed) is a sibling bug, logged by HornetEnvironmentAdapter.StuckEntryWatch.
-    private void CompleteStuckHkVerticalEntry(global::HeroController? knight) {
-        if (hkEntryFixed || !HeroSwitch.HornetActive || knight == null || knight.enabled) return; // only the INERT Knight
-        var gm = global::GameManager.UnsafeInstance;
-        if (gm == null || gm.gameState != global::GlobalEnums.GameState.ENTERING_LEVEL) return;
-        if (knight.transitionState != global::GlobalEnums.HeroTransitionState.DROPPING_DOWN) return; // reached the terminal landing-wait
+    private void CompleteStuckHkVerticalEntry(HeroController? knight) {
+        if (hkEntryFixed || !HeroSwitch.HornetActive || knight == null || knight.enabled)
+            return; // only the INERT Knight
+        var gm = GameManager.UnsafeInstance;
+        if (gm == null || gm.gameState != GameState.ENTERING_LEVEL) return;
+        if (knight.transitionState != HeroTransitionState.DROPPING_DOWN) return; // reached the terminal landing-wait
         var gate = knight.sceneEntryGate;
-        if (gate == null || gate.GetGatePosition() != global::GlobalEnums.GatePosition.bottom) return; // only the non-self-completing branch
+        if (gate == null || gate.GetGatePosition() != GatePosition.bottom)
+            return; // only the non-self-completing branch
         gm.FinishedEnteringScene();
         hkEntryFixed = true;
         Log.Info("[CameraSwitch] inert Knight stuck in bottom-gate entry (DROPPING_DOWN + gameState=ENTERING_LEVEL) "
                  + "-> called gm.FinishedEnteringScene() to complete HK's handshake (unblocks transitions)");
     }
 
-    private static void SnapHornetToKnight(global::HeroController knight) {
+    private static void SnapHornetToKnight(HeroController knight) {
         var hornet = BundleSpike.HornetRoot;
         if (hornet == null) return;
         hornet.transform.position = knight.transform.position;
@@ -267,29 +305,29 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         if (rb != null && rb.simulated) rb.linearVelocity = Vector2.zero; // don't carry pre-transition momentum
     }
 
-    // --- Keybind trace recorder (F9 toggles) --- captures Hornet's per-FRAME state (finer than the 12Hz HTTP poll) so a
-    // repro doesn't have to race a fixed poll window. Writes a TSV on stop; read /tmp/hornet_trace_live.tsv afterwards.
-    private const string TracePath = "/tmp/hornet_trace_live.tsv";
-    private bool tracing;
-    private float traceT0;
-    private System.Collections.Generic.List<string>? traceBuf;
-
     private void TraceTick() {
         if (Input.GetKeyDown(KeyCode.F9)) {
             if (!tracing) {
                 tracing = true;
                 traceT0 = Time.realtimeSinceStartup;
-                traceBuf = new System.Collections.Generic.List<string> {
+                traceBuf = new List<string> {
                     "t\tscene\ttransState\theroState\tonGround\tcReq\tvx\tvy\tx\ty"
                 };
                 Log.Info("[Trace] recording started (F9 to stop)");
-            } else {
+            }
+            else {
                 tracing = false;
-                try { System.IO.File.WriteAllLines(TracePath, traceBuf!); Log.Info($"[Trace] wrote {traceBuf!.Count - 1} frames -> {TracePath}"); }
-                catch (Exception e) { Log.Error($"[Trace] write failed: {e.Message}"); }
+                try {
+                    File.WriteAllLines(TracePath, traceBuf!);
+                    Log.Info($"[Trace] wrote {traceBuf!.Count - 1} frames -> {TracePath}");
+                } catch (Exception e) {
+                    Log.Error($"[Trace] write failed: {e.Message}");
+                }
+
                 traceBuf = null;
             }
         }
+
         if (!tracing) return;
         var hc = BundleSpike.RealHero;
         if (hc == null) return;
@@ -297,7 +335,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         var rb = hc.GetComponent<Rigidbody2D>();
         var v = rb != null ? rb.linearVelocity : Vector2.zero;
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        traceBuf!.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+        traceBuf!.Add(string.Format(CultureInfo.InvariantCulture,
             "{0:F2}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6:F1}\t{7:F1}\t{8:F1}\t{9:F1}",
             Time.realtimeSinceStartup - traceT0, scene, hc.transitionState, hc.hero_state,
             hc.cState.onGround, hc.controlReqlinquished, v.x, v.y, p.x, p.y));

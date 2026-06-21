@@ -8,6 +8,11 @@ namespace HornetPlayer.Playground;
 internal static class Log {
     internal static Action<string> Sink = msg => Debug.Log(msg);
 
-    internal static void Info(object? msg) => Sink($"[HornetPlayer] {msg}");
-    internal static void Error(object? msg) => Sink($"[HornetPlayer] [ERROR] {msg}");
+    internal static void Info(object? msg) {
+        Sink($"[HornetPlayer] {msg}");
+    }
+
+    internal static void Error(object? msg) {
+        Sink($"[HornetPlayer] [ERROR] {msg}");
+    }
 }

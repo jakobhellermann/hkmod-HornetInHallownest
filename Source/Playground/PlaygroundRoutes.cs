@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using HornetPlayer.DevServer;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-using HornetPlayer.DevServer;
 namespace HornetPlayer.Playground;
 
 // Game-agnostic debug routes: scene inspection, field/method poking, screenshots. A port of DevUtils' DevRoutes,
@@ -36,7 +36,8 @@ public static class PlaygroundRoutes {
         var node = new Dictionary<string, object?> {
             ["name"] = go.name,
             ["active"] = go.activeSelf,
-            ["components"] = go.GetComponents<Component>().Select(c => c == null ? "null" : c.GetType().FullName).ToArray()
+            ["components"] = go.GetComponents<Component>().Select(c => c == null ? "null" : c.GetType().FullName)
+                .ToArray()
         };
         // Omit children entirely on leaf nodes rather than emitting an empty array.
         if (children.Length > 0) node["children"] = children;
@@ -91,13 +92,15 @@ public static class PlaygroundRoutes {
 
     private static object SetActive(string? name, string? rawPath, string? activeStr) {
         if (activeStr == null) return DevResponse.Json(new { error = "missing 'active' param" }, 400);
-        if (name == null && rawPath == null) return DevResponse.Json(new { error = "missing 'name' or 'path' param" }, 400);
+        if (name == null && rawPath == null)
+            return DevResponse.Json(new { error = "missing 'name' or 'path' param" }, 400);
         var active = activeStr.ToLowerInvariant() is "true" or "1";
 
         // `name` is a contains-match over every GameObject; `path` resolves a single one.
         if (name != null) {
             var count = 0;
-            foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None)) {
+            foreach (var go in Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include,
+                         FindObjectsSortMode.None)) {
                 if (!go.name.Contains(name)) continue;
                 go.SetActive(active);
                 count++;
@@ -146,11 +149,17 @@ public static class PlaygroundRoutes {
         for (var i = 0; i < parms.Length; i++)
             args[i] = parms[i].DefaultValue ?? Activator.CreateInstance(parms[i].ParameterType)!;
         object? result;
-        try { result = method.Invoke(comp, args); }
-        catch (Exception e) { return new { ok = false, invoked = methodName, error = (e.InnerException ?? e).Message }; }
+        try {
+            result = method.Invoke(comp, args);
+        } catch (Exception e) {
+            return new { ok = false, invoked = methodName, error = (e.InnerException ?? e).Message };
+        }
+
         // Return the actual result (expanded one level), not just "ok" — the whole point of invoking a bool/struct
         // getter like CanOpenInventory() is to SEE what it returns.
-        return new { ok = true, invoked = methodName, returnType = method.ReturnType.Name, returned = Format(result, 1) };
+        return new {
+            ok = true, invoked = methodName, returnType = method.ReturnType.Name, returned = Format(result, 1)
+        };
     }
 
     private static (ComponentPath? path, object? error) ParsePath(string? raw) {
@@ -167,21 +176,27 @@ public static class PlaygroundRoutes {
         var (path, error) = ParsePath(rawPath);
         if (error != null) return (null, null, error);
         if (path!.Component == null)
-            return (null, null, DevResponse.Json(new { error = "missing component selector (use path@Component)" }, 400));
+            return (null, null,
+                DevResponse.Json(new { error = "missing component selector (use path@Component)" }, 400));
 
         var target = path.ResolveGameObject();
-        if (target == null) return (null, null, DevResponse.Json(new { error = $"GameObject not found: {rawPath}" }, 404));
+        if (target == null)
+            return (null, null, DevResponse.Json(new { error = $"GameObject not found: {rawPath}" }, 404));
 
         var comp = path.ResolveComponent(target);
-        if (comp == null) return (null, null, DevResponse.Json(new { error = $"Component '{path.Component}' not found" }, 404));
+        if (comp == null)
+            return (null, null, DevResponse.Json(new { error = $"Component '{path.Component}' not found" }, 404));
 
         return (target, comp, null);
     }
 
     // Get a value safely (catching getter exceptions) and format it bounded to `depth`.
     private static object? SafeFmt(Func<object?> getter, int depth) {
-        try { return Format(getter(), depth); }
-        catch (Exception e) { return $"<error: {e.Message}>"; }
+        try {
+            return Format(getter(), depth);
+        } catch (Exception e) {
+            return $"<error: {e.Message}>";
+        }
     }
 
     // Bounded value formatter. Primitives/strings/enums pass through. A UnityEngine.Object becomes "Type:name" and is
@@ -193,21 +208,28 @@ public static class PlaygroundRoutes {
         switch (value) {
             case null or bool or int or float or double or string: return value;
         }
+
         var t = value.GetType();
-        if (t.IsEnum || t.IsPrimitive) return value.ToString();                 // long/byte/enum/…
-        if (value is Object uo) return $"{t.Name}:{uo.name}";                    // UnityEngine.Object — don't recurse
+        if (t.IsEnum || t.IsPrimitive) return value.ToString(); // long/byte/enum/…
+        if (value is Object uo) return $"{t.Name}:{uo.name}"; // UnityEngine.Object — don't recurse
         if (value is Vector2 or Vector3 or Vector4 or Quaternion or Color) return value.ToString();
         if (depth <= 0) return value.ToString();
 
-        if (value is IDictionary) return value.ToString();                       // skip (rare; avoid key formatting)
+        if (value is IDictionary) return value.ToString(); // skip (rare; avoid key formatting)
         if (value is IEnumerable en) {
             var items = new List<object?>();
             foreach (var item in en) {
-                if (items.Count >= 64) { items.Add("…(truncated)"); break; }
+                if (items.Count >= 64) {
+                    items.Add("…(truncated)");
+                    break;
+                }
+
                 items.Add(Format(item, depth - 1));
             }
+
             return items;
         }
+
         // Plain class/struct: expand instance fields one level down.
         var dict = new Dictionary<string, object?>();
         foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))

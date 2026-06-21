@@ -1,7 +1,9 @@
 extern alias Silksong;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using Object = UnityEngine.Object;
 using SsActions = Silksong::HeroActions;
 using SsAction = Silksong::InControl.PlayerAction;
 
@@ -17,6 +19,11 @@ namespace HornetPlayer.Playground;
 internal static class InputBridge {
     private static GameObject? go;
 
+    // Debug drive (for /press): force an action pressed for `frames` ticks, so we can demo without a physical key.
+    internal static readonly Dictionary<string, int> Forced = new();
+
+    internal static int OpenInvWasPressedCount; // diagnostic: did the driver produce an OpenInventory WasPressed edge?
+
     internal static void Install() {
         if (go != null) return;
         go = new GameObject("HornetPlayer.InputDriver");
@@ -26,19 +33,19 @@ internal static class InputBridge {
     }
 
     internal static void Cleanup() {
-        if (go != null) { Object.Destroy(go); go = null; }
+        if (go != null) {
+            Object.Destroy(go);
+            go = null;
+        }
     }
 
-    // Debug drive (for /press): force an action pressed for `frames` ticks, so we can demo without a physical key.
-    internal static readonly Dictionary<string, int> Forced = new();
-    internal static void Press(string action, int frames) { Forced[action] = frames; }
-
-    internal static int OpenInvWasPressedCount;  // diagnostic: did the driver produce an OpenInventory WasPressed edge?
+    internal static void Press(string action, int frames) {
+        Forced[action] = frames;
+    }
 }
 
 [DefaultExecutionOrder(-10000)] // run before HeroController.Update so WasPressed lands the same frame
 internal sealed class InputDriver : MonoBehaviour {
-    private ulong tick;
     private static MethodInfo? moveVectorUpdate;
 
     private static readonly (string name, KeyCode key)[] Map = {
@@ -46,23 +53,27 @@ internal sealed class InputDriver : MonoBehaviour {
         ("up", KeyCode.UpArrow), ("down", KeyCode.DownArrow),
         ("jump", KeyCode.Z), ("attack", KeyCode.X), ("dash", KeyCode.C),
         ("superdash", KeyCode.S), // harpoon dash
-        ("cast", KeyCode.A),      // bind/heal + silk skill (Silksong's Cast action; Bind FSM ListenForCast)
+        ("cast", KeyCode.A), // bind/heal + silk skill (Silksong's Cast action; Bind FSM ListenForCast)
         ("quickcast", KeyCode.G), // needle throw / quick tool
         ("dreamnail", KeyCode.D), // needolin
-        ("openinventory", KeyCode.K), // open the inventory (Inv pane); ListenForInventoryShortcut reads OpenInventory.WasPressed (K: I/O collide with HK's own inventory)
-        ("opentools", KeyCode.L),     // open the Tools/Crests pane directly
+        ("openinventory",
+            KeyCode.K), // open the inventory (Inv pane); ListenForInventoryShortcut reads OpenInventory.WasPressed (K: I/O collide with HK's own inventory)
+        ("opentools", KeyCode.L) // open the Tools/Crests pane directly
     };
+
+    private ulong tick;
 
     private void Update() {
         try {
             // T = teleport Hornet to HK's Knight (so she's where the camera/player is). Works even while paused.
             if (Input.GetKeyDown(KeyCode.T)) {
                 var hornet = BundleSpike.HornetRoot;
-                var knight = global::HeroController.UnsafeInstance;
+                var knight = HeroController.UnsafeInstance;
                 if (hornet != null && knight != null) {
                     hornet.transform.position = knight.transform.position;
                     Log.Info($"[InputDriver] teleported Hornet -> Knight at {knight.transform.position}");
-                } else {
+                }
+                else {
                     Log.Info($"[InputDriver] TP failed: hornet={hornet != null} knight={knight != null}");
                 }
             }
@@ -80,12 +91,16 @@ internal sealed class InputDriver : MonoBehaviour {
                 var pressed = Input.GetKey(key) || Consume(name);
                 ActionFor(ia, name)?.CommitWithState(pressed, tick, dt);
             }
-            if (ia.OpenInventory.WasPressed) Log.Info($"[InputDriver] OpenInventory.WasPressed edge #{++InputBridge.OpenInvWasPressedCount}");
+
+            if (ia.OpenInventory.WasPressed)
+                Log.Info($"[InputDriver] OpenInventory.WasPressed edge #{++InputBridge.OpenInvWasPressedCount}");
             // Recompute the MoveVector (TwoAxis) from the freshly-committed Left/Right/Up/Down. Update is internal.
             moveVectorUpdate ??= ia.MoveVector.GetType().GetMethod("Update",
-                BindingFlags.NonPublic | BindingFlags.Instance, null, new[] { typeof(ulong), typeof(float) }, null);
-            moveVectorUpdate?.Invoke(ia.MoveVector, new object[] { tick, dt });
-        } catch (System.Exception e) { Log.Error($"[InputDriver] {e}"); }
+                BindingFlags.NonPublic | BindingFlags.Instance, null, [typeof(ulong), typeof(float)], null);
+            moveVectorUpdate?.Invoke(ia.MoveVector, [tick, dt]);
+        } catch (Exception e) {
+            Log.Error($"[InputDriver] {e}");
+        }
     }
 
     private static bool Consume(string name) {
@@ -94,11 +109,13 @@ internal sealed class InputDriver : MonoBehaviour {
         return true;
     }
 
-    private static SsAction? ActionFor(SsActions ia, string name) => name switch {
-        "left" => ia.Left, "right" => ia.Right, "up" => ia.Up, "down" => ia.Down,
-        "jump" => ia.Jump, "attack" => ia.Attack, "dash" => ia.Dash,
-        "superdash" => ia.SuperDash, "cast" => ia.Cast, "quickcast" => ia.QuickCast, "dreamnail" => ia.DreamNail,
-        "openinventory" => ia.OpenInventory, "opentools" => ia.OpenInventoryTools,
-        _ => null,
-    };
+    private static SsAction? ActionFor(SsActions ia, string name) {
+        return name switch {
+            "left" => ia.Left, "right" => ia.Right, "up" => ia.Up, "down" => ia.Down,
+            "jump" => ia.Jump, "attack" => ia.Attack, "dash" => ia.Dash,
+            "superdash" => ia.SuperDash, "cast" => ia.Cast, "quickcast" => ia.QuickCast, "dreamnail" => ia.DreamNail,
+            "openinventory" => ia.OpenInventory, "opentools" => ia.OpenInventoryTools,
+            _ => null
+        };
+    }
 }

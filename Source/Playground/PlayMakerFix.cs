@@ -27,13 +27,14 @@ internal static class PlayMakerFix {
     }
 
     // Seeding a separate, process-lifetime static cache; nothing to undo on unload.
-    internal static void Cleanup() { }
+    internal static void Cleanup() {
+    }
 
     private static void SeedSilksongPlayMaker() {
         // FullName -> Type for every type a Silksong FSM might reference by name (actions, enums, FsmObject component
         // types), from both prefixed Silksong assemblies.
         var map = new Dictionary<string, Type>();
-        AddTypes(map, typeof(Silksong::HeroController).Assembly);                     // Silksong.AssemblyCSharp
+        AddTypes(map, typeof(Silksong::HeroController).Assembly); // Silksong.AssemblyCSharp
         AddTypes(map, typeof(SilksongPM::HutongGames.PlayMaker.ActionData).Assembly); // Silksong.PlayMaker
 
         // PlayMaker actions also live in 3 small shared assemblies we prefixed (FadeNestedFadeGroup, GetLocalisedString,
@@ -41,32 +42,43 @@ internal static class PlayMakerFix {
         // original-PlayMaker variant via GetGlobalType's loaded-assemblies fallback (type mismatch -> can't create).
         const string lib = "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/";
         foreach (var name in new[] {
-            "Silksong.TeamCherryNestedFadeGroup", "Silksong.TeamCherryLocalization", "Silksong.ConditionalExpression",
-        }) {
-            try { AddTypes(map, Assembly.LoadFrom(lib + name + ".dll")); }
-            catch (Exception e) { Log.Error($"[PlayMakerFix] load {name}: {e.Message}"); }
-        }
+                     "Silksong.TeamCherryNestedFadeGroup", "Silksong.TeamCherryLocalization",
+                     "Silksong.ConditionalExpression"
+                 })
+            try {
+                AddTypes(map, Assembly.LoadFrom(lib + name + ".dll"));
+            } catch (Exception e) {
+                Log.Error($"[PlayMakerFix] load {name}: {e.Message}");
+            }
 
-        var seededRefl = SeedInto(SilksongStatic(typeof(SilksongPM::HutongGames.PlayMaker.ReflectionUtils), "typeLookup"), map);
-        var seededAction = SeedInto(SilksongStatic(typeof(SilksongPM::HutongGames.PlayMaker.ActionData), "ActionTypeLookup"), map);
-        Log.Info($"[PlayMakerFix] seeded Silksong.PlayMaker (isolated): typeLookup+={seededRefl}, ActionTypeLookup+={seededAction} from {map.Count} types");
+        var seededRefl =
+            SeedInto(SilksongStatic(typeof(SilksongPM::HutongGames.PlayMaker.ReflectionUtils), "typeLookup"), map);
+        var seededAction =
+            SeedInto(SilksongStatic(typeof(SilksongPM::HutongGames.PlayMaker.ActionData), "ActionTypeLookup"), map);
+        Log.Info(
+            $"[PlayMakerFix] seeded Silksong.PlayMaker (isolated): typeLookup+={seededRefl}, ActionTypeLookup+={seededAction} from {map.Count} types");
     }
 
     private static void AddTypes(Dictionary<string, Type> map, Assembly asm) {
         Type?[] types;
-        try { types = asm.GetTypes(); }
-        catch (ReflectionTypeLoadException e) { types = e.Types; }
+        try {
+            types = asm.GetTypes();
+        } catch (ReflectionTypeLoadException e) {
+            types = e.Types;
+        }
+
         foreach (var t in types)
-            if (t?.FullName != null) map[t.FullName] = t;
+            if (t?.FullName != null)
+                map[t.FullName] = t;
     }
 
-    private static IDictionary? SilksongStatic(Type owner, string field) =>
-        (IDictionary?)owner.GetField(field, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null);
+    private static IDictionary? SilksongStatic(Type owner, string field) {
+        return (IDictionary?)owner.GetField(field, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null);
+    }
 
     private static int SeedInto(IDictionary? dict, Dictionary<string, Type> map) {
         if (dict == null) return -1;
         foreach (var kv in map) dict[kv.Key] = kv.Value;
         return map.Count;
     }
-
 }

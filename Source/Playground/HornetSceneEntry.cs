@@ -17,7 +17,7 @@ internal static class HornetSceneEntry {
     // snap-to-Knight for comparison/debugging.
     internal static bool Enabled = true;
 
-    internal static IEnumerator Run(global::HeroController knight) {
+    internal static IEnumerator Run(HeroController knight) {
         var hc = BundleSpike.RealHero;
         var hkGate = knight.sceneEntryGate;
         if (hc == null || hkGate == null) yield break;
@@ -32,7 +32,7 @@ internal static class HornetSceneEntry {
     // Fabricate a Silksong TransitionPoint mirroring HK's entry gate. GetGatePosition() parses the GameObject NAME for
     // top/left/right/bottom/door, so the name must carry the side; everything else is plain public fields (identical set
     // in both games). customEntryFSM is left null -> PrepareEntry/BeforeEntry/AfterEntry are no-ops.
-    private static GameObject BuildGate(global::TransitionPoint hk) {
+    private static GameObject BuildGate(TransitionPoint hk) {
         var go = new GameObject(hk.name);
         // INACTIVE: Silksong's TransitionPoint.Awake (base.Awake / OnSceneLintUpgrade) NullRefs without the Silksong
         // scene-setup env, and we only need the gate as a data carrier for EnterScene (which reads fields + calls

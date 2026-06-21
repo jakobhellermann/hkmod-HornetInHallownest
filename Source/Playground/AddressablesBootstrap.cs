@@ -1,9 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
-using UnityEngine.ResourceManagement.ResourceLocations;
 
 namespace HornetPlayer.Playground;
 
@@ -21,6 +21,7 @@ namespace HornetPlayer.Playground;
 internal static class AddressablesBootstrap {
     private const string SilksongAa =
         "/home/jakob/.local/share/Steam/steamapps/common/Hollow Knight Silksong/Hollow Knight Silksong_Data/StreamingAssets/aa";
+
     // The IL-prefixed MonoScripts bundle (same CAB-283454ff as Silksong's original *_monoscripts.bundle, but m_Script
     // entries repointed to the Silksong.* assemblies). ALL MonoScripts across all 1155 asset bundles are centralized in
     // that one CAB (verified by scan: zero asset bundles carry their own), so substituting this one bundle file makes
@@ -38,7 +39,8 @@ internal static class AddressablesBootstrap {
     // So the source of truth is the ResourceManager's locator list, not a static flag.
     private static bool CatalogRegistered() {
         foreach (var loc in Addressables.ResourceLocators)
-            if (loc.LocatorId == CatalogId) return true;
+            if (loc.LocatorId == CatalogId)
+                return true;
         return false;
     }
 
@@ -64,11 +66,13 @@ internal static class AddressablesBootstrap {
             // InitializeAsync(string runtimeDataPath, string providerSuffix, bool autoReleaseHandle) with Silksong's
             // absolute settings.json (no token -> no transform needed for it). It's not on the facade -> reflection on
             // the Addressables.m_Addressables (AddressablesImpl) singleton.
-            var implProp = typeof(Addressables).GetProperty("m_Addressables", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Public);
+            var implProp = typeof(Addressables).GetProperty("m_Addressables",
+                BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Public);
             var impl = implProp?.GetValue(null) ?? throw new Exception("Addressables.m_Addressables not found");
-            var init = impl.GetType().GetMethod("InitializeAsync", new[] { typeof(string), typeof(string), typeof(bool) })
+            var init = impl.GetType()
+                           .GetMethod("InitializeAsync", [typeof(string), typeof(string), typeof(bool)])
                        ?? throw new Exception("AddressablesImpl.InitializeAsync(string,string,bool) not found");
-            var handle = init.Invoke(impl, new object[] { SilksongAa + "/settings.json", null, false });
+            var handle = init.Invoke(impl, [SilksongAa + "/settings.json", null, false]);
 
             // handle is AsyncOperationHandle<IResourceLocator> (generic struct) -> reflect WaitForCompletion + Status.
             // Init may report Failed because the settings.json catalog-location discovery comes up empty — that's fine;
@@ -80,13 +84,14 @@ internal static class AddressablesBootstrap {
 
             // Load Silksong's catalog directly (bypasses settings catalog-location discovery). Bundle ids inside resolve
             // via {RuntimePath} -> HK aa -> our InternalIdTransformFunc -> Silksong aa.
-            var cat = Addressables.LoadContentCatalogAsync(CatalogId, autoReleaseHandle: false);
+            var cat = Addressables.LoadContentCatalogAsync(CatalogId, false);
             cat.WaitForCompletion();
             var ok = cat.Status == AsyncOperationStatus.Succeeded;
             var locatorKeys = ok && cat.Result != null ? cat.Result.LocatorId : null;
             // NOTE: settings-init is EXPECTED to report Failed (its catalog-location discovery comes up empty); the real
             // success signal is loadCatalog=Succeeded — that's the registered Silksong locator. Not an error.
-            Log.Info($"[Addressables] Silksong catalog registered: loadCatalog={cat.Status} (settings-init={initStatus}, expected-Failed; locator={locatorKeys})");
+            Log.Info(
+                $"[Addressables] Silksong catalog registered: loadCatalog={cat.Status} (settings-init={initStatus}, expected-Failed; locator={locatorKeys})");
             return new { ok, init = initStatus, catalog = cat.Status.ToString(), locator = locatorKeys };
         } catch (Exception e) {
             var ex = e.InnerException ?? e;
@@ -101,7 +106,9 @@ internal static class AddressablesBootstrap {
             Ensure(); // idempotent (CatalogRegistered guard)
             var h = Addressables.LoadAssetAsync<GameObject>(key);
             var obj = h.WaitForCompletion();
-            var r = new { key, status = h.Status.ToString(), loaded = obj != null, name = obj != null ? obj.name : null };
+            var r = new {
+                key, status = h.Status.ToString(), loaded = obj != null, name = obj != null ? obj.name : null
+            };
             return r;
         } catch (Exception e) {
             return new { key, error = (e.InnerException ?? e).GetType().Name + ": " + (e.InnerException ?? e).Message };
@@ -120,20 +127,27 @@ internal static class AddressablesBootstrap {
             if (prefab == null) return new { error = "Hero_Hornet load returned null", status = h.Status.ToString() };
 
             var comps = prefab.GetComponents<Component>();
-            var byAsm = new System.Collections.Generic.Dictionary<string, int>();
-            var rootComponents = new System.Collections.Generic.List<string>();
+            var byAsm = new Dictionary<string, int>();
+            var rootComponents = new List<string>();
             var missing = 0;
             foreach (var c in comps) {
-                if (c == null) { missing++; rootComponents.Add("<missing script>"); continue; }
+                if (c == null) {
+                    missing++;
+                    rootComponents.Add("<missing script>");
+                    continue;
+                }
+
                 var asm = c.GetType().Assembly.GetName().Name;
                 byAsm[asm] = byAsm.TryGetValue(asm, out var n) ? n + 1 : 1;
                 rootComponents.Add($"{c.GetType().FullName} [{asm}]");
             }
+
             return new {
-                loaded = true, name = prefab.name, status = h.Status.ToString(),
+                loaded = true,
+                prefab.name, status = h.Status.ToString(),
                 rootTotal = comps.Length, missingScripts = missing,
                 byAssembly = byAsm,
-                rootComponents,
+                rootComponents
             };
         } catch (Exception e) {
             var ex = e.InnerException ?? e;

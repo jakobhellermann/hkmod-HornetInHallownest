@@ -25,16 +25,18 @@ namespace HornetPlayer.Playground;
 // fires exclusively for her box (HK's Knight uses HK's own HeroBox in the other assembly).
 internal static class ContactDamageBridge {
     private static Hook? hook;
-    private delegate void Orig(SHeroBox self, GameObject other);
-    private delegate void Hooked(Orig orig, SHeroBox self, GameObject other);
 
     // Log the first contact from each distinct HK object (clean log, still names every new hazard that hurts her).
     private static readonly HashSet<string> seen = new();
 
     internal static void Install() {
         var mi = typeof(SHeroBox).GetMethod("CheckForDamage", BindingFlags.Public | BindingFlags.Instance,
-            null, new[] { typeof(GameObject) }, null);
-        if (mi == null) { Log.Error("[ContactDamageBridge] HeroBox.CheckForDamage(GameObject) not found"); return; }
+            null, [typeof(GameObject)], null);
+        if (mi == null) {
+            Log.Error("[ContactDamageBridge] HeroBox.CheckForDamage(GameObject) not found");
+            return;
+        }
+
         hook = new Hook(mi, (Hooked)OnCheckForDamage);
         Log.Info("[ContactDamageBridge] installed: HeroBox.CheckForDamage");
     }
@@ -52,14 +54,19 @@ internal static class ContactDamageBridge {
         try {
             // HK's "damages_hero" FSM takes priority (some hazards drive damage through it), else HK's DamageHero data comp.
             int dmg = 0, hazard = (int)SHazard.ENEMY;
-            var fsm = global::FSMUtility.LocateFSM(other, "damages_hero");
+            var fsm = FSMUtility.LocateFSM(other, "damages_hero");
             if (fsm != null) {
                 dmg = fsm.FsmVariables.GetFsmInt("damageDealt").Value;
                 hazard = fsm.FsmVariables.GetFsmInt("hazardType").Value;
-            } else {
-                var dh = other.GetComponent<global::DamageHero>();
-                if (dh != null && dh.enabled) { dmg = dh.damageDealt; hazard = dh.hazardType; }
             }
+            else {
+                var dh = other.GetComponent<DamageHero>();
+                if (dh != null && dh.enabled) {
+                    dmg = dh.damageDealt;
+                    hazard = dh.hazardType;
+                }
+            }
+
             if (dmg <= 0) return;
 
             var hc = SHeroController.instance;
@@ -74,5 +81,12 @@ internal static class ContactDamageBridge {
         }
     }
 
-    internal static void Cleanup() { hook?.Dispose(); hook = null; }
+    internal static void Cleanup() {
+        hook?.Dispose();
+        hook = null;
+    }
+
+    private delegate void Orig(SHeroBox self, GameObject other);
+
+    private delegate void Hooked(Orig orig, SHeroBox self, GameObject other);
 }

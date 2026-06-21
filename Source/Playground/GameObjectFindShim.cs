@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 
@@ -30,35 +31,48 @@ internal static class GameObjectFindShim {
     // finds are never intercepted. Extend to specific Update methods later as their lookups surface.
     internal static bool CalledFromSilksongContext;
 
+    // One-off diagnostic: set to a name/tag (e.g. "CameraTarget") to dump the managed call stack ONCE when that
+    // lookup fires — reveals WHO calls it (the FSM action / component). Set via /find-trace?key=CameraTarget.
+    internal static string? TraceKey;
+
     // Known Silksong TAGS -> the Silksong object they should resolve to (tag namespace, used by FindWithTag).
-    private static GameObject? ResolveTag(string tag) => tag switch {
-        "CameraTarget" => GameCamerasBootstrap.CameraTargetGo, // Sprint FSM's FindGameObject(tag) -> needs Silksong's CameraTarget (has SetSprint)
-        _ => null,
-    };
+    private static GameObject? ResolveTag(string tag) {
+        return tag switch {
+            "CameraTarget" => GameCamerasBootstrap
+                .CameraTargetGo, // Sprint FSM's FindGameObject(tag) -> needs Silksong's CameraTarget (has SetSprint)
+            _ => null
+        };
+    }
 
     // Known Silksong NAMES -> the Silksong object (name namespace, used by GameObject.Find). Separate from tags on purpose.
-    private static GameObject? ResolveName(string name) => name switch {
-        _ => null,
-    };
+    private static GameObject? ResolveName(string name) {
+        return name switch {
+            _ => null
+        };
+    }
 
     internal static void Install() {
         if (hooks.Count > 0) return;
-        AddHook("Find", typeof(GameObject).GetMethod(nameof(GameObject.Find), new[] { typeof(string) }),
+        AddHook("Find", typeof(GameObject).GetMethod(nameof(GameObject.Find), [typeof(string)]),
             (Func<Func<string, GameObject>, string, GameObject>)FindDetour);
-        AddHook("FindGameObjectWithTag", typeof(GameObject).GetMethod(nameof(GameObject.FindGameObjectWithTag), new[] { typeof(string) }),
+        AddHook("FindGameObjectWithTag",
+            typeof(GameObject).GetMethod(nameof(GameObject.FindGameObjectWithTag), [typeof(string)]),
             (Func<Func<string, GameObject>, string, GameObject>)TagDetour);
         Log.Info($"[Find] shim installed on {hooks.Count} lookup methods");
     }
 
-    private static void AddHook(string label, System.Reflection.MethodInfo? mi, Delegate detour) {
-        if (mi == null) { Log.Error($"[Find] method not found: {label}"); return; }
-        try { hooks.Add(new Hook(mi, detour)); }
-        catch (Exception e) { Log.Error($"[Find] hook failed {label}: {e.Message}"); }
-    }
+    private static void AddHook(string label, MethodInfo? mi, Delegate detour) {
+        if (mi == null) {
+            Log.Error($"[Find] method not found: {label}");
+            return;
+        }
 
-    // One-off diagnostic: set to a name/tag (e.g. "CameraTarget") to dump the managed call stack ONCE when that
-    // lookup fires — reveals WHO calls it (the FSM action / component). Set via /find-trace?key=CameraTarget.
-    internal static string? TraceKey;
+        try {
+            hooks.Add(new Hook(mi, detour));
+        } catch (Exception e) {
+            Log.Error($"[Find] hook failed {label}: {e.Message}");
+        }
+    }
 
     private static GameObject FindDetour(Func<string, GameObject> orig, string name) {
         MaybeTrace(name);
@@ -72,12 +86,15 @@ internal static class GameObjectFindShim {
         MaybeTrace(tag);
         if (CalledFromSilksongContext) return Intercept("FindWithTag", tag, ResolveTag(tag))!;
         GameObject r;
-        try { r = orig(tag); }
-        catch (Exception e) {
+        try {
+            r = orig(tag);
+        } catch (Exception e) {
             // Tag not defined in HK's tag manager -> UnityException. "Not found" == null; don't crash the frame.
-            if (logged.Add("tagthrow:" + tag)) Log.Error($"[Find] FindWithTag('{tag}') threw {e.GetType().Name} (tag not defined in HK) -> null");
+            if (logged.Add("tagthrow:" + tag))
+                Log.Error($"[Find] FindWithTag('{tag}') threw {e.GetType().Name} (tag not defined in HK) -> null");
             return null!;
         }
+
         LogOnce("FindWithTag", tag, r);
         return r;
     }
@@ -96,7 +113,8 @@ internal static class GameObjectFindShim {
         try {
             if (TraceKey == null || key != TraceKey || !logged.Add("trace:" + key)) return;
             Log.Info($"[Find] CALLER of '{key}':\n{Environment.StackTrace}");
-        } catch { }
+        } catch {
+        }
     }
 
     private static void LogOnce(string method, string key, GameObject? result) {
@@ -104,8 +122,11 @@ internal static class GameObjectFindShim {
             var k = method + "|" + key;
             if (!logged.Add(k)) return;
             // Only reached in the passthrough path (HK context); Silksong-context lookups go through Intercept.
-            Log.Info($"[Find] {method}('{key}') -> {(result != null ? "'" + result.name + "'" : "null")}  [passthrough]");
-        } catch { /* never break a find */ }
+            Log.Info(
+                $"[Find] {method}('{key}') -> {(result != null ? "'" + result.name + "'" : "null")}  [passthrough]");
+        } catch {
+            /* never break a find */
+        }
     }
 
     internal static void Cleanup() {

@@ -16,16 +16,26 @@ namespace HornetPlayer.Playground;
 // this 2-arg method (FreezeMoment(int) -> FreezeMoment((FreezeMomentTypes)type, null)).
 internal static class FreezeMomentFix {
     private static Hook? hook;
-    private delegate void Orig(SGM self, SFreeze type, Action onFinish);
-    private delegate void Hooked(Orig orig, SGM self, SFreeze type, Action onFinish);
 
     internal static void Install() {
         var mi = typeof(SGM).GetMethod("FreezeMoment", BindingFlags.Public | BindingFlags.Instance, null,
-            new[] { typeof(SFreeze), typeof(Action) }, null);
-        if (mi == null) { Log.Error("[FreezeMomentFix] GameManager.FreezeMoment(FreezeMomentTypes,Action) not found"); return; }
+            [typeof(SFreeze), typeof(Action)], null);
+        if (mi == null) {
+            Log.Error("[FreezeMomentFix] GameManager.FreezeMoment(FreezeMomentTypes,Action) not found");
+            return;
+        }
+
         hook = new Hook(mi, (Hooked)((orig, self, type, onFinish) => onFinish?.Invoke()));
-        Log.Info("[FreezeMomentFix] installed: GameManager.FreezeMoment no-op (+onFinish; inactive GM can't run its coroutine)");
+        Log.Info(
+            "[FreezeMomentFix] installed: GameManager.FreezeMoment no-op (+onFinish; inactive GM can't run its coroutine)");
     }
 
-    internal static void Cleanup() { hook?.Dispose(); hook = null; }
+    internal static void Cleanup() {
+        hook?.Dispose();
+        hook = null;
+    }
+
+    private delegate void Orig(SGM self, SFreeze type, Action onFinish);
+
+    private delegate void Hooked(Orig orig, SGM self, SFreeze type, Action onFinish);
 }

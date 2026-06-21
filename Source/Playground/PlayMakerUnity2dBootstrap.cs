@@ -21,13 +21,13 @@ internal static class PlayMakerUnity2dBootstrap {
         try {
             if (Silksong::PlayMakerUnity2d.isAvailable()) return; // already up (survives hot-reload)
             var go = new GameObject("PlayMaker Unity 2D");
-            go.AddComponent<SilksongPM::PlayMakerFSM>();    // must exist BEFORE PlayMakerUnity2d.Awake reads GetComponent<PlayMakerFSM>()
-            go.AddComponent<Silksong::PlayMakerUnity2d>();  // Awake: fsmProxy = that FSM -> isAvailable() == true
+            go.AddComponent<SilksongPM::PlayMakerFSM>(); // must exist BEFORE PlayMakerUnity2d.Awake reads GetComponent<PlayMakerFSM>()
+            go.AddComponent<Silksong::PlayMakerUnity2d>(); // Awake: fsmProxy = that FSM -> isAvailable() == true
             Object.DontDestroyOnLoad(go);
             var ok = Silksong::PlayMakerUnity2d.isAvailable();
             Log.Info($"[PMUnity2d] manager created, isAvailable={ok}");
         } catch (Exception e) {
-            Log.Error($"[PMUnity2d] failed: {(e.InnerException ?? e)}");
+            Log.Error($"[PMUnity2d] failed: {e.InnerException ?? e}");
         }
     }
 }

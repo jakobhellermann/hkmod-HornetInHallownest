@@ -7,9 +7,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
-using USceneManager = UnityEngine.SceneManagement.SceneManager;
 
 namespace HornetPlayer.Playground;
 
@@ -18,8 +16,21 @@ namespace HornetPlayer.Playground;
 // `dotnet build` hot-reload (Unload → Initialize) doesn't leak a still-loaded bundle (which would make the next
 // LoadFromFile fail with "another AssetBundle with the same files is already loaded").
 internal static class BundleSpike {
+    // Minimal binding test: load a hand-built bundle with one GameObject+MonoBehaviour per test script (m_Script ->
+    // CAB-283454ff monoscripts, base fields only). Isolates pure script binding from scene/closure complexity. Needs
+    // only the remapped monoscripts bundle resident.
+    private const string MinimalBundlePath =
+        "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/minimal-binding-test.silksong.bundle";
+
     private static GameObject? heroPrefab;
-    private static GameObject? real;
+
+    // The live spawned HeroController (in the DontDestroyOnLoad follower).
+    internal static Silksong::HeroController? RealHero =>
+        HornetRoot != null ? HornetRoot.GetComponentInChildren<Silksong::HeroController>() : null;
+
+    // Root of the spawned Hornet subtree. PlayMakerFix uses it to tell Hornet's FSMs (resolve actions to Silksong)
+    // from HK's FSMs (resolve to HK) — every FSM under here is Silksong-authored.
+    internal static GameObject? HornetRoot { get; private set; }
 
 
     // Load the Hero_Hornet prefab via Addressables (Silksong's catalog, registered by AddressablesBootstrap):
@@ -44,14 +55,19 @@ internal static class BundleSpike {
         ToolItemManagerBootstrap.Ensure(); // #6: surgical ToolItemManager singleton (tools/crests/nail-art data source)
         CollectableItemManagerBootstrap.Ensure(); // #6: surgical CollectableItemManager singleton (inventory items)
         GlobalSettingsBootstrap.Apply(); // assign GlobalSettings _instance from the loaded SOs (bypass Addressables)
-        GameCamerasBootstrap.Ensure();   // GameCameras.instance + CameraTarget BEFORE the hero's FSMs Awake (else camera errors)
-        PlayMakerUnity2dBootstrap.Ensure(); // "PlayMaker Unity 2D" manager so collision/trigger proxies don't disable themselves
+        GameCamerasBootstrap
+            .Ensure(); // GameCameras.instance + CameraTarget BEFORE the hero's FSMs Awake (else camera errors)
+        PlayMakerUnity2dBootstrap
+            .Ensure(); // "PlayMaker Unity 2D" manager so collision/trigger proxies don't disable themselves
         // Tear down the previous spawn SYNCHRONOUSLY. Object.Destroy is deferred to end-of-frame, so the old hero would
         // still be alive when the new one's Awake runs below — its "an instance already exists" singleton branch
         // (HeroController.instance / GameManager.hero_ctrl) then skips ~3 render-relevant components, and the instance
         // ref ping-pongs across the deferred destroys -> the spawn alternates 71-visible / 68-invisible. DestroyImmediate
         // clears the old hero (and its singleton refs via OnDestroy) before we instantiate -> every spawn starts clean.
-        if (real != null) { Object.DestroyImmediate(real); real = null; }
+        if (HornetRoot != null) {
+            Object.DestroyImmediate(HornetRoot);
+            HornetRoot = null;
+        }
 
         // Instantiate INACTIVE so we can patch null fields (missing-environment refs) before Awake runs, then activate.
         var staging = new GameObject("hp_real_staging");
@@ -90,9 +106,13 @@ internal static class BundleSpike {
         // Tight Silksong-context window: SetActive(true) synchronously runs HeroController.Awake -> UpdateConfig -> FSM
         // events -> FindGameObject, whose name/tag lookups must resolve to Silksong objects (or null), not HK's.
         GameObjectFindShim.CalledFromSilksongContext = true;
-        try { inst.SetActive(true); }
-        finally { GameObjectFindShim.CalledFromSilksongContext = false; }
-        real = inst;
+        try {
+            inst.SetActive(true);
+        } finally {
+            GameObjectFindShim.CalledFromSilksongContext = false;
+        }
+
+        HornetRoot = inst;
 
         // Disable Hornet's standalone screen Vignette (child SpriteRenderer, sprite "vignette_large_v01", sorting
         // layer "Vignette"): a huge black sprite with a transparent hole pinned to the hero. In Silksong the camera
@@ -111,7 +131,8 @@ internal static class BundleSpike {
             // the tag is safe for her and removes the cross-game collision: the lookup then returns the Knight's vignette
             // (or null while it's inert -> HK's `if (vignetteGO)` guard skips cleanly).
             vignette.gameObject.tag = "Untagged";
-            Log.Info("[SpawnReal] disabled standalone Vignette (radial screen darkening) + cleared its HK \"Vignette\" tag (HK SceneManager.Start collision)");
+            Log.Info(
+                "[SpawnReal] disabled standalone Vignette (radial screen darkening) + cleared its HK \"Vignette\" tag (HK SceneManager.Start collision)");
         }
 
         // Apply the current active-hero state to the freshly spawned Hornet (default Knight => Hornet spawns inert but
@@ -120,11 +141,16 @@ internal static class BundleSpike {
 
         // Bring up Hornet's HUD now that the rig + hero are up (masks self-appear via bindCutscenePlayed). The per-frame
         // HeroSwitch driver then toggles its visibility with the active hero. Non-fatal if it hiccups.
-        try { GameCamerasBootstrap.BringUpHud(true); } catch (Exception e) { Log.Error($"[SpawnReal] BringUpHud: {e}"); }
+        try {
+            GameCamerasBootstrap.BringUpHud(true);
+        } catch (Exception e) {
+            Log.Error($"[SpawnReal] BringUpHud: {e}");
+        }
 
         var comps = inst.GetComponents<Component>();
         var alive = comps.Count(c => c != null);
-        Log.Info($"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; HeroController.instance set: {(Silksong::HeroController.instance != null)}");
+        Log.Info(
+            $"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; HeroController.instance set: {(Silksong::HeroController.instance != null)}");
         return new { ok = true, components = comps.Length, alive };
     }
 
@@ -134,9 +160,10 @@ internal static class BundleSpike {
     // values must be repopulated later (the data exists in the bundle, recoverable via rabex).
     private static void EnsureEmptyConfigs(Component owner) {
         foreach (var name in new[] { "configs", "specialConfigs" }) {
-            var fi = owner.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var fi = owner.GetType()
+                .GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
             if (fi == null || fi.GetValue(owner) != null) continue;
-            fi.SetValue(owner, System.Array.CreateInstance(fi.FieldType.GetElementType()!, 0));
+            fi.SetValue(owner, Array.CreateInstance(fi.FieldType.GetElementType()!, 0));
             Log.Info($"[SpawnReal] initialized null array field '{name}' to empty");
         }
     }
@@ -155,21 +182,13 @@ internal static class BundleSpike {
     }
 
     internal static object DespawnReal() {
-        if (real == null) return new { ok = true, note = "nothing to despawn" };
+        if (HornetRoot == null) return new { ok = true, note = "nothing to despawn" };
         // DestroyImmediate so a follow-up /spawn-real (or a hot-reload) never races the deferred end-of-frame Destroy —
         // a lingering old hero re-grabs singletons and orphans the input binding (ia_same=false). Matches SpawnReal.
-        Object.DestroyImmediate(real);
-        real = null;
+        Object.DestroyImmediate(HornetRoot);
+        HornetRoot = null;
         return new { ok = true, despawned = true };
     }
-
-    // The live spawned HeroController (in the DontDestroyOnLoad follower).
-    internal static Silksong::HeroController? RealHero =>
-        real != null ? real.GetComponentInChildren<Silksong::HeroController>() : null;
-
-    // Root of the spawned Hornet subtree. PlayMakerFix uses it to tell Hornet's FSMs (resolve actions to Silksong)
-    // from HK's FSMs (resolve to HK) — every FSM under here is Silksong-authored.
-    internal static GameObject? HornetRoot => real;
 
     // Scan ALL loaded GameObjects (incl. inactive + DontDestroyOnLoad) for components that are null — i.e. a
     // MonoBehaviour whose m_Script didn't resolve ("The referenced script ... is missing!"). Reports each GO's path,
@@ -184,11 +203,14 @@ internal static class BundleSpike {
             var go = t.gameObject;
             var comps = go.GetComponents<Component>();
             var nulls = 0;
-            foreach (var c in comps) if (c == null) nulls++;
+            foreach (var c in comps)
+                if (c == null)
+                    nulls++;
             if (nulls == 0) continue;
             var inScene = go.scene.IsValid();
-            var scene = inScene ? (go.scene.name ?? "<none>") : "<asset>";
-            byScene.TryGetValue(scene, out var sc); byScene[scene] = sc + nulls;
+            var scene = inScene ? go.scene.name ?? "<none>" : "<asset>";
+            byScene.TryGetValue(scene, out var sc);
+            byScene[scene] = sc + nulls;
             var list = inScene ? sceneHits : assetHits;
             if (list.Count < 50) {
                 var path = go.name;
@@ -197,31 +219,50 @@ internal static class BundleSpike {
                 list.Add(new { path, missing = nulls, siblings });
             }
         }
+
         var total = byScene.Values.Sum();
-        Log.Info($"[ScanMissing] {total} missing-script slots; scene GOs={sceneHits.Count} asset GOs={assetHits.Count}");
-        return new { totalMissingSlots = total, perScene = byScene, sceneObjects = sceneHits, assetObjects = assetHits };
+        Log.Info(
+            $"[ScanMissing] {total} missing-script slots; scene GOs={sceneHits.Count} asset GOs={assetHits.Count}");
+        return new {
+            totalMissingSlots = total, perScene = byScene, sceneObjects = sceneHits, assetObjects = assetHits
+        };
     }
 
     // Dump the live spawned Hornet's movement state (reachable directly via `real`; /inspect can't, it's DontDestroyOnLoad).
     internal static object HeroState() {
-        if (real == null) return new { error = "not spawned" };
-        var hc = real.GetComponentInChildren<Silksong::HeroController>();
+        if (HornetRoot == null) return new { error = "not spawned" };
+        var hc = HornetRoot.GetComponentInChildren<Silksong::HeroController>();
         if (hc == null) return new { error = "no HeroController" };
         var t = hc.GetType();
-        object F(string n) => t.GetField(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(hc);
+
+        object F(string n) {
+            return t.GetField(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(hc);
+        }
+
         var cs = F("cState");
-        object CS(string n) => cs?.GetType().GetField(n, BindingFlags.Instance | BindingFlags.Public)?.GetValue(cs);
-        var pos = ((Component)hc).transform.position;
+
+        object CS(string n) {
+            return cs?.GetType().GetField(n, BindingFlags.Instance | BindingFlags.Public)?.GetValue(cs);
+        }
+
+        var pos = hc.transform.position;
         var rb = F("rb2d") as Rigidbody2D;
         var ia = SilksongBootstrap.InputActions;
         var mv = ia?.MoveVector.Vector ?? default;
+
         // Pure gate queries (no mutation) — these are exactly what Update checks before HeroJump()/DoAttack().
-        bool? Q(string n) => (bool?)t.GetMethod(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null)?.Invoke(hc, null);
+        bool? Q(string n) {
+            return (bool?)t.GetMethod(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null,
+                Type.EmptyTypes, null)?.Invoke(hc, null);
+        }
+
         return new {
             move_input = F("move_input"), hero_state = F("hero_state")?.ToString(),
             transitionState = F("transitionState")?.ToString(), isGameplayScene = F("isGameplayScene"),
-            gameState = (F("gm") is { } g ? g.GetType().GetProperty("GameState")?.GetValue(g)?.ToString() : "gm-null"),
-            inputBlocked = (bool?)t.GetMethod("IsInputBlocked", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.Invoke(hc, null),
+            gameState = F("gm") is { } g ? g.GetType().GetProperty("GameState")?.GetValue(g)?.ToString() : "gm-null",
+            inputBlocked = (bool?)t
+                .GetMethod("IsInputBlocked", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                ?.Invoke(hc, null),
             // The decisive trio for "can't jump/attack while sprinting": dashing & isSprinting gate the predicates,
             // canJump/canAttack are the actual answers. canInput rules out the transition/pause gate.
             canJump = Q("CanJump"), canAttack = Q("CanAttack"), canDash = Q("CanDash"), canInput = Q("CanInput"),
@@ -239,22 +280,30 @@ internal static class BundleSpike {
             // the hero found a different InputHandler (different gm) — then the fix is the binding, not inputActions.
             handlerIsHeros = ReferenceEquals(SilksongBootstrap.Handler, F("inputHandler")),
             gmIsBootstrap = ReferenceEquals(Silksong::GameManager._instance, F("gm")),
-            heroHandlerNull = F("inputHandler") == null,
+            heroHandlerNull = F("inputHandler") == null
         };
     }
 
     // READ-ONLY input/dash diagnostics: enabled-state + CanDash() (a pure query) + its gating fields. Does NOT invoke
     // Update/LookForInput/HeroDashPressed — those mutate hero state (and Update's FailSafeChecks can destroy the hero).
     internal static object DiagInput() {
-        if (real == null) return new { error = "not spawned" };
-        var hc = real.GetComponentInChildren<Silksong::HeroController>();
+        if (HornetRoot == null) return new { error = "not spawned" };
+        var hc = HornetRoot.GetComponentInChildren<Silksong::HeroController>();
         if (hc == null) return new { error = "no HeroController" };
         var t = hc.GetType();
         const BindingFlags BF = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-        var comp = (Behaviour)(object)hc;
-        object Field(string n) => t.GetField(n, BF)?.GetValue(hc)!;
+        var comp = (Behaviour)hc;
+
+        object Field(string n) {
+            return t.GetField(n, BF)?.GetValue(hc)!;
+        }
+
         var cs2 = Field("cState");
-        object CsB(string n) => cs2?.GetType().GetField(n, BindingFlags.Instance | BindingFlags.Public)?.GetValue(cs2)!;
+
+        object CsB(string n) {
+            return cs2?.GetType().GetField(n, BindingFlags.Instance | BindingFlags.Public)?.GetValue(cs2)!;
+        }
+
         var pd = Field("playerData") as Silksong::PlayerData;
         var canDash = (bool?)t.GetMethod("CanDash", BF, null, Type.EmptyTypes, null)?.Invoke(hc, null);
         // Verify the buttonQueueTimers fix actually reached the hero's live InputHandler.
@@ -262,14 +311,16 @@ internal static class BundleSpike {
         var bqtField = ih?.GetType().GetField("buttonQueueTimers", BF);
         var bqt = bqtField?.GetValue(ih) as Array;
         return new {
-            enabled = comp.enabled, activeAndEnabled = comp.isActiveAndEnabled,
-            inputQueue = new { ihNull = ih == null, fieldFound = bqtField != null, bqtNull = bqt == null, len = bqt?.Length ?? -1 },
+            comp.enabled, activeAndEnabled = comp.isActiveAndEnabled,
+            inputQueue = new
+                { ihNull = ih == null, fieldFound = bqtField != null, bqtNull = bqt == null, len = bqt?.Length ?? -1 },
             move_input = Field("move_input"), hero_state = Field("hero_state")?.ToString(),
             dash = new {
-                canDash, hasDash = pd?.hasDash, dashCooldownTimer = Field("dashCooldownTimer"),
+                canDash,
+                pd?.hasDash, dashCooldownTimer = Field("dashCooldownTimer"),
                 preventDash = CsB("preventDash"), dashing = CsB("dashing"), airDashed = Field("airDashed"),
-                onGround = CsB("onGround"),
-            },
+                onGround = CsB("onGround")
+            }
         };
     }
 
@@ -277,37 +328,51 @@ internal static class BundleSpike {
     // actually running (have an active state) / carrying MissingActions (unresolved). Answers "are the FSMs enabled
     // and running, free of resolution failures?".
     internal static object FsmState() {
-        if (real == null) return new { error = "not spawned" };
-        var hc = real.GetComponentInChildren<Silksong::HeroController>();
+        if (HornetRoot == null) return new { error = "not spawned" };
+        var hc = HornetRoot.GetComponentInChildren<Silksong::HeroController>();
         var hcB = hc as Behaviour;
-        var fsms = real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true);
+        var fsms = HornetRoot.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true);
         int enabled = 0, activeInHier = 0, withState = 0, withMissing = 0;
         var sample = new List<object>();
         foreach (var f in fsms) {
-            var b = (Behaviour)(object)f;
+            var b = (Behaviour)f;
             var en = b.enabled;
             var act = b.gameObject.activeInHierarchy;
             if (en) enabled++;
             if (act) activeInHier++;
             string? state = null;
-            try { state = f.Fsm?.ActiveStateName; } catch { }
+            try {
+                state = f.Fsm?.ActiveStateName;
+            } catch {
+            }
+
             if (!string.IsNullOrEmpty(state)) withState++;
             var missing = false;
             try {
                 foreach (var st in f.FsmStates) {
-                    if (!st.ActionsLoaded) continue; // accessing .Actions on an uninitialized FSM (fsm==null) logs "Fsm not initialized" + a broken LoadActions (NullRef) — skip
+                    if (!st.ActionsLoaded)
+                        continue; // accessing .Actions on an uninitialized FSM (fsm==null) logs "Fsm not initialized" + a broken LoadActions (NullRef) — skip
                     foreach (var a in st.Actions)
-                        if (a.GetType().Name == "MissingAction") { missing = true; break; }
+                        if (a.GetType().Name == "MissingAction") {
+                            missing = true;
+                            break;
+                        }
+
                     if (missing) break;
                 }
-            } catch { }
+            } catch {
+            }
+
             if (missing) withMissing++;
             if (sample.Count < 60) sample.Add(new { name = f.FsmName, en, act, state, missing });
         }
+
         return new {
-            hero = new { enabled = hcB?.enabled, activeAndEnabled = hcB?.isActiveAndEnabled, activeInHierarchy = hcB?.gameObject.activeInHierarchy },
-            fsms = new { total = fsms.Length, enabled, activeInHier, running = withState, withMissingActions = withMissing },
-            sample,
+            hero = new { hcB?.enabled, activeAndEnabled = hcB?.isActiveAndEnabled, hcB?.gameObject.activeInHierarchy },
+            fsms = new {
+                total = fsms.Length, enabled, activeInHier, running = withState, withMissingActions = withMissing
+            },
+            sample
         };
     }
 
@@ -317,18 +382,22 @@ internal static class BundleSpike {
     internal static object ProbeCameraTarget() {
         var hc = RealHero;
         if (hc == null) return new { error = "not spawned" };
-        var go = ((Component)hc).gameObject;
+        var go = hc.gameObject;
         var ct = go.GetComponent(typeof(Silksong::CameraTarget).Name);
         var roots = go.GetComponents<Component>().Where(c => c != null)
             .Select(c => c.GetType().Name + " [" + c.GetType().Assembly.GetName().Name + "]").ToArray();
-        object? ctInfo = ct == null ? null : new {
-            type = ct.GetType().FullName,
-            asm = ct.GetType().Assembly.GetName().Name,
-            getMethodSetSprint = ct.GetType().GetMethod("SetSprint") != null,
-            sprintMethods = ct.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public)
-                .Where(m => m.Name.IndexOf("Sprint", StringComparison.OrdinalIgnoreCase) >= 0)
-                .Select(m => m.Name + "(" + string.Join(",", m.GetParameters().Select(p => p.ParameterType.Name)) + ")").ToArray(),
-        };
+        object? ctInfo = ct == null
+            ? null
+            : new {
+                type = ct.GetType().FullName,
+                asm = ct.GetType().Assembly.GetName().Name,
+                getMethodSetSprint = ct.GetType().GetMethod("SetSprint") != null,
+                sprintMethods = ct.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .Where(m => m.Name.IndexOf("Sprint", StringComparison.OrdinalIgnoreCase) >= 0)
+                    .Select(m =>
+                        m.Name + "(" + string.Join(",", m.GetParameters().Select(p => p.ParameterType.Name)) + ")")
+                    .ToArray()
+            };
         return new { heroGoHasCameraTarget = ct != null, cameraTarget = ctInfo, heroRootComponents = roots };
     }
 
@@ -337,9 +406,9 @@ internal static class BundleSpike {
     // component found there (+ whether it exposes SetSprint). This nails why we get "Method Name is invalid" despite the
     // hero having no CameraTarget — i.e. which OTHER object (likely HK's) the lookup lands on.
     internal static object ProbeSprintTarget() {
-        if (real == null) return new { error = "not spawned" };
+        if (HornetRoot == null) return new { error = "not spawned" };
         var results = new List<object>();
-        foreach (var f in real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true)) {
+        foreach (var f in HornetRoot.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true)) {
             foreach (var st in f.FsmStates) {
                 if (!st.ActionsLoaded) continue; // don't trigger LoadActions on uninitialized FSMs (NullRef spam)
                 foreach (var a in st.Actions) {
@@ -354,35 +423,52 @@ internal static class BundleSpike {
                         as SilksongPM::HutongGames.PlayMaker.FsmOwnerDefault;
                     GameObject? resolved = null;
                     string? ownerOption = null, specified = null, ownerVarName = null;
-                    bool ownerUseVariable = false;
+                    var ownerUseVariable = false;
                     if (owner != null) {
                         ownerOption = owner.OwnerOption.ToString();
-                        var fgo = owner.GameObject;            // FsmGameObject (NamedVariable)
+                        var fgo = owner.GameObject; // FsmGameObject (NamedVariable)
                         ownerUseVariable = fgo != null && fgo.UseVariable;
-                        ownerVarName = fgo?.Name;              // the variable/name slot
+                        ownerVarName = fgo?.Name; // the variable/name slot
                         specified = fgo?.Value != null ? fgo.Value.name : null;
-                        try { resolved = f.Fsm.GetOwnerDefaultTarget(owner); } catch (Exception e) { ownerOption += " (resolve threw: " + e.Message + ")"; }
+                        try {
+                            resolved = f.Fsm.GetOwnerDefaultTarget(owner);
+                        } catch (Exception e) {
+                            ownerOption += " (resolve threw: " + e.Message + ")";
+                        }
                     }
+
                     object comp = "n/a";
                     if (resolved != null) {
                         var ct = resolved.GetComponent(behVal);
-                        comp = ct == null ? "MISSING on resolved GO" : new {
-                            type = ct.GetType().FullName, asm = ct.GetType().Assembly.GetName().Name,
-                            hasSetSprint = ct.GetType().GetMethod("SetSprint") != null,
-                        };
+                        comp = ct == null
+                            ? "MISSING on resolved GO"
+                            : new {
+                                type = ct.GetType().FullName, asm = ct.GetType().Assembly.GetName().Name,
+                                hasSetSprint = ct.GetType().GetMethod("SetSprint") != null
+                            };
                     }
-                    results.Add(new { fsm = f.FsmName, state = st.Name, behaviour = behVal, ownerOption, ownerUseVariable, ownerVarName, specified, resolvedGo = resolved?.name, found = comp });
+
+                    results.Add(new {
+                        fsm = f.FsmName, state = st.Name, behaviour = behVal, ownerOption, ownerUseVariable,
+                        ownerVarName, specified, resolvedGo = resolved?.name, found = comp
+                    });
                 }
             }
+
             // Also dump the Sprint FSM's GameObject variables (who might hold the resolved "Camera Target") + action
             // types per state (to spot a Find/SetGameObject that populates it by name).
             if (f.FsmName == "Sprint") {
                 var vars = f.Fsm.Variables.GameObjectVariables
-                    .Select(v => new { v.Name, value = v.Value != null ? v.Value.name : null, asm = v.Value != null ? (object?)null : null }).ToArray();
-                var actionTypes = f.FsmStates.SelectMany(s => s.Actions.Select(x => x.GetType().Name)).Distinct().OrderBy(x => x).ToArray();
+                    .Select(v => new {
+                        v.Name, value = v.Value != null ? v.Value.name : null,
+                        asm = v.Value != null ? (object?)null : null
+                    }).ToArray();
+                var actionTypes = f.FsmStates.SelectMany(s => s.Actions.Select(x => x.GetType().Name)).Distinct()
+                    .OrderBy(x => x).ToArray();
                 results.Add(new { sprintFsmVars = vars, sprintActionTypes = actionTypes });
             }
         }
+
         return new { count = results.Count, results };
     }
 
@@ -391,26 +477,32 @@ internal static class BundleSpike {
     // action (so a CallMethodProper match shows both its methodName AND its `behaviour` target). For root-causing
     // "Method Name is invalid" / "missing behaviour" style PlayMaker errors.
     internal static object FindFsmAction(string needle) {
-        if (real == null) return new { error = "not spawned" };
+        if (HornetRoot == null) return new { error = "not spawned" };
         var hits = new List<object>();
-        foreach (var f in real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true)) {
-            foreach (var st in f.FsmStates) {
-                if (!st.ActionsLoaded) continue; // don't trigger LoadActions on uninitialized FSMs (NullRef spam)
-                foreach (var a in st.Actions) {
-                    var fields = new Dictionary<string, string>();
-                    var match = false;
-                    foreach (var fi in a.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public)) {
-                        var v = fi.GetValue(a);
-                        if (v == null) continue;
-                        var s = v.GetType().Name == "FsmString" ? v.GetType().GetProperty("Value")?.GetValue(v) as string : v as string;
-                        if (string.IsNullOrEmpty(s)) continue;
-                        fields[fi.Name] = s;
-                        if (s!.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0) match = true;
-                    }
-                    if (match) hits.Add(new { fsm = f.FsmName, go = f.gameObject.name, state = st.Name, action = a.GetType().Name, fields });
+        foreach (var f in HornetRoot.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true))
+        foreach (var st in f.FsmStates) {
+            if (!st.ActionsLoaded) continue; // don't trigger LoadActions on uninitialized FSMs (NullRef spam)
+            foreach (var a in st.Actions) {
+                var fields = new Dictionary<string, string>();
+                var match = false;
+                foreach (var fi in a.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public)) {
+                    var v = fi.GetValue(a);
+                    if (v == null) continue;
+                    var s = v.GetType().Name == "FsmString"
+                        ? v.GetType().GetProperty("Value")?.GetValue(v) as string
+                        : v as string;
+                    if (string.IsNullOrEmpty(s)) continue;
+                    fields[fi.Name] = s;
+                    if (s!.IndexOf(needle, StringComparison.OrdinalIgnoreCase) >= 0) match = true;
                 }
+
+                if (match)
+                    hits.Add(new {
+                        fsm = f.FsmName, go = f.gameObject.name, state = st.Name, action = a.GetType().Name, fields
+                    });
             }
         }
+
         return new { needle, count = hits.Count, hits };
     }
 
@@ -426,6 +518,7 @@ internal static class BundleSpike {
             foreach (var ff in vars.FloatVariables) d[ff.Name] = "float:" + ff.Value;
             return new { fsm = fsmName, go = f.gameObject.name, vars = d };
         }
+
         return new { error = "fsm not found" };
     }
 
@@ -438,12 +531,18 @@ internal static class BundleSpike {
             if (vt.Name == "FsmEvent") return string.IsNullOrEmpty(nm) ? null : "evt:" + nm;
             var valP = vt.GetProperty("Value");
             if (valP != null) {
-                object? val = null; try { val = valP.GetValue(v); } catch { }
+                object? val = null;
+                try {
+                    val = valP.GetValue(v);
+                } catch {
+                }
+
                 return (string.IsNullOrEmpty(nm) ? "" : nm + "=") + (val?.ToString() ?? "?");
             }
         }
+
         var s = v.ToString();
-        return (!string.IsNullOrEmpty(s) && s != vt.FullName) ? s : null;
+        return !string.IsNullOrEmpty(s) && s != vt.FullName ? s : null;
     }
 
     internal static object DumpStateActions(string fsmName, string stateName) {
@@ -451,26 +550,47 @@ internal static class BundleSpike {
             if (f == null || !string.Equals(f.FsmName, fsmName, StringComparison.OrdinalIgnoreCase)) continue;
             if (!f.gameObject.activeInHierarchy) continue;
             SilksongPM::HutongGames.PlayMaker.Fsm fsm;
-            try { fsm = f.Fsm; } catch { continue; }
+            try {
+                fsm = f.Fsm;
+            } catch {
+                continue;
+            }
+
             foreach (var st in fsm.States) {
                 if (!string.Equals(st.Name, stateName, StringComparison.OrdinalIgnoreCase)) continue;
                 var acts = new List<object>();
                 SilksongPM::HutongGames.PlayMaker.FsmStateAction[] actions;
-                try { actions = st.Actions; } catch { return new { error = "actions not loaded" }; }
+                try {
+                    actions = st.Actions;
+                } catch {
+                    return new { error = "actions not loaded" };
+                }
+
                 foreach (var a in actions ?? new SilksongPM::HutongGames.PlayMaker.FsmStateAction[0]) {
                     if (a == null) continue;
                     var fields = new Dictionary<string, string>();
-                    foreach (var fi in a.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-                        object? v; try { v = fi.GetValue(a); } catch { continue; }
+                    foreach (var fi in a.GetType()
+                                 .GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+                        object? v;
+                        try {
+                            v = fi.GetValue(a);
+                        } catch {
+                            continue;
+                        }
+
                         if (v == null) continue;
                         var repr = FsmFieldRepr(v);
-                        if (!string.IsNullOrEmpty(repr)) fields[fi.Name] = repr!.Length > 60 ? repr.Substring(0, 60) : repr;
+                        if (!string.IsNullOrEmpty(repr))
+                            fields[fi.Name] = repr!.Length > 60 ? repr.Substring(0, 60) : repr;
                     }
+
                     acts.Add(new { action = a.GetType().Name, fields });
                 }
+
                 return new { fsm = fsmName, state = stateName, go = f.gameObject.name, actions = acts };
             }
         }
+
         return new { error = "fsm/state not found" };
     }
 
@@ -481,17 +601,35 @@ internal static class BundleSpike {
         foreach (var f in Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>()) {
             if (f == null) continue;
             SilksongPM::HutongGames.PlayMaker.Fsm fsm;
-            try { fsm = f.Fsm; } catch { continue; }
+            try {
+                fsm = f.Fsm;
+            } catch {
+                continue;
+            }
+
             if (fsm?.States == null) continue;
             foreach (var st in fsm.States) {
-                if (!st.ActionsLoaded) { try { _ = st.Actions; } catch { continue; } }
+                if (!st.ActionsLoaded)
+                    try {
+                        _ = st.Actions;
+                    } catch {
+                        continue;
+                    }
+
                 SilksongPM::HutongGames.PlayMaker.FsmStateAction[] actions;
-                try { actions = st.Actions; } catch { continue; }
+                try {
+                    actions = st.Actions;
+                } catch {
+                    continue;
+                }
+
                 if (actions == null) continue;
                 foreach (var a in actions) {
                     if (a == null) continue;
-                    foreach (var fi in a.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
-                        if (!typeof(SilksongPM::HutongGames.PlayMaker.FsmEvent).IsAssignableFrom(fi.FieldType)) continue;
+                    foreach (var fi in a.GetType()
+                                 .GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)) {
+                        if (!typeof(SilksongPM::HutongGames.PlayMaker.FsmEvent).IsAssignableFrom(fi.FieldType))
+                            continue;
                         var ev = fi.GetValue(a) as SilksongPM::HutongGames.PlayMaker.FsmEvent;
                         if (ev != null && string.Equals(ev.Name, evt, StringComparison.OrdinalIgnoreCase)) {
                             var go = f.gameObject;
@@ -503,6 +641,7 @@ internal static class BundleSpike {
                 }
             }
         }
+
         return new { evt, senderCount = hits.Count, senders = hits };
     }
 
@@ -521,13 +660,30 @@ internal static class BundleSpike {
             if (!path.Contains(pathContains)) continue;
             var key = path + "::" + f.FsmName;
             if (!seen.Add(key)) continue; // dedupe identical clones
-            string state; bool en;
-            try { state = f.Fsm?.ActiveStateName ?? "?"; } catch { state = "<err>"; }
-            try { en = ((Behaviour)(object)f).enabled; } catch { en = false; }
+            string state;
+            bool en;
+            try {
+                state = f.Fsm?.ActiveStateName ?? "?";
+            } catch {
+                state = "<err>";
+            }
+
+            try {
+                en = f.enabled;
+            } catch {
+                en = false;
+            }
+
             string[] gts;
-            try { gts = f.Fsm.GlobalTransitions.Select(t => $"{t.EventName}->{t.ToState}").ToArray(); } catch { gts = new string[0]; }
+            try {
+                gts = f.Fsm.GlobalTransitions.Select(t => $"{t.EventName}->{t.ToState}").ToArray();
+            } catch {
+                gts = new string[0];
+            }
+
             list.Add(new { fsm = f.FsmName, go = path, state, enabled = en, globals = gts });
         }
+
         return new { count = list.Count, fsms = list };
     }
 
@@ -535,23 +691,36 @@ internal static class BundleSpike {
     // "HUD APPEAR RESET"). Also broadcasts via EventRegister (TeamCherry's global event layer) for listeners.
     internal static object SendFsmEvent(string name, string evt) {
         var all = Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>();
-        var sent = 0; var enabledCount = 0;
+        var sent = 0;
+        var enabledCount = 0;
         foreach (var f in all)
-            if (string.Equals(f.FsmName, name, StringComparison.OrdinalIgnoreCase) && f.gameObject.activeInHierarchy) {
+            if (string.Equals(f.FsmName, name, StringComparison.OrdinalIgnoreCase) && f.gameObject.activeInHierarchy)
                 try {
-                    var b = (Behaviour)(object)f;
-                    if (!b.enabled) { b.enabled = true; enabledCount++; } // a disabled FSM ignores events; enable to drive it
-                    f.SendEvent(evt); sent++;
-                } catch (Exception e) { Log.Error($"[SendFsmEvent] {e.Message}"); }
-            }
+                    var b = (Behaviour)f;
+                    if (!b.enabled) {
+                        b.enabled = true;
+                        enabledCount++;
+                    } // a disabled FSM ignores events; enable to drive it
+
+                    f.SendEvent(evt);
+                    sent++;
+                } catch (Exception e) {
+                    Log.Error($"[SendFsmEvent] {e.Message}");
+                }
+
         return new { fsm = name, evt, sentToFsms = sent, enabledFirst = enabledCount };
     }
 
     private static void SendToHealthDisplays(string evt) {
         foreach (var f in Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>())
-            if (f != null && string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase) && f.gameObject.activeInHierarchy) {
-                try { var b = (Behaviour)(object)f; if (!b.enabled) b.enabled = true; f.SendEvent(evt); } catch { }
-            }
+            if (f != null && string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase) &&
+                f.gameObject.activeInHierarchy)
+                try {
+                    var b = (Behaviour)f;
+                    if (!b.enabled) b.enabled = true;
+                    f.SendEvent(evt);
+                } catch {
+                }
     }
 
     // Drive the health-HUD appear sequence over frames (the per-mask `health_display` FSMs need Update cycles between
@@ -559,10 +728,14 @@ internal static class BundleSpike {
     //   HUD APPEAR RESET -> Init (rebuilds the mask mesh)  ->  MAX HP UP xN (Inactive->Appear path)  ->  SHOW HP
     //   (First Pause -> Appear Pause -> ... -> Idle = visible). This is a STAND-IN for the natural trigger (HeroController
     //   scene-entry -> proxyFSM -> HUD), to make the HUD reproducible until that real wiring is in place.
-    internal static IEnumerator DriveHealthHud(System.Action<object?> respond) {
+    internal static IEnumerator DriveHealthHud(Action<object?> respond) {
         SendToHealthDisplays("HUD APPEAR RESET");
         yield return new WaitForSeconds(0.25f);
-        for (var i = 0; i < 8; i++) { SendToHealthDisplays("MAX HP UP"); yield return new WaitForSeconds(0.08f); }
+        for (var i = 0; i < 8; i++) {
+            SendToHealthDisplays("MAX HP UP");
+            yield return new WaitForSeconds(0.08f);
+        }
+
         yield return new WaitForSeconds(0.1f);
         SendToHealthDisplays("SHOW HP");
         yield return new WaitForSeconds(0.2f);
@@ -579,6 +752,7 @@ internal static class BundleSpike {
                 target = f;
                 if (f.gameObject.activeInHierarchy) break; // prefer a live one
             }
+
         if (target == null)
             return new { error = "fsm not found", count = all.Length };
         return DumpFsm(target);
@@ -587,13 +761,14 @@ internal static class BundleSpike {
     // Dump an HK (global PlayMaker) FSM by name — FsmDumpAny only scans Silksong PlayMakerFSM, so HK scene objects
     // (levers, bells, geo rocks, …) need this. Same shape as DumpFsm; HK's PlayMaker API is identical.
     internal static object FsmDumpHk(string name) {
-        var all = Resources.FindObjectsOfTypeAll<global::PlayMakerFSM>();
-        global::PlayMakerFSM? target = null;
+        var all = Resources.FindObjectsOfTypeAll<PlayMakerFSM>();
+        PlayMakerFSM? target = null;
         foreach (var f in all)
             if (string.Equals(f.FsmName, name, StringComparison.OrdinalIgnoreCase)) {
                 target = f;
                 if (f.gameObject.activeInHierarchy) break;
             }
+
         if (target == null) return new { error = "hk fsm not found", count = all.Length };
         var fsm = target.Fsm;
         var states = new List<object>();
@@ -603,26 +778,39 @@ internal static class BundleSpike {
                 ? st.Actions.Select(a => {
                     // public FsmVar fields (collideTag/sendEvent/fsmName/...) carry the action's config — dump them.
                     var flds = a.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance)
-                        .Select(f => { object? v = null; try { v = f.GetValue(a); } catch { } return $"{f.Name}={v}"; });
+                        .Select(f => {
+                            object? v = null;
+                            try {
+                                v = f.GetValue(a);
+                            } catch {
+                            }
+
+                            return $"{f.Name}={v}";
+                        });
                     return $"{a.GetType().Name}({string.Join(", ", flds)})";
                 }).ToArray()
-                : new[] { "<not loaded>" };
+                : ["<not loaded>"];
             states.Add(new { name = st.Name, active = st.Name == fsm.ActiveStateName, trans, actions });
         }
+
         return new {
             fsmName = target.FsmName, gameObject = target.gameObject.name,
             activeState = fsm.ActiveStateName,
             globalTransitions = fsm.GlobalTransitions.Select(tr => $"{tr.EventName} -> {tr.ToState}").ToArray(),
-            states,
+            states
         };
     }
 
     internal static object FsmDump(string name) {
-        if (real == null) return new { error = "not spawned" };
-        var fsms = real.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true);
+        if (HornetRoot == null) return new { error = "not spawned" };
+        var fsms = HornetRoot.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true);
         SilksongPM::PlayMakerFSM? target = null;
         foreach (var f in fsms)
-            if (string.Equals(f.FsmName, name, StringComparison.OrdinalIgnoreCase)) { target = f; break; }
+            if (string.Equals(f.FsmName, name, StringComparison.OrdinalIgnoreCase)) {
+                target = f;
+                break;
+            }
+
         if (target == null)
             return new { error = "fsm not found", available = fsms.Select(f => f.FsmName).Distinct().ToArray() };
         return DumpFsm(target);
@@ -634,26 +822,23 @@ internal static class BundleSpike {
         foreach (var st in fsm.States) {
             var trans = st.Transitions.Select(tr => $"{tr.EventName} -> {tr.ToState}").ToArray();
             // accessing .Actions on an uninitialized FSM logs "Fsm not initialized" + a broken LoadActions (NullRef).
-            var actions = st.ActionsLoaded ? st.Actions.Select(a => a.GetType().Name).ToArray() : new[] { "<not loaded>" };
+            var actions = st.ActionsLoaded
+                ? st.Actions.Select(a => a.GetType().Name).ToArray()
+                : ["<not loaded>"];
             states.Add(new { name = st.Name, active = st.Name == fsm.ActiveStateName, trans, actions });
         }
+
         var go = target.gameObject;
         return new {
             fsmName = target.FsmName,
             gameObject = go.name,
-            activeInHierarchy = go.activeInHierarchy,
-            enabled = ((Behaviour)(object)target).enabled,
+            go.activeInHierarchy,
+            target.enabled,
             activeState = fsm.ActiveStateName,
             globalTransitions = fsm.GlobalTransitions.Select(tr => $"{tr.EventName} -> {tr.ToState}").ToArray(),
-            states,
+            states
         };
     }
-
-    // Minimal binding test: load a hand-built bundle with one GameObject+MonoBehaviour per test script (m_Script ->
-    // CAB-283454ff monoscripts, base fields only). Isolates pure script binding from scene/closure complexity. Needs
-    // only the remapped monoscripts bundle resident.
-    private const string MinimalBundlePath =
-        "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/minimal-binding-test.silksong.bundle";
 
     // Activate the instantiated GameCameras rig: register GameCameras._instance, unparent from the inactive holder,
     // DontDestroyOnLoad, SetActive(true). FSMs/CameraController will run (and likely complain about GameManager) —
@@ -667,7 +852,11 @@ internal static class BundleSpike {
     internal static object ProbeHeroFsms() {
         var hc = RealHero;
         if (hc == null) return new { error = "not spawned" };
-        string? FsmName(SilksongPM::PlayMakerFSM? f) => f == null ? null : f.FsmName;
+
+        string? FsmName(SilksongPM::PlayMakerFSM? f) {
+            return f == null ? null : f.FsmName;
+        }
+
         var fsms = HornetRoot!.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true)
             .Select(f => new { go = f.gameObject.name, fsm = f.FsmName })
             .ToArray();
@@ -676,11 +865,13 @@ internal static class BundleSpike {
                 sprintFSM = FsmName(hc.sprintFSM),
                 toolsFSM = FsmName(hc.toolsFSM),
                 dashBurst = FsmName(hc.dashBurst),
-                spellControl = FsmName(hc.spellControl),
+                spellControl = FsmName(hc.spellControl)
             },
             fsmCount = fsms.Length,
-            sprintLike = fsms.Where(f => f.fsm != null && (f.fsm.ToLowerInvariant().Contains("sprint") || f.go.ToLowerInvariant().Contains("sprint"))).ToArray(),
-            allFsms = fsms.Select(f => $"{f.go}::{f.fsm}").OrderBy(s => s).ToArray(),
+            sprintLike = fsms.Where(f =>
+                f.fsm != null && (f.fsm.ToLowerInvariant().Contains("sprint") ||
+                                  f.go.ToLowerInvariant().Contains("sprint"))).ToArray(),
+            allFsms = fsms.Select(f => $"{f.go}::{f.fsm}").OrderBy(s => s).ToArray()
         };
     }
 
@@ -688,9 +879,14 @@ internal static class BundleSpike {
         var byAsm = new Dictionary<string, List<string>>();
         foreach (var asm in AppDomain.CurrentDomain.GetAssemblies()) {
             Type[] types;
-            try { types = asm.GetTypes(); } catch { continue; }
+            try {
+                types = asm.GetTypes();
+            } catch {
+                continue;
+            }
+
             foreach (var t in types) {
-                Type? b = t.BaseType;
+                var b = t.BaseType;
                 while (b != null && b.Name != "FsmStateAction") b = b.BaseType;
                 if (b == null) continue;
                 var key = $"{asm.GetName().Name}  (base@{b.Assembly.GetName().Name})";
@@ -698,6 +894,7 @@ internal static class BundleSpike {
                 l.Add(t.Name);
             }
         }
+
         return byAsm.Select(kv => new { asm = kv.Key, count = kv.Value.Count, sample = kv.Value.Take(6).ToArray() })
             .OrderByDescending(x => x.count).ToArray();
     }
@@ -730,43 +927,47 @@ internal static class BundleSpike {
                 var asm = et.Assembly.GetName().Name; // group by the FIELD TYPE's assembly (main vs firstpass vs ...)
                 var val = fi.GetValue(comp);
                 var hasData = val != null
-                    && !(val is System.Array a && a.Length == 0)
-                    && !(val is System.Collections.IList l && l.Count == 0);
+                              && !(val is Array a && a.Length == 0)
+                              && !(val is IList l && l.Count == 0);
                 perAsm.TryGetValue(asm, out var cur);
                 perAsm[asm] = hasData ? (cur.withData + 1, cur.empty) : (cur.withData, cur.empty + 1);
                 if (!hasData && examples.Count < 30) examples.Add($"NULL {asm}: {ct.Name}.{fi.Name} = {et.FullName}");
             }
         }
+
         Object.DestroyImmediate(staging);
-        Log.Info("[ScanSerializable] reference-type custom-serializable, per owning assembly (withData / empty-or-null):");
+        Log.Info(
+            "[ScanSerializable] reference-type custom-serializable, per owning assembly (withData / empty-or-null):");
         foreach (var kv in perAsm.OrderBy(k => k.Key))
             Log.Info($"[ScanSerializable]   {kv.Key}: {kv.Value.withData} withData, {kv.Value.empty} empty/null");
         foreach (var e in examples) Log.Info($"[ScanSerializable]   POPULATED {e}");
         return new {
             perAssembly = perAsm.OrderBy(k => k.Key)
                 .Select(k => new { asm = k.Key, withData = k.Value.Item1, empty = k.Value.Item2 }).ToList(),
-            examples,
+            examples
         };
     }
 
-    private static bool IsUnitySerialized(System.Reflection.FieldInfo fi) {
+    private static bool IsUnitySerialized(FieldInfo fi) {
         if (fi.IsStatic) return false;
         if (fi.IsPublic) return !fi.IsNotSerialized;
         return fi.GetCustomAttributes(typeof(SerializeField), true).Length > 0;
     }
 
-    private static System.Type ElementType(System.Type t) =>
-        t.IsArray ? t.GetElementType()! :
-        (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(List<>)) ? t.GetGenericArguments()[0] : t;
+    private static Type ElementType(Type t) {
+        return t.IsArray ? t.GetElementType()! :
+            t.IsGenericType && t.GetGenericTypeDefinition() == typeof(List<>) ? t.GetGenericArguments()[0] : t;
+    }
 
     // A game-content custom [Serializable] class (not a UnityEngine.Object PPtr, not a primitive/string/enum, not a
     // BCL/UnityEngine type). Scans every assembly so we can compare native (TeamCherry.*) vs renamed (Silksong.*).
-    private static bool IsCustomSerializable(System.Type t) {
+    private static bool IsCustomSerializable(Type t) {
         if (t == null || t.IsPrimitive || t.IsEnum || t == typeof(string)) return false;
-        if (typeof(UnityEngine.Object).IsAssignableFrom(t)) return false; // PPtr — handled natively
+        if (typeof(Object).IsAssignableFrom(t)) return false; // PPtr — handled natively
         if (!t.IsSerializable) return false;
         var asm = t.Assembly.GetName().Name;
-        if (asm.StartsWith(nameof(System)) || asm.StartsWith(nameof(Unity)) || asm == "mscorlib" || asm == "netstandard") return false;
+        if (asm.StartsWith(nameof(System)) || asm.StartsWith(nameof(Unity)) || asm == "mscorlib" ||
+            asm == "netstandard") return false;
         return true;
     }
 
@@ -774,7 +975,10 @@ internal static class BundleSpike {
         // DestroyImmediate (not Destroy): Unload->Initialize is synchronous in one frame, so a deferred Destroy would
         // leave the old DontDestroyOnLoad hero alive into the next Initialize — orphaned, holding stale gm/inputHandler
         // refs (the move_input=0 / ia_same=false uncontrollable-hero bug). Same reason SpawnReal uses DestroyImmediate.
-        if (real != null) { Object.DestroyImmediate(real); real = null; }
+        if (HornetRoot != null) {
+            Object.DestroyImmediate(HornetRoot);
+            HornetRoot = null;
+        }
         // The hero + all its dependency bundles are now owned by Addressables (EnsureHeroPrefab); they're released with
         // the addressables runtime, not unloaded here. (The old manual LoadFromFile bundle list was removed.)
     }

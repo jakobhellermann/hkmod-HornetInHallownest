@@ -1,5 +1,6 @@
 extern alias Silksong;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -20,7 +21,23 @@ namespace HornetPlayer.Playground;
 internal static class GameCamerasBootstrap {
     private const string RigName = "Silksong_GameCameras";
     private static GameObject? rig;
-    private static Transform? inGame; // Hornet HUD content container ("In-game"), cached by BringUpHud for cheap toggling
+
+    private static Transform?
+        inGame; // Hornet HUD content container ("In-game"), cached by BringUpHud for cheap toggling
+
+    // Quick-fix the per-frame "Invalid layer id" flood: Silksong HUD elements carry MeshSortingOrder components whose
+    // serialized layerID is a Silksong sorting-layer uniqueID. Most match HK, but "Inventory"/"Scene Border" have
+    // DIFFERENT uniqueIDs across the games (verified via globalgamemanagers) -> HK rejects them, and MeshSortingOrder
+    // .OnUpdate re-applies every frame -> 769/frame. Remap each INVALID layerID (the private field, since OnUpdate
+    // re-reads it) to HK's by-name equivalent ("HUD" fallback). Proper fix is a TagManager superset (open item).
+    private static readonly Dictionary<int, string> SsSortingLayerNames = new() {
+        { 59515797, "Inventory" }, { 1017658613, "Scene Border" }
+    };
+
+    // Show/hide HK's native Knight HUD (the hudCanvas on HK's own GameCameras). global::GameCameras is HK's (unprefixed).
+    // Read the cached _instance FIELD directly, NOT the `instance` getter — that getter logs "Couldn't find GameCameras"
+    // when null (e.g. at the menu, where this runs per-frame via HeroSwitch) -> spam. The field is null-safe + silent.
+    private static FieldInfo? hkGcInstanceField;
 
     // Silksong's CameraTarget GameObject (on the rig). Silksong hero FSMs reference a "Camera Target" via a serialized
     // FsmGameObject whose cross-game PPtr is lost -> they'd fall back to GameObject.Find("Camera Target") and hit HK's
@@ -28,11 +45,14 @@ internal static class GameCamerasBootstrap {
     internal static GameObject? CameraTargetGo =>
         rig != null ? rig.GetComponentInChildren<Silksong::CameraTarget>(true)?.gameObject : null;
 
+    internal static bool HornetHudReady => inGame != null;
+
     // Hot-reload safe: the rig is DontDestroyOnLoad and survives our DLL reload (our `rig` static does not). Reuse the
     // existing rig instead of spawning a duplicate. Found by its unique instance name (the prefab is "_GameCameras").
     private static GameObject? FindExistingRig() {
         foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
-            if (go != null && go.name == RigName && go.scene.IsValid()) return go;
+            if (go != null && go.name == RigName && go.scene.IsValid())
+                return go;
         return null;
     }
 
@@ -43,9 +63,13 @@ internal static class GameCamerasBootstrap {
                 // Re-point GameCameras._instance in case it dangled across the reload (Silksong-assembly static).
                 var existing = rig.GetComponentInChildren<Silksong::GameCameras>(true);
                 if (existing != null && Silksong::GameCameras.SilentInstance == null)
-                    typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, existing);
-                return new { ok = true, note = "reused existing rig", instanceSet = Silksong::GameCameras.SilentInstance != null };
+                    typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
+                        ?.SetValue(null, existing);
+                return new {
+                    ok = true, note = "reused existing rig", instanceSet = Silksong::GameCameras.SilentInstance != null
+                };
             }
+
             AddressablesBootstrap.Ensure();
             var prefab = Addressables.LoadAssetAsync<GameObject>("_GameCameras").WaitForCompletion();
             if (prefab == null) return new { error = "_GameCameras load returned null" };
@@ -65,12 +89,31 @@ internal static class GameCamerasBootstrap {
             // CameraController would fight HK + NullRef without a full GameManager. Disable (don't destroy) so the rig's
             // serialized refs to them stay non-null for code that only reads the fields.
             int cams = 0, listeners = 0, controllers = 0, blur = 0;
-            foreach (var c in inst.GetComponentsInChildren<Camera>(true)) { c.enabled = false; cams++; }
-            foreach (var a in inst.GetComponentsInChildren<AudioListener>(true)) { a.enabled = false; listeners++; }
-            foreach (var cc in inst.GetComponentsInChildren<Silksong::CameraController>(true)) { cc.enabled = false; controllers++; }
+            foreach (var c in inst.GetComponentsInChildren<Camera>(true)) {
+                c.enabled = false;
+                cams++;
+            }
+
+            foreach (var a in inst.GetComponentsInChildren<AudioListener>(true)) {
+                a.enabled = false;
+                listeners++;
+            }
+
+            foreach (var cc in inst.GetComponentsInChildren<Silksong::CameraController>(true)) {
+                cc.enabled = false;
+                controllers++;
+            }
+
             // Per-frame cosmetic background-blur: NullRefs every frame without the scene's BlurPlanes. Off.
-            foreach (var b in inst.GetComponentsInChildren<Silksong::BlurManager>(true)) { b.enabled = false; blur++; }
-            foreach (var b in inst.GetComponentsInChildren<Silksong::LightBlurredBackground>(true)) { b.enabled = false; blur++; }
+            foreach (var b in inst.GetComponentsInChildren<Silksong::BlurManager>(true)) {
+                b.enabled = false;
+                blur++;
+            }
+
+            foreach (var b in inst.GetComponentsInChildren<Silksong::LightBlurredBackground>(true)) {
+                b.enabled = false;
+                blur++;
+            }
 
             // Seed the singleton the HUD FSMs deref during their Awake/Start, BEFORE activation. PlayerData (health/silk)
             // + GlobalSettings are already seeded earlier in SpawnReal (SilksongBootstrap / GlobalSettingsBootstrap).
@@ -81,7 +124,8 @@ internal static class GameCamerasBootstrap {
             // rig is under the holder); we DDOL the holder instead, below.
             var gc = inst.GetComponentInChildren<Silksong::GameCameras>(true);
             if (gc != null) {
-                typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, gc);
+                typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
+                    ?.SetValue(null, gc);
                 // Wire gm.gameCams (public field, set by GameManager.SetupGameRefs which we don't run) -> several paths
                 // deref it (e.g. inventory open's SetPausedState gameCams.StopCameraShake, HUD). GameManager.instance is
                 // already up (SilksongBootstrap ran before us in SpawnReal).
@@ -90,16 +134,17 @@ internal static class GameCamerasBootstrap {
 
             Object.DontDestroyOnLoad(holder);
             rig = inst;
-            holder.SetActive(true);   // ACTIVATE -> Awakes/Starts run (GameCameras.Awake/Start skipped in Stub)
+            holder.SetActive(true); // ACTIVATE -> Awakes/Starts run (GameCameras.Awake/Start skipped in Stub)
 
             var instanceSet = Silksong::GameCameras.SilentInstance != null;
-            Log.Info($"[GameCameras] rig ACTIVE+neutered: instance={instanceSet}, cams={cams} listeners={listeners} controllers={controllers} blur={blur}");
+            Log.Info(
+                $"[GameCameras] rig ACTIVE+neutered: instance={instanceSet}, cams={cams} listeners={listeners} controllers={controllers} blur={blur}");
             return new {
                 ok = true,
                 active = true,
                 instanceSet,
                 neutered = new { cameras = cams, audioListeners = listeners, cameraControllers = controllers, blur },
-                cameraTarget = inst.GetComponentInChildren<Silksong::CameraTarget>(true) != null,
+                cameraTarget = inst.GetComponentInChildren<Silksong::CameraTarget>(true) != null
             };
         } catch (Exception e) {
             var ex = e.InnerException ?? e;
@@ -108,34 +153,31 @@ internal static class GameCamerasBootstrap {
         }
     }
 
-    // Quick-fix the per-frame "Invalid layer id" flood: Silksong HUD elements carry MeshSortingOrder components whose
-    // serialized layerID is a Silksong sorting-layer uniqueID. Most match HK, but "Inventory"/"Scene Border" have
-    // DIFFERENT uniqueIDs across the games (verified via globalgamemanagers) -> HK rejects them, and MeshSortingOrder
-    // .OnUpdate re-applies every frame -> 769/frame. Remap each INVALID layerID (the private field, since OnUpdate
-    // re-reads it) to HK's by-name equivalent ("HUD" fallback). Proper fix is a TagManager superset (open item).
-    private static readonly System.Collections.Generic.Dictionary<int, string> SsSortingLayerNames = new() {
-        { 59515797, "Inventory" }, { 1017658613, "Scene Border" },
-    };
     private static int RemapSortingLayers(Transform root) {
         var msoType = typeof(Silksong::MeshSortingOrder);
         var layerIdF = msoType.GetField("layerID", BindingFlags.NonPublic | BindingFlags.Instance);
         if (layerIdF == null) return -1;
-        int fixes = 0;
+        var fixes = 0;
         foreach (var mso in root.GetComponentsInChildren<Silksong::MeshSortingOrder>(true)) {
             var id = (int)(layerIdF.GetValue(mso) ?? 0);
             if (SortingLayer.IsValid(id)) continue;
             var hkId = SortingLayer.NameToID(SsSortingLayerNames.TryGetValue(id, out var nm) ? nm : "HUD");
             layerIdF.SetValue(mso, hkId);
-            var rend = ((Component)(object)mso).GetComponent<MeshRenderer>();
+            var rend = mso.GetComponent<MeshRenderer>();
             if (rend != null) rend.sortingLayerID = hkId;
             fixes++;
         }
+
         return fixes;
     }
 
     private static Transform? FindByName(Transform root, string name) {
         if (root.name == name) return root;
-        foreach (Transform c in root) { var r = FindByName(c, name); if (r != null) return r; }
+        foreach (Transform c in root) {
+            var r = FindByName(c, name);
+            if (r != null) return r;
+        }
+
         return null;
     }
 
@@ -153,6 +195,7 @@ internal static class GameCamerasBootstrap {
             FindByName(hudCam, "In-game")?.gameObject.SetActive(false);
             return new { ok = true, hudOn = false };
         }
+
         // The HudCamera GO is INACTIVE in the prefab (the game's GameCameras.StartScene activates it; we skip that), so
         // its whole HUD subtree — and the FSMs that drive it (health_display, silk, …) — never Awoke. Activate the GO so
         // the FSMs self-initialize. Keep the Camera COMPONENT off: HK's HudCamera renders the UI-layer HUD meshes (no
@@ -164,27 +207,34 @@ internal static class GameCamerasBootstrap {
         // (ToolItemManager #6, gm.tilemap, quest/tool lists, button-skin input). The ONLY in-game HUD is "Anchor TL"
         // (Health + silk under it). Deactivate In-game's other children BEFORE activating HudCamera, so those panes
         // never Awake (a child set inactive while its parent chain is inactive won't fire Awake on activation).
-        inGame = FindByName(hudCam, "In-game");      // cache the HUD content container for per-frame visibility toggling
+        inGame = FindByName(hudCam, "In-game"); // cache the HUD content container for per-frame visibility toggling
         // Keep "Anchor TL" (Health/silk HUD) AND "Inventory" (tools/crests/items — its #6 managers are now up). The
         // remaining In-game children (Quick Map / Game Map Rendering / DialogueManager / Prompts / Menus / vignettes)
         // still NullRef on Awake without GameMap/QuestManager/etc., so deactivate them before activating HudCamera.
         Transform? inv = null;
         if (inGame != null)
             foreach (Transform c in inGame) {
-                if (c.name == "Inventory") { inv = c; continue; }
+                if (c.name == "Inventory") {
+                    inv = c;
+                    continue;
+                }
+
                 if (c.name != "Anchor TL") c.gameObject.SetActive(false);
             }
+
         // Inside Inventory keep only the tools/crests/items panes (Inv + Tools + Border); the Map/Quests/Journal panes
         // need GameMap/QuestManager (map/journal intentionally out of scope — would Awake a wall of NullRefs). Drop them
         // BEFORE Inventory activates (a child set inactive while its parent chain is inactive won't fire Awake), then
         // ensure Inventory itself is active so InventoryPaneList/Inv/Tools run their setup.
         if (inv != null) {
             foreach (Transform p in inv)
-                if (p.name is "Map" or "Quests" or "Journal") p.gameObject.SetActive(false);
+                if (p.name is "Map" or "Quests" or "Journal")
+                    p.gameObject.SetActive(false);
             inv.gameObject.SetActive(true);
         }
+
         hudCam.gameObject.SetActive(true);
-        inGame?.gameObject.SetActive(true);          // the in-game HUD container (Anchor TL + Inventory)
+        inGame?.gameObject.SetActive(true); // the in-game HUD container (Anchor TL + Inventory)
         FindByName(hudCam, "Hud Canvas")?.gameObject.SetActive(true);
         var layerFixes = RemapSortingLayers(hudCam);
 
@@ -195,19 +245,27 @@ internal static class GameCamerasBootstrap {
         var realSpool = hudCam.GetComponentInChildren<Silksong::SilkSpool>(true);
         if (realSpool != null) {
             typeof(Silksong::SilkSpool).GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)
-                ?.GetSetMethod(true)?.Invoke(null, new object[] { realSpool });
-            try { realSpool.DrawSpool(); } catch (Exception e) { Log.Error($"[HUD] DrawSpool: {e.Message}"); }
+                ?.GetSetMethod(true)?.Invoke(null, [realSpool]);
+            try {
+                realSpool.DrawSpool();
+            } catch (Exception e) {
+                Log.Error($"[HUD] DrawSpool: {e.Message}");
+            }
         }
 
         // Fade/slide the HUD content in (health/silk start hidden until the game fires this on scene-ready).
-        try { Silksong::GameCameras.instance?.HUDIn(); } catch (Exception e) { Log.Error($"[HUD] HUDIn: {e.Message}"); }
+        try {
+            Silksong::GameCameras.instance?.HUDIn();
+        } catch (Exception e) {
+            Log.Error($"[HUD] HUDIn: {e.Message}");
+        }
 
         var uiSet = Silksong::UIManager.instance != null;
-        return new { ok = true, hudOn = true, camEnabled = cam != null && cam.enabled, uiManager = uiSet, layerFixes,
-                     silkSpool = realSpool != null };
+        return new {
+            ok = true, hudOn = true, camEnabled = cam != null && cam.enabled, uiManager = uiSet, layerFixes,
+            silkSpool = realSpool != null
+        };
     }
-
-    internal static bool HornetHudReady => inGame != null;
 
     // Show/hide Hornet's HUD content (the "In-game" container) without re-running the heavy BringUpHud — the HudCamera GO
     // + FSMs stay alive, only the content is toggled. Cheap; safe to call per-frame (only SetActive on change).
@@ -216,16 +274,15 @@ internal static class GameCamerasBootstrap {
         if (inGame.gameObject.activeSelf != on) inGame.gameObject.SetActive(on);
     }
 
-    // Show/hide HK's native Knight HUD (the hudCanvas on HK's own GameCameras). global::GameCameras is HK's (unprefixed).
-    // Read the cached _instance FIELD directly, NOT the `instance` getter — that getter logs "Couldn't find GameCameras"
-    // when null (e.g. at the menu, where this runs per-frame via HeroSwitch) -> spam. The field is null-safe + silent.
-    private static FieldInfo? hkGcInstanceField;
     internal static void SetHkHudVisible(bool on) {
         try {
-            hkGcInstanceField ??= typeof(global::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
-            if (hkGcInstanceField?.GetValue(null) is not global::GameCameras hk) return;
+            hkGcInstanceField ??=
+                typeof(GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
+            if (hkGcInstanceField?.GetValue(null) is not GameCameras hk) return;
             if (hk.hudCanvas != null && hk.hudCanvas.activeSelf != on) hk.hudCanvas.SetActive(on);
-        } catch (Exception e) { Log.Error($"[HUD] SetHkHudVisible({on}): {e.Message}"); }
+        } catch (Exception e) {
+            Log.Error($"[HUD] SetHkHudVisible({on}): {e.Message}");
+        }
     }
 
     internal static void Cleanup() {
@@ -236,7 +293,12 @@ internal static class GameCamerasBootstrap {
         rig ??= FindExistingRig();
         // Destroy the persisted root (the inactive holder), which owns the rig as a child — not just `rig` itself, or the
         // holder would leak. root == rig in the degenerate case where rig is already a root.
-        if (rig != null) { Object.DestroyImmediate(rig.transform.root.gameObject); rig = null; }
-        typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, null);
+        if (rig != null) {
+            Object.DestroyImmediate(rig.transform.root.gameObject);
+            rig = null;
+        }
+
+        typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
+            ?.SetValue(null, null);
     }
 }

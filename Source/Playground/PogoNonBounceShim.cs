@@ -18,21 +18,22 @@ namespace HornetPlayer.Playground;
 internal static class PogoNonBounceShim {
     private static Hook? hook;
 
-    private delegate bool Orig(GameObject obj);
-    private delegate bool Hooked(Orig orig, GameObject obj);
-
     internal static void Install() {
         var mi = typeof(Silksong::HeroDownAttack).GetMethod("IsNonBounce",
-            BindingFlags.NonPublic | BindingFlags.Static, null, new[] { typeof(GameObject) }, null);
-        if (mi == null) { Log.Error("[PogoNonBounceShim] HeroDownAttack.IsNonBounce not found"); return; }
+            BindingFlags.NonPublic | BindingFlags.Static, null, [typeof(GameObject)], null);
+        if (mi == null) {
+            Log.Error("[PogoNonBounceShim] HeroDownAttack.IsNonBounce not found");
+            return;
+        }
+
         hook = new Hook(mi, (Hooked)OnIsNonBounce);
         Log.Info("[PogoNonBounceShim] installed: HeroDownAttack.IsNonBounce");
     }
 
     private static bool OnIsNonBounce(Orig orig, GameObject obj) {
-        if (orig(obj)) return true;                 // Silksong NonBouncer/BounceBalloon already said no-bounce
+        if (orig(obj)) return true; // Silksong NonBouncer/BounceBalloon already said no-bounce
         if (obj == null) return false;
-        var nb = obj.GetComponent<NonBouncer>();     // HK's NonBouncer (global)
+        var nb = obj.GetComponent<NonBouncer>(); // HK's NonBouncer (global)
         return nb != null && nb.active;
     }
 
@@ -40,4 +41,8 @@ internal static class PogoNonBounceShim {
         hook?.Dispose();
         hook = null;
     }
+
+    private delegate bool Orig(GameObject obj);
+
+    private delegate bool Hooked(Orig orig, GameObject obj);
 }

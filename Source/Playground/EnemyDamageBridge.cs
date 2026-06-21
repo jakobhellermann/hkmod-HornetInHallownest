@@ -1,5 +1,4 @@
 extern alias Silksong;
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
@@ -30,7 +29,7 @@ namespace HornetPlayer.Playground;
 // their own OnTriggerEnter2D + read the attacker's `damages_enemy` FSM (BreakableObject, BreakablePoleSimple) are
 // handled separately by DamagesEnemyFsmShim.
 internal sealed class HkEnemyHitBridge : Silksong::ReceivedDamageProxy, SIHit {
-    internal IHitResponder responder;   // HK's IHitResponder (HealthManager / Breakable / BreakablePole / …)
+    internal IHitResponder responder; // HK's IHitResponder (HealthManager / Breakable / BreakablePole / …)
 
     // Explicit re-implementation: ReceivedDamageProxy already implements IHitResponder.Hit (non-virtual); listing the
     // interface again + an explicit member overrides the interface dispatch for this type, so Silksong's
@@ -48,7 +47,7 @@ internal sealed class HkEnemyHitBridge : Silksong::ReceivedDamageProxy, SIHit {
             MagnitudeMultiplier = si.MagnitudeMultiplier,
             Multiplier = si.Multiplier <= 0f ? 1f : si.Multiplier,
             MoveAngle = si.MoveAngle,
-            IgnoreInvulnerable = false,
+            IgnoreInvulnerable = false
         };
         responder.Hit(hkHit);
         return SIHit.Response.DamageEnemy;
@@ -59,18 +58,21 @@ internal static class EnemyDamageBridge {
     private static Hook? hook;
     private static Hook? takeDamageHook;
 
-    private delegate void Orig(List<SIHit> store, GameObject target, int depth, HashSet<SIHit> blackList);
-    private delegate void Hooked(Orig orig, List<SIHit> store, GameObject target, int depth, HashSet<SIHit> blackList);
-
-    private delegate bool DoDmgOrig(Silksong::DamageEnemies self, GameObject target, bool isFirstHit);
-    private delegate bool DoDmgHooked(DoDmgOrig orig, Silksong::DamageEnemies self, GameObject target, bool isFirstHit);
+    // Identify what Hornet's slash actually overlaps. Once per distinct GameObject name so the log stays clean (no
+    // per-frame spam) while still naming every new thing she hits — useful for tracking down "object X doesn't react"
+    // (e.g. the stag Station Bell) when the object itself produces no log.
+    private static readonly HashSet<string> hitSeen = new();
 
     internal static void Install() {
         var mi = typeof(Silksong::HitTaker).GetMethod(
             "GetHitResponders",
             BindingFlags.Public | BindingFlags.Static, null,
-            new[] { typeof(List<SIHit>), typeof(GameObject), typeof(int), typeof(HashSet<SIHit>) }, null);
-        if (mi == null) { Log.Error("[EnemyDamageBridge] HitTaker.GetHitResponders(4-arg) not found"); return; }
+            [typeof(List<SIHit>), typeof(GameObject), typeof(int), typeof(HashSet<SIHit>)], null);
+        if (mi == null) {
+            Log.Error("[EnemyDamageBridge] HitTaker.GetHitResponders(4-arg) not found");
+            return;
+        }
+
         hook = new Hook(mi, (Hooked)OnGetHitResponders);
         Log.Info("[EnemyDamageBridge] installed: HitTaker.GetHitResponders");
 
@@ -80,33 +82,31 @@ internal static class EnemyDamageBridge {
         // and no `damages_enemy` read). Hornet's Silksong pipeline only sends Silksong's "TAKE DAMAGE" to Silksong FSMs,
         // so HK FSMs never hear it. We forward HK's "TAKE DAMAGE" to the target's HK FSMs after each Silksong DoDamage.
         var dd = typeof(Silksong::DamageEnemies).GetMethod("DoDamage", BindingFlags.Instance | BindingFlags.Public,
-            null, new[] { typeof(GameObject), typeof(bool) }, null);
+            null, [typeof(GameObject), typeof(bool)], null);
         if (dd != null) takeDamageHook = new Hook(dd, (DoDmgHooked)OnDoDamage);
         else Log.Error("[EnemyDamageBridge] DamageEnemies.DoDamage(GameObject,bool) not found");
     }
-
-    // Identify what Hornet's slash actually overlaps. Once per distinct GameObject name so the log stays clean (no
-    // per-frame spam) while still naming every new thing she hits — useful for tracking down "object X doesn't react"
-    // (e.g. the stag Station Bell) when the object itself produces no log.
-    private static readonly HashSet<string> hitSeen = new();
 
     private static bool OnDoDamage(DoDmgOrig orig, Silksong::DamageEnemies self, GameObject target, bool isFirstHit) {
         var hit = orig(self, target, isFirstHit);
         if (target == null) return hit;
         if (hitSeen.Add(target.name))
-            Log.Info($"[EnemyDamageBridge] hit '{target.name}' layer={target.layer} hkFSM={(target.GetComponent<PlayMakerFSM>() != null)} hkResponder={(target.GetComponentInParent<IHitResponder>() != null)}");
+            Log.Info(
+                $"[EnemyDamageBridge] hit '{target.name}' layer={target.layer} hkFSM={target.GetComponent<PlayMakerFSM>() != null} hkResponder={target.GetComponentInParent<IHitResponder>() != null}");
         // Only HK objects with a PlayMaker FSM care; FSMUtility no-ops otherwise but GetComponent gates the per-hit cost.
         if (target.GetComponent<PlayMakerFSM>() != null)
             FSMUtility.SendEventToGameObject(target, "TAKE DAMAGE");
         return hit;
     }
 
-    private static void OnGetHitResponders(Orig orig, List<SIHit> store, GameObject target, int depth, HashSet<SIHit> blackList) {
+    private static void OnGetHitResponders(Orig orig, List<SIHit> store, GameObject target, int depth,
+        HashSet<SIHit> blackList) {
         orig(store, target, depth, blackList);
         if (target == null) return;
         // A real Silksong responder is present (Silksong enemy, or already-bridged) -> nothing to do.
-        for (int i = 0; i < store.Count; i++)
-            if (store[i] is Silksong::HealthManager || store[i] is HkEnemyHitBridge) return;
+        for (var i = 0; i < store.Count; i++)
+            if (store[i] is Silksong::HealthManager || store[i] is HkEnemyHitBridge)
+                return;
         // HK target? Walk up to the nearest HK IHitResponder (HealthManager / Breakable / BreakablePole). HK colliders
         // may sit on a child of the target root, so search parents.
         var resp = target.GetComponentInParent<IHitResponder>();
@@ -126,6 +126,14 @@ internal static class EnemyDamageBridge {
         // Our component type identity changes on a hot-reload; strip stale bridges so the next Initialize re-adds fresh
         // ones (and they don't linger as orphaned references on HK enemies).
         foreach (var b in Resources.FindObjectsOfTypeAll<HkEnemyHitBridge>())
-            UnityEngine.Object.Destroy(b);
+            Object.Destroy(b);
     }
+
+    private delegate void Orig(List<SIHit> store, GameObject target, int depth, HashSet<SIHit> blackList);
+
+    private delegate void Hooked(Orig orig, List<SIHit> store, GameObject target, int depth, HashSet<SIHit> blackList);
+
+    private delegate bool DoDmgOrig(Silksong::DamageEnemies self, GameObject target, bool isFirstHit);
+
+    private delegate bool DoDmgHooked(DoDmgOrig orig, Silksong::DamageEnemies self, GameObject target, bool isFirstHit);
 }

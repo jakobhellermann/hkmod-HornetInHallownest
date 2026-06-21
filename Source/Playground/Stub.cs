@@ -41,14 +41,16 @@ internal static class Stub {
         var lang = typeof(SilksongLoc::TeamCherry.Localization.Language);
         ResourcesShim.PreferBundle = true;
         try {
-            Skip(lang, "SendMonoMessage");                                  // installs stub; its GetFunctionPointer also forces type-init
-            RuntimeHelpers.RunClassConstructor(lang.TypeHandle);           // ensure the cctor ran inside the window (no-op if already)
+            Skip(lang, "SendMonoMessage"); // installs stub; its GetFunctionPointer also forces type-init
+            RuntimeHelpers
+                .RunClassConstructor(lang.TypeHandle); // ensure the cctor ran inside the window (no-op if already)
         } finally {
             ResourcesShim.PreferBundle = false;
         }
-        Skip(typeof(Silksong::HeroWaterController), "Update");                                  // per-frame
-        Skip(typeof(Silksong::PersonalObjectPool), "OnStart");                                  // Start
-        Skip(typeof(Silksong::HeroAnimationController), "UpdateToolEquipFlags");                // Start
+
+        Skip(typeof(Silksong::HeroWaterController), "Update"); // per-frame
+        Skip(typeof(Silksong::PersonalObjectPool), "OnStart"); // Start
+        Skip(typeof(Silksong::HeroAnimationController), "UpdateToolEquipFlags"); // Start
         // Tool-equipment subsystem isn't initialized -> IsToolEquipped NullRefs; stub the root (no tools equipped),
         // which should cascade-fix ToolItem.IsEquipped / CheckIfToolEquipped / ToolEquipChecker / HeroWispLantern.
         Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped");
@@ -83,7 +85,8 @@ internal static class Stub {
         // SetParticleScale.OnUpdate (ticked every frame via SetParticleScaleCallbackHooks) derefs a null parentBody
         // (Rigidbody2D.IsAwake) -> per-frame NullRef. Cosmetic particle scaling -> stub.
         Skip(typeof(Silksong::SetParticleScale), "OnUpdate");
-        Skip(typeof(Silksong::DeliveryQuestItem), "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
+        Skip(typeof(Silksong::DeliveryQuestItem),
+            "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
         // Superjump's "Hit Roof Hard" state calls DeliveryQuestItem.TakeHit() via CallStaticMethod (slamming the ceiling
         // damages carried delivery items). TakeHit() -> TakeHit(int) -> GetActiveItems() -> QuestManager/CollectableItemManager
         // (deliveries/quest subsystem off, see DeliveryHudIcon above) -> NullRef. It throws at action index 0, aborting the
@@ -131,21 +134,28 @@ internal static class Stub {
     // Stub `method` on every Silksong type in `ns` whose name starts with `prefix` (category stub).
     internal static void SkipAllInNamespace(string ns, string prefix, string method) {
         Type?[] types;
-        try { types = typeof(Silksong::HeroController).Assembly.GetTypes(); }
-        catch (ReflectionTypeLoadException e) { types = e.Types; }
+        try {
+            types = typeof(Silksong::HeroController).Assembly.GetTypes();
+        } catch (ReflectionTypeLoadException e) {
+            types = e.Types;
+        }
+
         var n = 0;
         foreach (var t in types) {
             if (t?.Namespace != ns || !t.Name.StartsWith(prefix)) continue;
-            if (t.GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) == null) continue;
+            if (t.GetMethod(method, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) ==
+                null) continue;
             Skip(t, method);
             n++;
         }
+
         Log.Info($"[Stub] category {ns}.{prefix}*::{method} -> {n} types");
     }
 
     // Stub every method named `method` on `type` (all overloads/visibilities) to log-once + return default.
     internal static void Skip(Type type, string method) {
-        var found = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        var found = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public |
+                                    BindingFlags.NonPublic);
         var any = false;
         foreach (var mi in found) {
             if (mi.Name != method || mi.IsAbstract || mi.GetMethodBody() == null) continue;
@@ -157,6 +167,7 @@ internal static class Stub {
                 Log.Error($"[Stub] hook failed {label}: {e.Message}");
             }
         }
+
         if (!any) Log.Error($"[Stub] no method '{method}' on {type.FullName}");
         else Log.Info($"[Stub] installed: {type.Name}.{method}");
     }
@@ -180,10 +191,12 @@ internal static class Stub {
         var rt = il.Method.ReturnType;
         if (rt.MetadataType == MetadataType.Void) {
             c.Emit(OpCodes.Ret);
-        } else if (!rt.IsValueType) {
+        }
+        else if (!rt.IsValueType) {
             c.Emit(OpCodes.Ldnull);
             c.Emit(OpCodes.Ret);
-        } else {
+        }
+        else {
             var v = new VariableDefinition(rt);
             il.Body.Variables.Add(v);
             c.Emit(OpCodes.Ldloca, v);

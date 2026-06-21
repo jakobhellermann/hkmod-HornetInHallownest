@@ -27,8 +27,8 @@ namespace HornetPlayer.Playground;
 
 /// A name plus an optional index disambiguating among equal-named matches.
 public sealed class Field(string name, int? index = null) {
-    public readonly string Name = name;
     public readonly int? Index = index;
+    public readonly string Name = name;
 
     /// Inverse of parsing: escapes structural characters so the output round-trips.
     public override string ToString() {
@@ -36,17 +36,22 @@ public sealed class Field(string name, int? index = null) {
         return Index is { } i ? $"{name}:{i.ToString(CultureInfo.InvariantCulture)}" : name;
     }
 
-    public override bool Equals(object? obj) => obj is Field f && f.Name == Name && f.Index == Index;
-    public override int GetHashCode() => HashCode.Combine(Name, Index);
+    public override bool Equals(object? obj) {
+        return obj is Field f && f.Name == Name && f.Index == Index;
+    }
+
+    public override int GetHashCode() {
+        return HashCode.Combine(Name, Index);
+    }
 }
 
 /// A reference to a GameObject (by hierarchy path) and optionally a component.
 public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? component) {
-    /// Hierarchy path, root first; always at least one segment.
-    public readonly IReadOnlyList<Field> Segments = segments;
-
     /// Component selector (`@Type[:index]`), if any.
     public readonly Field? Component = component;
+
+    /// Hierarchy path, root first; always at least one segment.
+    public readonly IReadOnlyList<Field> Segments = segments;
 
     /// `ToString` is the inverse of `Parse`: it escapes structural characters so
     /// the output round-trips back through `Parse`.
@@ -65,10 +70,13 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
         return sb.ToString();
     }
 
-    public override bool Equals(object? obj) =>
-        obj is ComponentPath p && Segments.SequenceEqual(p.Segments) && Equals(Component, p.Component);
+    public override bool Equals(object? obj) {
+        return obj is ComponentPath p && Segments.SequenceEqual(p.Segments) && Equals(Component, p.Component);
+    }
 
-    public override int GetHashCode() => HashCode.Combine(Segments.Count, Component);
+    public override int GetHashCode() {
+        return HashCode.Combine(Segments.Count, Component);
+    }
 
     /// Parse a [ComponentPath]. Throws [FormatException] on malformed input.
     public static ComponentPath Parse(string input) {
@@ -119,10 +127,12 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
             if (c == '\\') {
                 cur.Append('\\');
                 if (i + 1 < s.Length) cur.Append(s[++i]);
-            } else if (c == delim) {
+            }
+            else if (c == delim) {
                 parts.Add(cur.ToString());
                 cur.Clear();
-            } else {
+            }
+            else {
                 cur.Append(c);
             }
         }
@@ -145,13 +155,13 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
     /// Remove escaping backslashes, yielding the literal name.
     private static string Unescape(string s) {
         var sb = new StringBuilder(s.Length);
-        for (var i = 0; i < s.Length; i++) {
+        for (var i = 0; i < s.Length; i++)
             if (s[i] == '\\') {
                 if (i + 1 < s.Length) sb.Append(s[++i]);
-            } else {
+            }
+            else {
                 sb.Append(s[i]);
             }
-        }
 
         return sb.ToString();
     }
@@ -159,17 +169,22 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
     /// Find the first GameObject whose hierarchy matches these segments. A
     /// segment without an index matches any equal-named sibling; with an index
     /// it must be that 0-based occurrence among same-named siblings.
-    public GameObject? ResolveGameObject() => AllGameObjects().FirstOrDefault(Matches);
+    public GameObject? ResolveGameObject() {
+        return AllGameObjects().FirstOrDefault(Matches);
+    }
 
     /// Resolve this path's component selector on `go` (null if no selector).
-    public Component? ResolveComponent(GameObject go) => Component != null ? FindComponent(go, Component) : null;
+    public Component? ResolveComponent(GameObject go) {
+        return Component != null ? FindComponent(go, Component) : null;
+    }
 
     /// Find a component on `go` by type name, picking the selector's 0-based
     /// occurrence among same-typed components (defaulting to the first).
-    public static Component? FindComponent(GameObject go, Field selector) =>
-        go.GetComponents<Component>()
+    public static Component? FindComponent(GameObject go, Field selector) {
+        return go.GetComponents<Component>()
             .Where(c => c != null && c.GetType().Name == selector.Name)
             .ElementAtOrDefault(selector.Index ?? 0);
+    }
 
     private bool Matches(GameObject go) {
         var chain = new List<GameObject>();
@@ -201,10 +216,13 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
         return new ComponentPath(fields, null).ToString();
     }
 
-    public static string GetPath(Transform t) => GetPath(t.gameObject);
+    public static string GetPath(Transform t) {
+        return GetPath(t.gameObject);
+    }
 
-    private static IEnumerable<GameObject> AllGameObjects() =>
-        Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+    private static IEnumerable<GameObject> AllGameObjects() {
+        return Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+    }
 
     private static IEnumerable<GameObject> SiblingsOf(GameObject go) {
         var parent = go.transform.parent;
@@ -223,5 +241,7 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
         return index;
     }
 
-    private static int CountSameName(GameObject go) => SiblingsOf(go).Count(s => s.name == go.name);
+    private static int CountSameName(GameObject go) {
+        return SiblingsOf(go).Count(s => s.name == go.name);
+    }
 }
