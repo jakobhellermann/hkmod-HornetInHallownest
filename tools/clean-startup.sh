@@ -49,7 +49,7 @@ curl -s -X POST "$DEV/load-save?slot=$SLOT" -d '' >/dev/null && echo
 # 4. Checkpoint once the scene has loaded AND Hornet has spawned: wait for the spawn marker, then for the
 #    follow-up burst (HUD bring-up etc.) to go quiet. Replaces a fixed sleep; --at-most bounds the wait if
 #    auto-spawn doesn't fire (e.g. already spawned) so the script still finishes.
-logsnap commit -m "loadlevel" --wait-for "[SpawnReal] instantiated" --settle 200ms --at-most 30s
+logsnap commit -m "loadlevel" --wait-for "[SpawnReal] instantiated" --settle 200ms --at-most 10s
 
 # 5. Switch control to Hornet, then checkpoint the switch's log burst (HeroSwitch + HUD retarget + adapter
 #    taking over Hornet) once it settles.

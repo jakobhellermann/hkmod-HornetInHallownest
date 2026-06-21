@@ -8,10 +8,14 @@
 #
 # Assumes a logsnap session is already open on the logs (run tools/clean-startup.sh first). Iterate with this
 # between code edits instead of restarting.
+#
+# Usage:  tools/reload.sh [checkpoint-label]      # label defaults to "reload"; pass one to tag the iteration,
+#                                                 # e.g. tools/reload.sh "stub quest+map" -> logsnap diff --in "stub quest+map"
 set -u
 
 SRC="/home/jakob/dev/hk/mods/HornetPlayer/Source"
 BUILDLOG=/tmp/reload-build.log
+MSG="${1:-reload}"
 
 # 1. Isolate the reload: checkpoint everything logged so far (no-op if nothing new).
 logsnap commit -m "pre-reload"
@@ -27,4 +31,4 @@ echo "build ok — waiting for hot-reload + respawn"
 
 # 3. Block until the hot-reload re-spawns Hornet, then until the follow-up burst goes quiet, then checkpoint.
 #    --at-most bounds it (e.g. reloading at the menu won't auto-respawn -> the wait gives up and the script ends).
-logsnap commit -m "reload" --wait-for "[SpawnReal] instantiated" --settle 200ms --at-most 60s
+logsnap commit -m "$MSG" --wait-for "[SpawnReal] instantiated" --settle 200ms --at-most 10s
