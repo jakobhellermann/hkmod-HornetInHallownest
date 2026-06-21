@@ -55,9 +55,12 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         ContactDamageBridge.Cleanup();
         HornetDeath.Cleanup();
         HornetBench.Cleanup();
+        HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
         GetComponentShim.Cleanup();
+        HeroControllerProbe.Cleanup();
+        EnemyTargetBridge.Cleanup();
         InventoryPauseBridge.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
@@ -129,6 +132,13 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/kill", _ => HornetDeath.Kill()); // debug: trigger Hornet death (real damage path)
         DebugServer.MapPost("/getup", _ => HornetDeath.ForceGetUp()); // debug: unstick from bench/no_input
         DebugServer.MapGet("/bench-state", _ => BundleSpike.BenchState()); // debug: atBench signal + Hornet sit clips
+        DebugServer.MapGet("/hc-probe", req => { // which HK HeroController methods get called on the Knight while Hornet active
+            if ((req["reset"] ?? "").ToLowerInvariant() == "true") return HeroControllerProbe.Reset();
+            var on = req["on"];
+            if (on != null) HeroControllerProbe.Enabled = on.ToLowerInvariant() != "false";
+            return HeroControllerProbe.Dump();
+        });
+        DebugServer.MapGet("/audio-diag", _ => BundleSpike.AudioDiag()); // debug: which SpawnAndPlayOneShot gate kills SFX
         DebugServer.MapPost("/switch", req => {
             var who = (req["who"] ?? "").ToLowerInvariant();
             return who switch {
@@ -173,9 +183,12 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
         HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
+        HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();
         FsmTracer.Install();            // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         GetComponentShim.Install();     // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
+        HeroControllerProbe.Install();  // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
+        EnemyTargetBridge.Install();    // redirect HK enemy "where's the hero" queries (LineOfSightDetector LoS) to the active hero
         InventoryPauseBridge.Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
         // BundleSpike.Run();
 

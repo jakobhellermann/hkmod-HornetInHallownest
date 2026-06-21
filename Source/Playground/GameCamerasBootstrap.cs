@@ -292,6 +292,30 @@ internal static class GameCamerasBootstrap {
         if (inGame.gameObject.activeSelf != on) inGame.gameObject.SetActive(on);
     }
 
+    private static Transform? ssMainCamT; // Silksong rig's (neutered) main camera transform, kept on HK's camera for audio
+
+    // Keep Silksong's neutered main camera on HK's camera. Silksong's AudioEventManager.TryPlayAudioClip culls 3D
+    // one-shots whose world position is farther than the prefab's maxDistance from GameCameras.mainCamera — and our
+    // rig's camera is disabled + parked at the rig origin, so EVERY hero SFX (dash/slash/attack, spatialBlend≈1) is
+    // distance-culled. Parking its TRANSFORM on HK's live camera makes the gate pass; HK's AudioListener still does the
+    // actual 3D mix. Cheap (one transform copy/frame); call from the per-frame CameraSwitchDriver.
+    internal static void SyncAudioCamera() {
+        try {
+            if (ssMainCamT == null) {
+                var ssGc = Silksong::GameCameras.SilentInstance;
+                if (ssGc == null || ssGc.mainCamera == null) return;
+                ssMainCamT = ssGc.mainCamera.transform;
+            }
+
+            hkGcInstanceField ??=
+                typeof(GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
+            if (hkGcInstanceField?.GetValue(null) is not GameCameras hk || hk.mainCamera == null) return;
+            ssMainCamT.position = hk.mainCamera.transform.position;
+        } catch (Exception e) {
+            Log.Error($"[HUD] SyncAudioCamera: {e.Message}");
+        }
+    }
+
     internal static void SetHkHudVisible(bool on) {
         try {
             hkGcInstanceField ??=

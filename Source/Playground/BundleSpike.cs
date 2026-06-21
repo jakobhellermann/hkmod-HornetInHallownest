@@ -143,6 +143,9 @@ internal static class BundleSpike {
 
         // Apply the current active-hero state to the freshly spawned Hornet (default Knight => Hornet spawns inert but
         // visible). Switch control with Tab or POST /switch.
+        // NOTE: do NOT auto-activate Hornet here — the spawn coincides with HK's scene entry, and inerting the Knight
+        // mid-entry breaks HK's entry handshake (it never finishes -> Hornet ends in nirvana). A "reload stays on Hornet"
+        // feature must DEFER the switch until the Knight's entry has completed (isHeroInPosition + grounded).
         HeroSwitch.SetActive(HeroSwitch.Active);
 
         // Bring up Hornet's HUD now that the rig + hero are up (masks self-appear via bindCutscenePlayed). The per-frame
@@ -287,6 +290,18 @@ internal static class BundleSpike {
             handlerIsHeros = ReferenceEquals(SilksongBootstrap.Handler, F("inputHandler")),
             gmIsBootstrap = ReferenceEquals(Silksong::GameManager._instance, F("gm")),
             heroHandlerNull = F("inputHandler") == null
+        };
+    }
+
+    // Audio diagnostics: which gate in RandomAudioClipTableExtensions.SpawnAndPlayOneShot silently returns null (no SFX).
+    internal static object AudioDiag() {
+        var prefab = Silksong::GlobalSettings.Audio.DefaultAudioSourcePrefab;
+        var gc = Silksong::GameCameras.SilentInstance;
+        return new {
+            defaultPrefabNull = prefab == null,
+            prefabSpatialBlend = prefab != null ? prefab.spatialBlend : -1f,
+            silentInstanceNull = gc == null,
+            mainCameraNull = gc != null && gc.mainCamera == null
         };
     }
 

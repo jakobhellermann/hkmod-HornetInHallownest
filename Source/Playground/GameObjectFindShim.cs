@@ -84,6 +84,22 @@ internal static class GameObjectFindShim {
 
     private static GameObject TagDetour(Func<string, GameObject> orig, string tag) {
         MaybeTrace(tag);
+        // While Hornet is the active hero, "Player" must resolve to HER. Both the Knight and Hornet_Real carry the
+        // "Player" tag, so Unity's FindGameObjectWithTag returns whichever it finds first (nondeterministic). HK enemy
+        // aggro/chase FSMs do FindWithTag("Player") ONCE, then cache + track that transform — if they grabbed the inert
+        // Knight they fly to it (this is the chase consumer the HeroControllerProbe can't see: it reads the tag, not a
+        // HeroController method). Redirect the tag to the active hero. HK systems that specifically need the Knight use
+        // HeroController.instance / UnsafeInstance directly (not the tag), so this only steers the tag-based "who is the
+        // player" consumers. Only "Player", only while HornetActive.
+        if (tag == "Player" && HeroSwitch.HornetActive) {
+            var hornet = BundleSpike.RealHero;
+            if (hornet != null) {
+                if (logged.Add("playerredirect"))
+                    Log.Info("[Find] FindWithTag('Player') -> REDIRECT 'Hornet' (HornetActive; was nondeterministic Knight/Hornet)");
+                return hornet.gameObject;
+            }
+        }
+
         if (CalledFromSilksongContext) return Intercept("FindWithTag", tag, ResolveTag(tag))!;
         GameObject r;
         try {

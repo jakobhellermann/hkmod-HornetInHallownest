@@ -301,6 +301,9 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
                 : null;
         HeroSwitch.RetargetCamera(follow);
 
+        // Keep Silksong's neutered camera on HK's camera so Hornet's 3D SFX aren't distance-culled (see SyncAudioCamera).
+        GameCamerasBootstrap.SyncAudioCamera();
+
         // HUD follows the active hero: Hornet's HUD (if brought up) while she's active, HK's Knight HUD otherwise. Synced
         // per-frame (cheap, SetActive-on-change) because HK re-enables its hudCanvas on every scene entry — same reason
         // the vignette is synced here. When Hornet's HUD isn't up yet, leave HK's alone (don't blank the screen).
