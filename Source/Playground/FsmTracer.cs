@@ -86,7 +86,7 @@ internal static class FsmTracer {
                 orig(fsm, name);
             }));
 
-        Log.Info($"[FsmTrace] installed ({hooks.Count} hooks; POST /fsm-trace?names=... to arm)");
+        Log.Debug($"[FsmTrace] installed ({hooks.Count} hooks; POST /fsm-trace?names=... to arm)");
     }
 
     // Which action is currently executing — attributes an event to the action that sent it (e.g. which BoolTest fired

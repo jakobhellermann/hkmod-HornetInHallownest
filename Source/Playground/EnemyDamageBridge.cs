@@ -58,10 +58,6 @@ internal static class EnemyDamageBridge {
     private static Hook? hook;
     private static Hook? takeDamageHook;
 
-    // Identify what Hornet's slash actually overlaps. Once per distinct GameObject name so the log stays clean (no
-    // per-frame spam) while still naming every new thing she hits — useful for tracking down "object X doesn't react"
-    // (e.g. the stag Station Bell) when the object itself produces no log.
-    private static readonly HashSet<string> hitSeen = new();
 
     internal static void Install() {
         var mi = typeof(Silksong::HitTaker).GetMethod(
@@ -74,7 +70,6 @@ internal static class EnemyDamageBridge {
         }
 
         hook = new Hook(mi, (Hooked)OnGetHitResponders);
-        Log.Info("[EnemyDamageBridge] installed: HitTaker.GetHitResponders");
 
         // Mirror HK's DamageEnemies.DoDamage, which sends BOTH HitTaker.Hit (-> IHitResponder, our bridge above) AND
         // `FSMUtility.SendEventToGameObject(target, "TAKE DAMAGE")`. The latter drives HK objects that react via a
@@ -90,9 +85,6 @@ internal static class EnemyDamageBridge {
     private static bool OnDoDamage(DoDmgOrig orig, Silksong::DamageEnemies self, GameObject target, bool isFirstHit) {
         var hit = orig(self, target, isFirstHit);
         if (target == null) return hit;
-        if (hitSeen.Add(target.name))
-            Log.Info(
-                $"[EnemyDamageBridge] hit '{target.name}' layer={target.layer} hkFSM={target.GetComponent<PlayMakerFSM>() != null} hkResponder={target.GetComponentInParent<IHitResponder>() != null}");
         // Only HK objects with a PlayMaker FSM care; FSMUtility no-ops otherwise but GetComponent gates the per-hit cost.
         if (target.GetComponent<PlayMakerFSM>() != null)
             FSMUtility.SendEventToGameObject(target, "TAKE DAMAGE");

@@ -176,7 +176,7 @@ internal static class Stub {
     }
 
     // Stub every method named `method` on `type` (all overloads/visibilities) to log-once + return default.
-    internal static void Skip(Type type, string method) {
+    private static void Skip(Type type, string method) {
         var found = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public |
                                     BindingFlags.NonPublic);
         var any = false;

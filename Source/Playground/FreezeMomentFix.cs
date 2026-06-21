@@ -26,7 +26,7 @@ internal static class FreezeMomentFix {
         }
 
         hook = new Hook(mi, (Hooked)((orig, self, type, onFinish) => onFinish?.Invoke()));
-        Log.Info(
+        Log.Debug(
             "[FreezeMomentFix] installed: GameManager.FreezeMoment no-op (+onFinish; inactive GM can't run its coroutine)");
     }
 

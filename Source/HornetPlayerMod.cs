@@ -77,7 +77,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         if (LoadedInstance != null) return;
         LoadedInstance = this;
 
-        Playground.Log.Sink = msg => Log(msg);
+        Playground.Log.SinkInfo = Log;
+        Playground.Log.SinkDebug = LogDebug;
+        Playground.Log.SinkError = LogError;
 
         Log("Initializing");
 
@@ -111,10 +113,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/fsm-trace", req => FsmTracer.SetTargets(req["names"])); // live state/event trace
         DebugServer.MapGet("/probe-cameratarget", _ => BundleSpike.ProbeCameraTarget());
         DebugServer.MapGet("/probe-sprint-target", _ => BundleSpike.ProbeSprintTarget());
-        DebugServer.MapGet("/find-trace", req => {
-            GameObjectFindShim.TraceKey = req["key"];
-            return new { traceKey = GameObjectFindShim.TraceKey };
-        });
         DebugServer.MapGet("/dump-localization", _ => ResourcesShim.DumpLocalization());
         DebugServer.MapGet("/load-res", req => ResourcesShim.LoadRes(req["path"] ?? ""));
         DebugServer.MapPost("/reload-resbundle", _ => {

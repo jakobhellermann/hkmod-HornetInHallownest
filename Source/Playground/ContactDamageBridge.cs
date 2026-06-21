@@ -39,7 +39,7 @@ internal static class ContactDamageBridge {
         }
 
         hook = new Hook(mi, (Hooked)OnCheckForDamage);
-        Log.Info("[ContactDamageBridge] installed: HeroBox.CheckForDamage");
+        Log.Debug("[ContactDamageBridge] installed: HeroBox.CheckForDamage");
     }
 
     private static void OnCheckForDamage(Orig orig, SHeroBox self, GameObject other) {

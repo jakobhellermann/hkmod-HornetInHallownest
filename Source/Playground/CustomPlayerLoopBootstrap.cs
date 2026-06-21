@@ -41,7 +41,7 @@ internal static class CustomPlayerLoopBootstrap {
 
             setup.Invoke(null, null);
             var ok = Contains(PlayerLoop.GetCurrentPlayerLoop(), lateType);
-            Log.Info($"[CustomPlayerLoop] installed LateFixedUpdate phase (present={ok})");
+            Log.Debug($"[CustomPlayerLoop] installed LateFixedUpdate phase (present={ok})");
         } catch (Exception e) {
             Log.Error($"[CustomPlayerLoop] {e}");
         }

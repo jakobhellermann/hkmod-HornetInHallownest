@@ -34,7 +34,7 @@ internal static class HeroControllerProbe {
     private static readonly Dictionary<string, int> distinctCallers = new();
     private static readonly HashSet<string> loggedCallerKeys = new();
 
-    internal static bool Enabled = true;
+    internal static bool Enabled = false;
 
     // Methods that are fine / already handled / not interesting — don't log (still hooked, just early-out).
     private static readonly HashSet<string> Denylist = new() {
@@ -60,7 +60,7 @@ internal static class HeroControllerProbe {
             }
         }
 
-        Log.Info($"[HeroControllerProbe] installed on {n} HK HeroController methods (log-only; while HornetActive)");
+        Log.Debug($"[HeroControllerProbe] installed on {n} HK HeroController methods (log-only; while HornetActive)");
     }
 
     private static void Prepend(ILContext il, string label) {

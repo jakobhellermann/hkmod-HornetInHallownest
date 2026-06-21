@@ -24,7 +24,7 @@ internal static class Tk2dClipShim {
         }
 
         hook = new Hook(mi, (Hooked)OnPlay);
-        Log.Info("[Tk2dClipShim] installed: tk2dSpriteAnimator.Play(string)");
+        Log.Debug("[Tk2dClipShim] installed: tk2dSpriteAnimator.Play(string)");
     }
 
     private static void OnPlay(Orig orig, tk2dSpriteAnimator self, string name) {

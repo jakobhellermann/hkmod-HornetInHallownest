@@ -24,19 +24,6 @@ internal static class ResourcesShim {
     private static AssetBundle? bundle;
     private static readonly HashSet<string> loggedMiss = new();
     private static readonly HashSet<string> loggedServe = new();
-    private static readonly HashSet<string> loggedShadow = new();
-
-    // Diagnostic: when HK's original Resources.Load serves a path that the Silksong bundle ALSO contains, that's a
-    // potential COLLISION — Silksong code calling this path silently gets HK's asset. Invisible normally (an orig hit
-    // logs nothing); with this on we log each such key once as SHADOWED to enumerate the real collision set hit at
-    // runtime (vs theoretical bundle∩HK). `Contains` is a cheap key lookup (no asset load). Default OFF — already used
-    // it once (load-save slot 1 → spawn-real, in a gameplay scene). FINDING: the only runtime
-    // collision is `PlayMakerPrefs` — loaded UNTYPED (`Resources.Load("PlayMakerPrefs")` → typeof(Object)), so HK's
-    // same-named asset wins and Silksong's `as PlayMakerPrefs` cast yields null. Benign (PlayMaker debug prefs, no
-    // crash). Everything else self-disambiguates: typed loads like `Resources.Load("PlayMakerGlobals",
-    // typeof(SilksongPM.PlayMakerGlobals))` miss HK (no asset of that Silksong type) and fall through to the bundle.
-    // Flip to true and reproduce if you suspect a new collision.
-    internal static bool LogShadowed = true;
 
     internal static void Install() {
         if (hook != null) return;
@@ -50,11 +37,11 @@ internal static class ResourcesShim {
             return;
         }
 
-        hook = new Hook(mi, (Func<Func<string, Type, Object>, string, Type, Object>)Detour);
-        Log.Info("[ResShim] installed Resources.Load(string,Type) hook");
+        hook = new Hook(mi, (Func<Func<string, Type?, Object>, string, Type, Object?>)Detour);
+        Log.Debug("[ResShim] installed Resources.Load(string,Type) hook");
     }
 
-    private static Object Detour(Func<string, Type, Object> orig, string path, Type type) {
+    private static Object? Detour(Func<string, Type?, Object> orig, string path, Type? type) {
         if (bundle == null || string.IsNullOrEmpty(path)) return orig(path, type);
 
         if (SilksongContext.Active) {
@@ -62,29 +49,29 @@ internal static class ResourcesShim {
             // caller — unreliable via the MonoMod trampoline); HK's loads happen outside the window. See SilksongContext.
             var served = ServeFromBundle(path, type);
             if (served != null) return served;
+
+            if (path.StartsWith("Languages/"))
+                // startup noise of silksong 
+                return null;
+
+            Log.Error($"[Resources.Load] MISS '{path}' as {type?.Name} could not be served from silksong Resources");
             var res = orig(path, type);
             if (res == null && loggedMiss.Add(path.ToLowerInvariant()))
-                Log.Error($"[Resources.Load] MISS '{path}' as {type?.Name} (not in bundle, prefer-bundle)");
+                Log.Error(
+                    $"[Resources.Load] MISS '{path}' as {type?.Name} could not be served from hollowknight Resources either");
             return res;
         }
 
         // Default: HK's original wins; only fall back to the bundle on a miss.
         var orig0 = orig(path, type);
-        if (orig0 != null) {
-            if (LogShadowed) {
-                var k = path.ToLowerInvariant();
-                if (bundle.Contains(k) && loggedShadow.Add(k))
-                    Log.Info(
-                        $"[Resources.Load] SHADOWED '{path}' as {type?.Name} — served by HK, Silksong bundle also has it");
-            }
-
-            return orig0;
-        }
+        if (orig0 != null) return orig0;
 
         var bundleAsset = ServeFromBundle(path, type);
         if (bundleAsset != null) return bundleAsset;
         if (loggedMiss.Add(path.ToLowerInvariant()))
-            Log.Error($"[Resources.Load] MISS '{path}' as {type?.Name} (not in bundle)");
+            Log.Error(
+                $"[Resources.Load] NULL '{path}' as {type?.Name} was loaded as null from hk context but is present in hkss. Are you missing SilksongContext?");
+
         return orig0;
     }
 
@@ -92,7 +79,7 @@ internal static class ResourcesShim {
     // MonoBehaviours to the Silksong.* types via the bundle's embedded, remapped monoscripts + per-entry preload table.
     // Returns null on a bundle miss; logs each distinct SERVE once. MISS logging is the caller's job (it depends on
     // whether the original also missed).
-    private static Object? ServeFromBundle(string path, Type type) {
+    private static Object? ServeFromBundle(string path, Type? type) {
         var key = path.ToLowerInvariant();
         Object served;
         try {
@@ -103,7 +90,7 @@ internal static class ResourcesShim {
         }
 
         if (served != null && loggedServe.Add(key))
-            Log.Info($"[Resources.Load] SERVE '{path}' as {type?.Name} <- silksong-resources.bundle");
+            Log.Debug($"[Resources.Load] SERVE '{path}' as {type?.Name} <- silksong-resources.bundle");
         return served;
     }
 
@@ -117,7 +104,6 @@ internal static class ResourcesShim {
 
         loggedMiss.Clear();
         loggedServe.Clear();
-        loggedShadow.Clear();
     }
 
     // Debug: reload silksong-resources.bundle from disk WITHOUT touching the hook, so we can iterate on the bundle
@@ -130,7 +116,6 @@ internal static class ResourcesShim {
 
         loggedMiss.Clear();
         loggedServe.Clear();
-        loggedShadow.Clear();
         bundle = AssetBundle.LoadFromFile(BundlePath);
         Log.Info(bundle != null
             ? $"[ResShim] reloaded bundle ({bundle.GetAllAssetNames().Length} assets)"
@@ -160,6 +145,7 @@ internal static class ResourcesShim {
             return new {
                 error = "type TeamCherry.Localization.LocalizationSettings (Silksong.TeamCherryLocalization) not found"
             };
+        // ReSharper disable once Unity.UnknownResource
         var so = Resources.Load("Languages/LocalizationSettings", t);
         if (so == null) return new { error = "Resources.Load returned null", bundleLoaded = bundle != null };
         var f = t.GetField("sheetTitles", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);

@@ -29,10 +29,6 @@ internal static class GameObjectFindShim {
     // (fail loud — never silently hand Silksong code HK's same-named object). Otherwise (HK's own code) lookups pass
     // through to Unity unchanged.
 
-    // One-off diagnostic: set to a name/tag (e.g. "CameraTarget") to dump the managed call stack ONCE when that
-    // lookup fires — reveals WHO calls it (the FSM action / component). Set via /find-trace?key=CameraTarget.
-    internal static string? TraceKey;
-
     // Known Silksong TAGS -> the Silksong object they should resolve to (tag namespace, used by FindWithTag).
     private static GameObject? ResolveTag(string tag) {
         return tag switch {
@@ -73,7 +69,6 @@ internal static class GameObjectFindShim {
     }
 
     private static GameObject FindDetour(Func<string, GameObject> orig, string name) {
-        MaybeTrace(name);
         if (SilksongContext.Active) return Intercept("Find", name, ResolveName(name))!;
         var r = orig(name);
         LogOnce("Find", name, r);
@@ -81,29 +76,26 @@ internal static class GameObjectFindShim {
     }
 
     private static GameObject TagDetour(Func<string, GameObject> orig, string tag) {
-        MaybeTrace(tag);
         // While Hornet is the active hero, "Player" must resolve to HER. Both the Knight and Hornet_Real carry the
         // "Player" tag, so Unity's FindGameObjectWithTag returns whichever it finds first (nondeterministic). HK enemy
         // aggro/chase FSMs do FindWithTag("Player") ONCE, then cache + track that transform — if they grabbed the inert
         // Knight they fly to it (this is the chase consumer the HeroControllerProbe can't see: it reads the tag, not a
         // HeroController method). Redirect the tag to the active hero. HK systems that specifically need the Knight use
         // HeroController.instance / UnsafeInstance directly (not the tag), so this only steers the tag-based "who is the
-        // player" consumers. Only "Player", only while HornetActive (when the Knight is active we leave native behaviour).
+        // player" consumers. Only "Player", only while HornetActive (when the Knight is active we leave native behavior).
         if (tag == "Player" && HeroSwitch.HornetActive && HeroSwitch.ActiveHeroGameObject is { } hero) {
-            if (logged.Add("playerredirect"))
-                Log.Info(
-                    "[Find] FindWithTag('Player') -> REDIRECT 'Hornet' (HornetActive; was nondeterministic Knight/Hornet)");
+            Log.Info("[Find] FindWithTag('Player') -> REDIRECT to Hornet");
             return hero;
         }
 
         if (SilksongContext.Active) return Intercept("FindWithTag", tag, ResolveTag(tag))!;
+
         GameObject r;
         try {
             r = orig(tag);
         } catch (Exception e) {
             // Tag not defined in HK's tag manager -> UnityException. "Not found" == null; don't crash the frame.
-            if (logged.Add("tagthrow:" + tag))
-                Log.Error($"[Find] FindWithTag('{tag}') threw {e.GetType().Name} (tag not defined in HK) -> null");
+            Log.Error($"[Find] FindWithTag('{tag}') threw {e.GetType().Name} (tag not defined in HK) -> null");
             return null!;
         }
 
@@ -114,19 +106,10 @@ internal static class GameObjectFindShim {
     // In Silksong context: resolve known keys to the Silksong object; block the rest to null (+log once) so Silksong
     // code never silently picks up HK's same-named object. Unknown blocks are the to-do list for the Resolve() map.
     private static GameObject? Intercept(string method, string key, GameObject? redirect) {
-        if (logged.Add("ctx:" + method + "|" + key))
-            Log.Info(redirect != null
-                ? $"[Find] {method}('{key}') -> REDIRECT '{redirect.name}' (silksong-context)"
-                : $"[Find] {method}('{key}') -> null (silksong-context, no Resolve mapping — BLOCKED; add to map if needed)");
+        Log.Info(redirect != null
+            ? $"[Find] {method}('{key}') -> REDIRECT '{redirect.name}' (silksong-context)"
+            : $"[Find] {method}('{key}') -> null (silksong-context, no Resolve mapping — BLOCKED; add to map if needed)");
         return redirect;
-    }
-
-    private static void MaybeTrace(string key) {
-        try {
-            if (TraceKey == null || key != TraceKey || !logged.Add("trace:" + key)) return;
-            Log.Info($"[Find] CALLER of '{key}':\n{Environment.StackTrace}");
-        } catch {
-        }
     }
 
     private static void LogOnce(string method, string key, GameObject? result) {

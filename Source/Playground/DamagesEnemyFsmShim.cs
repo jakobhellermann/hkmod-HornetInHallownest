@@ -44,7 +44,7 @@ internal static class DamagesEnemyFsmShim {
         if (locate != null) locateHook = new Hook(locate, (Hooked)OnLookup);
         else Log.Error("[DamagesEnemyFsmShim] FSMUtility.LocateFSM not found");
 
-        Log.Info("[DamagesEnemyFsmShim] installed: FindFsmOnGameObject + FSMUtility.LocateFSM");
+        Log.Debug("[DamagesEnemyFsmShim] installed: FindFsmOnGameObject + FSMUtility.LocateFSM");
     }
 
     private static PlayMakerFSM OnLookup(Orig orig, GameObject go, string fsmName) {

@@ -43,7 +43,7 @@ internal static class GetComponentShim {
 
                 return null;
             }));
-        Log.Info("[GetComponentShim] installed: GameObject.GetComponent(string) name-match fallback on null");
+        Log.Debug("[GetComponentShim] installed: GameObject.GetComponent(string) name-match fallback on null");
     }
 
     internal static void Cleanup() {

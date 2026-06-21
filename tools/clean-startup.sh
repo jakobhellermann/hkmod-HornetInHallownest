@@ -10,7 +10,7 @@
 # rotation-aware, so it follows Unity truncating Player.log on relaunch.
 #
 # Usage:  tools/clean-startup.sh [slot]      # slot defaults to 1 ("level 1")
-set -u
+set -eu
 
 GAME_DIR="/home/jakob/.steamapps/Hollow Knight"   # symlink -> ~/.local/share/Steam/steamapps/common/Hollow Knight
 GAME_BIN="$GAME_DIR/hollow_knight.x86_64"
@@ -25,6 +25,8 @@ if pkill -f hollow_knight.x86_64 2>/dev/null; then
     echo "killed running Hollow Knight"
     sleep 1   # let it release the window / log file before relaunch
 fi
+
+dotnet build
 
 # 1. Launch detached so the game survives this script exiting.
 cd "$GAME_DIR" || { echo "game dir not found: $GAME_DIR" >&2; exit 1; }

@@ -57,7 +57,7 @@ internal static class InventoryPauseBridge {
                         Log.Error($"[InvPause] {e}");
                     }
                 }));
-            Log.Info("[InvPause] installed (Silksong GameManager.SetIsInventoryOpen -> HK pause)");
+            Log.Debug("[InvPause] installed (Silksong GameManager.SetIsInventoryOpen -> HK pause)");
         } catch (Exception e) {
             Log.Error($"[InvPause] install: {e.Message}");
         }

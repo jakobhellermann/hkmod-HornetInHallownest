@@ -29,7 +29,7 @@ internal static class InputBridge {
         go = new GameObject("HornetPlayer.InputDriver");
         go.AddComponent<InputDriver>();
         Object.DontDestroyOnLoad(go);
-        Log.Info("[InputBridge] InputDriver installed (arrows=move, Z=jump, X=attack, C=dash)");
+        Log.Debug("[InputBridge] InputDriver installed (arrows=move, Z=jump, X=attack, C=dash)");
     }
 
     internal static void Cleanup() {

@@ -87,7 +87,7 @@ internal static class HeroSwitch {
             (Func<Func<HeroController, string, bool>, HeroController, string, bool>)((orig, self, s) =>
                 HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.GetState(s) : orig(self, s)));
 
-        Log.Info("[HeroSwitch] installed (Tab toggles Knight<->Hornet; /switch route)");
+        Log.Debug("[HeroSwitch] installed (Tab toggles Knight<->Hornet; /switch route)");
     }
 
     internal static void Cleanup() {

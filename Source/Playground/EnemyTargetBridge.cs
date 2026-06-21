@@ -28,7 +28,7 @@ internal static class EnemyTargetBridge {
         }
 
         losHook = new Hook(mi, (Action<Action<LineOfSightDetector>, LineOfSightDetector>)OnLosUpdate);
-        Log.Info("[EnemyTargetBridge] installed: LineOfSightDetector.Update -> active hero position");
+        Log.Debug("[EnemyTargetBridge] installed: LineOfSightDetector.Update -> active hero position");
 
         // The DOMINANT enemy hero-caching path: the `GetHero` PlayMaker action stores HeroController.instance (= the
         // Knight) into a per-FSM LOCAL "Hero" var, ONCE at the enemy's Initialise (census: 2367 usages, all local).
@@ -43,7 +43,7 @@ internal static class EnemyTargetBridge {
         }
 
         getHeroHook = new Hook(gh, (Action<Action<GetHero>, GetHero>)OnGetHero);
-        Log.Info("[EnemyTargetBridge] installed: GetHero -> active hero");
+        Log.Debug("[EnemyTargetBridge] installed: GetHero -> active hero");
     }
 
     private static void OnGetHero(Action<GetHero> orig, GetHero self) {

@@ -27,7 +27,7 @@ internal static class PogoNonBounceShim {
         }
 
         hook = new Hook(mi, (Hooked)OnIsNonBounce);
-        Log.Info("[PogoNonBounceShim] installed: HeroDownAttack.IsNonBounce");
+        Log.Debug("[PogoNonBounceShim] installed: HeroDownAttack.IsNonBounce");
     }
 
     private static bool OnIsNonBounce(Orig orig, GameObject obj) {

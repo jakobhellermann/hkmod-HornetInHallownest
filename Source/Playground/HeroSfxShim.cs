@@ -80,7 +80,7 @@ internal static class HeroSfxShim {
                 MakeRaw2D(self.GetComponent<AudioSource>());
             }));
 
-        Log.Info($"[HeroSfx] installed {hooks.Count} hooks -> 2D hero SFX");
+        Log.Debug($"[HeroSfx] installed {hooks.Count} hooks -> 2D hero SFX");
     }
 
     private static void HookMethod(Type type, string name, BindingFlags flags, Type[] sig, Delegate replacement) {
