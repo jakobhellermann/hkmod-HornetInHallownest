@@ -120,6 +120,17 @@ internal static class Stub {
         // These are MAP unlock indicators in the inventory; with no map they're correctly "locked" -> get_IsUnlocked
         // returns false (default), which also makes IsAutoNavSelectable false so OnEnable's EvaluateAutoNav skips them.
         Skip(typeof(Silksong::InventoryItemWideMapZone), "get_IsUnlocked");
+        // Inventory QUEST pane: InventoryPaneList.Start re-activates every pane (incl. the out-of-scope quest pane), and
+        // InventoryItemQuestManager.GetItems does `<quests>.Where(...)` on a null source (quest subsystem not brought up)
+        // -> ArgumentNullException, thrown from QuestItemManager.Awake -> base InventoryItemListManager.Awake ->
+        // UpdateList -> GetItems. Skip the quest manager's Awake so base.Awake (UpdateList) never runs -> null source
+        // never touched. No quests -> empty quest pane (out of scope; sibling to the map-zone skip above).
+        Skip(typeof(Silksong::QuestItemManager), "Awake");
+        // Inventory MAP pane: InventoryMapManager.OnPaneStart -> InventoryWideMap.UpdatePositions -> get_PositionOffset
+        // -> GameMap.IsLostInAbyssPostMap -> IsLostInAbyssBase NullRef (GameMap uninitialized; map subsystem out of
+        // scope). OnPaneStart is called directly from Awake AND subscribed to pane.OnPaneStart; skipping it covers both.
+        // The map pane stays inert (nothing to position).
+        Skip(typeof(Silksong::InventoryMapManager), "OnPaneStart");
         // Inventory open is decoupled from Silksong's global pause (chosen "overlay" approach): GameManager.SetPausedState
         // does SetTimeScale(0) — which would freeze HK's world AND our InputDriver (it bails at timeScale<=0, so the
         // inventory couldn't be navigated) — plus gameCams.StopCameraShake()/ui.AudioGoToPauseMenu() (HK owns time/pause/
