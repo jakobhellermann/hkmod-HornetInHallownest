@@ -70,10 +70,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 StuckEntryWatch(hero);
             }
 
-            // TESTING: infinite silk so silk-cost abilities always fire.
-            var pd = Silksong::PlayerData.instance;
-            if (pd != null) pd.silk = pd.silkMax;
-
             // --- The bookkeeping half of InputHandler.Update ---
             // InputHandler.Update never ticks (its GO is inactive). Its body splits cleanly in two: per-frame
             // bookkeeping the hero pipeline needs, and environment coupling we deliberately reject (SetCursorVisible

@@ -27,6 +27,10 @@ internal enum ActiveHero {
 // hero_ctrl is left as the Knight (non-null; CameraTarget only null-checks it, CameraController uses it for the
 // cosmetic look-up/down offset) so we don't disturb HK's camera bring-up.
 internal static class HeroSwitch {
+    // When true, the inactive hero is hidden (its sprite MeshRenderer disabled) instead of left visible-but-frozen, so a
+    // switch shows only the active character. Toggle off to see both (the old debug behaviour).
+    private const bool HideInactiveHero = true;
+
     private static GameObject? go;
     private static FieldInfo? heroTransformField;
     private static Hook? canInteractHook;
@@ -183,6 +187,14 @@ internal static class HeroSwitch {
 
         var rb = hero.GetComponent<Rigidbody2D>();
         if (rb != null) rb.simulated = !inert;
+
+        // Hide the inactive hero so a switch shows only the active character (tk2d heroes are a single sprite/MeshRenderer
+        // on the root — toggling it hides/shows the whole body). The death-revive's own renderer re-enable still wins when
+        // she's the active hero. Gated on the const so the visible-both debug behaviour is one flip away.
+        if (HideInactiveHero) {
+            var mr = hero.GetComponent<MeshRenderer>();
+            if (mr != null) mr.enabled = !inert;
+        }
 
         // Freeze animation while inert. The DRIVER (HeroAnimationController, both games) must go first: it runs every
         // frame independently of HeroController and calls Play() -> dereferences animator.CurrentClip.name. We then
