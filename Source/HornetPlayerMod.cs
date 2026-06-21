@@ -54,6 +54,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         PogoNonBounceShim.Cleanup();
         ContactDamageBridge.Cleanup();
         HornetDeath.Cleanup();
+        HornetBench.Cleanup();
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
         GetComponentShim.Cleanup();
@@ -126,6 +127,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             return new { ok = true, slot };
         });
         DebugServer.MapPost("/kill", _ => HornetDeath.Kill()); // debug: trigger Hornet death (real damage path)
+        DebugServer.MapGet("/bench-state", _ => BundleSpike.BenchState()); // debug: atBench signal + Hornet sit clips
         DebugServer.MapPost("/switch", req => {
             var who = (req["who"] ?? "").ToLowerInvariant();
             return who switch {
@@ -169,6 +171,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         ContactDamageBridge
             .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
+        HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
         FreezeMomentFix.Install();
         FsmTracer.Install();            // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         GetComponentShim.Install();     // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)

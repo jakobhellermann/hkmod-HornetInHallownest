@@ -290,6 +290,34 @@ internal static class BundleSpike {
         };
     }
 
+    // Bench diagnostics: HK's atBench signal (set by HK's Bench Control FSM when resting), Knight/Hornet positions, and
+    // Hornet's live animation clips (filtered to rest/sit/bench) — to confirm the mirror signal + the real sit-clip names
+    // for HornetBench. Capture during a held rest.
+    internal static object BenchState() {
+        var hc = RealHero;
+        var knight = HeroController.UnsafeInstance;
+        var pdHk = PlayerData.instance; // HK PlayerData — atBench is HK's
+        var anim = hc != null ? hc.AnimCtrl?.animator : null;
+        string[] restClips = Array.Empty<string>();
+        if (anim?.Library?.clips != null)
+            restClips = anim.Library.clips
+                .Where(c => c != null && c.name != null &&
+                            (c.name.IndexOf("rest", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             c.name.IndexOf("sit", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             c.name.IndexOf("bench", StringComparison.OrdinalIgnoreCase) >= 0))
+                .Select(c => c.name).ToArray();
+
+        return new {
+            atBench = pdHk != null && pdHk.atBench,
+            knightPos = knight != null ? (Vector2)knight.transform.position : (Vector2?)null,
+            hornetPos = hc != null ? (Vector2)hc.transform.position : (Vector2?)null,
+            hornetClip = anim?.CurrentClip?.name,
+            hornetControlReq = hc?.controlReqlinquished,
+            totalClips = anim?.Library?.clips?.Length ?? 0,
+            restClips
+        };
+    }
+
     // READ-ONLY input/dash diagnostics: enabled-state + CanDash() (a pure query) + its gating fields. Does NOT invoke
     // Update/LookForInput/HeroDashPressed — those mutate hero state (and Update's FailSafeChecks can destroy the hero).
     internal static object DiagInput() {
