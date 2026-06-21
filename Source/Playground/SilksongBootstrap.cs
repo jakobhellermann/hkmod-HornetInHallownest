@@ -1,4 +1,5 @@
 extern alias Silksong;
+extern alias SilksongPM;
 using System;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -174,6 +175,21 @@ internal static class SilksongBootstrap {
             Silksong::GameManager._instance = gm;
             gm.isPaused = false;
             gm.playerData = pd;
+
+            // Replicate the ONE line of GameManager.Awake we otherwise skip — it runs AFTER SetupGameRefs (decomp
+            // GameManager.cs:502): set the PlayMaker GLOBAL GameObject var "GameManager" to the GM GO. FSMs resolve a
+            // CallMethodProper's target via this global (FsmOwnerDefault -> global "GameManager"); without it the target
+            // is null and the call silently no-ops. Concretely this is what lets the Inventory Control FSM's
+            // SetIsInventoryOpen reach a target (-> InventoryPauseBridge's hooked HK pause). Uses the ISOLATED
+            // Silksong.PlayMaker runtime's globals (its PlayMakerGlobals, separate from HK's shared one).
+            try {
+                var gmVar = SilksongPM::PlayMakerGlobals.Instance?.Variables
+                    ?.FindFsmGameObject("GameManager");
+                if (gmVar != null) gmVar.Value = gmGo;
+                else Log.Error("[Bootstrap] PlayMaker global 'GameManager' var not found");
+            } catch (Exception e) {
+                Log.Error($"[Bootstrap] PlayMaker global GameManager: {e.Message}");
+            }
             // gm.GameState (LookForInput gates on == PLAYING) is maintained per-frame by HornetEnvironmentAdapter,
             // which also mirrors HK's pause onto it — so it's not set here.
 

@@ -56,6 +56,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
         GetComponentShim.Cleanup();
+        InventoryPauseBridge.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
@@ -168,6 +169,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         FreezeMomentFix.Install();
         FsmTracer.Install();            // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         GetComponentShim.Install();     // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
+        InventoryPauseBridge.Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
         // BundleSpike.Run();
 
         // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so

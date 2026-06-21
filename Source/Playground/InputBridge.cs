@@ -78,8 +78,13 @@ internal sealed class InputDriver : MonoBehaviour {
                 }
             }
 
-            // Don't drive input while HK is paused (HornetEnvironmentAdapter mirrors PAUSED to her GameManager).
-            if (Time.timeScale <= 0.0001f) return;
+            // Don't drive input while HK is paused (HornetEnvironmentAdapter mirrors PAUSED to her GameManager) —
+            // EXCEPT while the inventory is open: InventoryPauseBridge sets timeScale=0 to freeze the world, but the
+            // inventory FSM still reads inputActions to navigate/close, so keep feeding input in that case. The hero's
+            // own input blocker (added in the bridge) stops her from acting on it, so only the inventory consumes it.
+            var pd = Silksong::PlayerData.instance;
+            var inventoryOpen = pd != null && pd.isInventoryOpen;
+            if (Time.timeScale <= 0.0001f && !inventoryOpen) return;
             // Only feed Hornet's actions while she's the active character; otherwise HK's Knight is in control.
             if (!HeroSwitch.HornetActive) return;
 
