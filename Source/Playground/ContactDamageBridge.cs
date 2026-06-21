@@ -42,6 +42,13 @@ internal static class ContactDamageBridge {
     private static void OnCheckForDamage(Orig orig, SHeroBox self, GameObject other) {
         orig(self, other); // Silksong damagers (no-op for HK objects)
         if (other == null || self == null) return;
+        // Only hurt Hornet while she's the ACTIVE hero. When she's inert (Knight active) "inert" only flips
+        // HeroController.enabled + rb.simulated + freezes anim — her HeroBox/colliders/GameObject stay live and
+        // HeroController.instance still points at her, so this hook would otherwise fire on overlap. TakeDamage is a
+        // plain method call (enabled=false doesn't gate it) and StartCoroutine(StartRecoil) ticks while the GO is active,
+        // so it turns gravity OFF + sets no_input — but the FixedUpdate-driven recovery is gated by enabled, never runs
+        // while inert, and leaves her stranded floating in no_input on the next switch. So: no contact damage while inert.
+        if (!HeroSwitch.HornetActive) return;
         try {
             // HK's "damages_hero" FSM takes priority (some hazards drive damage through it), else HK's DamageHero data comp.
             int dmg = 0, hazard = (int)SHazard.ENEMY;
