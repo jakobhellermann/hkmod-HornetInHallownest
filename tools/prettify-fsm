@@ -1,0 +1,337 @@
+#!/usr/bin/env python3
+"""Pretty-print a PlayMaker FSM dumped by `rabex ... object <ref> cat`, WITH action parameters.
+
+Reads the rabex JSON from stdin (or a file arg) and renders the full graph plus, per state, each
+action's class AND its resolved parameters — the `actionData` parallel-array encoding decoded back into
+"field = value" per action. That's the part `fsm.py --actions` (class names only) and rabex itself
+(flat per-type arrays, not associated with actions) leave on the table.
+
+    rabex --steam-game silksong addressable Hero_Hornet file object 'Hero_Hornet@PlayMakerFSM:5' cat | tools/prettify-fsm
+    rabex --steam-game hollow scene Town object 4331 cat | tools/prettify-fsm
+    tools/prettify-fsm /tmp/fsm.json
+
+How actionData is encoded (so the output is trustworthy):
+  - actionNames[i]              the action CLASS, in order.
+  - actionStartIndex[i..i+1]    slice of the param index arrays belonging to action i.
+  - paramName/paramDataType/paramDataPos[j]   one entry per param, across ALL actions of the state.
+  - paramDataType is the ParamDataType enum. REFERENCE types (FsmString, FsmOwnerDefault, FsmVar, …)
+    store the value in a typed array (fsmStringParams, …) and paramDataPos is the INDEX into it.
+    VALUE types (Boolean, Integer, Float, and the Fsm* value-wrappers/events) are packed into the flat
+    `byteData` byte list and paramDataPos is the BYTE OFFSET (paramByteDataSize = length).
+We decode reference params exactly, fixed primitives (bool/int/float/enum) from byteData, and for the
+remaining packed Fsm-wrappers we surface the bound variable name / inline string by pulling printable
+ASCII out of the byte slice (PlayMaker stores it there) — enough to read intent.
+"""
+import json
+import os
+import struct
+import sys
+
+# Subtle colors for the core concepts (auto-off when piped / NO_COLOR / --no-color):
+#   event = yellow, state = cyan, action = green, variable = magenta, type = dim.
+_COLOR = "--color" in sys.argv or (
+    sys.stdout.isatty() and os.environ.get("NO_COLOR") is None and "--no-color" not in sys.argv)
+
+
+def _c(code, s):
+    return f"\033[{code}m{s}\033[0m" if _COLOR else s
+
+
+def EVENT(s): return _c("33", s)
+def STATE(s): return _c("36", s)
+def ACTION(s): return _c("32", s)
+def VAR(s): return _c("35", s)
+def DIM(s): return _c("2", s)
+
+# ParamDataType enum, in declaration order (= int value). From HutongGames.PlayMaker/ParamDataType.cs.
+PARAM_TYPES = [
+    "Integer", "Boolean", "Float", "String", "Color", "ObjectReference", "LayerMask", "Enum",
+    "Vector2", "Vector3", "Vector4", "Rect", "Array", "Character", "AnimationCurve", "FsmFloat",
+    "FsmInt", "FsmBool", "FsmString", "FsmGameObject", "FsmOwnerDefault", "FunctionCall",
+    "FsmAnimationCurve", "FsmEvent", "FsmObject", "FsmColor", "Unsupported", "GameObject",
+    "FsmVector3", "LayoutOption", "FsmRect", "FsmEventTarget", "FsmMaterial", "FsmTexture",
+    "Quaternion", "FsmQuaternion", "FsmProperty", "FsmVector2", "FsmTemplateControl", "FsmVar",
+    "CustomClass", "FsmArray", "FsmEnum",
+]
+
+# Reference types: paramDataPos indexes the named typed array (we decode the value exactly).
+REF_ARRAY = {
+    "String": "stringParams", "FsmString": "fsmStringParams", "FsmGameObject": "fsmGameObjectParams",
+    "FsmOwnerDefault": "fsmOwnerDefaultParams", "FsmObject": "fsmObjectParams", "FsmVar": "fsmVarParams",
+    "FsmArray": "fsmArrayParams", "FsmEventTarget": "fsmEventTargetParams", "FsmProperty": "fsmPropertyParams",
+    "FsmTemplateControl": "fsmTemplateControlParams", "ObjectReference": "unityObjectParams",
+    "GameObject": "unityObjectParams", "FunctionCall": "functionCallParams", "LayoutOption": "layoutOptionParams",
+    "AnimationCurve": "animationCurveParams", "FsmMaterial": "fsmObjectParams", "FsmTexture": "fsmObjectParams",
+}
+
+
+def find_fsm(o):
+    if isinstance(o, dict):
+        if "states" in o and "startState" in o:
+            return o
+        for v in o.values():
+            r = find_fsm(v)
+            if r:
+                return r
+    elif isinstance(o, list):
+        for v in o:
+            r = find_fsm(v)
+            if r:
+                return r
+    return None
+
+
+def ev(t):
+    e = t.get("fsmEvent")
+    name = e.get("name") if isinstance(e, dict) else None
+    return name or t.get("eventName") or "?"
+
+
+def ascii_runs(bs, lo, size, minlen=2):
+    """Printable-ASCII substrings in byteData[lo:lo+size] — surfaces packed var names / inline strings."""
+    out, cur = [], []
+    for b in bs[lo:lo + size]:
+        if 32 <= b < 127:
+            cur.append(chr(b))
+        else:
+            if len(cur) >= minlen:
+                out.append("".join(cur))
+            cur = []
+    if len(cur) >= minlen:
+        out.append("".join(cur))
+    return out
+
+
+def fmt_ref(typ, val):
+    """Render a reference-array entry compactly."""
+    if not isinstance(val, dict):
+        return repr(val)
+    if typ == "FsmOwnerDefault":
+        go = val.get("gameObject", {})
+        if val.get("ownerOption") == 0:
+            return "Owner (Self)"
+        nm = go.get("name")
+        return f'var {nm!r}' if nm else "<unset GO>"
+    if typ == "FsmEventTarget":
+        # EventTarget enum order: Self GameObject GameObjectFSM FSMComponent BroadcastAll HostFSM SubFSMs.
+        kinds = {0: "Self", 1: "GameObject", 2: "GameObjectFSM", 3: "FSMComponent",
+                 4: "BroadcastAll", 5: "HostFSM", 6: "SubFSMs"}
+        t = val.get("target")
+        bits = []
+        if t in (1, 2):  # GameObject / GameObjectFSM -> which GO (an FsmOwnerDefault)
+            go = val.get("gameObject") or {}
+            if go.get("ownerOption") == 0:
+                bits.append("Owner")
+            else:
+                gv = (go.get("gameObject") or {})
+                bits.append(f"var {gv['name']!r}" if gv.get("name") else "<unset>")
+        fn = val.get("fsmName")
+        fn = fn.get("value") if isinstance(fn, dict) else fn  # fsmName is an FsmString
+        if fn:
+            bits.append(f"fsm={fn!r}")
+        return kinds.get(t, f"target={t}") + (f"({', '.join(bits)})" if bits else "")
+    if typ == "FunctionCall":
+        pt = val.get("parameterType")
+        return f"{val.get('FunctionName')}()" if pt in (None, "None") else f"{val.get('FunctionName')}(<{pt}>)"
+    if typ == "FsmTemplateControl":  # RunFSM: sub-template + its variable/event wiring
+        # inputs flow parent -> template (templateVar <- parentVar); outputs template -> parent (->).
+        def _vmap(entries, arrow):
+            out = []
+            for e in entries or []:
+                tv = (e.get("variable") or {}).get("name")
+                b = (e.get("fsmVar") or {}).get("variableName")
+                out.append(f"{tv}{arrow}var {b!r}" if b else str(tv))
+            return out
+        tgt = (val.get("target") or {}).get("m_PathID")
+        parts = [f"template={tgt}"]
+        for label, key, arrow in (("in", "inputVariables", "<-"), ("out", "outputVariables", "->")):
+            m = _vmap(val.get(key), arrow)
+            if m:
+                parts.append(f"{label}[{', '.join(m)}]")
+        evs = [f"{(e.get('fromEvent') or {}).get('name')}->{(e.get('toEvent') or {}).get('name')}"
+               for e in val.get("outputEvents", [])]
+        if evs:
+            parts.append(f"events[{', '.join(evs)}]")
+        return " ".join(parts)
+    if typ == "FsmVar":
+        nm = val.get("variableName")
+        if nm:
+            return f'var {nm!r}'
+        # inline constant — pick the value field by VariableType (so False/0/"" still render; -1=unused).
+        vt = val.get("type")
+        if vt in (None, -1):
+            return "(unused)"
+        if vt == 0:
+            return f"{val.get('floatValue', 0):g}"
+        if vt == 1:
+            return str(val.get("intValue", 0))
+        if vt == 2:
+            return str(bool(val.get("boolValue", 0)))
+        if vt == 4:
+            return repr(val.get("stringValue", ""))
+        if vt == 14:
+            return f"enum({val.get('intValue', 0)})"
+        if vt in (3, 9, 10, 12):  # GameObject/Material/Texture/Object
+            pid = (val.get("objectReference") or {}).get("m_PathID")
+            return f"PPtr({pid})" if pid else "<null>"
+        if vt in (5, 6, 7, 8, 11):  # vector/color/rect/quaternion
+            v = val.get("vector4Value") or {}
+            return "(" + ",".join(f"{v.get(k, 0):g}" for k in ("x", "y", "z", "w")) + ")"
+        return "<inline>"
+    if typ in ("FsmString", "String"):
+        if val.get("useVariable") and val.get("name"):
+            return f'var {val["name"]!r}'
+        return repr(val.get("value", ""))
+    if typ in ("FsmGameObject", "FsmObject", "ObjectReference", "GameObject", "FsmMaterial", "FsmTexture"):
+        if val.get("useVariable") and val.get("name"):
+            return f'var {val["name"]!r}'
+        ref = val.get("value") if isinstance(val.get("value"), dict) else val
+        pid = ref.get("m_PathID") if isinstance(ref, dict) else None
+        return f"PPtr({pid})" if pid else val.get("name") or "<null>"
+    # fallback: name if it's a variable ref, else a boilerplate-stripped compact dump (NOT truncated).
+    if val.get("useVariable") and val.get("name"):
+        return f'var {val["name"]!r}'
+    return json.dumps(_strip(val), separators=(",", ":"))
+
+
+# PlayMaker serializes every variable/param with these editor-only fields — strip them so the compact
+# fallback shows the meaningful content in full instead of a JSON wall truncated mid-structure.
+_BOILER = {"tooltip", "showInInspector", "networkSync", "useVariable", "objectType", "objectTypeName",
+           "category", "categoryIDs", "m_FileID"}
+
+
+def _strip(o):
+    if isinstance(o, dict):
+        out = {}
+        for k, v in o.items():
+            if k in _BOILER:
+                continue
+            v = _strip(v)
+            if v in ("", None, [], {}):
+                continue
+            out[k] = v
+        return out
+    if isinstance(o, list):
+        return [_strip(x) for x in o]
+    return o
+
+
+def decode_byte(typ, bs, pos, size):
+    if bs is None:
+        return "<no byteData>"
+    if typ == "Boolean":
+        return str(bool(bs[pos])) if size >= 1 else "?"
+    if typ in ("Integer", "Enum", "LayerMask") and size >= 4:
+        return str(struct.unpack_from("<i", bytes(bs[pos:pos + 4]))[0])
+    if typ == "Float" and size >= 4:
+        return f"{struct.unpack_from('<f', bytes(bs[pos:pos + 4]))[0]:g}"
+    if typ == "FsmEvent" and size == 0:
+        return "(none)"
+    # Fsm scalar wrappers pack as [value(valsize)][useVariable(1)][name(rest)] (verified for FsmBool;
+    # FsmInt/FsmFloat follow the same scheme). useVariable -> bound to a named var; else an inline constant.
+    if typ in ("FsmBool", "FsmInt", "FsmFloat"):
+        valsize = 1 if typ == "FsmBool" else 4
+        if size > valsize and bs[pos + valsize]:  # useVariable byte set -> bound
+            name = "".join(chr(b) for b in bs[pos + valsize + 1:pos + size] if 32 <= b < 127)
+            return f"var {name!r}" if name else "<var>"
+        if size < valsize:
+            return f"({typ}, {size}B packed)"
+        if typ == "FsmBool":
+            return str(bool(bs[pos]))
+        if typ == "FsmInt":
+            return str(struct.unpack_from("<i", bytes(bs[pos:pos + 4]))[0])
+        return f"{struct.unpack_from('<f', bytes(bs[pos:pos + 4]))[0]:g}"
+    # other packed wrappers (events, vectors, color, …): surface embedded var name / string, else mark.
+    runs = ascii_runs(bs, pos, size)
+    if runs:
+        return f'→{runs[0]!r}' + (f" {runs[1:]}" if len(runs) > 1 else "")
+    return f"({typ}, {size}B packed)"
+
+
+def decode_action(ad, ai, bs):
+    """Yield (fieldName, typeName, renderedValue) for action index `ai`."""
+    starts = ad.get("actionStartIndex", [])
+    if ai >= len(starts):
+        return
+    names, types, pos = ad.get("paramName", []), ad.get("paramDataType", []), ad.get("paramDataPos", [])
+    sizes = ad.get("paramByteDataSize", [])
+    # actionStartIndex has no trailing sentinel: the LAST action's params run to the end of the arrays.
+    hi = starts[ai + 1] if ai + 1 < len(starts) else len(names)
+    for j in range(starts[ai], hi):
+        if j >= len(types):
+            break
+        typ = PARAM_TYPES[types[j]] if types[j] < len(PARAM_TYPES) else f"?{types[j]}"
+        nm = names[j] or "·"
+        p = pos[j]
+        if typ in REF_ARRAY:
+            arr = ad.get(REF_ARRAY[typ], [])
+            val = fmt_ref(typ, arr[p]) if p < len(arr) else "<idx oob>"
+        elif typ == "Array":
+            szs = ad.get("arrayParamSizes", [])
+            val = f"[{szs[p]} elems]" if p < len(szs) else "[array]"
+        else:
+            val = decode_byte(typ, bs, p, sizes[j] if j < len(sizes) else 0)
+        yield nm, typ, val
+
+
+def main():
+    args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    src = open(args[0]) if args else sys.stdin
+    fsm = find_fsm(json.load(src))
+    if not fsm:
+        sys.exit("no Fsm object found in input")
+
+    states = fsm.get("states", [])
+    total_actions = sum(len(s.get("actionData", {}).get("actionNames", [])) for s in states)
+    stub = len(states) <= 1 and total_actions == 0 and not fsm.get("events")
+    vars_ = fsm.get("variables", {})
+
+    print(f"FSM {fsm.get('name')!r}  start={fsm.get('startState')!r}  "
+          f"states={len(states)}  events={len(fsm.get('events', []))}")
+    if stub:
+        print("  ⚠ STUB: empty graph, logic lives in C# — variable container only.")
+        _print_vars(vars_)
+        return
+
+    glob = fsm.get("globalTransitions", [])
+    if glob:
+        print("\nGLOBAL TRANSITIONS (from any state):")
+        for t in glob:
+            print(f"  on {EVENT(repr(ev(t)))} -> {STATE(repr(t.get('toState')))}")
+
+    print("\nSTATES:")
+    for s in states:
+        mark = "*" if s.get("name") == fsm.get("startState") else " "
+        print(f"\n {mark}[{STATE(s.get('name'))}]")
+        for t in s.get("transitions", []):
+            print(f"      on {EVENT(repr(ev(t)))} -> {STATE(repr(t.get('toState')))}")
+        ad = s.get("actionData", {})
+        bs = ad.get("byteData")
+        for ai, cls in enumerate(ad.get("actionNames", [])):
+            on = ad.get("actionEnabled", [])
+            dis = "  (DISABLED)" if (ai < len(on) and not on[ai]) else ""
+            print(f"      · {ACTION(cls.split('.')[-1])}{dis}")
+            for nm, typ, val in decode_action(ad, ai, bs):
+                if typ == "FsmEvent" and val not in ("(none)",):
+                    val = EVENT(val)
+                elif val.startswith("var "):
+                    val = VAR(val)
+                print(f"          {nm} {DIM(': ' + typ + ' =')} {val}")
+    _print_vars(vars_)
+
+
+def _print_vars(vars_):
+    named = []
+    for cat, lst in vars_.items():
+        if cat.endswith("Variables") and isinstance(lst, list):
+            for v in lst:
+                if isinstance(v, dict) and v.get("name"):
+                    named.append((v["name"], cat[:-9]))
+    if named:
+        print("\nVARIABLES:")
+        for nm, cat in named:
+            print(f"  {VAR(nm)} {DIM('(' + cat + ')')}")
+
+
+if __name__ == "__main__":
+    main()
