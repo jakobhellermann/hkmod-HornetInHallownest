@@ -30,6 +30,8 @@ internal static class HeroSwitch {
     private static GameObject? go;
     private static FieldInfo? heroTransformField;
     private static Hook? canInteractHook;
+    private static Hook? canInputHook;
+    private static Hook? getStateHook;
 
     // The Knight's standalone input-listening ability FSMs: they fire independently of HeroController.enabled, so they
     // must be disabled to stop the inert Knight from cdashing/casting/nail-arting on shared input. (NOT controlReqlinquished
@@ -45,16 +47,32 @@ internal static class HeroSwitch {
         go.AddComponent<CameraSwitchDriver>();
         Object.DontDestroyOnLoad(go);
 
-        // Seam consumer redirect (Policy B): HK's interact gate HeroController.CanInteract() reads the Knight's state
-        // (controlReqlinquished/onGround/transitioning). While Hornet is active the Knight is correctly relinquished/inert,
-        // so doors/NPCs/benches asking the Knight get "no" -> Hornet's "Enter" prompt flashes but nothing happens. The
-        // Knight's relinquished state is RIGHT; the consumer is wrong to read it. Redirect to the active hero: Hornet's
-        // own CanInteract() when she's active, else the Knight's. One spot covers all interactables. (Catches FSM/
-        // reflection callers too, since the detour replaces the method.)
+        // Seam consumer redirect (Policy B): HK's interaction FSMs (doors/NPCs/benches) gate on the hero's state by
+        // calling HeroController methods on the "Player"-tagged GameObject == the KNIGHT. While Hornet is active the
+        // Knight is correctly inert (HeroController disabled, controlReqlinquished, acceptingInput=false), so those
+        // checks return "no" and the interaction's "Enter"/bench prompt flashes but nothing happens. The Knight's inert
+        // state is RIGHT; the consumer is wrong to read it instead of the active hero's. Redirect each such query to
+        // Hornet when she's active, else the Knight. One spot covers all interactables (catches FSM/reflection callers
+        // too, since the detour replaces the method).
+        //
+        // Three methods, found empirically by tracing which door FSMs cancel (see CLAUDE.md): simple shop doors
+        // (sly/bretta) gate on CanInteract(); the map-shop door's "Can Enter?" instead calls CanInput() + GetState()x6;
+        // benches read state the same way. All exist on both HeroControllers with identical signatures+semantics
+        // (GetState -> cState.GetState(name); the cState names are shared across the two games), so redirecting to
+        // RealHero is safe. The HK detours only ever see HK HeroController instances (the Knight) — Hornet is a
+        // Silksong.HeroController, a different type — so "redirect while HornetActive" can't accidentally recurse.
         canInteractHook = new Hook(
             typeof(HeroController).GetMethod(nameof(HeroController.CanInteract)),
             (Func<Func<HeroController, bool>, HeroController, bool>)((orig, self) =>
                 HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.CanInteract() : orig(self)));
+        canInputHook = new Hook(
+            typeof(HeroController).GetMethod(nameof(HeroController.CanInput)),
+            (Func<Func<HeroController, bool>, HeroController, bool>)((orig, self) =>
+                HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.CanInput() : orig(self)));
+        getStateHook = new Hook(
+            typeof(HeroController).GetMethod(nameof(HeroController.GetState)),
+            (Func<Func<HeroController, string, bool>, HeroController, string, bool>)((orig, self, s) =>
+                HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.GetState(s) : orig(self, s)));
 
         Log.Info("[HeroSwitch] installed (Tab toggles Knight<->Hornet; /switch route)");
     }
@@ -62,6 +80,10 @@ internal static class HeroSwitch {
     internal static void Cleanup() {
         canInteractHook?.Dispose();
         canInteractHook = null;
+        canInputHook?.Dispose();
+        canInputHook = null;
+        getStateHook?.Dispose();
+        getStateHook = null;
         if (go != null) {
             Object.Destroy(go);
             go = null;
