@@ -22,6 +22,17 @@ public class HornetPlayerMod : Mod, ITogglableMod {
     }
 
     public void Unload() {
+        // Unload-safe inventory: if the inventory was open at reload, its DisplayFrozenCamera.Freeze left HK's main
+        // camera disabled (Camera.main.enabled=false, showing a frozen snapshot). A hot-reload despawns the inventory
+        // before it can Unfreeze -> the main camera stays off -> black screen. Re-enable HK's main camera on teardown.
+        try {
+            var gc = global::GameCameras.instance;
+            if (gc != null && gc.mainCamera != null && !gc.mainCamera.enabled) {
+                gc.mainCamera.enabled = true;
+                Playground.Log.Info($"[Unload] re-enabled HK mainCamera '{gc.mainCamera.name}' (left disabled by inventory DisplayFrozenCamera.Freeze)");
+            }
+        } catch (System.Exception e) { Playground.Log.Error($"[Unload] camera restore: {e.Message}"); }
+
         ResourcesShim.Cleanup();
         GameObjectFindShim.Cleanup();
         AddressablesBootstrap.Cleanup();
