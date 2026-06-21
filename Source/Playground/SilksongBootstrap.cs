@@ -3,6 +3,7 @@ extern alias SilksongPM;
 using System;
 using System.Reflection;
 using System.Runtime.Serialization;
+using HornetPlayer.HornetInHallownest;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -133,25 +134,22 @@ internal static class SilksongBootstrap {
             // GameManager.instance.GetComponent<UpdateBatcher>().Add(this) -> NullRef without it) + TMP_Settings.
             gmGo.AddComponent<Silksong::UpdateBatcher>();
 
-            // TMProOld.TMP_Settings.instance does untyped Resources.Load("TMP Settings") -> HK's same-named asset wins,
+            // TMProOld.TMP_Settings.instance does an UNTYPED Resources.Load("TMP Settings") -> HK's same-named asset wins,
             // `as Silksong.TMP_Settings` -> null -> defaultStyleSheet NullRefs from HUD text. Force-load Silksong's from
-            // the bundle (PreferBundle window, same trick as localization) so s_Instance caches the correct-typed asset.
+            // the bundle (SilksongContext window, same trick as localization) so s_Instance caches the correct-typed asset.
             // TMP_Settings is REQUIRED: the in-game HUD (under Anchor TL) has TextMeshPro components whose Awake reads
-            // TMP_Settings.defaultStyleSheet -> 18 NullRefs (TextMeshPro.Awake) without it, which also break the health-
-            // mask setup. TMProOld.TMP_Settings.instance does an UNTYPED Resources.Load("TMP Settings") -> HK's same-named
-            // asset wins, `as Silksong.TMP_Settings` -> null. Force-load Silksong's from the bundle (PreferBundle window,
-            // same trick as localization) so s_Instance caches the correct-typed asset.
+            // TMP_Settings.defaultStyleSheet -> 18 NullRefs (TextMeshPro.Awake) without it, which also breaks the health-
+            // mask setup.
             // ACCEPTED COST (bisected via Player.log markers): loading TMP's default assets from the bundle emits exactly
             // 6 transient "missing script" warnings (3 "(Unknown)" + 3 "(Game Object '<null>')") — unresolved-script
             // components on TMP default assets, discarded immediately (/scan-missing = 0 persistent, no runtime effect).
             // Can't drop TMP (-> 18 NullRefs) and can't surgically avoid the 6; understood + accepted. See CLAUDE.md #7.
             try {
-                ResourcesShim.PreferBundle = true;
-                Silksong::TMProOld.TMP_Settings.LoadDefaultSettings();
+                using (SilksongContext.Enter()) {
+                    Silksong::TMProOld.TMP_Settings.LoadDefaultSettings();
+                }
             } catch (Exception e) {
                 Log.Error($"[Bootstrap] TMP_Settings load: {e.Message}");
-            } finally {
-                ResourcesShim.PreferBundle = false;
             }
 
             // Platform.Current (private static `current`, set only during Silksong's boot which we never run) is null ->

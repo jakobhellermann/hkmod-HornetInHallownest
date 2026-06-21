@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using HornetPlayer.HornetInHallownest;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
@@ -103,13 +104,11 @@ internal static class BundleSpike {
         inst.transform.position = hk != null ? hk.transform.position + new Vector3(3f, 0f, 0f) : Vector3.zero;
         Object.DontDestroyOnLoad(inst);
         Object.DestroyImmediate(staging);
-        // Tight Silksong-context window: SetActive(true) synchronously runs HeroController.Awake -> UpdateConfig -> FSM
-        // events -> FindGameObject, whose name/tag lookups must resolve to Silksong objects (or null), not HK's.
-        GameObjectFindShim.CalledFromSilksongContext = true;
-        try {
+        // Tight SilksongContext window: SetActive(true) synchronously runs HeroController.Awake -> UpdateConfig -> FSM
+        // events -> FindGameObject (name/tag lookups must resolve to Silksong objects, not HK's) + Resources.Load
+        // (prefer the bundle). See SilksongContext.
+        using (SilksongContext.Enter()) {
             inst.SetActive(true);
-        } finally {
-            GameObjectFindShim.CalledFromSilksongContext = false;
         }
 
         HornetRoot = inst;

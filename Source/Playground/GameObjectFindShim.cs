@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using HornetPlayer.HornetInHallownest;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 
@@ -23,13 +24,10 @@ internal static class GameObjectFindShim {
     private static readonly List<Hook> hooks = new();
     private static readonly HashSet<string> logged = new();
 
-    // Set true ONLY while Silksong code we control the entry of is executing (e.g. around the hero's SetActive(true),
-    // which synchronously runs HeroController.Awake -> UpdateConfig -> FSM events -> FindGameObject). While true, name/tag
-    // lookups are INTERCEPTED: a known key (e.g. "CameraTarget") resolves to the Silksong object; anything else returns
-    // null + a log (fail loud — never silently hand Silksong code HK's same-named object). While false (HK's own per-frame
-    // code), lookups pass through to Unity unchanged. Keep the window TIGHT (one Silksong entry point at a time) so HK's
-    // finds are never intercepted. Extend to specific Update methods later as their lookups surface.
-    internal static bool CalledFromSilksongContext;
+    // While SilksongContext.Active (Silksong code we control the entry of — see SilksongContext), name/tag lookups are
+    // INTERCEPTED: a known key (e.g. "CameraTarget") resolves to the Silksong object; anything else returns null + a log
+    // (fail loud — never silently hand Silksong code HK's same-named object). Otherwise (HK's own code) lookups pass
+    // through to Unity unchanged.
 
     // One-off diagnostic: set to a name/tag (e.g. "CameraTarget") to dump the managed call stack ONCE when that
     // lookup fires — reveals WHO calls it (the FSM action / component). Set via /find-trace?key=CameraTarget.
@@ -76,7 +74,7 @@ internal static class GameObjectFindShim {
 
     private static GameObject FindDetour(Func<string, GameObject> orig, string name) {
         MaybeTrace(name);
-        if (CalledFromSilksongContext) return Intercept("Find", name, ResolveName(name))!;
+        if (SilksongContext.Active) return Intercept("Find", name, ResolveName(name))!;
         var r = orig(name);
         LogOnce("Find", name, r);
         return r;
@@ -98,7 +96,7 @@ internal static class GameObjectFindShim {
             return hero;
         }
 
-        if (CalledFromSilksongContext) return Intercept("FindWithTag", tag, ResolveTag(tag))!;
+        if (SilksongContext.Active) return Intercept("FindWithTag", tag, ResolveTag(tag))!;
         GameObject r;
         try {
             r = orig(tag);
@@ -147,6 +145,5 @@ internal static class GameObjectFindShim {
         foreach (var h in hooks) h.Dispose();
         hooks.Clear();
         logged.Clear();
-        CalledFromSilksongContext = false;
     }
 }

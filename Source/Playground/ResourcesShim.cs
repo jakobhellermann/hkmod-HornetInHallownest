@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using HornetPlayer.HornetInHallownest;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -37,14 +38,6 @@ internal static class ResourcesShim {
     // Flip to true and reproduce if you suspect a new collision.
     internal static bool LogShadowed = true;
 
-    // When set, the shim serves from the Silksong bundle BEFORE HK's original Resources.Load (instead of only on a
-    // miss). Needed because some paths exist in BOTH games (e.g. Languages/EN_General — both are Team Cherry titles):
-    // by default HK's original wins, so Silksong's Language would read HK's sheets. We can't route by caller without a
-    // stacktrace (and via MonoMod the calling assembly is unreliable), so instead we scope by TIME: set this only while
-    // Silksong's own localization is loading (Stub.Install wraps the cctor trigger). HK's localization initializes at
-    // HK boot, before our mod, so it's never inside this window and keeps reading HK's sheets. See Stub.Install.
-    internal static bool PreferBundle;
-
     internal static void Install() {
         if (hook != null) return;
         bundle = AssetBundle.LoadFromFile(BundlePath);
@@ -64,8 +57,9 @@ internal static class ResourcesShim {
     private static Object Detour(Func<string, Type, Object> orig, string path, Type type) {
         if (bundle == null || string.IsNullOrEmpty(path)) return orig(path, type);
 
-        if (PreferBundle) {
-            // Silksong is loading its own assets: prefer the bundle over HK's same-path original.
+        if (SilksongContext.Active) {
+            // Silksong is loading its own assets: prefer the bundle over HK's same-path original. Scoped by time (not
+            // caller — unreliable via the MonoMod trampoline); HK's loads happen outside the window. See SilksongContext.
             var served = ServeFromBundle(path, type);
             if (served != null) return served;
             var res = orig(path, type);
@@ -114,7 +108,6 @@ internal static class ResourcesShim {
     }
 
     internal static void Cleanup() {
-        PreferBundle = false;
         hook?.Dispose();
         hook = null;
         if (bundle != null) {

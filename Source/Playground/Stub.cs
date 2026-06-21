@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using HornetPlayer.HornetInHallownest;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
@@ -34,18 +35,15 @@ internal static class Stub {
         // broadcast BEFORE our detour is wired -> exactly ONE MissingMethodException at startup, unavoidably (we proved
         // hooking the .cctor itself also self-triggers it). Accepted as a single, understood startup error.
         //
-        // We also use this controlled cctor trigger as the prefer-bundle WINDOW (see ResourcesShim.PreferBundle):
+        // We also use this controlled cctor trigger as a SilksongContext window (see SilksongContext / ResourcesShim):
         // Silksong's Languages/*_General sheets exist in BOTH HK's Resources and our bundle, and by default HK wins ->
-        // Silksong would read HK's strings. Setting PreferBundle here makes the cctor's sheet loads come from the
-        // Silksong bundle; HK's localization already initialized at HK boot (outside this window) and is unaffected.
+        // Silksong would read HK's strings. The window makes the cctor's sheet loads come from the Silksong bundle;
+        // HK's localization already initialized at HK boot (outside this window) and is unaffected.
         var lang = typeof(SilksongLoc::TeamCherry.Localization.Language);
-        ResourcesShim.PreferBundle = true;
-        try {
+        using (SilksongContext.Enter()) {
             Skip(lang, "SendMonoMessage"); // installs stub; its GetFunctionPointer also forces type-init
             RuntimeHelpers
                 .RunClassConstructor(lang.TypeHandle); // ensure the cctor ran inside the window (no-op if already)
-        } finally {
-            ResourcesShim.PreferBundle = false;
         }
 
         Skip(typeof(Silksong::HeroWaterController), "Update"); // per-frame
@@ -194,7 +192,6 @@ internal static class Stub {
         }
 
         if (!any) Log.Error($"[Stub] no method '{method}' on {type.FullName}");
-        else Log.Info($"[Stub] installed: {type.Name}.{method}");
     }
 
     // Called from stubbed methods (emitted by Rewrite). Logs each distinct stub once to avoid per-frame spam.
