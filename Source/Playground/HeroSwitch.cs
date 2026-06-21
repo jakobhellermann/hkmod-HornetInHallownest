@@ -204,6 +204,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         }
 
         if (Input.GetKeyDown(KeyCode.Tab)) HeroSwitch.Toggle();
+        TraceTick();
 
         // The inert, off-camera Knight's Vignette must be fully off (its black plates otherwise frame HK's screen
         // centered on the off-screen Knight). Toggle the whole Vignette GAMEOBJECT, not just hk.vignette.enabled: the
@@ -264,5 +265,41 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         hornet.transform.position = knight.transform.position;
         var rb = hornet.GetComponent<Rigidbody2D>();
         if (rb != null && rb.simulated) rb.linearVelocity = Vector2.zero; // don't carry pre-transition momentum
+    }
+
+    // --- Keybind trace recorder (F9 toggles) --- captures Hornet's per-FRAME state (finer than the 12Hz HTTP poll) so a
+    // repro doesn't have to race a fixed poll window. Writes a TSV on stop; read /tmp/hornet_trace_live.tsv afterwards.
+    private const string TracePath = "/tmp/hornet_trace_live.tsv";
+    private bool tracing;
+    private float traceT0;
+    private System.Collections.Generic.List<string>? traceBuf;
+
+    private void TraceTick() {
+        if (Input.GetKeyDown(KeyCode.F9)) {
+            if (!tracing) {
+                tracing = true;
+                traceT0 = Time.realtimeSinceStartup;
+                traceBuf = new System.Collections.Generic.List<string> {
+                    "t\tscene\ttransState\theroState\tonGround\tcReq\tvx\tvy\tx\ty"
+                };
+                Log.Info("[Trace] recording started (F9 to stop)");
+            } else {
+                tracing = false;
+                try { System.IO.File.WriteAllLines(TracePath, traceBuf!); Log.Info($"[Trace] wrote {traceBuf!.Count - 1} frames -> {TracePath}"); }
+                catch (Exception e) { Log.Error($"[Trace] write failed: {e.Message}"); }
+                traceBuf = null;
+            }
+        }
+        if (!tracing) return;
+        var hc = BundleSpike.RealHero;
+        if (hc == null) return;
+        var p = hc.transform.position;
+        var rb = hc.GetComponent<Rigidbody2D>();
+        var v = rb != null ? rb.linearVelocity : Vector2.zero;
+        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        traceBuf!.Add(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "{0:F2}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6:F1}\t{7:F1}\t{8:F1}\t{9:F1}",
+            Time.realtimeSinceStartup - traceT0, scene, hc.transitionState, hc.hero_state,
+            hc.cState.onGround, hc.controlReqlinquished, v.x, v.y, p.x, p.y));
     }
 }
