@@ -38,6 +38,7 @@ internal static class GameCamerasBootstrap {
     // Read the cached _instance FIELD directly, NOT the `instance` getter — that getter logs "Couldn't find GameCameras"
     // when null (e.g. at the menu, where this runs per-frame via HeroSwitch) -> spam. The field is null-safe + silent.
     private static FieldInfo? hkGcInstanceField;
+    private static Vector3 hkHudScale = Vector3.one; // HK hudCanvas' real scale, cached so we can restore after hiding
 
     // Silksong's CameraTarget GameObject (on the rig). Silksong hero FSMs reference a "Camera Target" via a serialized
     // FsmGameObject whose cross-game PPtr is lost -> they'd fall back to GameObject.Find("Camera Target") and hit HK's
@@ -295,8 +296,16 @@ internal static class GameCamerasBootstrap {
         try {
             hkGcInstanceField ??=
                 typeof(GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
-            if (hkGcInstanceField?.GetValue(null) is not GameCameras hk) return;
-            if (hk.hudCanvas != null && hk.hudCanvas.activeSelf != on) hk.hudCanvas.SetActive(on);
+            if (hkGcInstanceField?.GetValue(null) is not GameCameras hk || hk.hudCanvas == null) return;
+
+            // Hide/show via localScale, NOT GameObject.SetActive: re-activating hudCanvas re-fires its OnEnable, which
+            // re-runs HK's HUD slide-in animation (~1s) — the lag on a Knight<-Hornet switch. Scaling to zero hides the
+            // whole HUD instantly (HK's HUD is tk2d MESH-based, so a CanvasGroup alpha wouldn't touch it) while the
+            // GameObject stays active (no OnEnable, FSMs untouched). Cache the real scale so we can restore it exactly.
+            var t = hk.hudCanvas.transform;
+            if (t.localScale != Vector3.zero) hkHudScale = t.localScale; // remember the last non-hidden scale
+            if (!hk.hudCanvas.activeSelf) hk.hudCanvas.SetActive(true);
+            t.localScale = on ? hkHudScale : Vector3.zero;
         } catch (Exception e) {
             Log.Error($"[HUD] SetHkHudVisible({on}): {e.Message}");
         }
