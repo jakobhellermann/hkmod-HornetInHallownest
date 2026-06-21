@@ -233,6 +233,23 @@ internal static class GameCamerasBootstrap {
             inv.gameObject.SetActive(true);
         }
 
+        // Wire UIButtonSkins.ih BEFORE activating the subtree. ih is a one-shot snapshot taken in Start()->SetupRefs()
+        // (ih = GameManager.instance.inputHandler); without it every button-prompt lookup logs "Attempting to get button
+        // skins before the Input Handler is ready". Activating HudCamera below fires the inventory panes' Awakes, which
+        // query button skins — so we must populate ih first (gm.inputHandler is already wired by SilksongBootstrap). The
+        // instance lives in the loaded-but-inactive rig; FindObjectsByType(Include) reaches it. SetupRefs only sets
+        // ih/active + subscribes an event (deps ready), so it's safe to call directly.
+        try {
+            var setupRefs = typeof(Silksong::UIButtonSkins)
+                .GetMethod("SetupRefs", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var skins = UnityEngine.Object.FindObjectsByType<Silksong::UIButtonSkins>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var s in skins) setupRefs?.Invoke(s, null);
+            Log.Info($"[HUD] wired UIButtonSkins.ih on {skins.Length} instance(s) before HUD activation");
+        } catch (Exception e) {
+            Log.Error($"[HUD] UIButtonSkins.SetupRefs: {e.Message}");
+        }
+
         hudCam.gameObject.SetActive(true);
         inGame?.gameObject.SetActive(true); // the in-game HUD container (Anchor TL + Inventory)
         FindByName(hudCam, "Hud Canvas")?.gameObject.SetActive(true);
