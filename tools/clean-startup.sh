@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Clean startup + staged log snapshots for HornetPlayer debugging.
 #
-# Launches Hollow Knight (with the mod), then checkpoints the logs with logsnap at two stages:
+# Launches Hollow Knight (with the mod), then checkpoints the logs with logsnap at three stages:
 #   "loadgame"  — after boot + mod init
 #   "loadlevel" — after loading a save slot (HK GameManager.LoadGameFromUI via the mod's /load-save route)
+#   "switch"    — after switching control to Hornet (the mod's /switch?who=hornet route)
 #
 # Opens a fresh logsnap session on the log files at the start (cursors at EOF); logsnap is
 # rotation-aware, so it follows Unity truncating Player.log on relaunch.
@@ -43,10 +44,17 @@ logsnap commit -m "loadgame" --settle 200ms
 
 # 3. Load the save.
 echo "loading save slot $SLOT ..."
-curl -s -X POST "$DEV/load-save?slot=$SLOT" -d '' && echo
+curl -s -X POST "$DEV/load-save?slot=$SLOT" -d '' >/dev/null && echo
 
 # 4. Checkpoint once the scene has loaded AND Hornet has spawned: wait for the spawn marker, then for the
 #    follow-up burst (HUD bring-up etc.) to go quiet. Replaces a fixed sleep; --at-most bounds the wait if
 #    auto-spawn doesn't fire (e.g. already spawned) so the script still finishes.
 logsnap commit -m "loadlevel" --wait-for "[SpawnReal] instantiated" --settle 200ms --at-most 30s
-echo "done — checkpoints: loadgame, loadlevel"
+
+# 5. Switch control to Hornet, then checkpoint the switch's log burst (HeroSwitch + HUD retarget + adapter
+#    taking over Hornet) once it settles.
+echo "switching to Hornet ..."
+curl -s -X POST "$DEV/switch?who=hornet" -d '' >/dev/null && echo
+logsnap commit -m "switch" --settle 200ms
+
+echo "done — checkpoints: loadgame, loadlevel, switch"

@@ -26,13 +26,7 @@
         <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.26.0" PrivateAssets="all"/>
     </ItemGroup>
 
-    <!-- B1 hand-port parked (incomplete + its Silksong.* types would collide with the B2 prefixed reference DLLs). -->
-    <ItemGroup>
-        <Compile Remove="Silksong/Decompiled/**/*.cs"/>
-        <Compile Remove="Silksong/Adapt/**/*.cs"/>
-    </ItemGroup>
-
-    <!-- B2 retry: Silksong's Assembly-CSharp + firstpass, IL-prefixed to Silksong.* with cross-refs rewritten. -->
+    <!-- B2: Silksong's Assembly-CSharp + firstpass, IL-prefixed to Silksong.* with cross-refs rewritten. -->
     <ItemGroup>
         <!-- Assembly-only rename: types keep their original (global) names, colliding with HK's Assembly-CSharp.
              The `Silksong` extern alias disambiguates them in our code (Silksong::HeroController vs HK's HeroController). -->

@@ -22,12 +22,11 @@ internal static class BundleSpike {
     private static GameObject? real;
 
 
-    // Load the Hero_Hornet prefab via Addressables (Silksong's catalog, registered by AddressablesBootstrap). This is
-    // the option-A path that replaces the manual DepBundles + heroloading LoadFromFile (Run/ReloadWithAllDeps):
+    // Load the Hero_Hornet prefab via Addressables (Silksong's catalog, registered by AddressablesBootstrap):
     // Addressables pulls the full dependency closure AND owns every bundle, so there's no double-load conflict with the
     // game's own runtime addressables loads (GameManager.EnsureGlobalPool -> "GlobalPool", etc.). The monoscripts
     // redirect in AddressablesBootstrap makes all m_Script PPtrs bind to Silksong.* (verified: 63/63 root components
-    // bound, 0 missing, 0 HK Assembly-CSharp). No /reload-all-deps needed.
+    // bound, 0 missing, 0 HK Assembly-CSharp).
     private static void EnsureHeroPrefab() {
         if (heroPrefab != null) return;
         AddressablesBootstrap.Ensure();

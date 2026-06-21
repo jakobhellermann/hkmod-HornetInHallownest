@@ -29,7 +29,7 @@ internal static class ResourcesShim {
     // potential COLLISION — Silksong code calling this path silently gets HK's asset. Invisible normally (an orig hit
     // logs nothing); with this on we log each such key once as SHADOWED to enumerate the real collision set hit at
     // runtime (vs theoretical bundle∩HK). `Contains` is a cheap key lookup (no asset load). Default OFF — already used
-    // it once (load-save slot 1 → reload-all-deps → spawn-real, in a gameplay scene). FINDING: the only runtime
+    // it once (load-save slot 1 → spawn-real, in a gameplay scene). FINDING: the only runtime
     // collision is `PlayMakerPrefs` — loaded UNTYPED (`Resources.Load("PlayMakerPrefs")` → typeof(Object)), so HK's
     // same-named asset wins and Silksong's `as PlayMakerPrefs` cast yields null. Benign (PlayMaker debug prefs, no
     // crash). Everything else self-disambiguates: typed loads like `Resources.Load("PlayMakerGlobals",

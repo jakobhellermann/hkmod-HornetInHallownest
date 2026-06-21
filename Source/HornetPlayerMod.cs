@@ -89,7 +89,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         });
         DebugServer.Start(host, DebugServerPort);
 
-        // SilksongLoadSpike.Run();   // touches Silksong types -> assembly is now in the AppDomain
         // FIRST: register Silksong's Addressables catalog into HK's empty runtime, BEFORE any Silksong code triggers a
         // (failing) addressables access. Once init fails in a process it stays poisoned (hasStartedInitialization=true,
         // empty locators) and can't be re-init'd, so this must run at Initialize on a fresh process — a hot-reload of
@@ -135,7 +134,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
     }
 
     public void Unload() {
-        SilksongLoadSpike.Cleanup();
         ResourcesShim.Cleanup();
         GameObjectFindShim.Cleanup();
         AddressablesBootstrap.Cleanup();
