@@ -8,6 +8,7 @@ using SHeroBox = Silksong::HeroBox;
 using SHeroController = Silksong::HeroController;
 using SHazard = Silksong::GlobalEnums.HazardType;
 using SSide = Silksong::GlobalEnums.CollisionSide;
+using SDmgFlags = Silksong::GlobalEnums.DamagePropertyFlags;
 
 namespace HornetPlayer.Playground;
 
@@ -75,7 +76,13 @@ internal static class ContactDamageBridge {
                 Log.Info($"[ContactDamageBridge] HK contact damage from '{other.name}' dmg={dmg} hazard={hazard}");
             // damageSide = the side the damager is on (matches HeroBox.CheckForDamage's own computation).
             var side = other.transform.position.x > self.transform.position.x ? SSide.right : SSide.left;
-            hc.TakeDamage(other, side, dmg, (SHazard)hazard);
+            // NonLethal flag: a fatal hit routes through Die(nonLethal:true) (HeroController:5618), which SKIPS the whole
+            // lethal corpse/cocoon block (gm.tilemap / gm.gameMap.PositionCompassAndCorpse / HeroCorpseMarker — all null on
+            // our inactive bootstrap GM, so the lethal path NullRefs mid-coroutine before it can hand off). nonLethal still
+            // spawns a death prefab + reaches the gm.PlayerDead handoff (which HornetDeath intercepts -> HK bench respawn).
+            // The flag (bit 2) is consumed ONLY at that Die() call, so non-fatal hits are unaffected. Real corpse/cocoon =
+            // a later feature that brings up gm.gameMap/tilemap properly and drops this flag.
+            hc.TakeDamage(other, side, dmg, (SHazard)hazard, SDmgFlags.NonLethal);
         } catch (Exception e) {
             Log.Error($"[ContactDamageBridge] {e.Message}");
         }

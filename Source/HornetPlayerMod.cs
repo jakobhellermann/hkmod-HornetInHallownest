@@ -53,6 +53,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DamagesEnemyFsmShim.Cleanup();
         PogoNonBounceShim.Cleanup();
         ContactDamageBridge.Cleanup();
+        HornetDeath.Cleanup();
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
         GetComponentShim.Cleanup();
@@ -124,6 +125,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             GameManager.instance.LoadGameFromUI(slot); // HK's GameManager: full UI load (transition + scene)
             return new { ok = true, slot };
         });
+        DebugServer.MapPost("/kill", _ => HornetDeath.Kill()); // debug: trigger Hornet death (real damage path)
         DebugServer.MapPost("/switch", req => {
             var who = (req["who"] ?? "").ToLowerInvariant();
             return who switch {
@@ -166,6 +168,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             .Install(); // honour HK's NonBouncer so Hornet doesn't pogo off HK-non-pogoable objects (bell, …)
         ContactDamageBridge
             .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
+        HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
         FreezeMomentFix.Install();
         FsmTracer.Install();            // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         GetComponentShim.Install();     // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)

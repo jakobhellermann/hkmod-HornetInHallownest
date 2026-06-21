@@ -137,6 +137,20 @@ internal static class Stub {
         // audio). No-op it: the inventory still opens (SetIsInventoryOpen sets isInventoryOpen + AddInputBlocker around
         // this), just as an overlay over the live world instead of pausing. Vanilla pause semantics can be added later.
         Skip(typeof(Silksong::GameManager), "SetPausedState");
+        // ApplyMusicCue.OnEnter (death-music FSM, fired by Die's EventRegister HeroDeath broadcast): does
+        // `instance.AudioManager.ApplyMusicCue(...)` guarded ONLY on musicCue/instance null, NOT instance.AudioManager —
+        // which is null on our skeleton bootstrap GM -> NullRef. The deref is BEFORE the trailing Finish(), so the action
+        // already can't Finish: it hangs its music FSM today regardless. This is the documented "OK to stub" case (the
+        // general rule against stubbing PlayMaker actions is because they skip Finish() and hang — here the action hangs
+        // on its own, and a no-op at least drops the per-death NullRef). Silksong music is shadow-world here anyway (HK
+        // owns audio; AddSilk + the audio tables are already stubbed), so applying its cues is moot.
+        Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.ApplyMusicCue), "OnEnter");
+        // ScreenFader.OnEnter -> ScreenFaderUtils.Fade derefs gm.screenFader_fsm (null on the bootstrap GM — that fader
+        // FSM lives on the un-run Silksong camera rig) -> NullRef, again before the trailing Finish() (so it hangs). HK
+        // owns the camera + fades (our death uses HK's FadeOut(HERO_DEATH); GameManager.FadeSceneIn is already stubbed for
+        // the same reason), and gm.screenFader_fsm is ALWAYS null here so this action never works regardless -> stubbing
+        // can't regress a working fade. Same documented "already can't Finish" exception as ApplyMusicCue above.
+        Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.ScreenFader), "OnEnter");
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
         // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.
