@@ -90,14 +90,11 @@ internal static class GameObjectFindShim {
         // Knight they fly to it (this is the chase consumer the HeroControllerProbe can't see: it reads the tag, not a
         // HeroController method). Redirect the tag to the active hero. HK systems that specifically need the Knight use
         // HeroController.instance / UnsafeInstance directly (not the tag), so this only steers the tag-based "who is the
-        // player" consumers. Only "Player", only while HornetActive.
-        if (tag == "Player" && HeroSwitch.HornetActive) {
-            var hornet = BundleSpike.RealHero;
-            if (hornet != null) {
-                if (logged.Add("playerredirect"))
-                    Log.Info("[Find] FindWithTag('Player') -> REDIRECT 'Hornet' (HornetActive; was nondeterministic Knight/Hornet)");
-                return hornet.gameObject;
-            }
+        // player" consumers. Only "Player", only while HornetActive (when the Knight is active we leave native behaviour).
+        if (tag == "Player" && HeroSwitch.HornetActive && HeroSwitch.ActiveHeroGameObject is { } hero) {
+            if (logged.Add("playerredirect"))
+                Log.Info("[Find] FindWithTag('Player') -> REDIRECT 'Hornet' (HornetActive; was nondeterministic Knight/Hornet)");
+            return hero;
         }
 
         if (CalledFromSilksongContext) return Intercept("FindWithTag", tag, ResolveTag(tag))!;

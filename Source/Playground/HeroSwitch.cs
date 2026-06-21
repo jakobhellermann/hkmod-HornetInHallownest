@@ -45,6 +45,15 @@ internal static class HeroSwitch {
     internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
     internal static bool HornetActive => Active == ActiveHero.Hornet;
 
+    // The GameObject of the hero the player currently controls: the spawned Hornet while she's active, else HK's Knight.
+    // SINGLE SOURCE OF TRUTH for the "redirect HK's hero reference to the active hero" consumers — HeroProxy (PlayMaker
+    // global "Hero" var), EnemyTargetBridge (the GetHero action), GameObjectFindShim ("Player" tag). To add a new such
+    // consumer, resolve the hero through this (don't re-derive HornetActive ? RealHero : Knight). Null only before the
+    // Knight exists. See [[hero-fsm-real-hornet-strategy]].
+    internal static GameObject? ActiveHeroGameObject =>
+        HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.gameObject :
+        HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.gameObject : null;
+
     internal static void Install() {
         if (go != null) return;
         go = new GameObject("HornetPlayer.HeroSwitch");
@@ -303,6 +312,10 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
 
         // Keep Silksong's neutered camera on HK's camera so Hornet's 3D SFX aren't distance-culled (see SyncAudioCamera).
         GameCamerasBootstrap.SyncAudioCamera();
+
+        // Point HK's PlayMaker global "Hero" at the active hero (enemy chase/face track her; hero method calls go to her).
+        // Re-asserted per frame because HK re-binds it on scene entry — same reason the vignette/HUD are synced here.
+        HeroProxy.SyncGlobal();
 
         // HUD follows the active hero: Hornet's HUD (if brought up) while she's active, HK's Knight HUD otherwise. Synced
         // per-frame (cheap, SetActive-on-change) because HK re-enables its hudCanvas on every scene entry — same reason

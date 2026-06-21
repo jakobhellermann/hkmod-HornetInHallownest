@@ -61,6 +61,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         GetComponentShim.Cleanup();
         HeroControllerProbe.Cleanup();
         EnemyTargetBridge.Cleanup();
+        HeroProxy.Cleanup();
+        Tk2dClipShim.Cleanup();
         InventoryPauseBridge.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
@@ -189,7 +191,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         GetComponentShim.Install();     // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
         HeroControllerProbe.Install();  // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
         EnemyTargetBridge.Install();    // redirect HK enemy "where's the hero" queries (LineOfSightDetector LoS) to the active hero
+        Tk2dClipShim.Install();         // log-once + skip missing tk2d clips (HK-Knight clip names absent on Hornet's animator)
         InventoryPauseBridge.Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
+        // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 
         // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so

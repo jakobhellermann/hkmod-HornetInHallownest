@@ -19,6 +19,7 @@ namespace HornetPlayer.Playground;
 // robust to HK-version drift since we never duplicate HK's logic.
 internal static class EnemyTargetBridge {
     private static Hook? losHook;
+    private static Hook? getHeroHook;
 
     internal static void Install() {
         var mi = typeof(LineOfSightDetector).GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -29,6 +30,27 @@ internal static class EnemyTargetBridge {
 
         losHook = new Hook(mi, (Action<Action<LineOfSightDetector>, LineOfSightDetector>)OnLosUpdate);
         Log.Info("[EnemyTargetBridge] installed: LineOfSightDetector.Update -> active hero position");
+
+        // The DOMINANT enemy hero-caching path: the `GetHero` PlayMaker action stores HeroController.instance (= the
+        // Knight) into a per-FSM LOCAL "Hero" var, ONCE at the enemy's Initialise (census: 2367 usages, all local).
+        // Enemies then read that cached var for GetPosition/FaceObject/chase (and some CallMethodProper / Tk2dPlayAnimation,
+        // which resolve on Hornet's real components / Tk2dClipShim — same as the global "Hero" repoint). So redirect
+        // GetHero's result to Hornet too. NOTE: cached at Initialise -> enemies already in the scene keep the stale Knight
+        // ref until they re-init (scene reload); fresh/reloaded enemies cache Hornet.
+        var gh = typeof(GetHero).GetMethod("OnEnter", BindingFlags.Instance | BindingFlags.Public);
+        if (gh == null) {
+            Log.Error("[EnemyTargetBridge] GetHero.OnEnter not found");
+            return;
+        }
+
+        getHeroHook = new Hook(gh, (Action<Action<GetHero>, GetHero>)OnGetHero);
+        Log.Info("[EnemyTargetBridge] installed: GetHero -> active hero");
+    }
+
+    private static void OnGetHero(Action<GetHero> orig, GetHero self) {
+        orig(self); // resolves + Finish()es; sets storeResult to HeroController.instance (the Knight)
+        if (self.storeResult != null && HeroSwitch.ActiveHeroGameObject is { } hero)
+            self.storeResult.Value = hero;
     }
 
     private static void OnLosUpdate(Action<LineOfSightDetector> orig, LineOfSightDetector self) {
@@ -52,5 +74,7 @@ internal static class EnemyTargetBridge {
     internal static void Cleanup() {
         losHook?.Dispose();
         losHook = null;
+        getHeroHook?.Dispose();
+        getHeroHook = null;
     }
 }
