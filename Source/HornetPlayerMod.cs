@@ -44,6 +44,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         ContactDamageBridge.Cleanup();
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
+        GetComponentShim.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
@@ -155,6 +156,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
         FreezeMomentFix.Install();
         FsmTracer.Install();            // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
+        GetComponentShim.Install();     // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
         // BundleSpike.Run();
 
         // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so
