@@ -184,13 +184,15 @@ internal static class HeroSwitch {
 internal sealed class CameraSwitchDriver : MonoBehaviour {
     private string? lastScene;
     private bool pendingSnap;
+    private bool hkEntryFixed;
 
     private void Update() {
         var knight = global::HeroController.UnsafeInstance;
 
         // Detect a scene change; defer the Hornet snap until the Knight has actually been placed at the new entry.
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (scene != lastScene) { lastScene = scene; pendingSnap = true; }
+        if (scene != lastScene) { lastScene = scene; pendingSnap = true; hkEntryFixed = false; }
+        CompleteStuckHkVerticalEntry(knight);
         if (pendingSnap && knight != null && knight.isHeroInPosition) {
             // When Hornet is the active hero, run her REAL Silksong scene-entry (walk/drop-in animation + entry FSMs)
             // from HK's mirrored gate. When the Knight is active, Hornet is an inert prop -> just relocate her.
@@ -228,6 +230,32 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         } else {
             GameCamerasBootstrap.SetHkHudVisible(true); // no Hornet HUD -> always show HK's
         }
+    }
+
+    // Principled completion of HK's scene-entry handshake that the inert Knight can no longer finish. HK's GameManager
+    // delegates entry to hero_ctrl (the Knight); its HeroController.EnterScene calls gm.FinishedEnteringScene()
+    // (-> gameState ENTERING_LEVEL -> PLAYING) at the end. TOP-gate / horizontal entries complete on a fixed timer, but
+    // the BOTTOM-gate branch (an "up" transition) ends at transitionState=DROPPING_DOWN and only completes once the
+    // Knight physically LANDS (its OnCollisionEnter2D). While Hornet is active the Knight is inert (HeroController
+    // disabled + Rigidbody2D.simulated off), so it never falls/lands -> gameState stays ENTERING_LEVEL forever -> HK's
+    // TransitionPoint.TryDoTransition bails (`gm.gameState != PLAYING`) for EVERY later gate -> Hornet falls through
+    // wells (this also strands her on the NEXT transition, not just the up one). Since we took the hero role from the
+    // Knight, we own its half of HK's handshake: call HK's own public FinishedEnteringScene() (which also fires
+    // OnFinishedEnteringScene that HK scene-setup hangs off, not just the gameState flip). Deterministic on state — no
+    // timer/threshold — gated to the one branch the inert Knight breaks; self-guarding (gameState flips to PLAYING) plus
+    // a once-per-scene flag. NOTE: Hornet's OWN movement freeze on up-entries (she lands but loses no_input so her
+    // OnCollisionEnter2D completion is missed) is a sibling bug, logged by HornetEnvironmentAdapter.StuckEntryWatch.
+    private void CompleteStuckHkVerticalEntry(global::HeroController? knight) {
+        if (hkEntryFixed || !HeroSwitch.HornetActive || knight == null || knight.enabled) return; // only the INERT Knight
+        var gm = global::GameManager.UnsafeInstance;
+        if (gm == null || gm.gameState != global::GlobalEnums.GameState.ENTERING_LEVEL) return;
+        if (knight.transitionState != global::GlobalEnums.HeroTransitionState.DROPPING_DOWN) return; // reached the terminal landing-wait
+        var gate = knight.sceneEntryGate;
+        if (gate == null || gate.GetGatePosition() != global::GlobalEnums.GatePosition.bottom) return; // only the non-self-completing branch
+        gm.FinishedEnteringScene();
+        hkEntryFixed = true;
+        Log.Info("[CameraSwitch] inert Knight stuck in bottom-gate entry (DROPPING_DOWN + gameState=ENTERING_LEVEL) "
+                 + "-> called gm.FinishedEnteringScene() to complete HK's handshake (unblocks transitions)");
     }
 
     private static void SnapHornetToKnight(global::HeroController knight) {
