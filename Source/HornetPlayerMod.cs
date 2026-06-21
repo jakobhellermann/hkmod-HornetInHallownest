@@ -127,6 +127,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             return new { ok = true, slot };
         });
         DebugServer.MapPost("/kill", _ => HornetDeath.Kill()); // debug: trigger Hornet death (real damage path)
+        DebugServer.MapPost("/getup", _ => HornetDeath.ForceGetUp()); // debug: unstick from bench/no_input
         DebugServer.MapGet("/bench-state", _ => BundleSpike.BenchState()); // debug: atBench signal + Hornet sit clips
         DebugServer.MapPost("/switch", req => {
             var who = (req["who"] ?? "").ToLowerInvariant();

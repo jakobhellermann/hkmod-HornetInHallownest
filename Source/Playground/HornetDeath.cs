@@ -48,47 +48,59 @@ internal sealed class HornetDeath : MonoBehaviour {
         if (dead && !wasDead && !handling && HeroSwitch.HornetActive) {
             handling = true;
             Log.Info("[HornetDeath] Hornet died -> handing off to HK bench respawn");
-            StartCoroutine(DeathRoutine(hero));
+            StartCoroutine(DeathRoutine());
         }
 
         wasDead = dead;
     }
 
-    private IEnumerator DeathRoutine(SHeroController hero) {
+    private IEnumerator DeathRoutine() {
         var hkGm = GameManager.UnsafeInstance;
-        if (hkGm == null) {
-            Log.Error("[HornetDeath] no HK GameManager — can't respawn");
+        // try/finally (no catch — yield is legal here) guarantees `handling` is ALWAYS cleared, even if a wait below
+        // times out or Revive throws. A stuck DeathRoutine that never cleared `handling` would silently break EVERY
+        // later death (the rising-edge gate sees handling==true forever) — exactly the "she just stays dead" regression.
+        try {
+            if (hkGm == null) {
+                Log.Error("[HornetDeath] no HK GameManager — can't respawn");
+                yield break;
+            }
+
+            // HK's full death sequence inline: FreezeInPlace -> SaveGame -> wait (death anim plays) -> FadeOut ->
+            // ReadyForRespawn -> BeginSceneTransition(respawnScene). On return the transition is kicked, RespawningHero set.
+            yield return hkGm.PlayerDead(DeathWait);
+
+            // Wait for the respawn to settle — RespawningHero consumed by EnterHero + the Knight placed at the marker
+            // (isHeroInPosition). Bounded by a timeout so a bench-respawn quirk can never hang us (which would strand
+            // `handling`). After the timeout we revive anyway — better visible-and-controllable than stuck dead.
+            var t = 0f;
+            while (t < 6f) {
+                var k = HeroController.UnsafeInstance;
+                if (k != null && !hkGm.RespawningHero && k.isHeroInPosition) break;
+                t += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Revive(HeroController.UnsafeInstance);
+        } finally {
             handling = false;
-            yield break;
+            wasDead = false;
         }
-
-        // Run HK's full death sequence inline: FreezeInPlace -> SaveGame -> wait (death anim plays) -> FadeOut(HERO_DEATH)
-        // -> ReadyForRespawn -> BeginSceneTransition(respawnScene). Driving it from our (DontDestroyOnLoad) coroutine is
-        // fine — PlayerDead's body only references gm's own fields. On return the scene transition has been kicked and
-        // RespawningHero is set.
-        yield return hkGm.PlayerDead(DeathWait);
-
-        // Wait for HK to finish: EnterHero consumes RespawningHero and runs the Knight's Respawn(), which places it at the
-        // bench marker (isHeroInPosition flips true at SendHeroInPosition).
-        while (hkGm.RespawningHero) yield return null;
-        var knight = HeroController.UnsafeInstance;
-        while (knight == null || !knight.isHeroInPosition) {
-            yield return null;
-            knight = HeroController.UnsafeInstance;
-        }
-
-        Revive(hero, knight);
-        handling = false;
-        wasDead = false;
     }
 
-    // Bring Hornet back to life at the Knight's bench position. Mirrors the essential state-restores of Silksong's
-    // HeroController.Respawn (cState.dead clear, renderer/physics/gravity on, MaxHealth) without its scene-entry handshake
-    // (SendHeroInPosition / SilkSpool / bench FSM) — HK already owns the scene + camera here.
-    private static void Revive(SHeroController hero, HeroController knight) {
-        // Position: land where HK placed the Knight (the bench). CameraSwitchDriver also snaps on scene change, but a
-        // same-scene respawn doesn't trip its scene-name check, so do it here unconditionally.
-        hero.transform.position = knight.transform.position;
+    // Un-die Hornet at the respawn point. Restores the physical death-state Die() set (renderer off, layer 2, kinematic,
+    // no_input, HeroBox.Inactive) — always, so she can never be left invisible/dead. CONTROL + animation depend on where
+    // she landed: a BENCH respawn (HK's atBench) is owned by HornetBench (it sits her + handles get-up on input), so we
+    // must NOT RegainControl/idle here or the two fight (she'd run-in-place pinned to the seat). A ground respawn has no
+    // HornetBench involvement, so we put her in a normal controllable idle ourselves. Fetches the LIVE RealHero (a
+    // cross-scene respawn could have swapped the instance out from under a captured reference).
+    private static void Revive(HeroController? knight) {
+        var hero = BundleSpike.RealHero;
+        if (hero == null) {
+            Log.Error("[HornetDeath] revive: no Hornet to revive");
+            return;
+        }
+
+        if (knight != null) hero.transform.position = knight.transform.position;
         var rb = hero.GetComponent<Rigidbody2D>();
         if (rb != null) {
             rb.isKinematic = false;
@@ -113,21 +125,52 @@ internal sealed class HornetDeath : MonoBehaviour {
         hero.AffectedByGravity(true);
         hero.MaxHealth();
 
-        // Out of no_input (Die set it) back to a normal, input-accepting state.
-        setStateMethod ??= typeof(SHeroController).GetMethod("SetState",
-            BindingFlags.Instance | BindingFlags.NonPublic, null, [typeof(SActorStates)], null);
-        setStateMethod?.Invoke(hero, [SActorStates.idle]);
-        hero.RegainControl();
+        // Control/animation depend on WHERE she respawned:
+        //  - BENCH respawn (atBench) -> she must go through HK's bench rest so its FSM can later cycle back to "Idle" (the
+        //    only path that frees the bench for re-use; skipping it leaves the FSM stuck and benching dead until a scene
+        //    reload). So leave her to HornetBench (it sits her; the bench-wake unstick advances HK's hung "Startle" to the
+        //    get-up-ready "Resting"; the player's get-up then cycles the FSM home). Don't force up / clear atBench here.
+        //  - GROUND respawn -> no bench involved, so put her in a normal controllable idle ourselves.
+        var atBench = PlayerData.instance != null && PlayerData.instance.atBench;
+        if (!atBench) {
+            setStateMethod ??= typeof(SHeroController).GetMethod("SetState",
+                BindingFlags.Instance | BindingFlags.NonPublic, null, [typeof(SActorStates)], null);
+            setStateMethod?.Invoke(hero, [SActorStates.idle]);
+            hero.StartAnimationControlToIdle();
+            hero.RegainControl();
+        }
 
         // Re-apply the active-hero split: HK's Respawn woke the (inert) Knight (renderer/control/physics), so re-inert it
         // and re-assert Hornet active. who==prev so this skips the position handoff, just re-runs SetInert on both.
         HeroSwitch.SetActive(ActiveHero.Hornet);
 
-        Log.Info($"[HornetDeath] revived Hornet at {(Vector2)hero.transform.position} (bench respawn complete)");
+        Log.Info($"[HornetDeath] revived Hornet at {(Vector2)hero.transform.position} (atBench={atBench})");
     }
 
     private static IEnumerator Empty() {
         yield break;
+    }
+
+    // Debug (POST /getup): force Hornet out of any stuck bench/no_input state — clear atBench, re-enable rendering +
+    // control, stand to idle. Also handy to recover a session wedged by an old-build death.
+    internal static object ForceGetUp() {
+        var hero = BundleSpike.RealHero;
+        if (hero == null) return new { error = "no Hornet spawned" };
+        if (PlayerData.instance != null) PlayerData.instance.atBench = false;
+        hero.cState.dead = false;
+        SHeroBox.Inactive = false;
+        rendererField ??= typeof(SHeroController).GetField("renderer", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (rendererField?.GetValue(hero) is MeshRenderer mr) mr.enabled = true;
+        hero.gameObject.layer = 9;
+        var rb = hero.GetComponent<Rigidbody2D>();
+        if (rb != null) rb.isKinematic = false;
+        hero.AffectedByGravity(true);
+        setStateMethod ??= typeof(SHeroController).GetMethod("SetState",
+            BindingFlags.Instance | BindingFlags.NonPublic, null, [typeof(SActorStates)], null);
+        setStateMethod?.Invoke(hero, [SActorStates.idle]);
+        hero.StartAnimationControlToIdle();
+        hero.RegainControl();
+        return new { ok = true };
     }
 
     // Debug: kill Hornet on demand (POST /kill) via the real damage path (NonLethal, like ContactDamageBridge), so the

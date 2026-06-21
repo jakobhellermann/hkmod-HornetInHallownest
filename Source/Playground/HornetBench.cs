@@ -17,6 +17,7 @@ namespace HornetPlayer.Playground;
 internal sealed class HornetBench : MonoBehaviour {
     private static GameObject? go;
     private bool sitting;
+    private bool benchWakeUnstuck;
 
     private void Update() {
         var hero = BundleSpike.RealHero;
@@ -31,6 +32,19 @@ internal sealed class HornetBench : MonoBehaviour {
 
         if (resting && !sitting) EnterSit(hero);
         else if (!resting && sitting) ExitSit(hero);
+
+        // Unstick HK's death/load bench-wake so the bench can later free itself. After a death respawn the "Bench Control"
+        // FSM runs Init Resting -> Startle; "Startle" plays "Wake To Sit" on the hero and waits for that animation to
+        // COMPLETE before advancing to the get-up-ready "Resting". The animation plays on the INERT Knight (HeroSwitch
+        // paused its tk2d animator) so it never completes -> the FSM hangs in "Startle" -> atBench stuck true AND the
+        // bench can never be used again (it never returns to "Idle") until a scene reload. A normal rest never enters
+        // "Startle", so completing it is safe + scoped: push it to "Resting" so the player's get-up cycles the FSM home.
+        if (resting) {
+            if (!benchWakeUnstuck && TryAdvanceStuckBenchWake()) benchWakeUnstuck = true;
+        }
+        else {
+            benchWakeUnstuck = false;
+        }
 
         if (knight == null || !HeroSwitch.HornetActive) return;
 
@@ -71,6 +85,21 @@ internal sealed class HornetBench : MonoBehaviour {
         }
 
         Log.Info($"[HornetBench] Hornet sits (atBench) at {(Vector2)hero.transform.position}, healed");
+    }
+
+    // Find the active HK bench FSM hung in "Startle" and push it past the un-completing wake animation toward "Resting".
+    // Returns true once it sent the event (caller stops scanning). Only scans during the brief death-respawn window
+    // (resting && not yet unstuck), so the FindObjectsOfType cost is bounded.
+    private static bool TryAdvanceStuckBenchWake() {
+        foreach (var fsm in FindObjectsOfType<PlayMakerFSM>())
+            if (fsm.FsmName == "Bench Control" && fsm.ActiveStateName == "Startle") {
+                fsm.SendEvent("FINISHED"); // Startle -> Update Map Silently -> Resting (the Wake-To-Sit complete event)
+                Log.Info("[HornetBench] bench wake hung in 'Startle' (Wake-To-Sit never completes on inert Knight) "
+                         + "-> sent FINISHED to advance toward 'Resting' (get-up ready, frees the bench)");
+                return true;
+            }
+
+        return false;
     }
 
     private void ExitSit(SHeroController hero) {
