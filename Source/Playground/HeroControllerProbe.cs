@@ -27,20 +27,19 @@ namespace HornetPlayer.Playground;
 // `get_instance` hook (the entry point); the subsequent `.transform`/`.position` are plain Component/Transform members
 // and are NOT hooked. So a get_instance caller IS the smoking gun for "fly toward the Knight".
 internal static class HeroControllerProbe {
+    // How many distinct callers to surface per label before we stop walking the stack (just keep counting).
+    private const int CallerCap = 8;
     private static readonly List<ILHook> hooks = new();
     private static readonly Dictionary<string, long> counts = new();
     private static readonly Dictionary<string, int> distinctCallers = new();
     private static readonly HashSet<string> loggedCallerKeys = new();
-
-    // How many distinct callers to surface per label before we stop walking the stack (just keep counting).
-    private const int CallerCap = 8;
 
     internal static bool Enabled = true;
 
     // Methods that are fine / already handled / not interesting — don't log (still hooked, just early-out).
     private static readonly HashSet<string> Denylist = new() {
         // Already hand-redirected to RealHero in HeroSwitch:
-        "CanInteract", "CanInput", "GetState",
+        "CanInteract", "CanInput", "GetState"
     };
 
     internal static void Install() {
@@ -94,7 +93,7 @@ internal static class HeroControllerProbe {
         var frames = st.GetFrames();
         var first = "?";
         var lines = new List<string>();
-        if (frames != null) {
+        if (frames != null)
             foreach (var f in frames) {
                 var m = f.GetMethod();
                 var dt = m?.DeclaringType;
@@ -106,7 +105,6 @@ internal static class HeroControllerProbe {
                 lines.Add("    at " + name);
                 if (lines.Count >= 6) break;
             }
-        }
 
         trace = string.Join("\n", lines);
         return first;

@@ -26,12 +26,15 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         // camera disabled (Camera.main.enabled=false, showing a frozen snapshot). A hot-reload despawns the inventory
         // before it can Unfreeze -> the main camera stays off -> black screen. Re-enable HK's main camera on teardown.
         try {
-            var gc = global::GameCameras.instance;
+            var gc = GameCameras.instance;
             if (gc != null && gc.mainCamera != null && !gc.mainCamera.enabled) {
                 gc.mainCamera.enabled = true;
-                Playground.Log.Info($"[Unload] re-enabled HK mainCamera '{gc.mainCamera.name}' (left disabled by inventory DisplayFrozenCamera.Freeze)");
+                Playground.Log.Info(
+                    $"[Unload] re-enabled HK mainCamera '{gc.mainCamera.name}' (left disabled by inventory DisplayFrozenCamera.Freeze)");
             }
-        } catch (System.Exception e) { Playground.Log.Error($"[Unload] camera restore: {e.Message}"); }
+        } catch (Exception e) {
+            Playground.Log.Error($"[Unload] camera restore: {e.Message}");
+        }
 
         ResourcesShim.Cleanup();
         GameObjectFindShim.Cleanup();
@@ -105,7 +108,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause"));
         DebugServer.MapGet("/fsm-vars", req => BundleSpike.FsmVars(req["name"] ?? "Bind"));
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
-        DebugServer.MapPost("/fsm-trace", req => Playground.FsmTracer.SetTargets(req["names"])); // live state/event trace
+        DebugServer.MapPost("/fsm-trace", req => FsmTracer.SetTargets(req["names"])); // live state/event trace
         DebugServer.MapGet("/probe-cameratarget", _ => BundleSpike.ProbeCameraTarget());
         DebugServer.MapGet("/probe-sprint-target", _ => BundleSpike.ProbeSprintTarget());
         DebugServer.MapGet("/find-trace", req => {
@@ -134,13 +137,15 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/kill", _ => HornetDeath.Kill()); // debug: trigger Hornet death (real damage path)
         DebugServer.MapPost("/getup", _ => HornetDeath.ForceGetUp()); // debug: unstick from bench/no_input
         DebugServer.MapGet("/bench-state", _ => BundleSpike.BenchState()); // debug: atBench signal + Hornet sit clips
-        DebugServer.MapGet("/hc-probe", req => { // which HK HeroController methods get called on the Knight while Hornet active
+        DebugServer.MapGet("/hc-probe", req => {
+            // which HK HeroController methods get called on the Knight while Hornet active
             if ((req["reset"] ?? "").ToLowerInvariant() == "true") return HeroControllerProbe.Reset();
             var on = req["on"];
             if (on != null) HeroControllerProbe.Enabled = on.ToLowerInvariant() != "false";
             return HeroControllerProbe.Dump();
         });
-        DebugServer.MapGet("/audio-diag", _ => BundleSpike.AudioDiag()); // debug: which SpawnAndPlayOneShot gate kills SFX
+        DebugServer.MapGet("/audio-diag",
+            _ => BundleSpike.AudioDiag()); // debug: which SpawnAndPlayOneShot gate kills SFX
         DebugServer.MapPost("/switch", req => {
             var who = (req["who"] ?? "").ToLowerInvariant();
             return who switch {
@@ -187,12 +192,16 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();
-        FsmTracer.Install();            // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
-        GetComponentShim.Install();     // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
-        HeroControllerProbe.Install();  // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
-        EnemyTargetBridge.Install();    // redirect HK enemy "where's the hero" queries (LineOfSightDetector LoS) to the active hero
-        Tk2dClipShim.Install();         // log-once + skip missing tk2d clips (HK-Knight clip names absent on Hornet's animator)
-        InventoryPauseBridge.Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
+        FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
+        GetComponentShim
+            .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
+        HeroControllerProbe
+            .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
+        EnemyTargetBridge
+            .Install(); // redirect HK enemy "where's the hero" queries (LineOfSightDetector LoS) to the active hero
+        Tk2dClipShim.Install(); // log-once + skip missing tk2d clips (HK-Knight clip names absent on Hornet's animator)
+        InventoryPauseBridge
+            .Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
         // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 

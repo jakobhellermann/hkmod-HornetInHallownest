@@ -16,8 +16,8 @@ namespace HornetPlayer.Playground;
 // Respawn-point/heal/save on the HK side already happen; this only adds Hornet's sit visual + her own heal.
 internal sealed class HornetBench : MonoBehaviour {
     private static GameObject? go;
-    private bool sitting;
     private bool benchWakeUnstuck;
+    private bool sitting;
 
     private void Update() {
         var hero = BundleSpike.RealHero;
@@ -48,18 +48,16 @@ internal sealed class HornetBench : MonoBehaviour {
 
         if (knight == null || !HeroSwitch.HornetActive) return;
 
-        if (sitting) {
+        if (sitting)
             // Track the Knight as HK's bench FSM slides it the last bit onto the seat (over several frames after atBench
             // flips), so Hornet ends up exactly where it settles.
             hero.transform.position = knight.transform.position;
-        }
-        else if (knight.cState != null && knight.cState.nearBench) {
+        else if (knight.cState != null && knight.cState.nearBench)
             // Hornet is standing on a bench trigger — HK's RestBench set the KNIGHT's nearBench (it calls
             // HeroController.instance.NearBench on any layer-9 collider). Glue the far, inert Knight onto her NOW, BEFORE
             // rest is chosen: otherwise HK's bench FSM slides it onto the seat from across the room and the camera flashes
             // to that far slide. Pre-positioned here, the slide is a short local hop with nothing to flash to.
             knight.transform.position = hero.transform.position;
-        }
     }
 
     private void EnterSit(SHeroController hero) {

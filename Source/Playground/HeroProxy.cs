@@ -1,5 +1,5 @@
 using HutongGames.PlayMaker;
-using HkHero = global::HeroController;
+using HkHero = HeroController;
 
 namespace HornetPlayer.Playground;
 

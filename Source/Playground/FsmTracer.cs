@@ -29,18 +29,23 @@ internal static class FsmTracer {
                 var t = n.Trim();
                 if (t.Length > 0) targets.Add(t);
             }
+
         Log.Info($"[FsmTrace] tracing: {(targets.Count == 0 ? "(off)" : string.Join(", ", targets))}");
         return new { tracing = targets.ToArray() };
     }
 
-    private static bool Traced(Fsm fsm) => fsm != null && targets.Count > 0 && targets.Contains(fsm.Name);
+    private static bool Traced(Fsm fsm) {
+        return fsm != null && targets.Count > 0 && targets.Contains(fsm.Name);
+    }
 
     internal static void Install() {
         if (hooks.Count > 0) return;
         var t = typeof(Fsm);
         // NB: every detour wraps its logging in try/catch and ALWAYS calls orig last — a logging error (e.g. a null
         // action in a state's Actions array) must never throw before orig and break the FSM we're only observing.
-        Add(t.GetMethod("SwitchState", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(FsmState) }, null),
+        Add(
+            t.GetMethod("SwitchState", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(FsmState) },
+                null),
             (Action<Action<Fsm, FsmState>, Fsm, FsmState>)((orig, fsm, to) => {
                 try {
                     if (Traced(fsm)) {
@@ -50,23 +55,34 @@ internal static class FsmTracer {
                             : "";
                         Log.Info($"[FsmTrace] {fsm.Name}@{fsm.GameObjectName}: '{from}' --> '{to?.Name}'  [{acts}]");
                     }
-                } catch (Exception e) { Log.Error($"[FsmTrace] SwitchState log: {e.Message}"); }
+                } catch (Exception e) {
+                    Log.Error($"[FsmTrace] SwitchState log: {e.Message}");
+                }
+
                 orig(fsm, to);
             }));
         Add(t.GetMethod("Event", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(FsmEvent) }, null),
             (Action<Action<Fsm, FsmEvent>, Fsm, FsmEvent>)((orig, fsm, ev) => {
                 try {
                     if (Traced(fsm) && !string.IsNullOrEmpty(ev?.Name))
-                        Log.Info($"[FsmTrace] {fsm.Name}: EVENT '{ev.Name}' <- {ActiveAction(fsm)} (state '{fsm.ActiveStateName}')");
-                } catch (Exception e) { Log.Error($"[FsmTrace] Event log: {e.Message}"); }
+                        Log.Info(
+                            $"[FsmTrace] {fsm.Name}: EVENT '{ev.Name}' <- {ActiveAction(fsm)} (state '{fsm.ActiveStateName}')");
+                } catch (Exception e) {
+                    Log.Error($"[FsmTrace] Event log: {e.Message}");
+                }
+
                 orig(fsm, ev);
             }));
         Add(t.GetMethod("Event", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null),
             (Action<Action<Fsm, string>, Fsm, string>)((orig, fsm, name) => {
                 try {
                     if (Traced(fsm) && !string.IsNullOrEmpty(name))
-                        Log.Info($"[FsmTrace] {fsm.Name}: EVENT(str) '{name}' <- {ActiveAction(fsm)} (state '{fsm.ActiveStateName}')");
-                } catch (Exception e) { Log.Error($"[FsmTrace] Event(str) log: {e.Message}"); }
+                        Log.Info(
+                            $"[FsmTrace] {fsm.Name}: EVENT(str) '{name}' <- {ActiveAction(fsm)} (state '{fsm.ActiveStateName}')");
+                } catch (Exception e) {
+                    Log.Error($"[FsmTrace] Event(str) log: {e.Message}");
+                }
+
                 orig(fsm, name);
             }));
 
@@ -82,8 +98,16 @@ internal static class FsmTracer {
     }
 
     private static void Add(MethodInfo? mi, Delegate detour) {
-        if (mi == null) { Log.Error("[FsmTrace] method not found"); return; }
-        try { hooks.Add(new Hook(mi, detour)); } catch (Exception e) { Log.Error($"[FsmTrace] hook failed: {e.Message}"); }
+        if (mi == null) {
+            Log.Error("[FsmTrace] method not found");
+            return;
+        }
+
+        try {
+            hooks.Add(new Hook(mi, detour));
+        } catch (Exception e) {
+            Log.Error($"[FsmTrace] hook failed: {e.Message}");
+        }
     }
 
     internal static void Cleanup() {

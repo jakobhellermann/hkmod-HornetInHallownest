@@ -24,13 +24,12 @@ namespace HornetPlayer.Playground;
 // NullRefs on our null gm.tilemap/gm.gameMap). Real corpse/cocoon = a later feature; this is the "die -> back to bench"
 // path. Death detection is on the cState.dead rising edge (robust to which Die overload ran).
 internal sealed class HornetDeath : MonoBehaviour {
+    // Death wait before HK fades out — lets the Silksong death-prefab animation play, mirrors HK's DEATH_WAIT (2.85s).
+    private const float DeathWait = 2.5f;
     private static GameObject? go;
     private static FieldInfo? rendererField;
     private static MethodInfo? setStateMethod;
     private static Hook? playerDeadHook;
-
-    // Death wait before HK fades out — lets the Silksong death-prefab animation play, mirrors HK's DEATH_WAIT (2.85s).
-    private const float DeathWait = 2.5f;
 
     private bool handling;
     private bool wasDead;

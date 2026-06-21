@@ -40,6 +40,9 @@ internal static class GameCamerasBootstrap {
     private static FieldInfo? hkGcInstanceField;
     private static Vector3 hkHudScale = Vector3.one; // HK hudCanvas' real scale, cached so we can restore after hiding
 
+    private static Transform?
+        ssMainCamT; // Silksong rig's (neutered) main camera transform, kept on HK's camera for audio
+
     // Silksong's CameraTarget GameObject (on the rig). Silksong hero FSMs reference a "Camera Target" via a serialized
     // FsmGameObject whose cross-game PPtr is lost -> they'd fall back to GameObject.Find("Camera Target") and hit HK's
     // same-named object (HK's CameraTarget has no SetSprint -> "Method Name is invalid"). Rewire those refs to THIS.
@@ -242,8 +245,8 @@ internal static class GameCamerasBootstrap {
         // ih/active + subscribes an event (deps ready), so it's safe to call directly.
         try {
             var setupRefs = typeof(Silksong::UIButtonSkins)
-                .GetMethod("SetupRefs", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-            var skins = UnityEngine.Object.FindObjectsByType<Silksong::UIButtonSkins>(
+                .GetMethod("SetupRefs", BindingFlags.Instance | BindingFlags.NonPublic);
+            var skins = Object.FindObjectsByType<Silksong::UIButtonSkins>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var s in skins) setupRefs?.Invoke(s, null);
             Log.Info($"[HUD] wired UIButtonSkins.ih on {skins.Length} instance(s) before HUD activation");
@@ -291,8 +294,6 @@ internal static class GameCamerasBootstrap {
         if (inGame == null) return;
         if (inGame.gameObject.activeSelf != on) inGame.gameObject.SetActive(on);
     }
-
-    private static Transform? ssMainCamT; // Silksong rig's (neutered) main camera transform, kept on HK's camera for audio
 
     // Keep Silksong's neutered main camera on HK's camera. Silksong's AudioEventManager.TryPlayAudioClip culls 3D
     // one-shots whose world position is farther than the prefab's maxDistance from GameCameras.mainCamera — and our

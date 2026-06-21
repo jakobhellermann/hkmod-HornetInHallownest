@@ -26,7 +26,11 @@ internal static class GetComponentShim {
     internal static void Install() {
         if (hook != null) return;
         var mi = typeof(GameObject).GetMethod("GetComponent", new[] { typeof(string) });
-        if (mi == null) { Log.Error("[GetComponentShim] GameObject.GetComponent(string) not found"); return; }
+        if (mi == null) {
+            Log.Error("[GetComponentShim] GameObject.GetComponent(string) not found");
+            return;
+        }
+
         hook = new Hook(mi,
             (Func<Func<GameObject, string, Component>, GameObject, string, Component?>)((orig, self, name) => {
                 var c = orig(self, name);
@@ -36,6 +40,7 @@ internal static class GetComponentShim {
                     var ty = comp.GetType();
                     if (ty.Name == name || ty.FullName == name) return comp;
                 }
+
                 return null;
             }));
         Log.Info("[GetComponentShim] installed: GameObject.GetComponent(string) name-match fallback on null");

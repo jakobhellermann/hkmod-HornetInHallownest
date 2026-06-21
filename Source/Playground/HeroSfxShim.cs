@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
+using Object = UnityEngine.Object;
 using SRandomAudioTable = Silksong::RandomAudioClipTable;
 using SAudioExt = Silksong::RandomAudioClipTableExtensions;
 using SAudioEventManager = Silksong::AudioEventManager;
@@ -31,7 +32,7 @@ internal static class HeroSfxShim {
         if (clip == null) return;
         if (sfx == null) {
             go = new GameObject("HornetPlayer.HeroSfx");
-            UnityEngine.Object.DontDestroyOnLoad(go);
+            Object.DontDestroyOnLoad(go);
             sfx = go.AddComponent<AudioSource>();
             sfx.spatialBlend = 0f;
             sfx.volume = 1f;
@@ -52,9 +53,13 @@ internal static class HeroSfxShim {
 
     internal static void Install() {
         HookMethod(typeof(SAudioExt), "SpawnAndPlayOneShot", BindingFlags.Public | BindingFlags.Static,
-            [typeof(SRandomAudioTable), typeof(AudioSource), typeof(Vector3), typeof(bool), typeof(float), typeof(Action)],
+            [
+                typeof(SRandomAudioTable), typeof(AudioSource), typeof(Vector3), typeof(bool), typeof(float),
+                typeof(Action)
+            ],
             (Func<Func<SRandomAudioTable, AudioSource, Vector3, bool, float, Action, AudioSource>,
-                SRandomAudioTable, AudioSource, Vector3, bool, float, Action, AudioSource>)((_, table, _, _, force, vol, _) => {
+                SRandomAudioTable, AudioSource, Vector3, bool, float, Action, AudioSource>)((_, table, _, _, force, vol,
+                _) => {
                 if (table != null) PlayClip(table.SelectClip(force), table.SelectVolume() * vol, table.SelectPitch());
                 return null!;
             }));
@@ -62,10 +67,11 @@ internal static class HeroSfxShim {
         // AudioEvent one-shots: un-cull + route through a 2D prefab so the real prefab.Spawn play is audible.
         HookMethod(typeof(SAudioEventManager), "TryPlayAudioClip", BindingFlags.Public | BindingFlags.Static,
             [typeof(AudioClip), typeof(AudioSource), typeof(Vector3)],
-            (Func<Func<AudioClip, AudioSource, Vector3, bool>, AudioClip, AudioSource, Vector3, bool>)((_, _, prefab, _) => {
-                MakeRaw2D(prefab);
-                return true;
-            }));
+            (Func<Func<AudioClip, AudioSource, Vector3, bool>, AudioClip, AudioSource, Vector3, bool>)(
+                (_, _, prefab, _) => {
+                    MakeRaw2D(prefab);
+                    return true;
+                }));
 
         // NailSlash's own 3D AudioSource (the swing) — flip it to 2D once, in Awake.
         HookMethod(typeof(SNailSlash), "Awake", BindingFlags.NonPublic | BindingFlags.Instance, Type.EmptyTypes,
@@ -94,7 +100,7 @@ internal static class HeroSfxShim {
     internal static void Cleanup() {
         foreach (var h in hooks) h.Dispose();
         hooks.Clear();
-        if (go != null) UnityEngine.Object.Destroy(go);
+        if (go != null) Object.Destroy(go);
         go = null;
         sfx = null;
     }

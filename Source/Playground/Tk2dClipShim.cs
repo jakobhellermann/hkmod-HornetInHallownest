@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
@@ -32,7 +31,8 @@ internal static class Tk2dClipShim {
         if (self != null && !string.IsNullOrEmpty(name) && self.GetClipByName(name) == null) {
             var key = self.gameObject.name + "|" + name;
             if (logged.Add(key))
-                Log.Info($"[Tk2dClipShim] missing clip '{name}' on '{self.gameObject.name}' -> skipped (needs Hornet mapping)");
+                Log.Info(
+                    $"[Tk2dClipShim] missing clip '{name}' on '{self.gameObject.name}' -> skipped (needs Hornet mapping)");
             return; // skip orig (it would Debug.LogError per call)
         }
 

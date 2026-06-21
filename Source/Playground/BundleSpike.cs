@@ -313,7 +313,7 @@ internal static class BundleSpike {
         var knight = HeroController.UnsafeInstance;
         var pdHk = PlayerData.instance; // HK PlayerData — atBench is HK's
         var anim = hc != null ? hc.AnimCtrl?.animator : null;
-        string[] restClips = Array.Empty<string>();
+        var restClips = Array.Empty<string>();
         if (anim?.Library?.clips != null)
             restClips = anim.Library.clips
                 .Where(c => c != null && c.name != null &&

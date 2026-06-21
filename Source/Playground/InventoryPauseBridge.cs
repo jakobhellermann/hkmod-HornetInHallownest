@@ -38,7 +38,8 @@ internal static class InventoryPauseBridge {
                         if (value) {
                             prevTimeScale = Time.timeScale > 0.0001f ? Time.timeScale : 1f;
                             Time.timeScale = 0f;
-                        } else {
+                        }
+                        else {
                             Time.timeScale = prevTimeScale > 0.0001f ? prevTimeScale : 1f;
                         }
 
