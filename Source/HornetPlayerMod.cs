@@ -43,6 +43,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         PogoNonBounceShim.Cleanup();
         ContactDamageBridge.Cleanup();
         FreezeMomentFix.Cleanup();
+        FsmTracer.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
@@ -84,6 +85,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause"));
         DebugServer.MapGet("/fsm-vars", req => BundleSpike.FsmVars(req["name"] ?? "Bind"));
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
+        DebugServer.MapPost("/fsm-trace", req => Playground.FsmTracer.SetTargets(req["names"])); // live state/event trace
         DebugServer.MapGet("/probe-cameratarget", _ => BundleSpike.ProbeCameraTarget());
         DebugServer.MapGet("/probe-sprint-target", _ => BundleSpike.ProbeSprintTarget());
         DebugServer.MapGet("/find-trace", req => {
@@ -152,6 +154,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         ContactDamageBridge
             .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
         FreezeMomentFix.Install();
+        FsmTracer.Install();            // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         // BundleSpike.Run();
 
         // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so
