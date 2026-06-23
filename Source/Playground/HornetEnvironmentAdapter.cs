@@ -108,14 +108,16 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         go.AddComponent<HornetEnvironmentAdapter>();
         DontDestroyOnLoad(go);
         // Hook HK's GameManager.BeginSceneTransition: it fires at the start of a scene transition, before the scene
-        // unloads. Silksong's own GameManager never fires its UnloadingLevel event (GM GO inactive), so its subscribers
-        // (HeroController.OnLevelUnload → SetHeroParent(null) → DontDestroyOnLoad, CameraController, WalkArea, ...)
-        // never run — and Hornet gets destroyed by the scene unload. In this hook (after orig, which kicks off the
-        // coroutine that eventually unloads the scene), we fire Silksong's UnloadingLevel so its subscribers run.
+        // unloads. Silksong's own GameManager never fires its UnloadingLevel event (GM GO inactive), and
+        // HeroController.OnLevelUnload never subscribes to it (subscription is in SetupGameRefs, which we skip).
+        // So Hornet stays in the scene and gets destroyed by SceneManager.UnloadScene in the transition coroutine.
+        // In this hook (after orig, which kicks off the coroutine), we directly deparent her — what OnLevelUnload
+        // would do, but checking scene instead of parent (SetHeroParent(null) skips DontDestroyOnLoad when
+        // transform.parent is already null, even if the GO is still in a scene).
         var mi = typeof(GameManager).GetMethod("BeginSceneTransition", [typeof(GameManager.SceneLoadInfo)]);
         if (mi != null) {
             beginSceneTransitionHook = new Hook(mi, BeginSceneTransitionHook);
-            Log.Info("[EnvAdapter] installed: GameManager.BeginSceneTransition relay hook");
+            Log.Info("[EnvAdapter] installed: GameManager.BeginSceneTransition deparent hook");
         } else {
             Log.Error("[EnvAdapter] GameManager.BeginSceneTransition not found");
         }
@@ -123,19 +125,16 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
 
     private static void BeginSceneTransitionHook(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self, GameManager.SceneLoadInfo info) {
         orig(self, info);
-        // Fire Silksong's UnloadingLevel event — mirrors what Silksong's BeginSceneTransitionRoutine does
-        // at the same point (after setting up transition state, before scene unload).
-        var gm = Silksong::GameManager._instance;
-        if (gm == null) return;
-        try {
-            var field = typeof(Silksong::GameManager).GetField("UnloadingLevel",
-                BindingFlags.Public | BindingFlags.Instance);
-            if (field?.GetValue(gm) is Action del) {
-                del.Invoke();
-                Log.Info("[EnvAdapter] relayed UnloadingLevel to Silksong GameManager");
-            }
-        } catch (Exception e) {
-            Log.Error($"[EnvAdapter] UnloadingLevel relay failed: {e.Message}");
+        // Deparent Hornet before the transition coroutine unloads the scene. Mirrors Silksong's
+        // HeroController.OnLevelUnload → SetHeroParent(null) → DontDestroyOnLoad, but checks scene
+        // instead of parent: SetHeroParent(null) skips DontDestroyOnLoad when transform.parent is already
+        // null, even if the GO is still in a scene (e.g. platform destroyed, hero unparented but not in DDOL).
+        var hero = BundleSpike.RealHero;
+        if (hero != null && hero.gameObject.scene.name != "DontDestroyOnLoad") {
+            Log.Info($"[EnvAdapter] deparenting hero before scene transition (was in scene={hero.gameObject.scene.name})");
+            hero.SetHeroParent(null);
+            if (hero.gameObject.scene.name != "DontDestroyOnLoad")
+                UnityEngine.Object.DontDestroyOnLoad(hero.gameObject);
         }
     }
 

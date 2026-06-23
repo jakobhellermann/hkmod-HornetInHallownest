@@ -24,8 +24,7 @@ internal static class PlayMakerWarningContext {
     private static Hook? fsmUpdateHook;
     private static readonly HashSet<string> logged = new();
 
-    // ThreadStatic: the FSM currently executing (set by the Fsm.Update hook, read by GetGameObjectFsmHook).
-    // Format: "goName/fsmName(stateName)" or null if not in an FSM Update context.
+    // Fallback for init paths that run actions outside FsmExecutionStack (rare).
     [ThreadStatic] private static string? currentFsmContext;
 
     internal static void Install() {
@@ -39,12 +38,14 @@ internal static class PlayMakerWarningContext {
             Log.Error("[PlayMakerCtx] ActionHelpers.GetGameObjectFsm not found");
         }
 
-        // Hook Fsm.Update to track which FSM is currently executing (so GetGameObjectFsmHook can report the caller).
-        // Fsm.Update is an instance method on the Fsm class; it calls FsmState actions which call GetGameObjectFsm.
+        // Use PlayMaker's own FsmExecutionStack as the primary source of truth for the calling FSM.
+        // It's pushed by Fsm.Update, LateUpdate, FixedUpdate, AND ProcessEvent (cross-FSM events, init) —
+        // so it captures all action execution paths. We hook Fsm.Update as a fallback for rare init paths
+        // that run actions before the stack is pushed.
         var fsmUpdate = typeof(Fsm).GetMethod("Update", BindingFlags.Public | BindingFlags.Instance);
         if (fsmUpdate != null) {
             fsmUpdateHook = new Hook(fsmUpdate, FsmUpdateHook);
-            Log.Info("[PlayMakerCtx] installed: Fsm.Update context tracker");
+            Log.Info("[PlayMakerCtx] installed: Fsm.Update context fallback");
         } else {
             Log.Error("[PlayMakerCtx] Fsm.Update not found");
         }
@@ -68,7 +69,12 @@ internal static class PlayMakerWarningContext {
         var result = orig(go, fsmName);
         if (result == null && go != null && !string.IsNullOrEmpty(fsmName)) {
             var scene = go.scene.name;
-            var caller = currentFsmContext ?? "(unknown FSM)";
+            // Primary: PlayMaker's own execution stack (covers Update/LateUpdate/FixedUpdate/ProcessEvent).
+            // Fallback: our ThreadStatic (covers rare init paths outside the stack).
+            var execFsm = FsmExecutionStack.ExecutingFsm;
+            var caller = execFsm != null
+                ? $"{execFsm.OwnerName}/{execFsm.Name}"
+                : currentFsmContext ?? "(unknown FSM)";
             var key = $"notfound|{fsmName}|{go.name}|{scene}|{caller}";
             if (logged.Add(key)) {
                 Log.Info($"[PlayMakerCtx] FSM '{fsmName}' not found on GO '{go.name}' (scene={scene}) — called by FSM: {caller}");
