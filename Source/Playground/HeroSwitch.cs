@@ -130,8 +130,8 @@ internal static class HeroSwitch {
         // Hand off in place: move the newly-active hero to where the previously-active one stood, so control + camera
         // stay on the same spot (only the character changes). Skip when re-applying the same hero (e.g. at spawn).
         if (who != prev) {
-            var newT = who == ActiveHero.Hornet ? hornetGo?.transform : knightGo?.transform;
-            var oldT = prev == ActiveHero.Hornet ? hornetGo?.transform : knightGo?.transform;
+            var newT = TransformOf(who == ActiveHero.Hornet ? hornetGo : knightGo);
+            var oldT = TransformOf(prev == ActiveHero.Hornet ? hornetGo : knightGo);
             if (newT != null && oldT != null && newT != oldT) {
                 newT.position = oldT.position;
                 var rb = newT.GetComponent<Rigidbody2D>();
@@ -139,7 +139,7 @@ internal static class HeroSwitch {
             }
         }
 
-        var follow = who == ActiveHero.Hornet ? hornetGo?.transform : knightGo?.transform;
+        var follow = TransformOf(who == ActiveHero.Hornet ? hornetGo : knightGo);
         RetargetCamera(follow);
 
         // Log.Info($"[HeroSwitch] active={Active} following={(follow != null ? follow.name : "?")}");
@@ -225,6 +225,14 @@ internal static class HeroSwitch {
     }
 
     // Point HK's CameraTarget at `t` so HK's native camera chain follows it. Idempotent + cheap (one reflected set).
+    // Resolve a GameObject's Transform via Unity's overloaded null-check (NOT `go?.transform`). The `?.` operator uses a
+    // raw reference compare and does NOT see a destroyed-but-uncollected UnityEngine.Object (native side gone, managed
+    // wrapper alive) -> it touches a dead native pointer and NullRefs every frame. An explicit `go != null` invokes
+    // UnityEngine.Object's overloaded operator, which treats destroyed as null. Open item #1: Hornet's GO can be
+    // destroyed mid-session (e.g. a Stag ride); without this guard the per-frame CameraSwitchDriver.Update floods
+    // Player.log with native NullRefs until she's respawned (observed ~5M lines across one destruction window).
+    internal static Transform? TransformOf(GameObject? go) => go != null ? go.transform : null;
+
     internal static void RetargetCamera(Transform? t) {
         if (t == null) return;
         var gc = GameCameras.instance;
@@ -305,7 +313,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         }
 
         var follow = HeroSwitch.HornetActive
-            ? BundleSpike.HornetRoot?.transform
+            ? HeroSwitch.TransformOf(BundleSpike.HornetRoot)
             : knight != null
                 ? knight.transform
                 : null;
