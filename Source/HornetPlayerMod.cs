@@ -67,6 +67,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         HeroProxy.Cleanup();
         Tk2dClipShim.Cleanup();
         InventoryPauseBridge.Cleanup();
+        CallMethodProperFix.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
@@ -200,6 +201,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         Tk2dClipShim.Install(); // log-once + skip missing tk2d clips (HK-Knight clip names absent on Hornet's animator)
         InventoryPauseBridge
             .Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
+        CallMethodProperFix
+            .Install(); // catch AmbiguousMatchException in CallMethodProper.DoCache when HeroProxy repoints to Hornet
         // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 
