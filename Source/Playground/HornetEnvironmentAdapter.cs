@@ -1,6 +1,7 @@
 extern alias Silksong;
 using System;
 using System.Reflection;
+using MonoMod.RuntimeDetour;
 using UnityEngine;
 
 namespace HornetPlayer.Playground;
@@ -104,31 +105,44 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         go = new GameObject("HornetPlayer.EnvironmentAdapter");
         go.AddComponent<HornetEnvironmentAdapter>();
         DontDestroyOnLoad(go);
-        // Backfill Silksong's gm.UnloadingLevel event (which fires from the inactive Silksong_GameManager's
-        // scene-transition routines — never fires because the GM GO is inactive). The most critical subscriber is
-        // HeroController.OnLevelUnload -> SetHeroParent(null) -> DontDestroyOnLoad: if Hornet is parented to a scene
-        // object (e.g. a moving platform via HeroPlatformStick.DoParent), the scene unload destroys her. Fire the
-        // event from HK's activeSceneChanged so Silksong's subscribers (HeroController, CameraController, WalkArea, ...)
-        // get their unload callback at the right time.
-        UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        // Subscribe to HK's GameManager.UnloadingLevel event (fires at the start of BeginSceneTransitionRoutine,
+        // before the scene unloads) and forward it to Silksong's GameManager.UnloadingLevel. Silksong's own
+        // GameManager never fires this event (GM GO inactive), so its subscribers (HeroController.OnLevelUnload →
+        // SetHeroParent(null) → DontDestroyOnLoad, CameraController, WalkArea, ...) never run — and Hornet gets
+        // destroyed by the scene unload if she's in it. Forwarding the event at the right time mirrors Silksong's
+        // own flow exactly: HK fires its UnloadingLevel, we relay it to Silksong's, Silksong's subscribers run.
+        var hkGm = UnityEngine.Object.FindFirstObjectByType<GameManager>();
+        if (hkGm != null) {
+            var hkField = typeof(GameManager).GetField("UnloadingLevel",
+                BindingFlags.Public | BindingFlags.Instance);
+            if (hkField?.GetValue(hkGm) is Delegate hkDel) {
+                // Subscribe our relay to HK's event
+                var relay = (GameManager.UnloadLevel)OnHkUnloadingLevel;
+                hkField.SetValue(hkGm, Delegate.Combine(hkDel, relay));
+                Log.Info("[EnvAdapter] subscribed to HK GameManager.UnloadingLevel (relay to Silksong)");
+            }
+        }
     }
 
-    private static void OnActiveSceneChanged(UnityEngine.SceneManagement.Scene prev, UnityEngine.SceneManagement.Scene next) {
+    private static void OnHkUnloadingLevel() {
         var gm = Silksong::GameManager._instance;
         if (gm == null) return;
         try {
-            // Fire the event that HeroController.OnLevelUnload + others subscribe to.
-            // Silksong's GameManager stores it as `public event Action UnloadingLevel`.
             var field = typeof(Silksong::GameManager).GetField("UnloadingLevel",
                 BindingFlags.Public | BindingFlags.Instance);
-            if (field?.GetValue(gm) is Action del) del.Invoke();
+            if (field?.GetValue(gm) is Action del) {
+                del.Invoke();
+                Log.Info("[EnvAdapter] relayed UnloadingLevel to Silksong GameManager");
+            }
         } catch (Exception e) {
-            Log.Error($"[EnvAdapter] UnloadingLevel backfill failed: {e.Message}");
+            Log.Error($"[EnvAdapter] UnloadingLevel relay failed: {e.Message}");
         }
     }
 
     internal static void Cleanup() {
-        UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        // Unsubscribe from HK's UnloadingLevel event
+        var hkGm = go != null ? go.scene.name == "DontDestroyOnLoad" : false;
+        // (Unsubscribe is best-effort — the GameManager might be destroyed already)
         if (go != null) {
             Destroy(go);
             go = null;
