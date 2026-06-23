@@ -55,7 +55,20 @@ internal static class CallMethodProperFix {
     // For an instance method `bool DoCache()`, MonoMod's orig delegate includes the instance: Func<CallMethodProper, bool>.
     private static bool DoCacheHook(Func<CallMethodProper, bool> orig, CallMethodProper self) {
         try {
-            return orig(self);
+            var result = orig(self);
+            // orig returned false → method not found on the resolved type. HK's DoCache sets errorString
+            // ("Method Name is invalid: X") which DoMethodCall logs with zero context. Add ours.
+            if (!result) {
+                var type = (Type?)cachedTypeField?.GetValue(self);
+                var methodName = (methodNameField?.GetValue(self) as FsmString)?.Value;
+                var fsm = self.Fsm;
+                var scene = fsm?.Owner != null ? fsm.Owner.gameObject.scene.name : "?";
+                var goName = fsm?.OwnerName ?? "?";
+                var fsmName = fsm?.Name ?? "?";
+                var stateName = self.State?.Name ?? "?";
+                Log.Error($"[CallMethodProperFix] method '{methodName}' not found on {type?.Name ?? "?"} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
+            }
+            return result;
         } catch (AmbiguousMatchException) {
             // orig already set cachedType + cachedBehaviour before GetMethod threw — but fall back to component if not.
             var type = (Type?)cachedTypeField?.GetValue(self);
