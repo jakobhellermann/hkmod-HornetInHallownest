@@ -68,6 +68,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         Tk2dClipShim.Cleanup();
         InventoryPauseBridge.Cleanup();
         CallMethodProperFix.Cleanup();
+        PlayMakerWarningContext.Cleanup();
+        PlayMakerWarningContext.CleanupOnDestroyTrace();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
@@ -203,6 +205,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             .Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
         CallMethodProperFix
             .Install(); // catch AmbiguousMatchException in CallMethodProper.DoCache when HeroProxy repoints to Hornet
+        PlayMakerWarningContext
+            .Install(); // add GO+scene context to "Could not find FSM" / dedup "Fsm not initialized" burst
+        PlayMakerWarningContext.InstallOnDestroyTrace(); // trace who destroys Hornet's HeroController
         // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 

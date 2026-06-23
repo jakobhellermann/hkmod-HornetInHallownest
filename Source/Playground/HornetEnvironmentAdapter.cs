@@ -104,9 +104,31 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         go = new GameObject("HornetPlayer.EnvironmentAdapter");
         go.AddComponent<HornetEnvironmentAdapter>();
         DontDestroyOnLoad(go);
+        // Backfill Silksong's gm.UnloadingLevel event (which fires from the inactive Silksong_GameManager's
+        // scene-transition routines — never fires because the GM GO is inactive). The most critical subscriber is
+        // HeroController.OnLevelUnload -> SetHeroParent(null) -> DontDestroyOnLoad: if Hornet is parented to a scene
+        // object (e.g. a moving platform via HeroPlatformStick.DoParent), the scene unload destroys her. Fire the
+        // event from HK's activeSceneChanged so Silksong's subscribers (HeroController, CameraController, WalkArea, ...)
+        // get their unload callback at the right time.
+        UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnActiveSceneChanged;
+    }
+
+    private static void OnActiveSceneChanged(UnityEngine.SceneManagement.Scene prev, UnityEngine.SceneManagement.Scene next) {
+        var gm = Silksong::GameManager._instance;
+        if (gm == null) return;
+        try {
+            // Fire the event that HeroController.OnLevelUnload + others subscribe to.
+            // Silksong's GameManager stores it as `public event Action UnloadingLevel`.
+            var field = typeof(Silksong::GameManager).GetField("UnloadingLevel",
+                BindingFlags.Public | BindingFlags.Instance);
+            if (field?.GetValue(gm) is Action del) del.Invoke();
+        } catch (Exception e) {
+            Log.Error($"[EnvAdapter] UnloadingLevel backfill failed: {e.Message}");
+        }
     }
 
     internal static void Cleanup() {
+        UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         if (go != null) {
             Destroy(go);
             go = null;
