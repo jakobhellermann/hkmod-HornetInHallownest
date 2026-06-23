@@ -84,6 +84,16 @@ internal static class PlayMakerWarningContext {
     }
 
     private static void OnLogMessage(string condition, string stackTrace, LogType type) {
+        // Suppress HK HUD FSM warnings when Hornet is active: HK HUD FSMs (Soul Orb Control, etc.) call GetHero() ->
+        // HeroProxy redirects to Hornet -> they try HK-specific methods/FSMs that don't exist on Silksong's
+        // HeroController. These are no-ops (no crash, just log noise). Suppress them to keep the log clean.
+        if (HeroSwitch.HornetActive && (
+            condition.StartsWith("Method Name is invalid: ClearMP") ||
+            condition.StartsWith("Could not find FSM: Spell Control") ||
+            condition.StartsWith("Could not find FSM: ProxyFSM") ||
+            condition.StartsWith("Could not find FSM: Dream Nail"))) {
+            return; // swallow — these are expected cross-game mismatches when Hornet is active
+        }
         // Deduplicate the Silksong PlayMaker "Fsm not initialized" / "Error Loading Action" burst.
         // These fire from Fsm property getters and ActionData.CreateAction when the Fsm object is null
         // (init failed because Silksong_GameManager is inactive). Each unique message logged once.

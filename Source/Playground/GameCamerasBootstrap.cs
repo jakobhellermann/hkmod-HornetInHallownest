@@ -340,7 +340,12 @@ internal static class GameCamerasBootstrap {
             if (on) {
                 if (disabledHudFsms != null) {
                     foreach (var fsm in disabledHudFsms) {
-                        if (fsm != null) fsm.enabled = true;
+                        if (fsm != null) {
+                            // Prevent OnEnable from restarting the FSM (RestartOnEnable=true by default resets to
+                            // startState and re-runs the full appear chain: Init → Check Type → ... → Idle, 2-3s delay).
+                            fsm.Fsm.RestartOnEnable = false;
+                            fsm.enabled = true;
+                        }
                     }
                     disabledHudFsms = null;
                 }

@@ -45,10 +45,16 @@ internal static class CallMethodProperFix {
     private static readonly Dictionary<string, string> MethodRedirects = new() {
         { "CanTalk", "CanInspect" },      // HK NPC interaction gate -> Silksong's interact gate
         { "CanFocus", "CanCast" },        // HK focus/heal gate -> Silksong's bind/cast gate
-        // MP/Soul methods with no Silksong equivalent (Silksong uses Silk, not Soul/MP):
-        // AddMPCharge, ClearMP, StartMPDrain, StopMPDrain, ClearMPSendEvents, TryAddMPChargeSpa
-        // CanDreamNail, CanSuperDash — no Silksong equivalent, let them fail+log
     };
+
+    // HK-only methods with no Silksong equivalent. When Hornet is active and HK HUD FSMs call these on
+    // Silksong's HeroController (via HeroProxy), they silently no-op instead of logging an error.
+    private static readonly HashSet<string> HkOnlyMethods = new() {
+        "ClearMP", "ClearMPSendEvents", "AddMPCharge", "StartMPDrain", "StopMPDrain",
+        "TryAddMPChargeSpa", "SetMPCharge",
+    };
+
+    private static bool IsHkOnlyMethod(string methodName) => HkOnlyMethods.Contains(methodName);
 
     private static readonly FieldInfo? errorStringField =
         typeof(CallMethodProper).GetField("errorString", AllInstance);
@@ -94,6 +100,10 @@ internal static class CallMethodProperFix {
                     }
                 }
 
+                // Suppress known HK-only methods when Hornet is active (HK HUD FSMs calling on Silksong's HeroController).
+                // These are no-ops — the method doesn't exist on Silksong's HeroController and the FSM continues normally.
+                if (HeroSwitch.HornetActive && IsHkOnlyMethod(methodName))
+                    return false;
                 Log.Error($"[CallMethodProperFix] method '{methodName}' not found on {type?.Name ?? "?"} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
             }
             return result;
