@@ -8,7 +8,6 @@
 - hornet bench location
 
 ## Integration
-- XX interact doesn't freeze
 - XX item pickup / toll buy / stag
 - XX OOB big door
 - XX mask shard pickup doesn't end
@@ -20,6 +19,7 @@
 - ability sync
 - dash attack jumpup
 - grubfather?
+- hornet falling after level exit
 
 ## Nive to have
 - hud sync? geo on hornet
