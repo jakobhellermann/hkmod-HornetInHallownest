@@ -57,6 +57,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         PogoNonBounceShim.Cleanup();
         ContactDamageBridge.Cleanup();
         HornetDeath.Cleanup();
+        CoroutineRedirect.Cleanup();
         HornetBench.Cleanup();
         HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();
@@ -190,6 +191,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         ContactDamageBridge
             .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
+        CoroutineRedirect.Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
         HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();

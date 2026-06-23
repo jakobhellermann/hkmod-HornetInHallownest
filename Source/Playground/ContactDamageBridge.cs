@@ -1,6 +1,7 @@
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
@@ -53,19 +54,18 @@ internal static class ContactDamageBridge {
         // while inert, and leaves her stranded floating in no_input on the next switch. So: no contact damage while inert.
         if (!HeroSwitch.HornetActive) return;
         try {
-            // HK's "damages_hero" FSM takes priority (some hazards drive damage through it), else HK's DamageHero data comp.
-            int dmg = 0, hazard = (int)SHazard.ENEMY;
-            var fsm = FSMUtility.LocateFSM(other, "damages_hero");
-            if (fsm != null) {
-                dmg = fsm.FsmVariables.GetFsmInt("damageDealt").Value;
-                hazard = fsm.FsmVariables.GetFsmInt("hazardType").Value;
-            }
-            else {
-                var dh = other.GetComponent<DamageHero>();
-                if (dh != null && dh.enabled) {
-                    dmg = dh.damageDealt;
-                    hazard = dh.hazardType;
-                }
+            // Read HK's DamageHero for damage + hazardType. Distinguish hazards from enemies by hazardType:
+            // enemies default to hazardType=1 (HK SPIKES); HK's spike hazards actually use 2+ (ACID, LAVA, PIT).
+            // Only map 2+ to Silksong's hazard enum so DieFromHazard fires for real hazards, not enemy hits.
+            // (HK's "damages_hero" PlayMakerFSM can't be found from our assembly — PlayMakerFSM resolves to
+            // Silksong's type, not HK's. DamageHero.hazardType is the reliable signal.)
+            int dmg = 0;
+            SHazard ssHazard = SHazard.ENEMY;
+            var dh = other.GetComponentInParent<DamageHero>();
+            if (dh != null && dh.enabled) {
+                dmg = dh.damageDealt;
+                if ((int)dh.hazardType >= 2)
+                    ssHazard = MapHazard((int)dh.hazardType);
             }
 
             if (dmg <= 0) return;
@@ -73,7 +73,7 @@ internal static class ContactDamageBridge {
             var hc = SHeroController.instance;
             if (hc == null) return;
             if (seen.Add(other.name))
-                Log.Info($"[ContactDamageBridge] HK contact damage from '{other.name}' dmg={dmg} hazard={hazard}");
+                Log.Info($"[ContactDamageBridge] HK contact damage from '{other.name}' dmg={dmg} hazard={ssHazard}");
             // damageSide = the side the damager is on (matches HeroBox.CheckForDamage's own computation).
             var side = other.transform.position.x > self.transform.position.x ? SSide.right : SSide.left;
             // NonLethal flag: a fatal hit routes through Die(nonLethal:true) (HeroController:5618), which SKIPS the whole
@@ -82,10 +82,24 @@ internal static class ContactDamageBridge {
             // spawns a death prefab + reaches the gm.PlayerDead handoff (which HornetDeath intercepts -> HK bench respawn).
             // The flag (bit 2) is consumed ONLY at that Die() call, so non-fatal hits are unaffected. Real corpse/cocoon =
             // a later feature that brings up gm.gameMap/tilemap properly and drops this flag.
-            hc.TakeDamage(other, side, dmg, (SHazard)hazard, SDmgFlags.NonLethal);
+            hc.TakeDamage(other, side, dmg, ssHazard, SDmgFlags.NonLethal);
         } catch (Exception e) {
             Log.Error($"[ContactDamageBridge] {e.Message}");
         }
+    }
+
+    // Map HK's HazardType enum values to Silksong's. The enums differ:
+    // HK: NON_HAZARD=0, SPIKES=1, ACID=2, LAVA=3, PIT=4
+    // SS: NON_HAZARD=0, ENEMY=1, SPIKES=2, ACID=3, LAVA=4, PIT=5, ...
+    // Without mapping, HK SPIKES(1) becomes SS ENEMY(1) which skips hazard respawn.
+    private static SHazard MapHazard(int hkHazard) {
+        return hkHazard switch {
+            1 => SHazard.SPIKES,   // HK SPIKES -> SS SPIKES
+            2 => SHazard.ACID,     // HK ACID -> SS ACID (HK categorizes spike hazards as ACID; SS SPIKES prefab may be missing)
+            3 => SHazard.LAVA,     // HK LAVA -> SS LAVA
+            4 => SHazard.PIT,      // HK PIT -> SS PIT
+            _ => SHazard.ENEMY,    // unknown -> treat as enemy damage
+        };
     }
 
     internal static void Cleanup() {
@@ -94,6 +108,5 @@ internal static class ContactDamageBridge {
     }
 
     private delegate void Orig(SHeroBox self, GameObject other);
-
     private delegate void Hooked(Orig orig, SHeroBox self, GameObject other);
 }

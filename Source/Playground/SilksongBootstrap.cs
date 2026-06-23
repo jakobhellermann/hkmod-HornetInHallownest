@@ -14,6 +14,8 @@ namespace HornetPlayer.Playground;
 // _instance + the few fields HeroController reads (isPaused, playerData, an InputHandler component for
 // gm.GetComponent<InputHandler>()). Grown iteratively as spawn-real reveals the next missing field.
 internal static class SilksongBootstrap {
+    private static Silksong::GameManager? bootstrapGm;
+    private static Silksong::CameraController? bootstrapCamCtrl;
     private static GameObject? gmGo;
     private static GameObject? poolGo;
     private static bool done;
@@ -108,11 +110,18 @@ internal static class SilksongBootstrap {
 
             // gm.cameraCtrl (private-set property) is null -> SendHeroInPosition's gm.cameraCtrl.ResetStartTimer()
             // NullRefs. Provide a bare CameraController (on the inactive GO => no heavy Awake); ResetStartTimer just
-            // sets a float. Assign via the property's backing field.
+            // sets a float. Its camTarget field is set later (after GameCamerasBootstrap brings up the rig) because
+            // FreezeInPlace / HazardRespawn deref camTarget (null -> NullRef). Assign via the property's backing field.
             var camCtrl = gmGo.AddComponent<Silksong::CameraController>();
             typeof(Silksong::GameManager)
                 .GetField("<cameraCtrl>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
                 ?.SetValue(gm, camCtrl);
+
+            // gm.hero_ctrl (public property, private setter) is set in SetupGameRefs to HeroController.instance,
+            // which we skip. Without it, PlayerDeadFromHazard's `hero_ctrl.cState.dead` check NullRefs. The hero
+            // isn't spawned yet at this point, so defer to SilksongBootstrap.SetHeroCtrl (called from SpawnReal).
+            // Store camCtrl for later camTarget wiring too.
+            bootstrapCamCtrl = camCtrl;
 
             // gm.sm (CustomSceneManager, private-set) is null -> GetTotalFrostSpeed's gm.sm.FrostSpeed NullRefs (and
             // other per-scene env reads). Bare instance => default scene settings (FrostSpeed 0 etc.).
@@ -171,6 +180,7 @@ internal static class SilksongBootstrap {
             Object.DontDestroyOnLoad(poolGo);
 
             Silksong::GameManager._instance = gm;
+            bootstrapGm = gm;
             gm.isPaused = false;
             gm.playerData = pd;
 
@@ -208,6 +218,41 @@ internal static class SilksongBootstrap {
                      $"playerData={pd != null}, inputHandler={(gm.GetComponent<Silksong::InputHandler>() != null)}");
         } catch (Exception e) {
             Log.Error($"[Bootstrap] FAILED: {e}");
+        }
+    }
+
+    // Called from SpawnReal after the hero is spawned + GameCameras rig is up. Sets gm.hero_ctrl (so
+    // PlayerDeadFromHazard's hero_ctrl.cState.dead check works), the bare CameraController's camTarget
+    // (so FreezeInPlace / HazardRespawn don't NullRef on camTarget — our real CameraTarget from the rig),
+    // and gm.screenFader_fsm (so hazard respawn's "HAZARD RESPAWN" fade event fires).
+    internal static void SetHeroCtrl(Silksong::HeroController hero) {
+        if (bootstrapGm == null) return;
+        try {
+            typeof(Silksong::GameManager)
+                .GetField("<hero_ctrl>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(bootstrapGm, hero);
+
+            if (bootstrapCamCtrl != null) {
+                var ct = GameCamerasBootstrap.CameraTargetGo?.GetComponent<Silksong::CameraTarget>();
+                if (ct != null) bootstrapCamCtrl.camTarget = ct;
+            }
+
+            // screenFader_fsm: set in SetupGameRefs from HudCamera/In-game/LocateMyFSM("Screen Fader").
+            // The rig is up and "Screen Fader" is kept active — find and wire it.
+            var hudCam = GameCamerasBootstrap.HudCameraGo;
+            if (hudCam != null) {
+                var gameplayChild = hudCam.GetComponent<Silksong::HUDCamera>()?.GetType()
+                    .GetProperty("GameplayChild")?.GetValue(hudCam.GetComponent<Silksong::HUDCamera>()) as GameObject;
+                var sf = gameplayChild != null ? Silksong::FSMUtility.LocateFSM(gameplayChild, "Screen Fader") : null;
+                if (sf != null)
+                    typeof(Silksong::GameManager)
+                        .GetField("<screenFader_fsm>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+                        ?.SetValue(bootstrapGm, sf);
+            }
+
+            Log.Info("[Bootstrap] hero_ctrl + camTarget + screenFader wired");
+        } catch (Exception e) {
+            Log.Error($"[Bootstrap] SetHeroCtrl: {e.Message}");
         }
     }
 

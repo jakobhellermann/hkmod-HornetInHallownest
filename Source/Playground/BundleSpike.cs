@@ -155,6 +155,10 @@ internal static class BundleSpike {
             Log.Error($"[SpawnReal] BringUpHud: {e}");
         }
 
+        // Wire gm.hero_ctrl + bare CameraController.camTarget so Silksong's hazard respawn flow
+        // (PlayerDeadFromHazard → HazardRespawn) runs without NullRefs.
+        SilksongBootstrap.SetHeroCtrl(hc);
+
         var comps = inst.GetComponents<Component>();
         var alive = comps.Count(c => c != null);
         Log.Info(

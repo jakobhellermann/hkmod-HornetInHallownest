@@ -50,6 +50,9 @@ internal static class GameCamerasBootstrap {
     internal static GameObject? CameraTargetGo =>
         rig != null ? rig.GetComponentInChildren<Silksong::CameraTarget>(true)?.gameObject : null;
 
+    internal static GameObject? HudCameraGo =>
+        rig != null ? FindByName(rig.transform, "HudCamera")?.gameObject : null;
+
     internal static bool HornetHudReady => inGame != null;
 
     // Hot-reload safe: the rig is DontDestroyOnLoad and survives our DLL reload (our `rig` static does not). Reuse the
@@ -224,7 +227,12 @@ internal static class GameCamerasBootstrap {
                     continue;
                 }
 
-                if (c.name != "Anchor TL") c.gameObject.SetActive(false);
+                // Keep "Screen Fader" active: Silksong's hazard respawn sends "HAZARD RESPAWN" to it for the
+                // fade that hides the hero during the get-up animation. Without it, the hero is visible for 0.3s
+                // in the wrong animation before "Hazard Respawn" plays.
+                if (c.name is "Anchor TL" or "Screen Fader") continue;
+
+                c.gameObject.SetActive(false);
             }
 
         // Inside Inventory keep only the tools/crests/items panes (Inv + Tools + Border); the Map/Quests/Journal panes

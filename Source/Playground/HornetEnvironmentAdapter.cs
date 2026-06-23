@@ -101,6 +101,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     }
 
     private static Hook? beginSceneTransitionHook;
+    private static Hook? setHazardRespawnHook1; // SetHazardRespawn(Vector3, bool)
+    private static Hook? setHazardRespawnHook2; // SetHazardRespawn(HazardRespawnMarker)
 
     internal static void Install() {
         if (go != null) return;
@@ -114,6 +116,37 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         // In this hook (after orig, which kicks off the coroutine), we directly deparent her — what OnLevelUnload
         // would do, but checking scene instead of parent (SetHeroParent(null) skips DontDestroyOnLoad when
         // transform.parent is already null, even if the GO is still in a scene).
+        // Hook HK's PlayerData.SetHazardRespawn (both overloads): HK calls these from FinishedEnteringScene
+        // (HeroController) AND from HazardRespawnTrigger.OnTriggerEnter2D (which fires on ANY Layer-9 collider,
+        // including Hornet). Mirror onto Silksong's PlayerData so Silksong's HazardRespawn coroutine respawns at
+        // the right spot instead of the scene start.
+        var shr1 = typeof(PlayerData).GetMethod("SetHazardRespawn",
+            BindingFlags.Public | BindingFlags.Instance, null,
+            [typeof(Vector3), typeof(bool)], null);
+        if (shr1 != null) {
+            setHazardRespawnHook1 = new Hook(shr1,
+                (Action<Action<PlayerData, Vector3, bool>, PlayerData, Vector3, bool>)
+                ((orig, self, pos, facingRight) => {
+                    orig(self, pos, facingRight);
+                    var ssPd = Silksong::PlayerData.instance;
+                    if (ssPd != null) ssPd.SetHazardRespawn(pos, facingRight);
+                }));
+        }
+        var shr2 = typeof(PlayerData).GetMethod("SetHazardRespawn",
+            BindingFlags.Public | BindingFlags.Instance, null,
+            [typeof(HazardRespawnMarker)], null);
+        if (shr2 != null) {
+            setHazardRespawnHook2 = new Hook(shr2,
+                (Action<Action<PlayerData, HazardRespawnMarker>, PlayerData, HazardRespawnMarker>)
+                ((orig, self, marker) => {
+                    orig(self, marker);
+                    var ssPd = Silksong::PlayerData.instance;
+                    if (ssPd != null && marker != null)
+                        ssPd.SetHazardRespawn(marker.transform.position, marker.respawnFacingRight);
+                }));
+        }
+        Log.Info($"[EnvAdapter] SetHazardRespawn mirror installed ({setHazardRespawnHook1 != null}, {setHazardRespawnHook2 != null})");
+
         var mi = typeof(GameManager).GetMethod("BeginSceneTransition", [typeof(GameManager.SceneLoadInfo)]);
         if (mi != null) {
             beginSceneTransitionHook = new Hook(mi, BeginSceneTransitionHook);
@@ -141,6 +174,10 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     internal static void Cleanup() {
         beginSceneTransitionHook?.Dispose();
         beginSceneTransitionHook = null;
+        setHazardRespawnHook1?.Dispose();
+        setHazardRespawnHook1 = null;
+        setHazardRespawnHook2?.Dispose();
+        setHazardRespawnHook2 = null;
         if (go != null) {
             Destroy(go);
             go = null;

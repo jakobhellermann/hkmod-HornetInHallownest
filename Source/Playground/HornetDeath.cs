@@ -2,6 +2,7 @@ extern alias Silksong;
 using System;
 using System.Collections;
 using System.Reflection;
+using GlobalEnums;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using SHeroController = Silksong::HeroController;
@@ -30,6 +31,7 @@ internal sealed class HornetDeath : MonoBehaviour {
     private static FieldInfo? rendererField;
     private static MethodInfo? setStateMethod;
     private static Hook? playerDeadHook;
+    private static Hook? takeDamageHook;
 
     private bool handling;
     private bool wasDead;
@@ -199,8 +201,7 @@ internal sealed class HornetDeath : MonoBehaviour {
         // in CameraController.FreezeInPlace (bare controller, no rig), plus drips "Coroutine couldn't be started" from its
         // internal gm.StartCoroutine calls. We replaced respawn with HK's bench path (DeathRoutine), so Silksong's
         // PlayerDead is pure noise. Skip can't no-op it (it returns IEnumerator -> default null -> StartCoroutine(null)
-        // throws), so hook it to an empty coroutine. PlayerDeadFromHazard isn't hooked: fatal hits always route through
-        // Die (the health==0 check precedes the hazard switch), so PlayerDead is the only handoff in play.
+        // throws), so hook it to an empty coroutine.
         var pdm = typeof(SGameManager).GetMethod("PlayerDead",
             BindingFlags.Public | BindingFlags.Instance, null, [typeof(float)], null);
         if (pdm != null)
@@ -209,11 +210,33 @@ internal sealed class HornetDeath : MonoBehaviour {
                 ((_, _, _) => Empty()));
         else
             Log.Error("[HornetDeath] Silksong GameManager.PlayerDead(float) not found");
+
+        // Hook HK's HeroController.TakeDamage: when Hornet is active, HK's hazard zones still call
+        // HeroController.instance.TakeDamage on the inert Knight (hazards target HK's hero, not Hornet).
+        // ContactDamageBridge already routes hazard damage to Hornet, so the Knight's TakeDamage is
+        // redundant — skip it entirely when Hornet is active.
+        var td = typeof(HeroController).GetMethod("TakeDamage",
+            BindingFlags.Public | BindingFlags.Instance, null,
+            [typeof(GameObject), typeof(CollisionSide), typeof(int), typeof(int)], null);
+        if (td != null) {
+            takeDamageHook = new Hook(td,
+                (Action<Action<HeroController, GameObject, CollisionSide, int, int>,
+                    HeroController, GameObject, CollisionSide, int, int>)
+                ((orig, self, go, side, dmg, hazard) => {
+                    if (HeroSwitch.HornetActive) return;
+                    orig(self, go, side, dmg, hazard);
+                }));
+            Log.Info("[HornetDeath] hooked TakeDamage on HK HeroController");
+        } else {
+            Log.Error("[HornetDeath] HeroController.TakeDamage not found");
+        }
     }
 
     internal static void Cleanup() {
         playerDeadHook?.Dispose();
         playerDeadHook = null;
+        takeDamageHook?.Dispose();
+        takeDamageHook = null;
         if (go != null) {
             Destroy(go);
             go = null;
