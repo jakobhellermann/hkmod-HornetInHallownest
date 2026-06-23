@@ -42,6 +42,31 @@ internal static class HeroSwitch {
     // — that's coupled to HK's door-entry; see SetInert.)
     private static readonly string[] AbilityFsms = { "Superdash", "Spell Control", "Nail Arts" };
 
+    // When the Knight is inert, disable ALL his PlayMakerFSM components (root + children), not just the ability FSMs.
+    // HK FSMs that target the PlayMaker global "Hero" (which HeroProxy repoints to Hornet) would otherwise fire on
+    // Hornet's GO — causing cross-game collisions (e.g. GetFsmBool on "ProxyFSM") and unwanted side effects. The
+    // ability FSMs are a subset, but the rest (Charm Effects, Attacks, Effects, Vignette children, ...) should also
+    // be dormant while the Knight is inactive.
+    //
+    // We only disable FSMs that are currently enabled, and remember which ones we touched. On restore, we only
+    // re-enable the ones we disabled — not FSMs the game itself had disabled for gameplay reasons.
+    private static readonly HashSet<PlayMakerFSM> disabledByUs = new();
+
+    private static void SetAllKnightFsms(GameObject knightGo, bool enabled) {
+        if (enabled) {
+            foreach (var fsm in disabledByUs)
+                if (fsm != null) fsm.enabled = true;
+            disabledByUs.Clear();
+        } else {
+            foreach (var fsm in knightGo.GetComponentsInChildren<PlayMakerFSM>(true)) {
+                if (fsm.enabled) {
+                    fsm.enabled = false;
+                    disabledByUs.Add(fsm);
+                }
+            }
+        }
+    }
+
     internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
     internal static bool HornetActive => Active == ActiveHero.Hornet;
 
@@ -161,6 +186,9 @@ internal static class HeroSwitch {
             // touch controlReqlinquished: it's coupled to HK's door-entry chain (which still reads the Knight) and would
             // break Hornet's door transitions — that consumer gets patched on the Hornet side instead.
             SetAbilityFsms(hk, !inert);
+            // Disable ALL FSMs on the Knight (root + children) when inert — not just ability FSMs.
+            // Charm Effects, Attacks, Effects, etc. target the "Hero" global (→ Hornet) and would fire on her.
+            SetAllKnightFsms(hero, !inert);
             // A Hornet-started transition relinquishes the Knight (HK sets controlReqlinquished at transition start), but
             // with the Knight inert its EnterScene never reaches the RegainControl at the end -> the flag sticks and
             // blocks the Knight's double jump / abilities (CanDoubleJump etc. gate on !controlReqlinquished) until a bench
