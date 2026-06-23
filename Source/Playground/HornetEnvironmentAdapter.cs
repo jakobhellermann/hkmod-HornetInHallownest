@@ -100,31 +100,31 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         }
     }
 
+    private static Hook? beginSceneTransitionHook;
+
     internal static void Install() {
         if (go != null) return;
         go = new GameObject("HornetPlayer.EnvironmentAdapter");
         go.AddComponent<HornetEnvironmentAdapter>();
         DontDestroyOnLoad(go);
-        // Subscribe to HK's GameManager.UnloadingLevel event (fires at the start of BeginSceneTransitionRoutine,
-        // before the scene unloads) and forward it to Silksong's GameManager.UnloadingLevel. Silksong's own
-        // GameManager never fires this event (GM GO inactive), so its subscribers (HeroController.OnLevelUnload →
-        // SetHeroParent(null) → DontDestroyOnLoad, CameraController, WalkArea, ...) never run — and Hornet gets
-        // destroyed by the scene unload if she's in it. Forwarding the event at the right time mirrors Silksong's
-        // own flow exactly: HK fires its UnloadingLevel, we relay it to Silksong's, Silksong's subscribers run.
-        var hkGm = UnityEngine.Object.FindFirstObjectByType<GameManager>();
-        if (hkGm != null) {
-            var hkField = typeof(GameManager).GetField("UnloadingLevel",
-                BindingFlags.Public | BindingFlags.Instance);
-            if (hkField?.GetValue(hkGm) is Delegate hkDel) {
-                // Subscribe our relay to HK's event
-                var relay = (GameManager.UnloadLevel)OnHkUnloadingLevel;
-                hkField.SetValue(hkGm, Delegate.Combine(hkDel, relay));
-                Log.Info("[EnvAdapter] subscribed to HK GameManager.UnloadingLevel (relay to Silksong)");
-            }
+        // Hook HK's GameManager.BeginSceneTransition: it fires at the start of a scene transition, before the scene
+        // unloads. Silksong's own GameManager never fires its UnloadingLevel event (GM GO inactive), so its subscribers
+        // (HeroController.OnLevelUnload → SetHeroParent(null) → DontDestroyOnLoad, CameraController, WalkArea, ...)
+        // never run — and Hornet gets destroyed by the scene unload. In this hook (after orig, which kicks off the
+        // coroutine that eventually unloads the scene), we fire Silksong's UnloadingLevel so its subscribers run.
+        var mi = typeof(GameManager).GetMethod("BeginSceneTransition", [typeof(GameManager.SceneLoadInfo)]);
+        if (mi != null) {
+            beginSceneTransitionHook = new Hook(mi, BeginSceneTransitionHook);
+            Log.Info("[EnvAdapter] installed: GameManager.BeginSceneTransition relay hook");
+        } else {
+            Log.Error("[EnvAdapter] GameManager.BeginSceneTransition not found");
         }
     }
 
-    private static void OnHkUnloadingLevel() {
+    private static void BeginSceneTransitionHook(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self, GameManager.SceneLoadInfo info) {
+        orig(self, info);
+        // Fire Silksong's UnloadingLevel event — mirrors what Silksong's BeginSceneTransitionRoutine does
+        // at the same point (after setting up transition state, before scene unload).
         var gm = Silksong::GameManager._instance;
         if (gm == null) return;
         try {
@@ -140,9 +140,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     }
 
     internal static void Cleanup() {
-        // Unsubscribe from HK's UnloadingLevel event
-        var hkGm = go != null ? go.scene.name == "DontDestroyOnLoad" : false;
-        // (Unsubscribe is best-effort — the GameManager might be destroyed already)
+        beginSceneTransitionHook?.Dispose();
+        beginSceneTransitionHook = null;
         if (go != null) {
             Destroy(go);
             go = null;

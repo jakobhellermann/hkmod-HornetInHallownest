@@ -39,6 +39,7 @@ internal static class GameCamerasBootstrap {
     // when null (e.g. at the menu, where this runs per-frame via HeroSwitch) -> spam. The field is null-safe + silent.
     private static FieldInfo? hkGcInstanceField;
     private static Vector3 hkHudScale = Vector3.one; // HK hudCanvas' real scale, cached so we can restore after hiding
+    private static HashSet<PlayMakerFSM>? disabledHudFsms; // HK HUD FSMs we disabled when Knight is inert
 
     private static Transform?
         ssMainCamT; // Silksong rig's (neutered) main camera transform, kept on HK's camera for audio
@@ -331,6 +332,27 @@ internal static class GameCamerasBootstrap {
             if (t.localScale != Vector3.zero) hkHudScale = t.localScale; // remember the last non-hidden scale
             if (!hk.hudCanvas.activeSelf) hk.hudCanvas.SetActive(true);
             t.localScale = on ? hkHudScale : Vector3.zero;
+
+            // When hiding (Knight inert), disable all PlayMakerFSM components in the HK HUD subtree. HK HUD FSMs
+            // (Soul Orb Control, Spell Control, etc.) call GetHero() -> HeroProxy redirects to Hornet -> they try
+            // HK-specific methods (ClearMP) / FSMs (Spell Control) that don't exist on Silksong's HeroController.
+            // Disabling the FSMs (not the GO) stops them cleanly without triggering OnEnable's slide-in animation.
+            if (on) {
+                if (disabledHudFsms != null) {
+                    foreach (var fsm in disabledHudFsms) {
+                        if (fsm != null) fsm.enabled = true;
+                    }
+                    disabledHudFsms = null;
+                }
+            } else {
+                disabledHudFsms ??= new HashSet<PlayMakerFSM>();
+                foreach (var fsm in hk.hudCanvas.GetComponentsInChildren<PlayMakerFSM>(true)) {
+                    if (fsm.enabled) {
+                        fsm.enabled = false;
+                        disabledHudFsms.Add(fsm);
+                    }
+                }
+            }
         } catch (Exception e) {
             Log.Error($"[HUD] SetHkHudVisible({on}): {e.Message}");
         }
