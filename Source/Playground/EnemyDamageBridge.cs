@@ -1,4 +1,5 @@
 extern alias Silksong;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
@@ -57,6 +58,7 @@ internal sealed class HkEnemyHitBridge : Silksong::ReceivedDamageProxy, SIHit {
 internal static class EnemyDamageBridge {
     private static Hook? hook;
     private static Hook? takeDamageHook;
+    private static Hook? soulGainHook;
 
 
     internal static void Install() {
@@ -80,6 +82,16 @@ internal static class EnemyDamageBridge {
             null, [typeof(GameObject), typeof(bool)], null);
         if (dd != null) takeDamageHook = new Hook(dd, (DoDmgHooked)OnDoDamage);
         else Log.Error("[EnemyDamageBridge] DamageEnemies.DoDamage(GameObject,bool) not found");
+
+        // Hook HK's HeroController.SoulGain: when HK enemies take a nail hit, HK's HealthManager.Hit calls
+        // HeroController.instance.SoulGain() — that's HK's Knight, awarding HK soul. When Hornet is active,
+        // redirect to Silksong's HeroController.SilkGain() so she gets silk instead.
+        var soulMi = typeof(HeroController).GetMethod("SoulGain", BindingFlags.Public | BindingFlags.Instance);
+        if (soulMi != null) {
+            soulGainHook = new Hook(soulMi, (Action<Action<HeroController>, HeroController>)OnSoulGain);
+        } else {
+            Log.Error("[EnemyDamageBridge] HeroController.SoulGain not found");
+        }
     }
 
     private static bool OnDoDamage(DoDmgOrig orig, Silksong::DamageEnemies self, GameObject target, bool isFirstHit) {
@@ -115,10 +127,20 @@ internal static class EnemyDamageBridge {
         hook = null;
         takeDamageHook?.Dispose();
         takeDamageHook = null;
+        soulGainHook?.Dispose();
+        soulGainHook = null;
         // Our component type identity changes on a hot-reload; strip stale bridges so the next Initialize re-adds fresh
         // ones (and they don't linger as orphaned references on HK enemies).
         foreach (var b in Resources.FindObjectsOfTypeAll<HkEnemyHitBridge>())
-            Object.Destroy(b);
+            UnityEngine.Object.Destroy(b);
+    }
+
+    private static void OnSoulGain(Action<HeroController> orig, HeroController self) {
+        if (HeroSwitch.HornetActive && BundleSpike.RealHero != null) {
+            BundleSpike.RealHero.SilkGain();
+        } else {
+            orig(self);
+        }
     }
 
     private delegate void Orig(List<SIHit> store, GameObject target, int depth, HashSet<SIHit> blackList);

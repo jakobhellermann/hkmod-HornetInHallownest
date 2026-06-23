@@ -11,7 +11,6 @@
 - XX item pickup / toll buy / stag
 - XX OOB big door
 - XX mask shard pickup doesn't end
-- XX should get silk from enemies
 - XX fireball scene entry broken
 - spring water
 - swimming

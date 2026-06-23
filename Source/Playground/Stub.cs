@@ -61,9 +61,6 @@ internal static class Stub {
         // versions, so they must RUN: a stubbed action never calls Finish(), hanging its FSM state forever (e.g. Sprint
         // stuck in "Cancel All", never returning to Idle to accept DASHED), and stubbed ListenFor* suppress the very
         // input->FSM events the moves need. Input is alive now (InputDriver + buttonQueueTimers).
-        // AddSilk -> GameCameras.instance.silkSpool (silk meter UI); GameCameras isn't bootstrapped. UI, not needed
-        // for no-input bring-up. TODO: bootstrap GameCameras/silkSpool for the UI/combat phase.
-        Skip(typeof(Silksong::HeroController), "AddSilk");
         Skip(typeof(Silksong::HeroController), "SetupDeliveryItems"); // delivery-quest setup entry — quests irrelevant
         // The HUD's DeliveryHudIcon.OnPreUpdateDisplay calls DeliveryQuestItem.GetActiveItems() -> NullRef (delivery-quest
         // system deliberately off, see above). Skip it: currentItem stays null -> RadialHudIcon.GetIsActive() is false ->
