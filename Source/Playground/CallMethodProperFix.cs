@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using HutongGames.PlayMaker;
@@ -34,6 +35,21 @@ internal static class CallMethodProperFix {
         typeof(CallMethodProper).GetField("cachedMethodInfo", AllInstance);
     private static readonly FieldInfo? cachedParameterInfoField =
         typeof(CallMethodProper).GetField("cachedParameterInfo", AllInstance);
+
+    // HK HeroController methods that Silksong doesn't have, mapped to their closest Silksong equivalent.
+    // When CallMethodProper resolves behaviour="HeroController" on Hornet (via HeroProxy+GetComponentShim),
+    // HK-specific method names fail with "Method Name is invalid". The map re-routes them to the Silksong equivalent
+    // so the calling HK FSM gets a sensible result instead of silently canceling.
+    // Methods not in this map and not on Silksong's HeroController will still fail — they show up in the
+    // "method not found" log so we can add them as needed.
+    private static readonly Dictionary<string, string> MethodRedirects = new() {
+        { "CanTalk", "CanInspect" },      // HK NPC interaction gate -> Silksong's interact gate
+        { "CanFocus", "CanCast" },        // HK focus/heal gate -> Silksong's bind/cast gate
+        // MP/Soul methods with no Silksong equivalent (Silksong uses Silk, not Soul/MP):
+        // AddMPCharge, ClearMP, StartMPDrain, StopMPDrain, ClearMPSendEvents, TryAddMPChargeSpa
+        // CanDreamNail, CanSuperDash — no Silksong equivalent, let them fail+log
+    };
+
     private static readonly FieldInfo? errorStringField =
         typeof(CallMethodProper).GetField("errorString", AllInstance);
     private static readonly FieldInfo? componentField =
@@ -66,6 +82,18 @@ internal static class CallMethodProperFix {
                 var goName = fsm?.OwnerName ?? "?";
                 var fsmName = fsm?.Name ?? "?";
                 var stateName = self.State?.Name ?? "?";
+
+                // Try method redirect (HK method name -> Silksong equivalent)
+                if (type != null && methodName != null && MethodRedirects.TryGetValue(methodName, out var redirect)) {
+                    var altMethod = type.GetMethod(redirect, Type.EmptyTypes);
+                    if (altMethod != null) {
+                        cachedMethodInfoField?.SetValue(self, altMethod);
+                        cachedParameterInfoField?.SetValue(self, altMethod.GetParameters());
+                        Log.Info($"[CallMethodProperFix] redirected '{methodName}' -> '{redirect}' on {type.Name} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
+                        return true;
+                    }
+                }
+
                 Log.Error($"[CallMethodProperFix] method '{methodName}' not found on {type?.Name ?? "?"} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
             }
             return result;
