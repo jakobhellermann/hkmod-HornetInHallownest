@@ -48,7 +48,6 @@ internal static class Stub {
                 .RunClassConstructor(lang.TypeHandle); // ensure the cctor ran inside the window (no-op if already)
         }
 
-        Skip(typeof(Silksong::HeroWaterController), "Update", silent: true); // per-frame
         Skip(typeof(Silksong::PersonalObjectPool), "OnStart"); // Start
         Skip(typeof(Silksong::HeroAnimationController), "UpdateToolEquipFlags"); // Start
         // Tool-equipment subsystem isn't initialized -> IsToolEquipped NullRefs; stub the root (no tools equipped),
