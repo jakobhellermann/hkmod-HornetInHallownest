@@ -90,6 +90,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         PogoNonBounceShim.Cleanup();
         ContactDamageBridge.Cleanup();
         HornetDeath.Cleanup();
+        RespawnBridge.Cleanup();
         CoroutineRedirect.Cleanup();
         HornetBench.Cleanup();
         HeroSfxShim.Cleanup();
@@ -179,6 +180,22 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             (req, respond) =>
                 validation!.RunRoute(req, respond)); // run a validation scenario (optionally disable=ModuleId,...)
         DebugServer.MapGet("/validate-list", _ => validation!.List()); // list scenarios + module Ids
+        DebugServer.MapGet("/respawn-state", _ => { // compare HK vs Silksong PlayerData respawn (hard-save split)
+            var hk = GameManager.instance.playerData;
+            var ss = Silksong::PlayerData.instance;
+            return new {
+                scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
+                hk = new { hk.respawnScene, hk.respawnMarkerName, hk.respawnType, hk.atBench },
+                ss = ss != null ? new { ss.respawnScene, ss.respawnMarkerName, ss.respawnType, ss.atBench } : null
+            };
+        });
+        DebugServer.MapPost("/mirror-respawn", _ => { // copy Silksong PD respawn -> HK PD (un-poison a pre-bridge save)
+            var ss = Silksong::PlayerData.instance;
+            var knight = HeroController.UnsafeInstance;
+            if (ss == null || knight == null) return new { error = "no Silksong PD / HK hero" };
+            knight.SetBenchRespawn(ss.respawnMarkerName, ss.respawnScene, ss.respawnType, false);
+            return new { mirrored = new { ss.respawnScene, ss.respawnMarkerName, ss.respawnType } };
+        });
         DebugServer.MapGet("/bench-state", _ => BundleSpike.BenchState()); // debug: atBench signal + Hornet sit clips
         DebugServer.MapGet("/hc-probe", req => {
             // which HK HeroController methods get called on the Knight while Hornet active
@@ -237,6 +254,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         ContactDamageBridge
             .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
+        RespawnBridge.Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
         CoroutineRedirect
             .Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
         HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
