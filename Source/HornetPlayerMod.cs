@@ -5,6 +5,7 @@ using System.Reflection;
 using HornetPlayer.DevServer;
 using HornetPlayer.HornetInHallownest.Core;
 using HornetPlayer.HornetInHallownest.Modules;
+using HornetPlayer.HornetInHallownest.Util;
 using HornetPlayer.HornetInHallownest.Validation;
 using HornetPlayer.HornetInHallownest.Validation.Scenarios;
 using HornetPlayer.Playground;
@@ -134,6 +135,18 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/toolmgr", _ => ToolItemManagerBootstrap.Diag());
+        DebugServer.MapGet("/equip-crest", req => { // equip a crest by id + apply its HeroConfig (ResetAllCrestState)
+            var id = req["id"] ?? "";
+            Silksong::ToolItemManager.SetEquippedCrest(id);
+            Silksong::ToolItemManager.SendEquippedChangedEvent(true);
+            var hero = HornetSpawner.RealHero;
+            hero?.ResetAllCrestState();
+            return new {
+                equipped = Silksong::PlayerData.instance != null ? Silksong::PlayerData.instance.CurrentCrestID : null,
+                crestConfigSet = hero != null && hero.GetFieldValue<object>("crestConfig") != null,
+                recoilHorVelocity = hero != null ? hero.RECOIL_HOR_VELOCITY : -1f
+            };
+        });
         DebugServer.MapGet("/colmgr", _ => CollectableItemManagerBootstrap.Ensure());
         DebugServer.MapGet("/diag-input", _ => BundleSpike.DiagInput());
         DebugServer.MapGet("/fsm-state", _ => BundleSpike.FsmState());
