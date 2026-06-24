@@ -22,6 +22,7 @@ public static class PlaygroundRoutes {
         DebugServer.MapPost("/set-active", req => SetActive(req["name"], req["path"], req["active"]));
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
         DebugServer.MapPost("/invoke", req => Invoke(req["path"], req["method"]));
+        DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
     }
 
     private static object SceneTree() {
@@ -122,19 +123,51 @@ public static class PlaygroundRoutes {
     private static object SetField(string? rawPath, string? fieldName, string? value) {
         if (fieldName == null) return DevResponse.Json(new { error = "missing 'field' param" }, 400);
 
-        var (_, comp, error) = ResolveComponent(rawPath);
+        var (target, comp, error) = ResolveComponent(rawPath);
         if (error != null) return error;
 
-        var field = comp!.GetType().GetField(fieldName, MemberFlags);
-        if (field == null) return DevResponse.Json(new { error = $"Field not found: {fieldName}" }, 404);
+        // Support dotted paths like "transform.position" — walk properties/fields.
+        object? current = comp;
+        Type? type = comp!.GetType();
+        var parts = fieldName.Split('.');
+        for (var i = 0; i < parts.Length - 1; i++) {
+            var prop = type!.GetProperty(parts[i], MemberFlags);
+            if (prop != null) { current = prop.GetValue(current); type = current?.GetType(); continue; }
+            var field = type!.GetField(parts[i], MemberFlags);
+            if (field != null) { current = field.GetValue(current); type = current?.GetType(); continue; }
+            return DevResponse.Json(new { error = $"Cannot resolve '{parts[i]}' in '{fieldName}'" }, 404);
+        }
+        var leaf = parts[^1];
+        var leafProp = type!.GetProperty(leaf, MemberFlags);
+        var leafField = type!.GetField(leaf, MemberFlags);
+        if (leafProp == null && leafField == null)
+            return DevResponse.Json(new { error = $"Field/property not found: {fieldName}" }, 404);
+        var fieldType = leafProp?.PropertyType ?? leafField!.FieldType;
 
-        var newValue = value == "null" ? null
-            : field.FieldType == typeof(bool) ? value == "true"
-            : field.FieldType == typeof(int) ? int.Parse(value ?? "0", CultureInfo.InvariantCulture)
-            : field.FieldType == typeof(float) ? float.Parse(value ?? "0", CultureInfo.InvariantCulture)
-            : (object)(value ?? "");
-        field.SetValue(comp, newValue);
+        var newValue = ParseValue(value, fieldType);
+        if (leafProp != null) leafProp.SetValue(current, newValue);
+        else leafField!.SetValue(current, newValue);
         return new { ok = true };
+    }
+
+    private static object? ParseValue(string? value, Type type) {
+        if (value == "null") return null;
+        if (type == typeof(string)) return value;
+        if (type == typeof(bool)) return value == "true";
+        if (type == typeof(int)) return int.Parse(value ?? "0", CultureInfo.InvariantCulture);
+        if (type == typeof(float)) return float.Parse(value ?? "0", CultureInfo.InvariantCulture);
+        if (type == typeof(Vector3)) {
+            var p = (value ?? "0,0,0").Split(',');
+            return new Vector3(float.Parse(p[0], CultureInfo.InvariantCulture),
+                               float.Parse(p.Length > 1 ? p[1] : "0", CultureInfo.InvariantCulture),
+                               float.Parse(p.Length > 2 ? p[2] : "0", CultureInfo.InvariantCulture));
+        }
+        if (type == typeof(Vector2)) {
+            var p = (value ?? "0,0").Split(',');
+            return new Vector2(float.Parse(p[0], CultureInfo.InvariantCulture),
+                                float.Parse(p.Length > 1 ? p[1] : "0", CultureInfo.InvariantCulture));
+        }
+        return value ?? "";
     }
 
     private static object Invoke(string? rawPath, string? methodName) {
