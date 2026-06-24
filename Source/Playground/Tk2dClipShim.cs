@@ -33,7 +33,7 @@ internal static class Tk2dClipShim {
             return; // skip orig (it would Debug.LogError per call)
         }
 
-        orig(self, name);
+        orig(self!, name);
     }
 
     internal static void Cleanup() {

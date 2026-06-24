@@ -93,7 +93,7 @@ internal sealed class HornetBench : MonoBehaviour {
     // Returns true once it sent the event (caller stops scanning). Only scans during the brief death-respawn window
     // (resting && not yet unstuck), so the FindObjectsOfType cost is bounded.
     private static bool TryAdvanceStuckBenchWake() {
-        foreach (var fsm in FindObjectsOfType<PlayMakerFSM>())
+        foreach (var fsm in FindObjectsByType<PlayMakerFSM>(FindObjectsSortMode.InstanceID))
             if (fsm.FsmName == "Bench Control" && fsm.ActiveStateName == "Startle") {
                 fsm.SendEvent("FINISHED"); // Startle -> Update Map Silently -> Resting (the Wake-To-Sit complete event)
                 Log.Info("[HornetBench] bench wake hung in 'Startle' (Wake-To-Sit never completes on inert Knight) "

@@ -21,7 +21,7 @@ internal static class CoroutineRedirect {
     private static MonoBehaviour? host;
 
     internal static void Install() {
-        host = Object.FindObjectOfType<PlaygroundHost>();
+        host = Object.FindAnyObjectByType<PlaygroundHost>();
         if (host == null) {
             var go = new GameObject("HornetPlayer.CoroutineHost");
             host = go.AddComponent<PlaygroundHost>();
@@ -40,7 +40,7 @@ internal static class CoroutineRedirect {
     }
 
     private static Coroutine RedirectCoroutine(OrigDel orig, MonoBehaviour self, IEnumerator routine) {
-        if (routine == null) return orig(self, routine);
+        if (routine == null) return orig(self, null!);
         // Only redirect when the calling GO is inactive — normal calls pass through untouched.
         if (self != null && self.gameObject != null && self.gameObject.activeInHierarchy) {
             return orig(self, routine);

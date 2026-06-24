@@ -49,9 +49,9 @@ internal static class DamagesEnemyFsmShim {
 
     private static PlayMakerFSM OnLookup(Orig orig, GameObject go, string fsmName) {
         var found = orig(go, fsmName);
-        if (found != null || fsmName != "damages_enemy" || go == null) return found;
+        if (found != null || fsmName != "damages_enemy" || go == null) return found!;
         // Only stand in for Hornet's slash (a Silksong DamageEnemies attacker). Leave anything else to HK.
-        if (go.GetComponentInParent<Silksong::DamageEnemies>() == null) return found;
+        if (go.GetComponentInParent<Silksong::DamageEnemies>() == null) return found!;
         EnsureDummy();
         dirVar!.Value = SlashDirection(go);
         dmgVar!.Value = NailDamage();

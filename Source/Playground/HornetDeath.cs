@@ -104,7 +104,7 @@ internal sealed class HornetDeath : MonoBehaviour {
         if (knight != null) hero.transform.position = knight.transform.position;
         var rb = hero.GetComponent<Rigidbody2D>();
         if (rb != null) {
-            rb.isKinematic = false;
+            rb.bodyType = RigidbodyType2D.Dynamic;
             rb.simulated = true;
             rb.linearVelocity = Vector2.zero;
         }
@@ -167,7 +167,7 @@ internal sealed class HornetDeath : MonoBehaviour {
         if (rendererField?.GetValue(hero) is MeshRenderer mr) mr.enabled = true;
         hero.gameObject.layer = 9;
         var rb = hero.GetComponent<Rigidbody2D>();
-        if (rb != null) rb.isKinematic = false;
+        if (rb != null) rb.bodyType = RigidbodyType2D.Dynamic;
         hero.AffectedByGravity(true);
         setStateMethod ??= typeof(SHeroController).GetMethod("SetState",
             BindingFlags.Instance | BindingFlags.NonPublic, null, [typeof(SActorStates)], null);

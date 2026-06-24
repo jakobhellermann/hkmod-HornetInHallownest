@@ -54,7 +54,7 @@ internal static class CallMethodProperFix {
         "TryAddMPChargeSpa", "SetMPCharge",
     };
 
-    private static bool IsHkOnlyMethod(string methodName) => HkOnlyMethods.Contains(methodName);
+    private static bool IsHkOnlyMethod(string? methodName) => methodName != null && HkOnlyMethods.Contains(methodName);
 
     private static readonly FieldInfo? errorStringField =
         typeof(CallMethodProper).GetField("errorString", AllInstance);

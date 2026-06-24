@@ -22,8 +22,6 @@ internal static class InputBridge {
     // Debug drive (for /press): force an action pressed for `frames` ticks, so we can demo without a physical key.
     internal static readonly Dictionary<string, int> Forced = new();
 
-    internal static int OpenInvWasPressedCount; // diagnostic: did the driver produce an OpenInventory WasPressed edge?
-
     internal static void Install() {
         if (go != null) return;
         go = new GameObject("HornetPlayer.InputDriver");

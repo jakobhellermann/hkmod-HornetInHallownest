@@ -157,7 +157,7 @@ internal static class BundleSpike {
 
         // Wire gm.hero_ctrl + bare CameraController.camTarget so Silksong's hazard respawn flow
         // (PlayerDeadFromHazard → HazardRespawn) runs without NullRefs.
-        SilksongBootstrap.SetHeroCtrl(hc);
+        SilksongBootstrap.SetHeroCtrl(hc!);
 
         DamageEnemyProxy.Install();
 
@@ -249,13 +249,13 @@ internal static class BundleSpike {
         if (hc == null) return new { error = "no HeroController" };
         var t = hc.GetType();
 
-        object F(string n) {
+        object? F(string n) {
             return t.GetField(n, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(hc);
         }
 
         var cs = F("cState");
 
-        object CS(string n) {
+        object? CS(string n) {
             return cs?.GetType().GetField(n, BindingFlags.Instance | BindingFlags.Public)?.GetValue(cs);
         }
 
@@ -730,7 +730,7 @@ internal static class BundleSpike {
 
             string[] gts;
             try {
-                gts = f.Fsm.GlobalTransitions.Select(t => $"{t.EventName}->{t.ToState}").ToArray();
+                gts = f.Fsm?.GlobalTransitions.Select(t => $"{t.EventName}->{t.ToState}").ToArray() ?? Array.Empty<string>();
             } catch {
                 gts = new string[0];
             }

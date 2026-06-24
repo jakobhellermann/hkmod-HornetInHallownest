@@ -59,7 +59,7 @@ internal static class FsmTracer {
                     Log.Error($"[FsmTrace] SwitchState log: {e.Message}");
                 }
 
-                orig(fsm, to);
+                orig(fsm, to!);
             }));
         Add(t.GetMethod("Event", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(FsmEvent) }, null),
             (Action<Action<Fsm, FsmEvent>, Fsm, FsmEvent>)((orig, fsm, ev) => {
@@ -71,7 +71,7 @@ internal static class FsmTracer {
                     Log.Error($"[FsmTrace] Event log: {e.Message}");
                 }
 
-                orig(fsm, ev);
+                orig(fsm, ev!);
             }));
         Add(t.GetMethod("Event", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null),
             (Action<Action<Fsm, string>, Fsm, string>)((orig, fsm, name) => {
