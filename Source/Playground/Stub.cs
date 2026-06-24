@@ -1,5 +1,6 @@
 extern alias Silksong;
 extern alias SilksongLoc;
+extern alias SilksongPM;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -189,6 +190,33 @@ internal static class Stub {
         // NOTE: SetConfigGroup's throw is FSMUtility.SendEventToGameObject -> list[i].Fsm.Event() on the hero's
         // PlayMakerFSMs, which aren't fully initialized (linked to the residual ~125 action-resolution failures).
         // NOT stubbed here (FSMUtility is broad / FSM is core) — tracked as the PlayMaker bring-up TODO.
+
+        // Debug instrumentation: wrap Fsm.InitData in try/catch to log which FSM/GO NullRefs during initialization.
+        // InitData iterates states/events/transitions — a null array (bad deserialization) crashes with no FSM context.
+        // Hook both Silksong's and HK's PlayMaker (same namespace, different assemblies).
+        InstrumentInitData(typeof(SilksongPM::HutongGames.PlayMaker.Fsm));
+        InstrumentInitData(typeof(HutongGames.PlayMaker.Fsm));
+    }
+
+    private static void InstrumentInitData(Type fsmType) {
+        var mi = fsmType.GetMethod("InitData", BindingFlags.Public | BindingFlags.Instance);
+        if (mi == null) {
+            Log.Error($"[Stub] Fsm.InitData not found on {fsmType.Assembly.GetName().Name}");
+            return;
+        }
+        var nameProp = fsmType.GetProperty("Name");
+        var goNameProp = fsmType.GetProperty("GameObjectName");
+        detours.Add(new Hook(mi, (Action<Action<object>, object>)((orig, self) => {
+            try { orig(self); }
+            catch (Exception e) {
+                var fsmName = "?";
+                var goName = "?";
+                try { fsmName = (string?)nameProp?.GetValue(self) ?? "?"; } catch { }
+                try { goName = (string?)goNameProp?.GetValue(self) ?? "?"; } catch { }
+                Log.Error($"[Fsm.InitData] NullRef in FSM='{fsmName}' GO='{goName}' ({fsmType.Assembly.GetName().Name}): {e}");
+            }
+        })));
+        Log.Info($"[Stub] instrumented Fsm.InitData on {fsmType.Assembly.GetName().Name}");
     }
 
     // Stub `method` on every Silksong type in `ns` whose name starts with `prefix` (category stub).
