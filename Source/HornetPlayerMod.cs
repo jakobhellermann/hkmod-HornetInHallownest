@@ -1,4 +1,5 @@
-﻿using System;
+﻿extern alias Silksong;
+using System;
 using System.Collections;
 using System.Reflection;
 using HornetPlayer.DevServer;
@@ -34,6 +35,18 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             }
         } catch (Exception e) {
             Playground.Log.Error($"[Unload] camera restore: {e.Message}");
+        }
+        // Hot-reload while inventory was open leaves isInventoryOpen=true on Silksong's PlayerData -> IsPaused()=true
+        // -> CanInput()=false -> hero stuck. Clear it + restore timeScale.
+        try {
+            var pd = Silksong::PlayerData.instance;
+            if (pd != null && pd.isInventoryOpen) {
+                pd.isInventoryOpen = false;
+                Playground.Log.Info("[Unload] cleared stuck isInventoryOpen");
+            }
+            if (UnityEngine.Time.timeScale <= 0.0001f) UnityEngine.Time.timeScale = 1f;
+        } catch (Exception e) {
+            Playground.Log.Error($"[Unload] inventory reset: {e.Message}");
         }
 
         ResourcesShim.Cleanup();

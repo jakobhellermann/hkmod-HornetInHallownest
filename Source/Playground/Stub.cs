@@ -20,6 +20,7 @@ namespace HornetPlayer.Playground;
 // edit it as source; the ILHook is our "guard".
 internal static class Stub {
     private static readonly List<ILHook> hooks = new();
+    private static readonly List<Hook> detours = new();
 
     // The methods that NullRef on spawn because the full game runtime isn't set up (callees, leaf methods).
     // Identified from Player.log on a real spawn — see TODO.md / docs.
@@ -90,6 +91,20 @@ internal static class Stub {
         // bootstrap GM (Silksong achievements are irrelevant in HK).
         Skip(typeof(Silksong::GameManager), "AwardAchievement", silent: true);
         Skip(typeof(Silksong::GameManager), "UpdateAchievementProgress", silent: true);
+        // Debug: catch SetEquippedTools NullRef to find the exact inner cause
+        var setEq = typeof(Silksong::ToolItemManager).GetMethod("SetEquippedTools",
+            BindingFlags.Static | BindingFlags.Public);
+        if (setEq != null) {
+            detours.Add(new Hook(setEq,
+                (Action<Action<string, System.Collections.Generic.List<string>>, string, System.Collections.Generic.List<string>>)
+                ((orig, crestId, tools) => {
+                    try { orig(crestId, tools); }
+                    catch (Exception e) {
+                        Log.Error($"[SetEquippedTools] crestId={crestId} -> {e}");
+                        throw;
+                    }
+                })));
+        }
         // SimpleFadeOut::SetColor throws nullref, because Awake is never ran
         Skip(typeof(Silksong::CameraController), "ScreenFlash");
         // GameCameras.Start does only `gs.LoadOverscanSettings(); SetOverscan(gs.overScanAdjustment)` — gs is
@@ -257,6 +272,8 @@ internal static class Stub {
 
     internal static void Cleanup() {
         foreach (var h in hooks) h.Dispose();
+        foreach (var h in detours) h.Dispose();
         hooks.Clear();
+        detours.Clear();
     }
 }

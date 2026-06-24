@@ -83,6 +83,10 @@ internal sealed class HornetBench : MonoBehaviour {
         }
 
         Log.Info($"[HornetBench] Hornet sits (atBench) at {(Vector2)hero.transform.position}, healed");
+        // Mirror atBench onto Silksong's PlayerData so inventory CanChangeEquips() (reads
+        // GameManager.instance.playerData.atBench = Silksong's PD) allows equipping while resting.
+        var spd = Silksong::PlayerData.instance;
+        spd?.atBench = true;
     }
 
     // Find the active HK bench FSM hung in "Startle" and push it past the un-completing wake animation toward "Resting".

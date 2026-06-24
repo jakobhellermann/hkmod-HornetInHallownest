@@ -54,12 +54,12 @@ internal sealed class InputDriver : MonoBehaviour {
         ("jump", KeyCode.Z), ("attack", KeyCode.X), ("dash", KeyCode.C),
         ("superdash", KeyCode.S), // harpoon dash
         ("cast", KeyCode.A), // bind/heal + silk skill (Silksong's Cast action; Bind FSM ListenForCast)
-        ("quickcast", KeyCode.G), // needle throw / quick tool
+        ("quickcast", KeyCode.F), // needle throw / quick tool / silk skill
         ("dreamnail", KeyCode.D), // needolin
         ("openinventory",
             KeyCode.K), // open the inventory (Inv pane); ListenForInventoryShortcut reads OpenInventory.WasPressed (K: I/O collide with HK's own inventory)
         ("opentools", KeyCode.L), // open the Tools/Crests pane directly
-        ("menusubmit", KeyCode.Y), // inventory equip/submit
+        ("menusubmit", KeyCode.Z), // inventory equip/submit
         ("menucancel", KeyCode.X), // inventory cancel/back
     };
 

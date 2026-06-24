@@ -158,6 +158,9 @@ internal sealed class HornetDeath : MonoBehaviour {
         var hero = BundleSpike.RealHero;
         if (hero == null) return new { error = "no Hornet spawned" };
         if (PlayerData.instance != null) PlayerData.instance.atBench = false;
+        var spd = Silksong::PlayerData.instance;
+        if (spd != null) spd.isInventoryOpen = false;
+        if (UnityEngine.Time.timeScale <= 0.0001f) UnityEngine.Time.timeScale = 1f;
         hero.cState.dead = false;
         SHeroBox.Inactive = false;
         rendererField ??= typeof(SHeroController).GetField("renderer", BindingFlags.Instance | BindingFlags.NonPublic);
