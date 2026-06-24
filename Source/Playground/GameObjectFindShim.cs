@@ -114,7 +114,7 @@ internal static class GameObjectFindShim {
     private static void LogOnce(string method, string key, GameObject? result) {
         try {
             // Only reached in the passthrough path (HK context); Silksong-context lookups go through Intercept.
-            Log.InfoOnce($"find|{method}|{key}",
+            Log.DebugOnce($"find|{method}|{key}",
                 $"[Find] {method}('{key}') -> {(result != null ? "'" + result.name + "'" : "null")}  [passthrough]");
         } catch {
             /* never break a find */

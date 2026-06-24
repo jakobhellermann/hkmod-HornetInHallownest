@@ -33,6 +33,11 @@ internal static class Log {
         SinkInfo($"{msg}");
     }
 
+    internal static void DebugOnce(string key, object? msg) {
+        if (DedupOnce && !seenOnce.Add(key)) return;
+        SinkDebug($"{msg}");
+    }
+
     internal static void ErrorOnce(string key, object? msg) {
         if (DedupOnce && !seenOnce.Add(key)) return;
         SinkError($"{msg}");
