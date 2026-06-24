@@ -2,6 +2,7 @@ extern alias Silksong;
 extern alias SilksongLoc;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using HornetPlayer.HornetInHallownest;
@@ -121,6 +122,30 @@ internal static class Stub {
         // [0x0003d] (likely a static cache stale from a previous hot-reload). The quest subsystem isn't brought up, so
         // quest-update UI is moot. Silent (per-tool, could be many).
         Skip(typeof(Silksong::QuestManager), "MaybeShowQuestUpdated", silent: true);
+        // QuestManager.GetActiveQuests / GetAcceptedQuests: ObjectCache<T>.cache defaults to null, and
+        // ShouldUpdate(Version) returns false when both sides are 0 (never incremented without a QuestManager).
+        // So GetActiveQuests returns null -> foreach over null -> NullRef in InventoryItemCollectable.Description
+        // (which iterates GetActiveQuests to append quest-desc text to item tooltips). Return Enumerable.Empty
+        // instead — quest subsystem not brought up, so no active quests is correct.
+        var qm = typeof(Silksong::QuestManager);
+        var getActive = qm.GetMethod("GetActiveQuests", BindingFlags.Public | BindingFlags.Static);
+        var getAccepted = qm.GetMethod("GetAcceptedQuests", BindingFlags.Public | BindingFlags.Static);
+        if (getActive != null)
+            hooks.Add(new ILHook(getActive, il => {
+                il.Body.Instructions.Clear();
+                var c = new ILCursor(il);
+                c.Emit(OpCodes.Call, typeof(Enumerable).GetMethod(nameof(Enumerable.Empty))!
+                    .MakeGenericMethod(typeof(Silksong::FullQuestBase)));
+                c.Emit(OpCodes.Ret);
+            }));
+        if (getAccepted != null)
+            hooks.Add(new ILHook(getAccepted, il => {
+                il.Body.Instructions.Clear();
+                var c = new ILCursor(il);
+                c.Emit(OpCodes.Call, typeof(Enumerable).GetMethod(nameof(Enumerable.Empty))!
+                    .MakeGenericMethod(typeof(Silksong::BasicQuestBase)));
+                c.Emit(OpCodes.Ret);
+            }));
         // Inventory MAP pane: InventoryMapManager.OnPaneStart -> InventoryWideMap.UpdatePositions -> get_PositionOffset
         // -> GameMap.IsLostInAbyssPostMap -> IsLostInAbyssBase NullRef (GameMap uninitialized; map subsystem out of
         // scope). OnPaneStart is called directly from Awake AND subscribed to pane.OnPaneStart; skipping it covers both.

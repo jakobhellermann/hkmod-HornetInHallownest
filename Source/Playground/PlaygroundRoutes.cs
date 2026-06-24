@@ -25,6 +25,7 @@ public static class PlaygroundRoutes {
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
         DebugServer.MapPost("/invoke", req => Invoke(req["path"], req["method"]));
         DebugServer.MapPost("/unlock-tools", _ => { try { Silksong::ToolItemManager.UnlockAllTools(); Silksong::ToolItemManager.UnlockAllCrests(); return new { ok = true }; } catch (Exception e) { Log.Error($"[unlock-tools] {e}"); return new { error = e.Message, stack = e.StackTrace }; } });
+        DebugServer.MapGet("/collectables", _ => DumpCollectables());
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
     }
 
@@ -226,6 +227,19 @@ public static class PlaygroundRoutes {
             return (null, null, DevResponse.Json(new { error = $"Component '{path.Component}' not found" }, 404));
 
         return (target, comp, null);
+    }
+
+    private static object DumpCollectables() {
+        var items = Resources.FindObjectsOfTypeAll<Silksong::CollectableItem>();
+        return items.Select(i => new {
+            name = i.name,
+            type = i.GetType().Name,
+            isVisible = i.IsVisible,
+            collectedAmount = i.CollectedAmount,
+            useResponsesNull = typeof(Silksong::CollectableItem)
+                .GetField("useResponses", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.GetValue(i) == null
+        }).ToArray();
     }
 
     // Get a value safely (catching getter exceptions) and format it bounded to `depth`.
