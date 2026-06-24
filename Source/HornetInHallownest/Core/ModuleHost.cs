@@ -13,8 +13,8 @@ namespace HornetPlayer.HornetInHallownest.Core;
 // Each module's Initialize/Deinitialize is wrapped in try/catch: one module failing to come up (or tear down) must
 // not abort the rest — we log it and continue, matching the resilience of the old flat list.
 public sealed class ModuleHost {
-    private readonly HashSet<string> active = new();
-    private readonly List<IModule> modules = new();
+    private readonly HashSet<string> active = [];
+    private readonly List<IModule> modules = [];
 
     public IReadOnlyList<IModule> Modules => modules;
 
@@ -42,17 +42,6 @@ public sealed class ModuleHost {
                 m.Deinitialize();
             } catch (Exception e) {
                 Log.Error($"[ModuleHost] deinit '{m.Id}': {e}");
-            }
-        }
-    }
-
-    public void Tick() {
-        foreach (var m in modules) {
-            if (m is not ITickable t || !active.Contains(m.Id)) continue;
-            try {
-                t.Tick();
-            } catch (Exception e) {
-                Log.Error($"[ModuleHost] tick '{m.Id}': {e}");
             }
         }
     }

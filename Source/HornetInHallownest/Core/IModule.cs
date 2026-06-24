@@ -11,10 +11,3 @@ public interface IModule {
     void Initialize();
     void Deinitialize();
 }
-
-// Opt-in per-frame hook. A module that needs per-frame work also implements ITickable; ModuleHost.Tick() calls it
-// each frame in registration order (only while the module is active). Kept separate from IModule so modules that
-// don't need a frame tick stay simple.
-public interface ITickable {
-    void Tick();
-}

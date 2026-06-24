@@ -117,7 +117,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         playgroundHost = new GameObject("HornetPlayer.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
         var host = playgroundHost.AddComponent<PlaygroundHost>();
-        host.OnTick = moduleHost.Tick; // per-frame tick for ITickable modules (none yet; wired for migration)
 
         validation = new ValidationRunner(moduleHost)
             .Register(new SpawnSanityScenario());
