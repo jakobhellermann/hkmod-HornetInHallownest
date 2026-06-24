@@ -85,6 +85,10 @@ internal static class Stub {
         // which fights HK's fade (HK owns the camera/fade) and needs Silksong's fade FSM/camera context we don't run.
         // No-op it; HK fades the scene.
         Skip(typeof(Silksong::GameManager), "FadeSceneIn");
+        // AwardAchievement -> achievementHandler.AwardAchievementToPlayer(key); achievementHandler is null on our
+        // bootstrap GM (Silksong achievements are irrelevant in HK).
+        Skip(typeof(Silksong::GameManager), "AwardAchievement", silent: true);
+        Skip(typeof(Silksong::GameManager), "UpdateAchievementProgress", silent: true);
         // SimpleFadeOut::SetColor throws nullref, because Awake is never ran
         Skip(typeof(Silksong::CameraController), "ScreenFlash");
         // GameCameras.Start does only `gs.LoadOverscanSettings(); SetOverscan(gs.overScanAdjustment)` — gs is
@@ -112,6 +116,11 @@ internal static class Stub {
         // UpdateList -> GetItems. Skip the quest manager's Awake so base.Awake (UpdateList) never runs -> null source
         // never touched. No quests -> empty quest pane (out of scope; sibling to the map-zone skip above).
         Skip(typeof(Silksong::QuestItemManager), "Awake");
+        // QuestManager.MaybeShowQuestUpdated: called by ToolItem.Unlock when a tool is newly unlocked with an item-get
+        // popup. Without a QuestManager singleton, GetActiveQuests returns Empty — but the method still NullRefs at
+        // [0x0003d] (likely a static cache stale from a previous hot-reload). The quest subsystem isn't brought up, so
+        // quest-update UI is moot. Silent (per-tool, could be many).
+        Skip(typeof(Silksong::QuestManager), "MaybeShowQuestUpdated", silent: true);
         // Inventory MAP pane: InventoryMapManager.OnPaneStart -> InventoryWideMap.UpdatePositions -> get_PositionOffset
         // -> GameMap.IsLostInAbyssPostMap -> IsLostInAbyssBase NullRef (GameMap uninitialized; map subsystem out of
         // scope). OnPaneStart is called directly from Awake AND subscribed to pane.OnPaneStart; skipping it covers both.

@@ -1,3 +1,4 @@
+extern alias Silksong;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -23,6 +24,7 @@ public static class PlaygroundRoutes {
         DebugServer.MapPost("/set-active", req => SetActive(req["name"], req["path"], req["active"]));
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
         DebugServer.MapPost("/invoke", req => Invoke(req["path"], req["method"]));
+        DebugServer.MapPost("/unlock-tools", _ => { try { Silksong::ToolItemManager.UnlockAllTools(); Silksong::ToolItemManager.UnlockAllCrests(); return new { ok = true }; } catch (Exception e) { Log.Error($"[unlock-tools] {e}"); return new { error = e.Message, stack = e.StackTrace }; } });
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
     }
 
