@@ -22,8 +22,6 @@ internal static class ResourcesShim {
 
     private static Hook? hook;
     private static AssetBundle? bundle;
-    private static readonly HashSet<string> loggedMiss = new();
-    private static readonly HashSet<string> loggedServe = new();
 
     internal static void Install() {
         if (hook != null) return;
@@ -56,8 +54,8 @@ internal static class ResourcesShim {
 
             Log.Error($"[Resources.Load] MISS '{path}' as {type?.Name} could not be served from silksong Resources");
             var res = orig(path, type);
-            if (res == null && loggedMiss.Add(path.ToLowerInvariant()))
-                Log.Error(
+            if (res == null)
+                Log.ErrorOnce($"resmiss|{path.ToLowerInvariant()}",
                     $"[Resources.Load] MISS '{path}' as {type?.Name} could not be served from hollowknight Resources either");
             return res;
         }
@@ -68,8 +66,8 @@ internal static class ResourcesShim {
 
         var bundleAsset = ServeFromBundle(path, type);
         if (bundleAsset != null) return bundleAsset;
-        if (loggedMiss.Add(path.ToLowerInvariant()))
-            Log.Error(
+        if (bundleAsset == null)
+            Log.ErrorOnce($"resmiss|{path.ToLowerInvariant()}",
                 $"[Resources.Load] NULL '{path}' as {type?.Name} was loaded as null from hk context but is present in hkss. Are you missing SilksongContext?");
 
         return orig0;
@@ -89,8 +87,9 @@ internal static class ResourcesShim {
             return null;
         }
 
-        if (served != null && loggedServe.Add(key))
-            Log.Debug($"[Resources.Load] SERVE '{path}' as {type?.Name} <- silksong-resources.bundle");
+        if (served != null)
+            Log.InfoOnce($"resserve|{key}",
+                $"[Resources.Load] SERVE '{path}' as {type?.Name} <- silksong-resources.bundle");
         return served;
     }
 
@@ -102,8 +101,6 @@ internal static class ResourcesShim {
             bundle = null;
         }
 
-        loggedMiss.Clear();
-        loggedServe.Clear();
     }
 
     // Debug: reload silksong-resources.bundle from disk WITHOUT touching the hook, so we can iterate on the bundle
@@ -114,8 +111,6 @@ internal static class ResourcesShim {
             bundle = null;
         }
 
-        loggedMiss.Clear();
-        loggedServe.Clear();
         bundle = AssetBundle.LoadFromFile(BundlePath);
         Log.Info(bundle != null
             ? $"[ResShim] reloaded bundle ({bundle.GetAllAssetNames().Length} assets)"

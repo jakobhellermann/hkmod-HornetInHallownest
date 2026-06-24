@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace HornetPlayer.Playground;
 
@@ -19,5 +20,25 @@ internal static class Log {
 
     internal static void Error(object? msg) {
         SinkError($"{msg}");
+    }
+
+    // --- Log-once dedup with global toggle ---
+    // When DedupOnce is true (default): each unique key logs only once. When false: logs every call.
+    // Toggle via POST /log-once?dedup=false to see repeat occurrences during debugging.
+    private static readonly HashSet<string> seenOnce = new();
+    internal static bool DedupOnce = true;
+
+    internal static void InfoOnce(string key, object? msg) {
+        if (DedupOnce && !seenOnce.Add(key)) return;
+        SinkInfo($"{msg}");
+    }
+
+    internal static void ErrorOnce(string key, object? msg) {
+        if (DedupOnce && !seenOnce.Add(key)) return;
+        SinkError($"{msg}");
+    }
+
+    internal static void ClearOnce() {
+        seenOnce.Clear();
     }
 }

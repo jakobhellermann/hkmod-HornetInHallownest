@@ -19,7 +19,6 @@ namespace HornetPlayer.Playground;
 // edit it as source; the ILHook is our "guard".
 internal static class Stub {
     private static readonly List<ILHook> hooks = new();
-    private static readonly HashSet<string> logged = new();
 
     // The methods that NullRef on spawn because the full game runtime isn't set up (callees, leaf methods).
     // Identified from Player.log on a real spawn — see TODO.md / docs.
@@ -193,7 +192,7 @@ internal static class Stub {
 
     // Called from stubbed methods (emitted by Rewrite). Logs each distinct stub once to avoid per-frame spam.
     public static void Logged(string label) {
-        if (logged.Add(label)) Log.Info($"[Stub] >> {label} (stubbed, no-op)");
+        Log.InfoOnce($"stub|{label}", $"[Stub] >> {label} (stubbed, no-op)");
     }
 
     private static void Rewrite(ILContext il, string label) {
@@ -228,6 +227,5 @@ internal static class Stub {
     internal static void Cleanup() {
         foreach (var h in hooks) h.Dispose();
         hooks.Clear();
-        logged.Clear();
     }
 }

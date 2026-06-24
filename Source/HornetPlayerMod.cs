@@ -166,6 +166,11 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             InputBridge.Press(a, f); // debug-drive an InControl action for f frames (no physical key needed)
             return new { action = a, frames = f };
         });
+        DebugServer.MapPost("/log-once", req => {
+            Playground.Log.DedupOnce = (req["dedup"] ?? "true").ToLowerInvariant() != "false";
+            if (Playground.Log.DedupOnce) Playground.Log.ClearOnce();
+            return new { dedup = Playground.Log.DedupOnce };
+        });
         DebugServer.Start(host, DebugServerPort);
 
         // FIRST: register Silksong's Addressables catalog into HK's empty runtime, BEFORE any Silksong code triggers a

@@ -95,7 +95,8 @@ internal static class CallMethodProperFix {
                     if (altMethod != null) {
                         cachedMethodInfoField?.SetValue(self, altMethod);
                         cachedParameterInfoField?.SetValue(self, altMethod.GetParameters());
-                        Log.Info($"[CallMethodProperFix] redirected '{methodName}' -> '{redirect}' on {type.Name} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
+                        Log.InfoOnce($"redirect|{methodName}|{type.Name}|{goName}|{fsmName}|{stateName}",
+                            $"[CallMethodProperFix] redirected '{methodName}' -> '{redirect}' on {type.Name} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
                         return true;
                     }
                 }
@@ -143,7 +144,8 @@ internal static class CallMethodProperFix {
             if (resolved != null) {
                 cachedMethodInfoField?.SetValue(self, resolved);
                 cachedParameterInfoField?.SetValue(self, resolved.GetParameters());
-                Log.Info($"[CallMethodProperFix] disambiguated '{methodName}' on {type.Name} ({label}) -> {resolved}");
+                Log.InfoOnce($"disambig|{methodName}|{type.Name}|{label}",
+                    $"[CallMethodProperFix] disambiguated '{methodName}' on {type.Name} ({label}) -> {resolved}");
                 return true;
             }
 

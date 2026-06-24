@@ -22,7 +22,6 @@ namespace HornetPlayer.Playground;
 internal static class PlayMakerWarningContext {
     private static Hook? getGameObjectFsmHook;
     private static Hook? fsmUpdateHook;
-    private static readonly HashSet<string> logged = new();
 
     // Fallback for init paths that run actions outside FsmExecutionStack (rare).
     [ThreadStatic] private static string? currentFsmContext;
@@ -75,10 +74,8 @@ internal static class PlayMakerWarningContext {
             var caller = execFsm != null
                 ? $"{execFsm.OwnerName}/{execFsm.Name}"
                 : currentFsmContext ?? "(unknown FSM)";
-            var key = $"notfound|{fsmName}|{go.name}|{scene}|{caller}";
-            if (logged.Add(key)) {
-                Log.Info($"[PlayMakerCtx] FSM '{fsmName}' not found on GO '{go.name}' (scene={scene}) — called by FSM: {caller}");
-            }
+            Log.InfoOnce($"notfound|{fsmName}|{go.name}|{scene}|{caller}",
+                $"[PlayMakerCtx] FSM '{fsmName}' not found on GO '{go.name}' (scene={scene}) — called by FSM: {caller}");
         }
         return result;
     }
@@ -101,9 +98,8 @@ internal static class PlayMakerWarningContext {
             condition.StartsWith("Error Loading Action:") ||
             condition.StartsWith("get_actions: Fsm not initialized:") ||
             condition.StartsWith("get_fsm: Fsm not initialized:")) {
-            if (logged.Add(condition)) {
-                Log.Info($"[PlayMakerCtx] {condition} (root cause: inactive Silksong_GameManager — FSM init chain aborted)");
-            }
+            Log.InfoOnce($"warn|{condition}",
+                $"[PlayMakerCtx] {condition} (root cause: inactive Silksong_GameManager — FSM init chain aborted)");
         }
     }
 
@@ -113,7 +109,6 @@ internal static class PlayMakerWarningContext {
         fsmUpdateHook?.Dispose();
         fsmUpdateHook = null;
         Application.logMessageReceived -= OnLogMessage;
-        logged.Clear();
     }
 
     // One-shot diagnostic: log the call stack when Hornet's HeroController.OnDestroy fires,

@@ -22,7 +22,6 @@ namespace HornetPlayer.Playground;
 // null (that's what "not found" means) so it can't crash the frame.
 internal static class GameObjectFindShim {
     private static readonly List<Hook> hooks = new();
-    private static readonly HashSet<string> logged = new();
 
     // While SilksongContext.Active (Silksong code we control the entry of — see SilksongContext), name/tag lookups are
     // INTERCEPTED: a known key (e.g. "CameraTarget") resolves to the Silksong object; anything else returns null + a log
@@ -114,10 +113,8 @@ internal static class GameObjectFindShim {
 
     private static void LogOnce(string method, string key, GameObject? result) {
         try {
-            var k = method + "|" + key;
-            if (!logged.Add(k)) return;
             // Only reached in the passthrough path (HK context); Silksong-context lookups go through Intercept.
-            Log.Debug(
+            Log.InfoOnce($"find|{method}|{key}",
                 $"[Find] {method}('{key}') -> {(result != null ? "'" + result.name + "'" : "null")}  [passthrough]");
         } catch {
             /* never break a find */
@@ -127,6 +124,5 @@ internal static class GameObjectFindShim {
     internal static void Cleanup() {
         foreach (var h in hooks) h.Dispose();
         hooks.Clear();
-        logged.Clear();
     }
 }

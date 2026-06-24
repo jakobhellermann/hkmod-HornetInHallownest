@@ -28,8 +28,7 @@ namespace HornetPlayer.Playground;
 internal static class ContactDamageBridge {
     private static Hook? hook;
 
-    // Log the first contact from each distinct HK object (clean log, still names every new hazard that hurts her).
-    private static readonly HashSet<string> seen = new();
+
 
     internal static void Install() {
         var mi = typeof(SHeroBox).GetMethod("CheckForDamage", BindingFlags.Public | BindingFlags.Instance,
@@ -72,8 +71,8 @@ internal static class ContactDamageBridge {
 
             var hc = SHeroController.instance;
             if (hc == null) return;
-            if (seen.Add(other.name))
-                Log.Info($"[ContactDamageBridge] HK contact damage from '{other.name}' dmg={dmg} hazard={ssHazard}");
+            Log.InfoOnce($"contact:{other.name}",
+                $"[ContactDamageBridge] HK contact damage from '{other.name}' dmg={dmg} hazard={ssHazard}");
             // damageSide = the side the damager is on (matches HeroBox.CheckForDamage's own computation).
             var side = other.transform.position.x > self.transform.position.x ? SSide.right : SSide.left;
             // NonLethal flag: a fatal hit routes through Die(nonLethal:true) (HeroController:5618), which SKIPS the whole

@@ -32,7 +32,6 @@ internal static class HeroControllerProbe {
     private static readonly List<ILHook> hooks = new();
     private static readonly Dictionary<string, long> counts = new();
     private static readonly Dictionary<string, int> distinctCallers = new();
-    private static readonly HashSet<string> loggedCallerKeys = new();
 
     internal static bool Enabled = false;
 
@@ -81,10 +80,9 @@ internal static class HeroControllerProbe {
         if (seen >= CallerCap) return; // saturated: keep counting, stop walking the stack
 
         var caller = FirstExternalCaller(out var trace);
-        var key = label + " <- " + caller;
-        if (!loggedCallerKeys.Add(key)) return;
         distinctCallers[label] = seen + 1;
-        Log.Info($"[HeroControllerProbe] KNIGHT.{label}  <-  {caller}\n{trace}");
+        Log.InfoOnce($"probe|{label}|{caller}",
+            $"[HeroControllerProbe] KNIGHT.{label}  <-  {caller}\n{trace}");
     }
 
     // Walk past the probe + the hooked HeroController frame(s) (incl. MonoMod trampolines) to the first real caller.
@@ -126,7 +124,6 @@ internal static class HeroControllerProbe {
     internal static object Reset() {
         counts.Clear();
         distinctCallers.Clear();
-        loggedCallerKeys.Clear();
         return new { reset = true };
     }
 
@@ -135,6 +132,5 @@ internal static class HeroControllerProbe {
         hooks.Clear();
         counts.Clear();
         distinctCallers.Clear();
-        loggedCallerKeys.Clear();
     }
 }

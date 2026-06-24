@@ -13,7 +13,6 @@ namespace HornetPlayer.Playground;
 // also covers the Knight — but a missing clip on the Knight would be a real HK bug worth seeing, so the global hook is fine.
 internal static class Tk2dClipShim {
     private static Hook? hook;
-    private static readonly HashSet<string> logged = new();
 
     internal static void Install() {
         var mi = typeof(tk2dSpriteAnimator).GetMethod("Play", BindingFlags.Public | BindingFlags.Instance,
@@ -29,10 +28,8 @@ internal static class Tk2dClipShim {
 
     private static void OnPlay(Orig orig, tk2dSpriteAnimator self, string name) {
         if (self != null && !string.IsNullOrEmpty(name) && self.GetClipByName(name) == null) {
-            var key = self.gameObject.name + "|" + name;
-            if (logged.Add(key))
-                Log.Info(
-                    $"[Tk2dClipShim] missing clip '{name}' on '{self.gameObject.name}' -> skipped (needs Hornet mapping)");
+            Log.InfoOnce($"clip|{self.gameObject.name}|{name}",
+                $"[Tk2dClipShim] missing clip '{name}' on '{self.gameObject.name}' -> skipped (needs Hornet mapping)");
             return; // skip orig (it would Debug.LogError per call)
         }
 
@@ -42,7 +39,6 @@ internal static class Tk2dClipShim {
     internal static void Cleanup() {
         hook?.Dispose();
         hook = null;
-        logged.Clear();
     }
 
     private delegate void Orig(tk2dSpriteAnimator self, string name);
