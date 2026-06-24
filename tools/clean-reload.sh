@@ -9,7 +9,7 @@
 # Opens a fresh logsnap session on the log files at the start (cursors at EOF); logsnap is
 # rotation-aware, so it follows Unity truncating Player.log on relaunch.
 #
-# Usage:  tools/clean-startup.sh [slot]      # slot defaults to 1 ("level 1")
+# Usage:  tools/clean-reload.sh [slot]      # slot defaults to 1 ("level 1")
 set -eu
 
 GAME_DIR="/home/jakob/.steamapps/Hollow Knight"   # symlink -> ~/.local/share/Steam/steamapps/common/Hollow Knight

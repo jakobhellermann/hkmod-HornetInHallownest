@@ -6,7 +6,7 @@
 #      (Unload -> Initialize -> auto-respawn Hornet).
 #   3. Wait for the reload to finish (the [SpawnReal] instantiated marker) + settle, then checkpoint.
 #
-# Assumes a logsnap session is already open on the logs (run tools/clean-startup.sh first). Iterate with this
+# Assumes a logsnap session is already open on the logs (run tools/clean-reload.sh first). Iterate with this
 # between code edits instead of restarting.
 #
 # Usage:  tools/reload.sh [checkpoint-label]      # label defaults to "reload"; pass one to tag the iteration,
