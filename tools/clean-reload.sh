@@ -19,7 +19,7 @@ SLOT="${1:-1}"
 DEV="localhost:8201"
 
 # 0. Open a fresh logsnap session (cursors at EOF) and kill any running instance before a fresh launch.
-rm "$LOGDIR/Player.log" "$LOGDIR/ModLog.txt"
+rm -f "$LOGDIR/Player.log" "$LOGDIR/ModLog.txt"
 logsnap open "$LOGDIR/Player.log" "$LOGDIR/ModLog.txt"
 if pkill -f hollow_knight.x86_64 2>/dev/null; then
     echo "killed running Hollow Knight"
@@ -30,7 +30,7 @@ dotnet build
 
 # 1. Launch detached so the game survives this script exiting.
 cd "$GAME_DIR" || { echo "game dir not found: $GAME_DIR" >&2; exit 1; }
-setsid "$GAME_BIN" >/dev/null 2>&1 < /dev/null &
+DISPLAY= setsid "$GAME_BIN" >/dev/null 2>&1 < /dev/null &
 echo "launched Hollow Knight (pid $!)"
 
 # 2. Wait for boot + mod init. The mod's debug server only starts listening at the END of Initialize, so

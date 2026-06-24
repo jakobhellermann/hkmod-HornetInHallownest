@@ -10,8 +10,8 @@
 ## Integration
 - XX item pickup / toll buy / stag
 - XX OOB big door
-- XX mask shard pickup doesn't end
 - XX fireball scene entry broken
+- OOB on scene transitions
 - spring water
 - swimming
 - cannot pickup geo on dash
