@@ -13,7 +13,7 @@ internal static class ToolItemManagerBootstrap {
 
     internal static object Ensure() {
         var mgr = ManagerSingletonBootstrap.BringUp(typeof(Silksong::ToolItemManager), GoName, "toolItems",
-            "crestList");
+            "crestList", "equipChangedToolSingleReminder", "equipChangedToolModifierReminder");
         if (mgr == null) return new { error = "ToolItemManager bring-up failed (see log)" };
         return Diag();
     }

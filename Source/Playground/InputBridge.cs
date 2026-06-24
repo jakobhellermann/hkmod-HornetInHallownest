@@ -64,6 +64,7 @@ internal sealed class InputDriver : MonoBehaviour {
     };
 
     private ulong tick;
+    private bool infiniteSilk;
 
     private void Update() {
         try {
@@ -78,6 +79,16 @@ internal sealed class InputDriver : MonoBehaviour {
                 else {
                     Log.Info($"[InputDriver] TP failed: hornet={hornet != null} knight={knight != null}");
                 }
+            }
+
+            // Toggle infinite silk (B key). When on, refill silk to max each frame.
+            if (Input.GetKeyDown(KeyCode.B)) {
+                infiniteSilk = !infiniteSilk;
+                Log.Info($"[InputDriver] infinite silk: {infiniteSilk}");
+            }
+            if (infiniteSilk) {
+                var spd = Silksong::PlayerData.instance;
+                if (spd != null && spd.silk < spd.silkMax) spd.silk = spd.silkMax;
             }
 
             // Don't drive input while HK is paused (HornetEnvironmentAdapter mirrors PAUSED to her GameManager) —
