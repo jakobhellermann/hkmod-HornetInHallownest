@@ -27,7 +27,10 @@
 ## Nive to have
 - hud sync? geo on hornet
 - dirtmouth slowdown
-- crouch mode for knight height
+- crouch mode for knight height:
+    - thorns, crossroads shard, greenpath entry
 
 ## Intermittent / needs debug
 - cannot bench sometimes
+
+
