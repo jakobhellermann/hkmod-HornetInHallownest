@@ -163,9 +163,18 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         // Stag station "Stag Control" FSM loads Cinematic_Stag_travel via LoadLevel). Without this hook Hornet stays
         // in the scene and is destroyed by the synchronous scene load.
         var smType = typeof(SceneManager);
-        var lsParamsType = typeof(LoadSceneParameters);
-        var loadSceneMI = smType.GetMethod("LoadScene",
-            BindingFlags.Public | BindingFlags.Static, null, [typeof(string), lsParamsType], null);
+        // LoadSceneParameters is a struct — GetMethod with Type[] fails to match value types with
+        // the default binder in some Unity versions. Walk the methods manually instead.
+        MethodInfo? loadSceneMI = null;
+        MethodInfo? loadSceneAsyncMI = null;
+        foreach (var m in smType.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
+            if (m.Name != "LoadScene" && m.Name != "LoadSceneAsync") continue;
+            var ps = m.GetParameters();
+            if (ps.Length != 2 || ps[0].ParameterType != typeof(string)) continue;
+            if (ps[1].ParameterType != typeof(LoadSceneParameters)) continue;
+            if (m.Name == "LoadScene") loadSceneMI = m;
+            else loadSceneAsyncMI = m;
+        }
         if (loadSceneMI != null) {
             loadSceneHook = new Hook(loadSceneMI,
                 (Func<Func<string, LoadSceneParameters, Scene>, string, LoadSceneParameters, Scene>)LoadSceneHook);
@@ -173,8 +182,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         } else {
             Log.Error("[EnvAdapter] SceneManager.LoadScene(string, LoadSceneParameters) not found");
         }
-        var loadSceneAsyncMI = smType.GetMethod("LoadSceneAsync",
-            BindingFlags.Public | BindingFlags.Static, null, [typeof(string), lsParamsType], null);
         if (loadSceneAsyncMI != null) {
             loadSceneAsyncHook = new Hook(loadSceneAsyncMI,
                 (Func<Func<string, LoadSceneParameters, AsyncOperation>, string, LoadSceneParameters, AsyncOperation>)LoadSceneAsyncHook);
