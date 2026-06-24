@@ -8,7 +8,7 @@
 - hornet bench location
 
 ## Integration
-- XX item pickup / toll buy / stag
+- stag?
 - XX OOB big door
 - XX fireball scene entry broken
 - OOB on scene transitions
