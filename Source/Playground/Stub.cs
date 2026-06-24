@@ -68,14 +68,6 @@ internal static class Stub {
         // StartDashEffect activates dashBurstPrefab/airDashEffect (unresolved external effect prefabs) -> NullRef,
         // aborting HeroDash after cState.dashing is set but before cooldown/FSM. Purely cosmetic -> stub so dash runs.
         Skip(typeof(Silksong::HeroController), "StartDashEffect");
-        // NOTE: RandomAudioClipTableExtensions.SpawnAndPlayOneShot is NO LONGER stubbed — HeroSfxShim now REPLACES it with
-        // PlayClipAtPoint so Hornet's one-shot SFX (dash/attack/slash) actually play (the real body silently culls them
-        // via Silksong's audio plumbing we don't run). The old stub here was a no-op that killed all hero SFX.
-        // CheckForBump delegates to bumpChecker (null, not set up) -> NullRef EVERY FixedUpdate inside Dash(), before
-        // `dash_timer -= dt`, so the timer never decrements, FinishedDashing never fires -> stuck dashing forever. The
-        // wrapper discards the out-results (`out var _`), so stubbing is behaviorally free; Unity colliders still
-        // handle real collision.
-        Skip(typeof(Silksong::HeroController), "CheckForBump");
         // SetParticleScale.OnUpdate (ticked every frame via SetParticleScaleCallbackHooks) derefs a null parentBody
         // (Rigidbody2D.IsAwake) -> per-frame NullRef. Cosmetic particle scaling -> stub.
         Skip(typeof(Silksong::SetParticleScale), "OnUpdate", silent: true); // per-frame
