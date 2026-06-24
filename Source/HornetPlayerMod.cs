@@ -3,6 +3,9 @@ using System;
 using System.Collections;
 using System.Reflection;
 using HornetPlayer.DevServer;
+using HornetPlayer.HornetInHallownest.Core;
+using HornetPlayer.HornetInHallownest.Validation;
+using HornetPlayer.HornetInHallownest.Validation.Scenarios;
 using HornetPlayer.Playground;
 using Modding;
 using UnityEngine;
@@ -14,7 +17,12 @@ public class HornetPlayerMod : Mod, ITogglableMod {
     // Distinct from Silksong's DevUtils server (8200) so both games can be debugged at once.
     private const int DebugServerPort = 8201;
 
+    // The new lifecycle backbone (HornetInHallownest). Modules migrate into this ordered list one at a time; until a
+    // system is migrated it keeps its old Install/Cleanup below. Initialize forward, Deinitialize reverse.
+    private readonly ModuleHost moduleHost = new();
+
     private GameObject? playgroundHost;
+    private ValidationRunner? validation;
 
     public static HornetPlayerMod? LoadedInstance { get; private set; }
 
@@ -50,6 +58,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         } catch (Exception e) {
             Playground.Log.Error($"[Unload] inventory reset: {e.Message}");
         }
+
+        // New lifecycle backbone: tear migrated modules down in reverse registration order, before the legacy systems.
+        moduleHost.DeinitializeAll();
 
         ResourcesShim.Cleanup();
         GameObjectFindShim.Cleanup();
@@ -106,6 +117,10 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         playgroundHost = new GameObject("HornetPlayer.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
         var host = playgroundHost.AddComponent<PlaygroundHost>();
+        host.OnTick = moduleHost.Tick; // per-frame tick for ITickable modules (none yet; wired for migration)
+
+        validation = new ValidationRunner(moduleHost)
+            .Register(new SpawnSanityScenario());
 
         PlaygroundRoutes.Register();
         DebugServer.MapPost("/spawn-real", _ => BundleSpike.SpawnReal());
@@ -157,6 +172,10 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapPost("/getup", _ => HornetDeath.ForceGetUp()); // debug: unstick from bench/no_input
         DebugServer.MapPost("/hazard",
             req => HornetDeath.Hazard(req["type"] ?? "3")); // debug: trigger hazard N (2=spikes,3=acid,4=lava,5=pit)
+        DebugServer.MapPost("/validate",
+            (req, respond) =>
+                validation!.RunRoute(req, respond)); // run a validation scenario (optionally disable=ModuleId,...)
+        DebugServer.MapGet("/validate-list", _ => validation!.List()); // list scenarios + module Ids
         DebugServer.MapGet("/bench-state", _ => BundleSpike.BenchState()); // debug: atBench signal + Hornet sit clips
         DebugServer.MapGet("/hc-probe", req => {
             // which HK HeroController methods get called on the Knight while Hornet active
@@ -237,6 +256,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         PlayMakerWarningContext.InstallOnDestroyTrace(); // trace who destroys Hornet's HeroController
         // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
+
+        // New lifecycle backbone: init migrated modules in registration order (empty until the first system migrates).
+        moduleHost.InitializeAll();
 
         // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so
         // this brings her back without a manual /spawn-real (and on a fresh boot, fires the first time you load in).
