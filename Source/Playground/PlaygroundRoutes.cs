@@ -16,6 +16,7 @@ public static class PlaygroundRoutes {
     private const BindingFlags MemberFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
     public static void Register() {
+        DebugServer.MapGet("/scene", _ => new { scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name });
         DebugServer.MapGet("/scene-tree", _ => SceneTree());
         DebugServer.MapGet("/screenshot", (AsyncRouteHandler)((_, respond) => Screenshot(respond)));
         DebugServer.MapGet("/inspect", req => Inspect(req["path"], req["depth"]));

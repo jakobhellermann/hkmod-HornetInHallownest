@@ -9,10 +9,7 @@
 - VS get animation shows knight always
 
 ## Integration
-- stag?
-- XX OOB big door
-- XX nail art during transition
-- XX fireball scene entry broken
+- XX hardsaves
 - OOB on scene transitions
 - spring water
 - swimming
@@ -21,6 +18,7 @@
 - dash attack jumpup
 - grubfather?
 - hornet falling after level exit
+- soul totem -> silk
 
 ## Nive to have
 - hud sync? geo on hornet
