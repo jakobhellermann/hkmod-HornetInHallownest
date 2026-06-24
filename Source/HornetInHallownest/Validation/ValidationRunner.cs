@@ -54,6 +54,15 @@ public sealed class ValidationRunner {
             if (type is LogType.Exception or LogType.Error) engineErrors.Add($"{type}: {msg}");
         };
 
+        // The mod's own Log.Error goes to the modding API (ModLog), NOT Application.logMessageReceived — so tap the Log
+        // sink too, else scenarios miss every shim/bridge error (e.g. ResourcesShim "missing SilksongContext").
+        var modErrors = new List<string>();
+        var origSink = Log.SinkError;
+        Log.SinkError = m => {
+            modErrors.Add(m);
+            origSink(m);
+        };
+
         var disabled = new List<string>();
         Application.logMessageReceived += watcher;
         try {
@@ -65,10 +74,12 @@ public sealed class ValidationRunner {
             yield return scenario.Run(ctx);
         } finally {
             Application.logMessageReceived -= watcher;
+            Log.SinkError = origSink;
             foreach (var id in disabled) host.Enable(id);
         }
 
         foreach (var e in engineErrors) ctx.Fail(e);
+        foreach (var e in modErrors) ctx.Fail($"Log.Error: {e}");
         Log.Info($"[Validation] {name} disabled=[{string.Join(",", disabled)}] -> {(ctx.Passed ? "PASS" : "FAIL")}");
         respond(new {
             scenario = name,

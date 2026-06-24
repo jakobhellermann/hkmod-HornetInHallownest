@@ -31,4 +31,4 @@ echo "build ok — waiting for hot-reload + respawn"
 
 # 3. Block until the hot-reload re-spawns Hornet, then until the follow-up burst goes quiet, then checkpoint.
 #    --at-most bounds it (e.g. reloading at the menu won't auto-respawn -> the wait gives up and the script ends).
-logsnap commit -m "$MSG" --wait-for "[SpawnReal] instantiated" --settle 200ms --at-most 10s
+logsnap commit -m "$MSG" --wait-for "[HornetSpawner] instantiated" --settle 200ms --at-most 10s

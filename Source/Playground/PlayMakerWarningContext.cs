@@ -27,7 +27,6 @@ internal static class PlayMakerWarningContext {
 
     // One-shot diagnostic: log the call stack when Hornet's HeroController.OnDestroy fires,
     // so we can see WHO destroys her during scene transitions (open item #1 — silent destruction).
-    private static Hook? onDestroyHook;
 
     internal static void Install() {
         // Hook HK's ActionHelpers.GetGameObjectFsm — this is where "Could not find FSM: X" comes from
@@ -113,27 +112,5 @@ internal static class PlayMakerWarningContext {
         fsmUpdateHook?.Dispose();
         fsmUpdateHook = null;
         Application.logMessageReceived -= OnLogMessage;
-    }
-
-    internal static void InstallOnDestroyTrace() {
-        var mi = typeof(Silksong::HeroController)
-            .GetMethod("OnDestroy", BindingFlags.NonPublic | BindingFlags.Instance);
-        if (mi == null) {
-            Log.Error("[PlayMakerCtx] HeroController.OnDestroy not found");
-            return;
-        }
-
-        onDestroyHook = new Hook(mi,
-            (Action<Action<Silksong::HeroController>, Silksong::HeroController>)((orig, self) => {
-                orig(self);
-                Log.Error(
-                    $"[PlayMakerCtx] HeroController.OnDestroy on '{self.gameObject.name}' (scene={self.gameObject.scene.name})\n{Environment.StackTrace}");
-            }));
-        Log.Info("[PlayMakerCtx] installed: HeroController.OnDestroy trace");
-    }
-
-    internal static void CleanupOnDestroyTrace() {
-        onDestroyHook?.Dispose();
-        onDestroyHook = null;
     }
 }

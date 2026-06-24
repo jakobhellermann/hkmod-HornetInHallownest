@@ -21,12 +21,6 @@ public static class ReflectionExtension {
     internal const BindingFlags InstanceAnyVisibilityDeclaredOnly = BindingFlags.Public | BindingFlags.NonPublic |
                                                                     BindingFlags.Instance | BindingFlags.DeclaredOnly;
 
-    private readonly record struct MemberKey(Type Type, string Name);
-
-    private readonly record struct AllMemberKey(Type Type, BindingFlags BindingFlags);
-
-    private readonly record struct MethodKey(Type Type, string Name, long ParameterHash);
-
     private static readonly ConcurrentDictionary<MemberKey, MemberInfo?> CachedMemberInfos = new();
     private static readonly ConcurrentDictionary<MemberKey, FieldInfo?> CachedFieldInfos = new();
     private static readonly ConcurrentDictionary<MemberKey, PropertyInfo?> CachedPropertyInfos = new();
@@ -47,9 +41,7 @@ public static class ReflectionExtension {
     public static MemberInfo? GetMemberInfo(this Type type, string name,
         BindingFlags bindingFlags = StaticInstanceAnyVisibility, bool logFailure = true) {
         var key = new MemberKey(type, name);
-        if (CachedMemberInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedMemberInfos.TryGetValue(key, out var result)) return result;
 
         var currentType = type;
         do {
@@ -57,9 +49,7 @@ public static class ReflectionExtension {
             currentType = currentType.BaseType;
         } while (result == null && currentType != null);
 
-        if (result == null && logFailure) {
-            Log.Error($"Failed to find member '{name}' on type '{type}'");
-        }
+        if (result == null && logFailure) Log.Error($"Failed to find member '{name}' on type '{type}'");
 
         return CachedMemberInfos[key] = result;
     }
@@ -68,9 +58,7 @@ public static class ReflectionExtension {
     public static FieldInfo? GetFieldInfo(this Type type, string name,
         BindingFlags bindingFlags = StaticInstanceAnyVisibility, bool logFailure = true) {
         var key = new MemberKey(type, name);
-        if (CachedFieldInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedFieldInfos.TryGetValue(key, out var result)) return result;
 
         var currentType = type;
         do {
@@ -78,9 +66,7 @@ public static class ReflectionExtension {
             currentType = currentType.BaseType;
         } while (result == null && currentType != null);
 
-        if (result == null && logFailure) {
-            Log.Error($"Failed to find field '{name}' on type '{type}'");
-        }
+        if (result == null && logFailure) Log.Error($"Failed to find field '{name}' on type '{type}'");
 
         return CachedFieldInfos[key] = result;
     }
@@ -89,9 +75,7 @@ public static class ReflectionExtension {
     public static PropertyInfo? GetPropertyInfo(this Type type, string name,
         BindingFlags bindingFlags = StaticInstanceAnyVisibility, bool logFailure = true) {
         var key = new MemberKey(type, name);
-        if (CachedPropertyInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedPropertyInfos.TryGetValue(key, out var result)) return result;
 
         var currentType = type;
         do {
@@ -99,9 +83,7 @@ public static class ReflectionExtension {
             currentType = currentType.BaseType;
         } while (result == null && currentType != null);
 
-        if (result == null && logFailure) {
-            Log.Error($"Failed to find property '{name}' on type '{type}'");
-        }
+        if (result == null && logFailure) Log.Error($"Failed to find property '{name}' on type '{type}'");
 
         return CachedPropertyInfos[key] = result;
     }
@@ -110,65 +92,54 @@ public static class ReflectionExtension {
     public static MethodInfo? GetMethodInfo(this Type type, string name, Type?[]? parameterTypes = null,
         BindingFlags bindingFlags = StaticInstanceAnyVisibility, bool logFailure = true) {
         var key = new MethodKey(type, name, parameterTypes.GetCustomHashCode());
-        if (CachedMethodInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedMethodInfos.TryGetValue(key, out var result)) return result;
 
         var currentType = type;
         do {
-            if (parameterTypes != null) {
+            if (parameterTypes != null)
                 foreach (var method in currentType.GetAllMethodInfos(bindingFlags)) {
-                    if (method.Name != name) {
-                        continue;
-                    }
+                    if (method.Name != name) continue;
 
                     var parameters = method.GetParameters();
-                    if (parameters.Length != parameterTypes.Length) {
-                        continue;
-                    }
+                    if (parameters.Length != parameterTypes.Length) continue;
 
-                    for (var i = 0; i < parameters.Length; i++) {
+                    for (var i = 0; i < parameters.Length; i++)
                         // Treat a null type as a wild card
-                        if (parameterTypes[i] != null && parameterTypes[i] != parameters[i].ParameterType) {
+                        if (parameterTypes[i] != null && parameterTypes[i] != parameters[i].ParameterType)
                             goto NextMethod;
-                        }
-                    }
 
                     if (result != null) {
                         // "Amphibious" matches on different types indicate overrides. Choose the "latest" method
                         if (result.DeclaringType != null && result.DeclaringType != method.DeclaringType) {
-                            if (method.DeclaringType!.IsSubclassOf(result.DeclaringType)) {
-                                result = method;
-                            }
-                        } else {
-                            if (logFailure) {
+                            if (method.DeclaringType!.IsSubclassOf(result.DeclaringType)) result = method;
+                        }
+                        else {
+                            if (logFailure)
                                 Log.Error(
                                     $"Method '{name}' with parameters ({string.Join<Type?>(", ", parameterTypes)}) on type '{type}' is ambiguous between '{result}' and '{method}'");
-                            }
 
                             result = null;
                             break;
                         }
-                    } else {
+                    }
+                    else {
                         result = method;
                     }
 
                     NextMethod: ;
                 }
-            } else {
+            else
                 result = currentType.GetMethod(name, bindingFlags);
-            }
 
             currentType = currentType.BaseType;
         } while (result == null && currentType != null);
 
         if (result == null && logFailure) {
-            if (parameterTypes == null) {
+            if (parameterTypes == null)
                 Log.Error($"Failed to find method '{name}' on type '{type}'");
-            } else {
+            else
                 Log.Error(
                     $"Failed to find method '{name}' with parameters ({string.Join<Type?>(", ", parameterTypes)}) on type '{type}'");
-            }
         }
 
         return CachedMethodInfos[key] = result;
@@ -178,9 +149,7 @@ public static class ReflectionExtension {
     public static EventInfo? GetEventInfo(this Type type, string name,
         BindingFlags bindingFlags = StaticInstanceAnyVisibility) {
         var key = new MemberKey(type, name);
-        if (CachedEventInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedEventInfos.TryGetValue(key, out var result)) return result;
 
         var currentType = type;
         do {
@@ -188,9 +157,7 @@ public static class ReflectionExtension {
             currentType = currentType.BaseType;
         } while (result == null && currentType != null);
 
-        if (result == null) {
-            Log.Error($"Failed to find event '{name}' on type '{type}'");
-        }
+        if (result == null) Log.Error($"Failed to find event '{name}' on type '{type}'");
 
         return CachedEventInfos[key] = result;
     }
@@ -199,14 +166,10 @@ public static class ReflectionExtension {
     public static MethodInfo? GetGetMethod(this Type type, string name,
         BindingFlags bindingFlags = StaticInstanceAnyVisibility) {
         var key = new MemberKey(type, name);
-        if (CachedGetMethodInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedGetMethodInfos.TryGetValue(key, out var result)) return result;
 
         result = type.GetPropertyInfo(name, bindingFlags)?.GetGetMethod(true);
-        if (result == null) {
-            Log.Error($"Failed to find get-method of property '{name}' on type '{type}'");
-        }
+        if (result == null) Log.Error($"Failed to find get-method of property '{name}' on type '{type}'");
 
         return CachedGetMethodInfos[key] = result;
     }
@@ -215,14 +178,10 @@ public static class ReflectionExtension {
     public static MethodInfo? GetSetMethod(this Type type, string name,
         BindingFlags bindingFlags = StaticInstanceAnyVisibility) {
         var key = new MemberKey(type, name);
-        if (CachedSetMethodInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedSetMethodInfos.TryGetValue(key, out var result)) return result;
 
         result = type.GetPropertyInfo(name, bindingFlags)?.GetSetMethod(true);
-        if (result == null) {
-            Log.Error($"Failed to find set-method of property '{name}' on type '{type}'");
-        }
+        if (result == null) Log.Error($"Failed to find set-method of property '{name}' on type '{type}'");
 
         return CachedSetMethodInfos[key] = result;
     }
@@ -233,9 +192,7 @@ public static class ReflectionExtension {
         bindingFlags |= BindingFlags.DeclaredOnly;
 
         var key = new AllMemberKey(type, bindingFlags);
-        if (CachedAllFieldInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedAllFieldInfos.TryGetValue(key, out var result)) return result;
 
         HashSet<FieldInfo> allFields = [];
 
@@ -255,9 +212,7 @@ public static class ReflectionExtension {
         bindingFlags |= BindingFlags.DeclaredOnly;
 
         var key = new AllMemberKey(type, bindingFlags);
-        if (CachedAllPropertyInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedAllPropertyInfos.TryGetValue(key, out var result)) return result;
 
         HashSet<PropertyInfo> allProperties = [];
 
@@ -277,9 +232,7 @@ public static class ReflectionExtension {
         bindingFlags |= BindingFlags.DeclaredOnly;
 
         var key = new AllMemberKey(type, bindingFlags);
-        if (CachedAllMethodInfos.TryGetValue(key, out var result)) {
-            return result;
-        }
+        if (CachedAllMethodInfos.TryGetValue(key, out var result)) return result;
 
         HashSet<MethodInfo> allMethods = [];
 
@@ -295,45 +248,35 @@ public static class ReflectionExtension {
 
     /// Gets the value of the instance field on the object
     public static T? GetFieldValue<T>(this object obj, string name) {
-        if (obj.GetType().GetFieldInfo(name, InstanceAnyVisibility) is not { } field) {
-            return default;
-        }
+        if (obj.GetType().GetFieldInfo(name, InstanceAnyVisibility) is not { } field) return default;
 
         return (T?)field.GetValue(obj);
     }
 
     /// Gets the value of the static field on the type
     public static T? GetFieldValue<T>(this Type type, string name) {
-        if (type.GetFieldInfo(name, StaticAnyVisibility) is not { } field) {
-            return default;
-        }
+        if (type.GetFieldInfo(name, StaticAnyVisibility) is not { } field) return default;
 
         return (T?)field.GetValue(null);
     }
 
     /// Sets the value of the instance field on the object
     public static void SetFieldValue(this object obj, string name, object? value) {
-        if (obj.GetType().GetFieldInfo(name, InstanceAnyVisibility) is not { } field) {
-            return;
-        }
+        if (obj.GetType().GetFieldInfo(name, InstanceAnyVisibility) is not { } field) return;
 
         field.SetValue(obj, value);
     }
 
     /// Sets the value of the static field on the type
     public static void SetFieldValue(this Type type, string name, object? value) {
-        if (type.GetFieldInfo(name, StaticAnyVisibility) is not { } field) {
-            return;
-        }
+        if (type.GetFieldInfo(name, StaticAnyVisibility) is not { } field) return;
 
         field.SetValue(null, value);
     }
 
     /// Gets the value of the instance property on the object
     public static T? GetPropertyValue<T>(this object obj, string name) {
-        if (obj.GetType().GetPropertyInfo(name, InstanceAnyVisibility) is not { } property) {
-            return default;
-        }
+        if (obj.GetType().GetPropertyInfo(name, InstanceAnyVisibility) is not { } property) return default;
 
         if (!property.CanRead) {
             Log.Error($"Property '{name}' on type '{obj.GetType()}' is not readable");
@@ -345,9 +288,7 @@ public static class ReflectionExtension {
 
     /// Gets the value of the static property on the type
     public static T? GetPropertyValue<T>(this Type type, string name) {
-        if (type.GetPropertyInfo(name, StaticAnyVisibility) is not { } property) {
-            return default;
-        }
+        if (type.GetPropertyInfo(name, StaticAnyVisibility) is not { } property) return default;
 
         if (!property.CanRead) {
             Log.Error($"Property '{name}' on type '{type}' is not readable");
@@ -359,9 +300,7 @@ public static class ReflectionExtension {
 
     /// Sets the value of the instance property on the object
     public static void SetPropertyValue(this object obj, string name, object? value) {
-        if (obj.GetType().GetPropertyInfo(name, InstanceAnyVisibility) is not { } property) {
-            return;
-        }
+        if (obj.GetType().GetPropertyInfo(name, InstanceAnyVisibility) is not { } property) return;
 
         if (!property.CanWrite) {
             Log.Error($"Property '{name}' on type '{obj.GetType()}' is not writable");
@@ -373,9 +312,7 @@ public static class ReflectionExtension {
 
     /// Sets the value of the static property on the type
     public static void SetPropertyValue(this Type type, string name, object? value) {
-        if (type.GetPropertyInfo(name, StaticAnyVisibility) is not { } property) {
-            return;
-        }
+        if (type.GetPropertyInfo(name, StaticAnyVisibility) is not { } property) return;
 
         if (!property.CanWrite) {
             Log.Error($"Property '{name}' on type '{type}' is not writable");
@@ -389,9 +326,8 @@ public static class ReflectionExtension {
     public static void InvokeMethod(this object obj, string name, params object?[]? parameters) {
         if (obj.GetType().GetMethodInfo(name,
                 parameters?.Select(param => param?.GetType()).ToArray(),
-                InstanceAnyVisibility) is not { } method) {
+                InstanceAnyVisibility) is not { } method)
             return;
-        }
 
         method.Invoke(obj, parameters);
     }
@@ -399,9 +335,8 @@ public static class ReflectionExtension {
     /// Invokes the static method on the type
     public static void InvokeMethod(this Type type, string name, params object?[]? parameters) {
         if (type.GetMethodInfo(name, parameters?.Select(param => param?.GetType()).ToArray(), StaticAnyVisibility) is
-            not { } method) {
+            not { } method)
             return;
-        }
 
         method.Invoke(null, parameters);
     }
@@ -410,9 +345,8 @@ public static class ReflectionExtension {
     public static T? InvokeMethod<T>(this object obj, string name, params object?[]? parameters) {
         if (obj.GetType().GetMethodInfo(name,
                 parameters?.Select(param => param?.GetType()).ToArray(),
-                InstanceAnyVisibility) is not { } method) {
+                InstanceAnyVisibility) is not { } method)
             return default;
-        }
 
         return (T?)method.Invoke(obj, parameters);
     }
@@ -420,25 +354,26 @@ public static class ReflectionExtension {
     /// Invokes the static method on the type, returning the result
     public static T? InvokeMethod<T>(this Type type, string name, params object?[]? parameters) {
         if (type.GetMethodInfo(name, parameters?.Select(param => param?.GetType()).ToArray(), StaticAnyVisibility) is
-            not { } method) {
+            not { } method)
             return default;
-        }
 
         return (T?)method.Invoke(null, parameters);
     }
+
+    private readonly record struct MemberKey(Type Type, string Name);
+
+    private readonly record struct AllMemberKey(Type Type, BindingFlags BindingFlags);
+
+    private readonly record struct MethodKey(Type Type, string Name, long ParameterHash);
 }
 
 internal static class HashCodeExtensions {
     public static long GetCustomHashCode<T>(this IEnumerable<T>? enumerable) {
-        if (enumerable == null) {
-            return 0;
-        }
+        if (enumerable == null) return 0;
 
         unchecked {
             long hash = 17;
-            foreach (var item in enumerable) {
-                hash = hash * -1521134295 + EqualityComparer<T>.Default.GetHashCode(item!);
-            }
+            foreach (var item in enumerable) hash = hash * -1521134295 + EqualityComparer<T>.Default.GetHashCode(item!);
 
             return hash;
         }

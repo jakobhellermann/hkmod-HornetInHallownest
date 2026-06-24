@@ -16,10 +16,10 @@ internal static class DamageEnemyProxy {
 
     internal static void Install() {
         var hero = BundleSpike.RealHero;
-        if (hero == null) return;
+        if (!hero) return;
 
         var attacks = hero.transform.Find("Attacks");
-        if (attacks == null) return;
+        if (!attacks) return;
 
         var count = 0;
         foreach (var dmg in attacks.GetComponentsInChildren<Silksong::DamageEnemies>(true)) {

@@ -97,7 +97,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         InventoryPauseBridge.Cleanup();
         CallMethodProperFix.Cleanup();
         PlayMakerWarningContext.Cleanup();
-        PlayMakerWarningContext.CleanupOnDestroyTrace();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
@@ -112,8 +111,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         Playground.Log.SinkDebug = LogDebug;
         Playground.Log.SinkError = LogError;
 
-        Log("Initializing");
-
         playgroundHost = new GameObject("HornetPlayer.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
         var host = playgroundHost.AddComponent<PlaygroundHost>();
@@ -122,8 +119,10 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             .Register(new SpawnSanityScenario());
 
         PlaygroundRoutes.Register();
-        DebugServer.MapPost("/spawn-real", _ => HornetSpawner.SpawnReal());
-        DebugServer.MapPost("/despawn-real", _ => HornetSpawner.DespawnReal());
+        DebugServer.MapPost("/spawn-real", _ => HornetSpawner.Spawn() ? new { ok = true } : new { ok = false });
+        DebugServer.MapPost("/despawn-real", _ => HornetSpawner.Despawn()
+            ? new { ok = true, despawned = true }
+            : new { ok = true, note = "nothing to despawn" });
         DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/toolmgr", _ => ToolItemManagerBootstrap.Diag());
@@ -251,7 +250,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             .Install(); // catch AmbiguousMatchException in CallMethodProper.DoCache when HeroProxy repoints to Hornet
         PlayMakerWarningContext
             .Install(); // add GO+scene context to "Could not find FSM" / dedup "Fsm not initialized" burst
-        PlayMakerWarningContext.InstallOnDestroyTrace(); // trace who destroys Hornet's HeroController
         // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 
@@ -275,7 +273,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             if (knight != null && knight.isHeroInPosition) {
                 if (HornetSpawner.HornetRoot == null)
                     try {
-                        HornetSpawner.SpawnReal();
+                        HornetSpawner.Spawn();
                         Playground.Log.Info("[AutoSpawn] in gameplay scene + Hornet absent -> spawned");
                     } catch (Exception e) {
                         Playground.Log.Error($"[AutoSpawn] {e}");
