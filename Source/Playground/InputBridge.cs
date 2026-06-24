@@ -58,11 +58,12 @@ internal sealed class InputDriver : MonoBehaviour {
             KeyCode.K), // open the inventory (Inv pane); ListenForInventoryShortcut reads OpenInventory.WasPressed (K: I/O collide with HK's own inventory)
         ("opentools", KeyCode.L), // open the Tools/Crests pane directly
         ("menusubmit", KeyCode.Z), // inventory equip/submit
-        ("menucancel", KeyCode.X), // inventory cancel/back
+        ("menucancel", KeyCode.X) // inventory cancel/back
     };
 
-    private ulong tick;
     private bool infiniteSilk;
+
+    private ulong tick;
 
     private void Update() {
         try {
@@ -84,6 +85,7 @@ internal sealed class InputDriver : MonoBehaviour {
                 infiniteSilk = !infiniteSilk;
                 Log.Info($"[InputDriver] infinite silk: {infiniteSilk}");
             }
+
             if (infiniteSilk) {
                 var spd = Silksong::PlayerData.instance;
                 if (spd != null && spd.silk < spd.silkMax) spd.silk = spd.silkMax;

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
+using Object = UnityEngine.Object;
 using SIHit = Silksong::IHitResponder;
 using SHitInstance = Silksong::HitInstance;
 
@@ -87,11 +88,10 @@ internal static class EnemyDamageBridge {
         // HeroController.instance.SoulGain() — that's HK's Knight, awarding HK soul. When Hornet is active,
         // redirect to Silksong's HeroController.SilkGain() so she gets silk instead.
         var soulMi = typeof(HeroController).GetMethod("SoulGain", BindingFlags.Public | BindingFlags.Instance);
-        if (soulMi != null) {
+        if (soulMi != null)
             soulGainHook = new Hook(soulMi, (Action<Action<HeroController>, HeroController>)OnSoulGain);
-        } else {
+        else
             Log.Error("[EnemyDamageBridge] HeroController.SoulGain not found");
-        }
     }
 
     private static bool OnDoDamage(DoDmgOrig orig, Silksong::DamageEnemies self, GameObject target, bool isFirstHit) {
@@ -117,6 +117,7 @@ internal static class EnemyDamageBridge {
             if (store[i] is HkEnemyHitBridge b && b.gameObject == target)
                 return;
         }
+
         // HK target? Check the target GO first (its own HealthManager), then walk up.
         var resp = target.GetComponent<IHitResponder>()
                    ?? target.GetComponentInParent<IHitResponder>();
@@ -138,15 +139,14 @@ internal static class EnemyDamageBridge {
         // Our component type identity changes on a hot-reload; strip stale bridges so the next Initialize re-adds fresh
         // ones (and they don't linger as orphaned references on HK enemies).
         foreach (var b in Resources.FindObjectsOfTypeAll<HkEnemyHitBridge>())
-            UnityEngine.Object.Destroy(b);
+            Object.Destroy(b);
     }
 
     private static void OnSoulGain(Action<HeroController> orig, HeroController self) {
-        if (HeroSwitch.HornetActive && BundleSpike.RealHero != null) {
+        if (HeroSwitch.HornetActive && BundleSpike.RealHero != null)
             BundleSpike.RealHero.SilkGain();
-        } else {
+        else
             orig(self);
-        }
     }
 
     private delegate void Orig(List<SIHit> store, GameObject target, int depth, HashSet<SIHit> blackList);

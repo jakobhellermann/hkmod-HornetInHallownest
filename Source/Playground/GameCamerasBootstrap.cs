@@ -347,24 +347,24 @@ internal static class GameCamerasBootstrap {
             // Disabling the FSMs (not the GO) stops them cleanly without triggering OnEnable's slide-in animation.
             if (on) {
                 if (disabledHudFsms != null) {
-                    foreach (var fsm in disabledHudFsms) {
+                    foreach (var fsm in disabledHudFsms)
                         if (fsm != null) {
                             // Prevent OnEnable from restarting the FSM (RestartOnEnable=true by default resets to
                             // startState and re-runs the full appear chain: Init → Check Type → ... → Idle, 2-3s delay).
                             fsm.Fsm.RestartOnEnable = false;
                             fsm.enabled = true;
                         }
-                    }
+
                     disabledHudFsms = null;
                 }
-            } else {
+            }
+            else {
                 disabledHudFsms ??= new HashSet<PlayMakerFSM>();
-                foreach (var fsm in hk.hudCanvas.GetComponentsInChildren<PlayMakerFSM>(true)) {
+                foreach (var fsm in hk.hudCanvas.GetComponentsInChildren<PlayMakerFSM>(true))
                     if (fsm.enabled) {
                         fsm.enabled = false;
                         disabledHudFsms.Add(fsm);
                     }
-                }
             }
         } catch (Exception e) {
             Log.Error($"[HUD] SetHkHudVisible({on}): {e.Message}");

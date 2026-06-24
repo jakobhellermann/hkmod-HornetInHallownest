@@ -1,8 +1,8 @@
 extern alias Silksong;
 using System;
+using System.Reflection;
 using HutongGames.PlayMaker;
 using MonoMod.RuntimeDetour;
-using UnityEngine;
 
 namespace HornetPlayer.Playground;
 
@@ -11,8 +11,7 @@ namespace HornetPlayer.Playground;
 // named "damages_enemy" to each of Hornet's slash GOs with the variables HK reads (damageDealt, direction,
 // attackType, magnitudeMult, circleDirection, Multiplier). direction is synced via a hook on
 // DamageEnemies.SetDirection (called at attack time), not per-frame.
-static class DamageEnemyProxy {
-
+internal static class DamageEnemyProxy {
     private static Hook? setDirectionHook;
 
     internal static void Install() {
@@ -22,7 +21,7 @@ static class DamageEnemyProxy {
         var attacks = hero.transform.Find("Attacks");
         if (attacks == null) return;
 
-        int count = 0;
+        var count = 0;
         foreach (var dmg in attacks.GetComponentsInChildren<Silksong::DamageEnemies>(true)) {
             var go = dmg.gameObject;
             if (go.GetComponent<PlayMakerFSM>() != null) continue;
@@ -36,6 +35,7 @@ static class DamageEnemyProxy {
                 Log.ErrorOnce($"proxy|{go.name}", $"[DamageEnemyProxy] AddComponent failed on {go.name}: {e.Message}");
                 continue;
             }
+
             if (fsm == null) continue;
             fsm.Name = "damages_enemy";
 
@@ -63,17 +63,17 @@ static class DamageEnemyProxy {
 
         if (setDirectionHook == null) {
             var mi = typeof(Silksong::DamageEnemies).GetMethod("SetDirection",
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            if (mi != null) {
-                setDirectionHook = new Hook(mi, SetDirectionHook);
-            }
+                BindingFlags.Public | BindingFlags.Instance);
+            if (mi != null) setDirectionHook = new Hook(mi, SetDirectionHook);
         }
 
         Log.Info($"[DamageEnemyProxy] installed on {count} slash GOs");
     }
 
     // Silksong has AttackTypes values 8+ that don't exist in HK's enum. Map those to Generic (1).
-    private static int MapAttackType(int ss) => ss <= 7 ? ss : 1;
+    private static int MapAttackType(int ss) {
+        return ss <= 7 ? ss : 1;
+    }
 
     internal static void Cleanup() {
         setDirectionHook?.Dispose();

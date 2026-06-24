@@ -160,7 +160,7 @@ internal sealed class HornetDeath : MonoBehaviour {
         if (PlayerData.instance != null) PlayerData.instance.atBench = false;
         var spd = Silksong::PlayerData.instance;
         if (spd != null) spd.isInventoryOpen = false;
-        if (UnityEngine.Time.timeScale <= 0.0001f) UnityEngine.Time.timeScale = 1f;
+        if (Time.timeScale <= 0.0001f) Time.timeScale = 1f;
         hero.cState.dead = false;
         SHeroBox.Inactive = false;
         rendererField ??= typeof(SHeroController).GetField("renderer", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -205,7 +205,7 @@ internal sealed class HornetDeath : MonoBehaviour {
             3 => Silksong::GlobalEnums.HazardType.ACID,
             4 => Silksong::GlobalEnums.HazardType.LAVA,
             5 => Silksong::GlobalEnums.HazardType.PIT,
-            _ => Silksong::GlobalEnums.HazardType.ENEMY,
+            _ => Silksong::GlobalEnums.HazardType.ENEMY
         };
         var pd = Silksong::PlayerData.instance;
         if (pd != null) pd.isInvincible = false;
@@ -251,7 +251,8 @@ internal sealed class HornetDeath : MonoBehaviour {
                     orig(self, go, side, dmg, hazard);
                 }));
             Log.Info("[HornetDeath] hooked TakeDamage on HK HeroController");
-        } else {
+        }
+        else {
             Log.Error("[HornetDeath] HeroController.TakeDamage not found");
         }
     }

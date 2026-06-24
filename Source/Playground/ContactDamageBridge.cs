@@ -1,7 +1,5 @@
 extern alias Silksong;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
@@ -27,7 +25,6 @@ namespace HornetPlayer.Playground;
 // fires exclusively for her box (HK's Knight uses HK's own HeroBox in the other assembly).
 internal static class ContactDamageBridge {
     private static Hook? hook;
-
 
 
     internal static void Install() {
@@ -58,13 +55,13 @@ internal static class ContactDamageBridge {
             // Only map 2+ to Silksong's hazard enum so DieFromHazard fires for real hazards, not enemy hits.
             // (HK's "damages_hero" PlayMakerFSM can't be found from our assembly — PlayMakerFSM resolves to
             // Silksong's type, not HK's. DamageHero.hazardType is the reliable signal.)
-            int dmg = 0;
-            SHazard ssHazard = SHazard.ENEMY;
+            var dmg = 0;
+            var ssHazard = SHazard.ENEMY;
             var dh = other.GetComponentInParent<DamageHero>();
             if (dh != null && dh.enabled) {
                 dmg = dh.damageDealt;
-                if ((int)dh.hazardType >= 2)
-                    ssHazard = MapHazard((int)dh.hazardType);
+                if (dh.hazardType >= 2)
+                    ssHazard = MapHazard(dh.hazardType);
             }
 
             // Hazards (acid/lava/pit/spikes) carry damageDealt=0 in HK — the death is intrinsic to the hazard type, not
@@ -103,7 +100,7 @@ internal static class ContactDamageBridge {
             3 => SHazard.ACID,
             4 => SHazard.LAVA,
             5 => SHazard.PIT,
-            _ => SHazard.ENEMY,    // 1/unknown -> generic contact damage
+            _ => SHazard.ENEMY // 1/unknown -> generic contact damage
         };
     }
 
@@ -113,5 +110,6 @@ internal static class ContactDamageBridge {
     }
 
     private delegate void Orig(SHeroBox self, GameObject other);
+
     private delegate void Hooked(Orig orig, SHeroBox self, GameObject other);
 }

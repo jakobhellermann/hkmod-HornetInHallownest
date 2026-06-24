@@ -17,15 +17,28 @@ public static class PlaygroundRoutes {
     private const BindingFlags MemberFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
     public static void Register() {
-        DebugServer.MapGet("/scene", _ => new { scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name });
+        DebugServer.MapGet("/scene",
+            _ => new { scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name });
         DebugServer.MapGet("/scene-tree", _ => SceneTree());
         DebugServer.MapGet("/screenshot", (AsyncRouteHandler)((_, respond) => Screenshot(respond)));
         DebugServer.MapGet("/inspect", req => Inspect(req["path"], req["depth"]));
         DebugServer.MapPost("/set-active", req => SetActive(req["name"], req["path"], req["active"]));
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
         DebugServer.MapPost("/invoke", req => Invoke(req["path"], req["method"]));
-        DebugServer.MapPost("/unlock-tools", _ => { try { Silksong::ToolItemManager.UnlockAllTools(); Silksong::ToolItemManager.UnlockAllCrests(); return new { ok = true }; } catch (Exception e) { Log.Error($"[unlock-tools] {e}"); return new { error = e.Message, stack = e.StackTrace }; } });
-        DebugServer.MapPost("/cheat-equip", _ => { Silksong::CheatManager.CanChangeEquipsAnywhere = true; return new { ok = true }; });
+        DebugServer.MapPost("/unlock-tools", _ => {
+            try {
+                Silksong::ToolItemManager.UnlockAllTools();
+                Silksong::ToolItemManager.UnlockAllCrests();
+                return new { ok = true };
+            } catch (Exception e) {
+                Log.Error($"[unlock-tools] {e}");
+                return new { error = e.Message, stack = e.StackTrace };
+            }
+        });
+        DebugServer.MapPost("/cheat-equip", _ => {
+            Silksong::CheatManager.CanChangeEquipsAnywhere = true;
+            return new { ok = true };
+        });
         DebugServer.MapGet("/collectables", _ => DumpCollectables());
         DebugServer.MapGet("/gameplay", _ => DumpGameplay());
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
@@ -75,7 +88,7 @@ public static class PlaygroundRoutes {
         if (path.Component == null)
             return new {
                 path = ComponentPath.GetPath(target),
-                layer = target.layer,
+                target.layer,
                 components = target.GetComponents<Component>()
                     .Select(c => c == null ? "null" : c.GetType().FullName).ToArray()
             };
@@ -134,15 +147,26 @@ public static class PlaygroundRoutes {
 
         // Support dotted paths like "transform.position" — walk properties/fields.
         object? current = comp;
-        Type? type = comp!.GetType();
+        var type = comp!.GetType();
         var parts = fieldName.Split('.');
         for (var i = 0; i < parts.Length - 1; i++) {
             var prop = type!.GetProperty(parts[i], MemberFlags);
-            if (prop != null) { current = prop.GetValue(current); type = current?.GetType(); continue; }
+            if (prop != null) {
+                current = prop.GetValue(current);
+                type = current?.GetType();
+                continue;
+            }
+
             var field = type!.GetField(parts[i], MemberFlags);
-            if (field != null) { current = field.GetValue(current); type = current?.GetType(); continue; }
+            if (field != null) {
+                current = field.GetValue(current);
+                type = current?.GetType();
+                continue;
+            }
+
             return DevResponse.Json(new { error = $"Cannot resolve '{parts[i]}' in '{fieldName}'" }, 404);
         }
+
         var leaf = parts[^1];
         var leafProp = type!.GetProperty(leaf, MemberFlags);
         var leafField = type!.GetField(leaf, MemberFlags);
@@ -165,14 +189,16 @@ public static class PlaygroundRoutes {
         if (type == typeof(Vector3)) {
             var p = (value ?? "0,0,0").Split(',');
             return new Vector3(float.Parse(p[0], CultureInfo.InvariantCulture),
-                               float.Parse(p.Length > 1 ? p[1] : "0", CultureInfo.InvariantCulture),
-                               float.Parse(p.Length > 2 ? p[2] : "0", CultureInfo.InvariantCulture));
+                float.Parse(p.Length > 1 ? p[1] : "0", CultureInfo.InvariantCulture),
+                float.Parse(p.Length > 2 ? p[2] : "0", CultureInfo.InvariantCulture));
         }
+
         if (type == typeof(Vector2)) {
             var p = (value ?? "0,0").Split(',');
             return new Vector2(float.Parse(p[0], CultureInfo.InvariantCulture),
-                                float.Parse(p.Length > 1 ? p[1] : "0", CultureInfo.InvariantCulture));
+                float.Parse(p.Length > 1 ? p[1] : "0", CultureInfo.InvariantCulture));
         }
+
         return value ?? "";
     }
 
@@ -234,7 +260,7 @@ public static class PlaygroundRoutes {
     private static object DumpCollectables() {
         var items = Resources.FindObjectsOfTypeAll<Silksong::CollectableItem>();
         return items.Select(i => new {
-            name = i.name,
+            i.name,
             type = i.GetType().Name,
             isVisible = i.IsVisible,
             collectedAmount = i.CollectedAmount,
@@ -248,7 +274,8 @@ public static class PlaygroundRoutes {
         var gameplayType = typeof(Silksong::HeroController).Assembly.GetType("GlobalSettings.Gameplay");
         if (gameplayType == null) return new { error = "Gameplay type not found" };
         var baseType = gameplayType.BaseType;
-        var getInstance = baseType?.GetMethod("Get", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, [typeof(string)], null);
+        var getInstance = baseType?.GetMethod("Get", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public,
+            null, [typeof(string)], null);
         var gp = getInstance?.Invoke(null, ["GlobalSettings/Gameplay"]);
         if (gp == null) return new { error = "Gameplay.Get() returned null" };
         var fields = new Dictionary<string, object?>();
@@ -256,6 +283,7 @@ public static class PlaygroundRoutes {
             var v = f.GetValue(gp);
             fields[f.Name] = v == null ? "null" : v.ToString();
         }
+
         return fields;
     }
 

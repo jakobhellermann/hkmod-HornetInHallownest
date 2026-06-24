@@ -1,6 +1,5 @@
 extern alias Silksong;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using HutongGames.PlayMaker;
 using MonoMod.RuntimeDetour;
@@ -26,6 +25,10 @@ internal static class PlayMakerWarningContext {
     // Fallback for init paths that run actions outside FsmExecutionStack (rare).
     [ThreadStatic] private static string? currentFsmContext;
 
+    // One-shot diagnostic: log the call stack when Hornet's HeroController.OnDestroy fires,
+    // so we can see WHO destroys her during scene transitions (open item #1 — silent destruction).
+    private static Hook? onDestroyHook;
+
     internal static void Install() {
         // Hook HK's ActionHelpers.GetGameObjectFsm — this is where "Could not find FSM: X" comes from
         var mi = typeof(ActionHelpers).GetMethod("GetGameObjectFsm",
@@ -33,7 +36,8 @@ internal static class PlayMakerWarningContext {
         if (mi != null) {
             getGameObjectFsmHook = new Hook(mi, GetGameObjectFsmHook);
             Log.Info("[PlayMakerCtx] installed: ActionHelpers.GetGameObjectFsm");
-        } else {
+        }
+        else {
             Log.Error("[PlayMakerCtx] ActionHelpers.GetGameObjectFsm not found");
         }
 
@@ -45,7 +49,8 @@ internal static class PlayMakerWarningContext {
         if (fsmUpdate != null) {
             fsmUpdateHook = new Hook(fsmUpdate, FsmUpdateHook);
             Log.Info("[PlayMakerCtx] installed: Fsm.Update context fallback");
-        } else {
+        }
+        else {
             Log.Error("[PlayMakerCtx] Fsm.Update not found");
         }
 
@@ -77,6 +82,7 @@ internal static class PlayMakerWarningContext {
             Log.InfoOnce($"notfound|{fsmName}|{go.name}|{scene}|{caller}",
                 $"[PlayMakerCtx] FSM '{fsmName}' not found on GO '{go.name}' (scene={scene}) — called by FSM: {caller}");
         }
+
         return result;
     }
 
@@ -85,22 +91,20 @@ internal static class PlayMakerWarningContext {
         // HeroProxy redirects to Hornet -> they try HK-specific methods/FSMs that don't exist on Silksong's
         // HeroController. These are no-ops (no crash, just log noise). Suppress them to keep the log clean.
         if (HeroSwitch.HornetActive && (
-            condition.StartsWith("Method Name is invalid: ClearMP") ||
-            condition.StartsWith("Could not find FSM: Spell Control") ||
-            condition.StartsWith("Could not find FSM: ProxyFSM") ||
-            condition.StartsWith("Could not find FSM: Dream Nail"))) {
+                condition.StartsWith("Method Name is invalid: ClearMP") ||
+                condition.StartsWith("Could not find FSM: Spell Control") ||
+                condition.StartsWith("Could not find FSM: ProxyFSM") ||
+                condition.StartsWith("Could not find FSM: Dream Nail")))
             return; // swallow — these are expected cross-game mismatches when Hornet is active
-        }
         // Deduplicate the Silksong PlayMaker "Fsm not initialized" / "Error Loading Action" burst.
         // These fire from Fsm property getters and ActionData.CreateAction when the Fsm object is null
         // (init failed because Silksong_GameManager is inactive). Each unique message logged once.
         if (condition.StartsWith("Fsm not initialized:") ||
             condition.StartsWith("Error Loading Action:") ||
             condition.StartsWith("get_actions: Fsm not initialized:") ||
-            condition.StartsWith("get_fsm: Fsm not initialized:")) {
+            condition.StartsWith("get_fsm: Fsm not initialized:"))
             Log.InfoOnce($"warn|{condition}",
                 $"[PlayMakerCtx] {condition} (root cause: inactive Silksong_GameManager — FSM init chain aborted)");
-        }
     }
 
     internal static void Cleanup() {
@@ -111,18 +115,20 @@ internal static class PlayMakerWarningContext {
         Application.logMessageReceived -= OnLogMessage;
     }
 
-    // One-shot diagnostic: log the call stack when Hornet's HeroController.OnDestroy fires,
-    // so we can see WHO destroys her during scene transitions (open item #1 — silent destruction).
-    private static Hook? onDestroyHook;
-
     internal static void InstallOnDestroyTrace() {
         var mi = typeof(Silksong::HeroController)
             .GetMethod("OnDestroy", BindingFlags.NonPublic | BindingFlags.Instance);
-        if (mi == null) { Log.Error("[PlayMakerCtx] HeroController.OnDestroy not found"); return; }
-        onDestroyHook = new Hook(mi, (Action<Action<Silksong::HeroController>, Silksong::HeroController>)((orig, self) => {
-            orig(self);
-            Log.Error($"[PlayMakerCtx] HeroController.OnDestroy on '{self.gameObject.name}' (scene={self.gameObject.scene.name})\n{System.Environment.StackTrace}");
-        }));
+        if (mi == null) {
+            Log.Error("[PlayMakerCtx] HeroController.OnDestroy not found");
+            return;
+        }
+
+        onDestroyHook = new Hook(mi,
+            (Action<Action<Silksong::HeroController>, Silksong::HeroController>)((orig, self) => {
+                orig(self);
+                Log.Error(
+                    $"[PlayMakerCtx] HeroController.OnDestroy on '{self.gameObject.name}' (scene={self.gameObject.scene.name})\n{Environment.StackTrace}");
+            }));
         Log.Info("[PlayMakerCtx] installed: HeroController.OnDestroy trace");
     }
 

@@ -24,6 +24,12 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static FieldInfo? isGameplaySceneField;
     private static FieldInfo? gameStateField;
     private static MethodInfo? updateButtonQueueingMethod;
+
+    private static Hook? beginSceneTransitionHook;
+    private static Hook? loadSceneHook; // SceneManager.LoadScene(string, LoadSceneParameters)
+    private static Hook? loadSceneAsyncHook; // SceneManager.LoadSceneAsync(string, LoadSceneParameters)
+    private static Hook? setHazardRespawnHook1; // SetHazardRespawn(Vector3, bool)
+    private static Hook? setHazardRespawnHook2; // SetHazardRespawn(HazardRespawnMarker)
     private float armedWindow; // seconds left in the post-transition "watch for stuck control" window
     private string? lastScene;
     private float stuckControlTimer;
@@ -101,12 +107,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         }
     }
 
-    private static Hook? beginSceneTransitionHook;
-    private static Hook? loadSceneHook;       // SceneManager.LoadScene(string, LoadSceneParameters)
-    private static Hook? loadSceneAsyncHook;  // SceneManager.LoadSceneAsync(string, LoadSceneParameters)
-    private static Hook? setHazardRespawnHook1; // SetHazardRespawn(Vector3, bool)
-    private static Hook? setHazardRespawnHook2; // SetHazardRespawn(HazardRespawnMarker)
-
     internal static void Install() {
         if (go != null) return;
         go = new GameObject("HornetPlayer.EnvironmentAdapter");
@@ -126,7 +126,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         var shr1 = typeof(PlayerData).GetMethod("SetHazardRespawn",
             BindingFlags.Public | BindingFlags.Instance, null,
             [typeof(Vector3), typeof(bool)], null);
-        if (shr1 != null) {
+        if (shr1 != null)
             setHazardRespawnHook1 = new Hook(shr1,
                 (Action<Action<PlayerData, Vector3, bool>, PlayerData, Vector3, bool>)
                 ((orig, self, pos, facingRight) => {
@@ -134,11 +134,10 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                     var ssPd = Silksong::PlayerData.instance;
                     if (ssPd != null) ssPd.SetHazardRespawn(pos, facingRight);
                 }));
-        }
         var shr2 = typeof(PlayerData).GetMethod("SetHazardRespawn",
             BindingFlags.Public | BindingFlags.Instance, null,
             [typeof(HazardRespawnMarker)], null);
-        if (shr2 != null) {
+        if (shr2 != null)
             setHazardRespawnHook2 = new Hook(shr2,
                 (Action<Action<PlayerData, HazardRespawnMarker>, PlayerData, HazardRespawnMarker>)
                 ((orig, self, marker) => {
@@ -147,14 +146,15 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                     if (ssPd != null && marker != null)
                         ssPd.SetHazardRespawn(marker.transform.position, marker.respawnFacingRight);
                 }));
-        }
-        Log.Info($"[EnvAdapter] SetHazardRespawn mirror installed ({setHazardRespawnHook1 != null}, {setHazardRespawnHook2 != null})");
+        Log.Info(
+            $"[EnvAdapter] SetHazardRespawn mirror installed ({setHazardRespawnHook1 != null}, {setHazardRespawnHook2 != null})");
 
         var mi = typeof(GameManager).GetMethod("BeginSceneTransition", [typeof(GameManager.SceneLoadInfo)]);
         if (mi != null) {
             beginSceneTransitionHook = new Hook(mi, BeginSceneTransitionHook);
             Log.Info("[EnvAdapter] installed: GameManager.BeginSceneTransition deparent hook");
-        } else {
+        }
+        else {
             Log.Error("[EnvAdapter] GameManager.BeginSceneTransition not found");
         }
 
@@ -175,35 +175,43 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
             if (m.Name == "LoadScene") loadSceneMI = m;
             else loadSceneAsyncMI = m;
         }
+
         if (loadSceneMI != null) {
             loadSceneHook = new Hook(loadSceneMI,
                 (Func<Func<string, LoadSceneParameters, Scene>, string, LoadSceneParameters, Scene>)LoadSceneHook);
             Log.Info("[EnvAdapter] installed: SceneManager.LoadScene deparent hook");
-        } else {
+        }
+        else {
             Log.Error("[EnvAdapter] SceneManager.LoadScene(string, LoadSceneParameters) not found");
         }
+
         if (loadSceneAsyncMI != null) {
             loadSceneAsyncHook = new Hook(loadSceneAsyncMI,
-                (Func<Func<string, LoadSceneParameters, AsyncOperation>, string, LoadSceneParameters, AsyncOperation>)LoadSceneAsyncHook);
+                (Func<Func<string, LoadSceneParameters, AsyncOperation>, string, LoadSceneParameters, AsyncOperation>)
+                LoadSceneAsyncHook);
             Log.Info("[EnvAdapter] installed: SceneManager.LoadSceneAsync deparent hook");
-        } else {
+        }
+        else {
             Log.Error("[EnvAdapter] SceneManager.LoadSceneAsync(string, LoadSceneParameters) not found");
         }
     }
 
-    private static void BeginSceneTransitionHook(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self, GameManager.SceneLoadInfo info) {
+    private static void BeginSceneTransitionHook(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self,
+        GameManager.SceneLoadInfo info) {
         orig(self, info);
         DeparentHero("scene transition");
     }
 
     // SceneManager.LoadScene is synchronous (mustCompleteNextFrame=true): by the time orig returns the old scene is
     // already unloaded and Hornet destroyed. Deparent BEFORE calling orig.
-    private static Scene LoadSceneHook(Func<string, LoadSceneParameters, Scene> orig, string sceneName, LoadSceneParameters parameters) {
+    private static Scene LoadSceneHook(Func<string, LoadSceneParameters, Scene> orig, string sceneName,
+        LoadSceneParameters parameters) {
         DeparentHero($"SceneManager.LoadScene({sceneName})");
         return orig(sceneName, parameters);
     }
 
-    private static AsyncOperation LoadSceneAsyncHook(Func<string, LoadSceneParameters, AsyncOperation> orig, string sceneName, LoadSceneParameters parameters) {
+    private static AsyncOperation LoadSceneAsyncHook(Func<string, LoadSceneParameters, AsyncOperation> orig,
+        string sceneName, LoadSceneParameters parameters) {
         DeparentHero($"SceneManager.LoadSceneAsync({sceneName})");
         return orig(sceneName, parameters);
     }
@@ -217,7 +225,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
             Log.Info($"[EnvAdapter] deparenting hero before {reason} (was in scene={hero.gameObject.scene.name})");
             hero.SetHeroParent(null);
             if (hero.gameObject.scene.name != "DontDestroyOnLoad")
-                UnityEngine.Object.DontDestroyOnLoad(hero.gameObject);
+                DontDestroyOnLoad(hero.gameObject);
         }
     }
 

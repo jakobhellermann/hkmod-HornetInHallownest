@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using HornetPlayer.HornetInHallownest;
+using HutongGames.PlayMaker;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
@@ -52,7 +53,7 @@ internal static class Stub {
         Skip(typeof(Silksong::HeroAnimationController), "UpdateToolEquipFlags"); // Start
         // Tool-equipment subsystem isn't initialized -> IsToolEquipped NullRefs; stub the root (no tools equipped),
         // which should cascade-fix ToolItem.IsEquipped / CheckIfToolEquipped / ToolEquipChecker / HeroWispLantern.
-        Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped", silent: true); // per-frame (crest equip checks)
+        Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped", true); // per-frame (crest equip checks)
         Skip(typeof(Silksong::KeepWorldScalePositive), "OnEnable");
         Skip(typeof(Silksong::HeroNailImbuement), "Awake");
         Skip(typeof(Silksong::FollowTransform), "OnEnable");
@@ -72,7 +73,7 @@ internal static class Stub {
         Skip(typeof(Silksong::HeroController), "StartDashEffect");
         // SetParticleScale.OnUpdate (ticked every frame via SetParticleScaleCallbackHooks) derefs a null parentBody
         // (Rigidbody2D.IsAwake) -> per-frame NullRef. Cosmetic particle scaling -> stub.
-        Skip(typeof(Silksong::SetParticleScale), "OnUpdate", silent: true); // per-frame
+        Skip(typeof(Silksong::SetParticleScale), "OnUpdate", true); // per-frame
         Skip(typeof(Silksong::DeliveryQuestItem),
             "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
         // Superjump's "Hit Roof Hard" state calls DeliveryQuestItem.TakeHit() via CallStaticMethod (slamming the ceiling
@@ -89,22 +90,22 @@ internal static class Stub {
         Skip(typeof(Silksong::GameManager), "FadeSceneIn");
         // AwardAchievement -> achievementHandler.AwardAchievementToPlayer(key); achievementHandler is null on our
         // bootstrap GM (Silksong achievements are irrelevant in HK).
-        Skip(typeof(Silksong::GameManager), "AwardAchievement", silent: true);
-        Skip(typeof(Silksong::GameManager), "UpdateAchievementProgress", silent: true);
+        Skip(typeof(Silksong::GameManager), "AwardAchievement", true);
+        Skip(typeof(Silksong::GameManager), "UpdateAchievementProgress", true);
         // Debug: catch SetEquippedTools NullRef to find the exact inner cause
         var setEq = typeof(Silksong::ToolItemManager).GetMethod("SetEquippedTools",
             BindingFlags.Static | BindingFlags.Public);
-        if (setEq != null) {
+        if (setEq != null)
             detours.Add(new Hook(setEq,
-                (Action<Action<string, System.Collections.Generic.List<string>>, string, System.Collections.Generic.List<string>>)
+                (Action<Action<string, List<string>>, string, List<string>>)
                 ((orig, crestId, tools) => {
-                    try { orig(crestId, tools); }
-                    catch (Exception e) {
+                    try {
+                        orig(crestId, tools);
+                    } catch (Exception e) {
                         Log.Error($"[SetEquippedTools] crestId={crestId} -> {e}");
                         throw;
                     }
                 })));
-        }
         // SimpleFadeOut::SetColor throws nullref, because Awake is never ran
         Skip(typeof(Silksong::CameraController), "ScreenFlash");
         // GameCameras.Start does only `gs.LoadOverscanSettings(); SetOverscan(gs.overScanAdjustment)` — gs is
@@ -136,7 +137,7 @@ internal static class Stub {
         // popup. Without a QuestManager singleton, GetActiveQuests returns Empty — but the method still NullRefs at
         // [0x0003d] (likely a static cache stale from a previous hot-reload). The quest subsystem isn't brought up, so
         // quest-update UI is moot. Silent (per-tool, could be many).
-        Skip(typeof(Silksong::QuestManager), "MaybeShowQuestUpdated", silent: true);
+        Skip(typeof(Silksong::QuestManager), "MaybeShowQuestUpdated", true);
         // QuestManager.GetActiveQuests / GetAcceptedQuests: ObjectCache<T>.cache defaults to null, and
         // ShouldUpdate(Version) returns false when both sides are 0 (never incremented without a QuestManager).
         // So GetActiveQuests returns null -> foreach over null -> NullRef in InventoryItemCollectable.Description
@@ -194,7 +195,7 @@ internal static class Stub {
         // InitData iterates states/events/transitions — a null array (bad deserialization) crashes with no FSM context.
         // Hook both Silksong's and HK's PlayMaker (same namespace, different assemblies).
         InstrumentInitData(typeof(SilksongPM::HutongGames.PlayMaker.Fsm));
-        InstrumentInitData(typeof(HutongGames.PlayMaker.Fsm));
+        InstrumentInitData(typeof(Fsm));
     }
 
     private static void InstrumentInitData(Type fsmType) {
@@ -203,16 +204,27 @@ internal static class Stub {
             Log.Error($"[Stub] Fsm.InitData not found on {fsmType.Assembly.GetName().Name}");
             return;
         }
+
         var nameProp = fsmType.GetProperty("Name");
         var goNameProp = fsmType.GetProperty("GameObjectName");
         detours.Add(new Hook(mi, (Action<Action<object>, object>)((orig, self) => {
-            try { orig(self); }
-            catch (Exception e) {
+            try {
+                orig(self);
+            } catch (Exception e) {
                 var fsmName = "?";
                 var goName = "?";
-                try { fsmName = (string?)nameProp?.GetValue(self) ?? "?"; } catch { }
-                try { goName = (string?)goNameProp?.GetValue(self) ?? "?"; } catch { }
-                Log.Error($"[Fsm.InitData] NullRef in FSM='{fsmName}' GO='{goName}' ({fsmType.Assembly.GetName().Name}): {e}");
+                try {
+                    fsmName = (string?)nameProp?.GetValue(self) ?? "?";
+                } catch {
+                }
+
+                try {
+                    goName = (string?)goNameProp?.GetValue(self) ?? "?";
+                } catch {
+                }
+
+                Log.Error(
+                    $"[Fsm.InitData] NullRef in FSM='{fsmName}' GO='{goName}' ({fsmType.Assembly.GetName().Name}): {e}");
             }
         })));
         Log.Info($"[Stub] instrumented Fsm.InitData on {fsmType.Assembly.GetName().Name}");

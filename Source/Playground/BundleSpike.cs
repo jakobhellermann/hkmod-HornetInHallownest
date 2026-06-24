@@ -574,7 +574,7 @@ internal static class BundleSpike {
             foreach (var ff in vars.FloatVariables) d[ff.Name] = "float:" + ff.Value;
             foreach (var g in vars.GameObjectVariables) d[g.Name] = "go:" + (g.Value != null ? g.Value.name : "<null>");
             // also surface the isolated Silksong PlayMaker global "Hero" (set by the Globalise_Hero_Hornet FSM)
-            string globalHero = "<no global var>";
+            var globalHero = "<no global var>";
             var gh = SilksongPM::PlayMakerGlobals.Instance?.Variables?.FindFsmGameObject("Hero");
             if (gh != null) globalHero = gh.Value != null ? gh.Value.name : "<null>";
             return new { fsm = fsmName, go = f.gameObject.name, vars = d, globalHero };
@@ -739,7 +739,8 @@ internal static class BundleSpike {
 
             string[] gts;
             try {
-                gts = f.Fsm?.GlobalTransitions.Select(t => $"{t.EventName}->{t.ToState}").ToArray() ?? Array.Empty<string>();
+                gts = f.Fsm?.GlobalTransitions.Select(t => $"{t.EventName}->{t.ToState}").ToArray() ??
+                      Array.Empty<string>();
             } catch {
                 gts = new string[0];
             }

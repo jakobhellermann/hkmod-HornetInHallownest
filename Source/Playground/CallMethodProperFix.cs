@@ -27,12 +27,16 @@ internal static class CallMethodProperFix {
 
     private static readonly FieldInfo? methodNameField =
         typeof(CallMethodProper).GetField("methodName", AllInstance);
+
     private static readonly FieldInfo? parametersField =
         typeof(CallMethodProper).GetField("parameters", AllInstance);
+
     private static readonly FieldInfo? cachedTypeField =
         typeof(CallMethodProper).GetField("cachedType", AllInstance);
+
     private static readonly FieldInfo? cachedMethodInfoField =
         typeof(CallMethodProper).GetField("cachedMethodInfo", AllInstance);
+
     private static readonly FieldInfo? cachedParameterInfoField =
         typeof(CallMethodProper).GetField("cachedParameterInfo", AllInstance);
 
@@ -43,25 +47,29 @@ internal static class CallMethodProperFix {
     // Methods not in this map and not on Silksong's HeroController will still fail — they show up in the
     // "method not found" log so we can add them as needed.
     private static readonly Dictionary<string, string> MethodRedirects = new() {
-        { "CanTalk", "CanInspect" },      // HK NPC interaction gate -> Silksong's interact gate
-        { "CanFocus", "CanCast" },        // HK focus/heal gate -> Silksong's bind/cast gate
+        { "CanTalk", "CanInspect" }, // HK NPC interaction gate -> Silksong's interact gate
+        { "CanFocus", "CanCast" } // HK focus/heal gate -> Silksong's bind/cast gate
     };
 
     // HK-only methods with no Silksong equivalent. When Hornet is active and HK HUD FSMs call these on
     // Silksong's HeroController (via HeroProxy), they silently no-op instead of logging an error.
     private static readonly HashSet<string> HkOnlyMethods = new() {
         "ClearMP", "ClearMPSendEvents", "AddMPCharge", "StartMPDrain", "StopMPDrain",
-        "TryAddMPChargeSpa", "SetMPCharge",
+        "TryAddMPChargeSpa", "SetMPCharge"
     };
-
-    private static bool IsHkOnlyMethod(string? methodName) => methodName != null && HkOnlyMethods.Contains(methodName);
 
     private static readonly FieldInfo? errorStringField =
         typeof(CallMethodProper).GetField("errorString", AllInstance);
+
     private static readonly FieldInfo? componentField =
         typeof(CallMethodProper).GetField("component", AllInstance);
+
     private static readonly FieldInfo? gameObjectField =
         typeof(CallMethodProper).GetField("gameObject", AllInstance);
+
+    private static bool IsHkOnlyMethod(string? methodName) {
+        return methodName != null && HkOnlyMethods.Contains(methodName);
+    }
 
     internal static void Install() {
         var mi = typeof(CallMethodProper).GetMethod("DoCache", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -105,8 +113,10 @@ internal static class CallMethodProperFix {
                 // These are no-ops — the method doesn't exist on Silksong's HeroController and the FSM continues normally.
                 if (HeroSwitch.HornetActive && IsHkOnlyMethod(methodName))
                     return false;
-                Log.Error($"[CallMethodProperFix] method '{methodName}' not found on {type?.Name ?? "?"} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
+                Log.Error(
+                    $"[CallMethodProperFix] method '{methodName}' not found on {type?.Name ?? "?"} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
             }
+
             return result;
         } catch (AmbiguousMatchException) {
             // orig already set cachedType + cachedBehaviour before GetMethod threw — but fall back to component if not.
@@ -137,7 +147,8 @@ internal static class CallMethodProperFix {
             if (parameters is { Length: > 0 }) {
                 var types = parameters.Select(p => p.RealType ?? typeof(object)).ToArray();
                 resolved = type.GetMethod(methodName, types);
-            } else {
+            }
+            else {
                 resolved = type.GetMethod(methodName, Type.EmptyTypes);
             }
 
@@ -151,7 +162,8 @@ internal static class CallMethodProperFix {
 
             errorStringField?.SetValue(self,
                 $"[CallMethodProperFix] ambiguous '{methodName}' on {type.Name} — no overload matched parameter types ({label})\n");
-            Log.Error($"[CallMethodProperFix] ambiguous '{methodName}' on {type.Name} ({label}) — could not resolve, skipping");
+            Log.Error(
+                $"[CallMethodProperFix] ambiguous '{methodName}' on {type.Name} ({label}) — could not resolve, skipping");
             return false;
         }
     }

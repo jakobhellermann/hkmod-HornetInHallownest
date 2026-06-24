@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using HornetPlayer.HornetInHallownest;
 using MonoMod.RuntimeDetour;
@@ -100,7 +99,6 @@ internal static class ResourcesShim {
             bundle.Unload(true);
             bundle = null;
         }
-
     }
 
     // Debug: reload silksong-resources.bundle from disk WITHOUT touching the hook, so we can iterate on the bundle

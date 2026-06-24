@@ -36,6 +36,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         } catch (Exception e) {
             Playground.Log.Error($"[Unload] camera restore: {e.Message}");
         }
+
         // Hot-reload while inventory was open leaves isInventoryOpen=true on Silksong's PlayerData -> IsPaused()=true
         // -> CanInput()=false -> hero stuck. Clear it + restore timeScale.
         try {
@@ -44,7 +45,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
                 pd.isInventoryOpen = false;
                 Playground.Log.Info("[Unload] cleared stuck isInventoryOpen");
             }
-            if (UnityEngine.Time.timeScale <= 0.0001f) UnityEngine.Time.timeScale = 1f;
+
+            if (Time.timeScale <= 0.0001f) Time.timeScale = 1f;
         } catch (Exception e) {
             Playground.Log.Error($"[Unload] inventory reset: {e.Message}");
         }
@@ -125,7 +127,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             (req, respond) => BundleSpike.DriveHealthHud(respond)); // drive the health-mask appear chain over frames
         DebugServer.MapGet("/find-event-senders", req => BundleSpike.FindEventSenders(req["event"] ?? "SHOW HP"));
         DebugServer.MapGet("/fsm-state-actions",
-            req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause", req["go"]));
+            req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause",
+                req["go"]));
         DebugServer.MapGet("/fsm-vars", req => BundleSpike.FsmVars(req["name"] ?? "Bind", req["go"]));
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapPost("/fsm-trace", req => FsmTracer.SetTargets(req["names"])); // live state/event trace
@@ -152,7 +155,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         });
         DebugServer.MapPost("/kill", _ => HornetDeath.Kill()); // debug: trigger Hornet death (real damage path)
         DebugServer.MapPost("/getup", _ => HornetDeath.ForceGetUp()); // debug: unstick from bench/no_input
-        DebugServer.MapPost("/hazard", req => HornetDeath.Hazard(req["type"] ?? "3")); // debug: trigger hazard N (2=spikes,3=acid,4=lava,5=pit)
+        DebugServer.MapPost("/hazard",
+            req => HornetDeath.Hazard(req["type"] ?? "3")); // debug: trigger hazard N (2=spikes,3=acid,4=lava,5=pit)
         DebugServer.MapGet("/bench-state", _ => BundleSpike.BenchState()); // debug: atBench signal + Hornet sit clips
         DebugServer.MapGet("/hc-probe", req => {
             // which HK HeroController methods get called on the Knight while Hornet active
@@ -211,7 +215,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         ContactDamageBridge
             .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
-        CoroutineRedirect.Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
+        CoroutineRedirect
+            .Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
         HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();

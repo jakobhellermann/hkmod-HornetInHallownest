@@ -52,21 +52,6 @@ internal static class HeroSwitch {
     // re-enable the ones we disabled — not FSMs the game itself had disabled for gameplay reasons.
     private static readonly HashSet<PlayMakerFSM> disabledByUs = new();
 
-    private static void SetAllKnightFsms(GameObject knightGo, bool enabled) {
-        if (enabled) {
-            foreach (var fsm in disabledByUs)
-                if (fsm != null) fsm.enabled = true;
-            disabledByUs.Clear();
-        } else {
-            foreach (var fsm in knightGo.GetComponentsInChildren<PlayMakerFSM>(true)) {
-                if (fsm.enabled) {
-                    fsm.enabled = false;
-                    disabledByUs.Add(fsm);
-                }
-            }
-        }
-    }
-
     internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
     internal static bool HornetActive => Active == ActiveHero.Hornet;
 
@@ -78,6 +63,22 @@ internal static class HeroSwitch {
     internal static GameObject? ActiveHeroGameObject =>
         HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.gameObject :
         HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.gameObject : null;
+
+    private static void SetAllKnightFsms(GameObject knightGo, bool enabled) {
+        if (enabled) {
+            foreach (var fsm in disabledByUs)
+                if (fsm != null)
+                    fsm.enabled = true;
+            disabledByUs.Clear();
+        }
+        else {
+            foreach (var fsm in knightGo.GetComponentsInChildren<PlayMakerFSM>(true))
+                if (fsm.enabled) {
+                    fsm.enabled = false;
+                    disabledByUs.Add(fsm);
+                }
+        }
+    }
 
     internal static void Install() {
         if (go != null) return;
@@ -259,7 +260,9 @@ internal static class HeroSwitch {
     // UnityEngine.Object's overloaded operator, which treats destroyed as null. Open item #1: Hornet's GO can be
     // destroyed mid-session (e.g. a Stag ride); without this guard the per-frame CameraSwitchDriver.Update floods
     // Player.log with native NullRefs until she's respawned (observed ~5M lines across one destruction window).
-    internal static Transform? TransformOf(GameObject? go) => go != null ? go.transform : null;
+    internal static Transform? TransformOf(GameObject? go) {
+        return go != null ? go.transform : null;
+    }
 
     internal static void RetargetCamera(Transform? t) {
         if (t == null) return;
