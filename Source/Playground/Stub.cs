@@ -45,12 +45,12 @@ internal static class Stub {
                 .RunClassConstructor(lang.TypeHandle); // ensure the cctor ran inside the window (no-op if already)
         }
 
-        Skip(typeof(Silksong::HeroWaterController), "Update"); // per-frame
+        Skip(typeof(Silksong::HeroWaterController), "Update", silent: true); // per-frame
         Skip(typeof(Silksong::PersonalObjectPool), "OnStart"); // Start
         Skip(typeof(Silksong::HeroAnimationController), "UpdateToolEquipFlags"); // Start
         // Tool-equipment subsystem isn't initialized -> IsToolEquipped NullRefs; stub the root (no tools equipped),
         // which should cascade-fix ToolItem.IsEquipped / CheckIfToolEquipped / ToolEquipChecker / HeroWispLantern.
-        Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped");
+        Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped", silent: true); // per-frame (crest equip checks)
         Skip(typeof(Silksong::KeepWorldScalePositive), "OnEnable");
         Skip(typeof(Silksong::HeroNailImbuement), "Awake");
         Skip(typeof(Silksong::FollowTransform), "OnEnable");
@@ -78,7 +78,7 @@ internal static class Stub {
         Skip(typeof(Silksong::HeroController), "CheckForBump");
         // SetParticleScale.OnUpdate (ticked every frame via SetParticleScaleCallbackHooks) derefs a null parentBody
         // (Rigidbody2D.IsAwake) -> per-frame NullRef. Cosmetic particle scaling -> stub.
-        Skip(typeof(Silksong::SetParticleScale), "OnUpdate");
+        Skip(typeof(Silksong::SetParticleScale), "OnUpdate", silent: true); // per-frame
         Skip(typeof(Silksong::DeliveryQuestItem),
             "BreakAllInternal"); // also called directly from Start (BreakTimedNoEffects)
         // Superjump's "Hit Roof Hard" state calls DeliveryQuestItem.TakeHit() via CallStaticMethod (slamming the ceiling
@@ -172,7 +172,7 @@ internal static class Stub {
     }
 
     // Stub every method named `method` on `type` (all overloads/visibilities) to log-once + return default.
-    private static void Skip(Type type, string method) {
+    private static void Skip(Type type, string method, bool silent = false) {
         var found = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public |
                                     BindingFlags.NonPublic);
         var any = false;
@@ -180,7 +180,7 @@ internal static class Stub {
             if (mi.Name != method || mi.IsAbstract || mi.GetMethodBody() == null) continue;
             var label = $"{type.Name}.{mi.Name}";
             try {
-                hooks.Add(new ILHook(mi, il => Rewrite(il, label)));
+                hooks.Add(new ILHook(mi, il => Rewrite(il, label, silent)));
                 any = true;
             } catch (Exception e) {
                 Log.Error($"[Stub] hook failed {label}: {e.Message}");
@@ -190,18 +190,23 @@ internal static class Stub {
         if (!any) Log.Error($"[Stub] no method '{method}' on {type.FullName}");
     }
 
-    // Called from stubbed methods (emitted by Rewrite). Logs each distinct stub once to avoid per-frame spam.
+    // Called from stubbed methods (emitted by Rewrite). Two variants:
+    //   Logged — logs each distinct stub once, then silent (InfoOnce dedup)
+    //   Silent — never logs
     public static void Logged(string label) {
         Log.InfoOnce($"stub|{label}", $"[Stub] >> {label} (stubbed, no-op)");
     }
 
-    private static void Rewrite(ILContext il, string label) {
+    public static void Silent(string label) {
+    }
+
+    private static void Rewrite(ILContext il, string label, bool silent = false) {
         il.Body.Instructions.Clear();
         il.Body.ExceptionHandlers.Clear();
         il.Body.Variables.Clear();
         var c = new ILCursor(il);
         c.Emit(OpCodes.Ldstr, label);
-        c.Emit(OpCodes.Call, typeof(Stub).GetMethod(nameof(Logged))!);
+        c.Emit(OpCodes.Call, typeof(Stub).GetMethod(silent ? nameof(Silent) : nameof(Logged))!);
         EmitDefaultReturn(c, il);
     }
 
