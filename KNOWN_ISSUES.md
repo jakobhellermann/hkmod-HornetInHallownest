@@ -6,10 +6,12 @@
 - death animation
 - fury area glow doesnt stop
 - hornet bench location
+- VS get animation shows knight always
 
 ## Integration
 - stag?
 - XX OOB big door
+- XX nail art during transition
 - XX fireball scene entry broken
 - OOB on scene transitions
 - spring water
