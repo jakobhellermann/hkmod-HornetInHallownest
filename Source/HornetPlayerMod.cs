@@ -97,6 +97,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
         GetComponentShim.Cleanup();
+        CompareTagShim.Cleanup();
         HeroControllerProbe.Cleanup();
         EnemyTargetBridge.Cleanup();
         HeroProxy.Cleanup();
@@ -263,6 +264,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         GetComponentShim
             .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
+        CompareTagShim.Install(); // CompareTag("Recoiler") -> true (HK has no "Recoiler" tag; else CompareTag throws)
         HeroControllerProbe
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
         EnemyTargetBridge
