@@ -1,3 +1,7 @@
+# Second try:
+- blue hearts
+- big door oob
+
 # Bugs
 
 ## Cosmetic
