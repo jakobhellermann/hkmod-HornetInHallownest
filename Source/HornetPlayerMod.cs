@@ -4,6 +4,7 @@ using System.Collections;
 using System.Reflection;
 using HornetPlayer.DevServer;
 using HornetPlayer.HornetInHallownest.Core;
+using HornetPlayer.HornetInHallownest.Modules;
 using HornetPlayer.HornetInHallownest.Validation;
 using HornetPlayer.HornetInHallownest.Validation.Scenarios;
 using HornetPlayer.Playground;
@@ -67,7 +68,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         AddressablesBootstrap.Cleanup();
         GameCamerasBootstrap.Cleanup();
         UIManagerBootstrap.Cleanup();
-        BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
         DamageEnemyProxy.Cleanup();
         ToolItemManagerBootstrap.Cleanup();
@@ -123,8 +123,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             .Register(new SpawnSanityScenario());
 
         PlaygroundRoutes.Register();
-        DebugServer.MapPost("/spawn-real", _ => BundleSpike.SpawnReal());
-        DebugServer.MapPost("/despawn-real", _ => BundleSpike.DespawnReal());
+        DebugServer.MapPost("/spawn-real", _ => HornetSpawner.SpawnReal());
+        DebugServer.MapPost("/despawn-real", _ => HornetSpawner.DespawnReal());
         DebugServer.MapPost("/scan-serializable", _ => BundleSpike.ScanSerializable());
         DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
@@ -257,7 +257,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 
-        // New lifecycle backbone: init migrated modules in registration order (empty until the first system migrates).
+        // New lifecycle backbone: register migrated modules in order, then init them. Spawn is the first module — its
+        // Initialize is a no-op (spawn is lazy, via /spawn-real or AutoSpawn); its Deinitialize despawns Hornet.
+        moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
 
         // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so
@@ -273,9 +275,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             var knight =
                 HeroController.UnsafeInstance; // UnsafeInstance: no "Couldn't find a Hero" log spam at the menu
             if (knight != null && knight.isHeroInPosition) {
-                if (BundleSpike.HornetRoot == null)
+                if (HornetSpawner.HornetRoot == null)
                     try {
-                        BundleSpike.SpawnReal();
+                        HornetSpawner.SpawnReal();
                         Playground.Log.Info("[AutoSpawn] in gameplay scene + Hornet absent -> spawned");
                     } catch (Exception e) {
                         Playground.Log.Error($"[AutoSpawn] {e}");

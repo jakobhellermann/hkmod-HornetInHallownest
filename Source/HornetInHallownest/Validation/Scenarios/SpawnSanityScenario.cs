@@ -1,8 +1,6 @@
 extern alias Silksong;
 using System.Collections;
-using HornetPlayer.Playground;
-
-// TEMP: reads the spawn state still owned by BundleSpike; repoints to HornetSpawner once extracted.
+using HornetPlayer.HornetInHallownest.Modules;
 
 namespace HornetPlayer.HornetInHallownest.Validation.Scenarios;
 
@@ -14,7 +12,7 @@ public sealed class SpawnSanityScenario : IScenario {
     public string Name => "spawn-sanity";
 
     public IEnumerator Run(ScenarioContext ctx) {
-        var hero = BundleSpike.RealHero;
+        var hero = HornetSpawner.RealHero;
         ctx.Assert(hero != null, "RealHero is null (Hornet not spawned)");
         if (hero == null) yield break;
 
@@ -24,6 +22,6 @@ public sealed class SpawnSanityScenario : IScenario {
         yield return ctx.WaitSeconds(1.5f);
 
         // Still alive and present after the window (a crash/destroy would null this out).
-        ctx.Assert(BundleSpike.RealHero != null, "Hornet vanished during observation window");
+        ctx.Assert(HornetSpawner.RealHero != null, "Hornet vanished during observation window");
     }
 }

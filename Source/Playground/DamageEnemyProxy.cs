@@ -26,17 +26,27 @@ internal static class DamageEnemyProxy {
             var go = dmg.gameObject;
             if (go.GetComponent<PlayMakerFSM>() != null) continue;
 
+            // Add the FSM while the GO is INACTIVE, then restore its active state. AddComponent on an ACTIVE GO runs
+            // PlayMakerFSM.Awake -> Init -> Preprocess synchronously on the default (uninitialized) Fsm — whose single
+            // null-Transition state NullRefs before we can set the empty arrays below. On an INACTIVE GO Awake never
+            // runs, so the .Fsm getter (fsm.Owner = this) NullRefs on the still-null fsm. Both failure modes were the
+            // ~20 "AddComponent failed" errors on spawn. Adding while inactive defers Awake; Reset() initializes the
+            // fsm so .Fsm is safe; restoring active state then runs Awake once on the clean, empty fsm.
+            var wasActive = go.activeSelf;
+            if (wasActive) go.SetActive(false);
+
             PlayMakerFSM fsmComp;
-            Fsm? fsm = null;
+            Fsm fsm;
             try {
                 fsmComp = go.AddComponent<PlayMakerFSM>();
+                fsmComp.Reset(); // init fsm (Awake didn't run while inactive) so the .Fsm getter doesn't NullRef
                 fsm = fsmComp.Fsm;
             } catch (Exception e) {
                 Log.ErrorOnce($"proxy|{go.name}", $"[DamageEnemyProxy] AddComponent failed on {go.name}: {e.Message}");
+                if (wasActive) go.SetActive(true);
                 continue;
             }
 
-            if (fsm == null) continue;
             fsm.Name = "damages_enemy";
 
             fsm.Variables.IntVariables = [
@@ -51,13 +61,19 @@ internal static class DamageEnemyProxy {
             fsm.Variables.BoolVariables = [
                 new FsmBool("circleDirection") { Value = dmg.CircleDirection }
             ];
-            // InitData iterates states/events/globalTransitions. The default Fsm() constructor creates
-            // states = new FsmState[1] but the element has null Transitions → NullRef in InitData when
-            // the GO activates. Set empty arrays so InitData no-ops cleanly.
+            // Fsm.Init (run on activation) iterates states/events/globalTransitions. The default Fsm creates
+            // states = new FsmState[1] but the element has null Transitions → NullRef. Empty arrays make Init no-op.
             fsm.States = [];
             fsm.Events = [];
             fsm.GlobalTransitions = [];
 
+            // This is a pure VARIABLE CONTAINER for HK breakables to read (damageDealt/direction/…) — it must never
+            // RUN. A live PlayMakerFSM with empty States ticks Fsm.Update → Continue → EnterState(null start state) →
+            // NullRef every frame the GO is active. Disabling stops OnEnable/Start/Update while Awake still registers it
+            // in fsmList and GetComponent/FsmVariables stay readable, so HK's lookup + variable reads are unaffected.
+            fsmComp.enabled = false;
+
+            if (wasActive) go.SetActive(true);
             count++;
         }
 
