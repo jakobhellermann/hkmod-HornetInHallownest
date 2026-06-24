@@ -26,14 +26,13 @@ namespace HornetPlayer.HornetInHallownest.Modules;
 public sealed class HornetSpawner : IModule {
     // The live spawned HeroController (in the DontDestroyOnLoad follower).
     internal static Silksong::HeroController? RealHero =>
-        HornetRoot != null ? HornetRoot.GetComponentInChildren<Silksong::HeroController>() : null;
+        HornetRoot ? HornetRoot.GetComponentInChildren<Silksong::HeroController>() : null;
 
     // Root of the spawned Hornet subtree. PlayMakerFix uses it to tell Hornet's FSMs (resolve actions to Silksong)
     // from HK's FSMs (resolve to HK) — every FSM under here is Silksong-authored.
     internal static GameObject? HornetRoot { get; private set; }
 
-    // Exposed for diagnostics (BundleSpike.ScanSerializable) that instantiate the prefab without spawning.
-    internal static GameObject? HeroPrefab { get; private set; }
+    private static GameObject? heroPrefab;
 
     public string Id => "spawn";
 
@@ -51,10 +50,10 @@ public sealed class HornetSpawner : IModule {
     // redirect in AddressablesBootstrap makes all m_Script PPtrs bind to Silksong.* (verified: 63/63 root components
     // bound, 0 missing, 0 HK Assembly-CSharp).
     internal static void EnsureHeroPrefab() {
-        if (HeroPrefab != null) return;
+        if (heroPrefab) return;
         AddressablesBootstrap.Ensure();
-        HeroPrefab = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
-        if (HeroPrefab != null) Log.Info("[HornetSpawner] Hero_Hornet loaded via Addressables");
+        heroPrefab = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
+        if (heroPrefab) Log.Info("[HornetSpawner] Hero_Hornet loaded via Addressables");
     }
 
     // Instantiate the FULL prefab ACTIVE (no stripping) so every component's Awake/Start runs against our prefixed
@@ -62,7 +61,7 @@ public sealed class HornetSpawner : IModule {
     // missing" list (e.g. GameManager.instance null, input/camera singletons absent).
     internal static object SpawnReal() {
         EnsureHeroPrefab();
-        if (HeroPrefab == null) return new { error = "Hero_Hornet load via Addressables failed" };
+        if (!heroPrefab) return new { error = "Hero_Hornet load via Addressables failed" };
         SilksongBootstrap.Ensure();
         ToolItemManagerBootstrap.Ensure(); // #6: surgical ToolItemManager singleton (tools/crests/nail-art data source)
         CollectableItemManagerBootstrap.Ensure(); // #6: surgical CollectableItemManager singleton (inventory items)
@@ -76,7 +75,7 @@ public sealed class HornetSpawner : IModule {
         // (HeroController.instance / GameManager.hero_ctrl) then skips ~3 render-relevant components, and the instance
         // ref ping-pongs across the deferred destroys -> the spawn alternates 71-visible / 68-invisible. DestroyImmediate
         // clears the old hero (and its singleton refs via OnDestroy) before we instantiate -> every spawn starts clean.
-        if (HornetRoot != null) {
+        if (HornetRoot) {
             Object.DestroyImmediate(HornetRoot);
             HornetRoot = null;
         }
@@ -84,11 +83,11 @@ public sealed class HornetSpawner : IModule {
         // Instantiate INACTIVE so we can patch null fields (missing-environment refs) before Awake runs, then activate.
         var staging = new GameObject("hp_real_staging");
         staging.SetActive(false);
-        var inst = Object.Instantiate(HeroPrefab, staging.transform);
+        var inst = Object.Instantiate(heroPrefab, staging.transform);
         inst.name = "Hornet_Real";
 
         var hc = inst.GetComponent<Silksong::HeroController>();
-        if (hc != null) {
+        if (hc) {
             // wallClingEffect.SetActive(false) at the end of Awake NullRefs when the field is unset.
             EnsureChildField(hc, "wallClingEffect");
             EnsureEmptyConfigs(hc);
@@ -112,7 +111,7 @@ public sealed class HornetSpawner : IModule {
         var hk = Object.FindFirstObjectByType<HeroController>();
         inst.SetActive(false);
         inst.transform.SetParent(null, false);
-        inst.transform.position = hk != null ? hk.transform.position + new Vector3(3f, 0f, 0f) : Vector3.zero;
+        inst.transform.position = hk ? hk.transform.position + new Vector3(3f, 0f, 0f) : Vector3.zero;
         Object.DontDestroyOnLoad(inst);
         Object.DestroyImmediate(staging);
         // Tight SilksongContext window: SetActive(true) synchronously runs HeroController.Awake -> UpdateConfig -> FSM
@@ -129,7 +128,7 @@ public sealed class HornetSpawner : IModule {
         // rig drives it; here it runs standalone and blacks out everything outside the hole. We keep HK's environment,
         // so just turn it off.
         var vignette = inst.transform.Find("Vignette");
-        if (vignette != null) {
+        if (vignette) {
             vignette.gameObject.SetActive(false);
             // Strip HK's "Vignette" tag from Hornet's vignette. HK's SceneManager.orig_Start (runs on every scene load)
             // does FindGameObjectWithTag("Vignette") then an UNGUARDED LocateFSM(go,"Darkness Control").SendEvent("RESET").
@@ -173,14 +172,15 @@ public sealed class HornetSpawner : IModule {
         DamageEnemyProxy.Install();
 
         var comps = inst.GetComponents<Component>();
-        var alive = comps.Count(c => c != null);
+        var alive = comps.Count(c => c);
+        var instanceSet = (bool)Silksong::HeroController.instance;
         Log.Info(
-            $"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; HeroController.instance set: {(Silksong::HeroController.instance != null)}");
+            $"[SpawnReal] instantiated — {alive}/{comps.Length} root components non-null; HeroController.instance set: {instanceSet}");
         return new { ok = true, components = comps.Length, alive };
     }
 
     internal static object DespawnReal() {
-        if (HornetRoot == null) return new { ok = true, note = "nothing to despawn" };
+        if (!HornetRoot) return new { ok = true, note = "nothing to despawn" };
         // DestroyImmediate so a follow-up /spawn-real (or a hot-reload) never races the deferred end-of-frame Destroy —
         // a lingering old hero re-grabs singletons and orphans the input binding (ia_same=false). Matches SpawnReal.
         Object.DestroyImmediate(HornetRoot);

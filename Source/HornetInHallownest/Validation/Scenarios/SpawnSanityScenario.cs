@@ -13,8 +13,8 @@ public sealed class SpawnSanityScenario : IScenario {
 
     public IEnumerator Run(ScenarioContext ctx) {
         var hero = HornetSpawner.RealHero;
-        ctx.Assert(hero != null, "RealHero is null (Hornet not spawned)");
-        if (hero == null) yield break;
+        ctx.Assert(hero, "RealHero is null (Hornet not spawned)");
+        if (!hero) yield break;
 
         ctx.Assert(!hero.cState.dead, "Hornet starts dead");
 
@@ -22,6 +22,6 @@ public sealed class SpawnSanityScenario : IScenario {
         yield return ctx.WaitSeconds(1.5f);
 
         // Still alive and present after the window (a crash/destroy would null this out).
-        ctx.Assert(HornetSpawner.RealHero != null, "Hornet vanished during observation window");
+        ctx.Assert(HornetSpawner.RealHero, "Hornet vanished during observation window");
     }
 }

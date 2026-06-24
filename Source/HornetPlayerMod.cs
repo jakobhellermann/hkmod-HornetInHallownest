@@ -124,7 +124,6 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         PlaygroundRoutes.Register();
         DebugServer.MapPost("/spawn-real", _ => HornetSpawner.SpawnReal());
         DebugServer.MapPost("/despawn-real", _ => HornetSpawner.DespawnReal());
-        DebugServer.MapPost("/scan-serializable", _ => BundleSpike.ScanSerializable());
         DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/toolmgr", _ => ToolItemManagerBootstrap.Diag());
