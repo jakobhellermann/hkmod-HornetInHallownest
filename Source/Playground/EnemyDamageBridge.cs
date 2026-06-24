@@ -107,13 +107,19 @@ internal static class EnemyDamageBridge {
         HashSet<SIHit> blackList) {
         orig(store, target, depth, blackList);
         if (target == null) return;
-        // A real Silksong responder is present (Silksong enemy, or already-bridged) -> nothing to do.
-        for (var i = 0; i < store.Count; i++)
-            if (store[i] is Silksong::HealthManager || store[i] is HkEnemyHitBridge)
+        // A real Silksong responder is present, or a bridge already on this exact GO -> nothing to do.
+        // (A bridge found via walk-up on a PARENT does NOT cover the target's own HealthManager —
+        // e.g. False Knight Head has its own HealthManager, but HitTaker walks up to the Body's
+        // bridge and stops there.)
+        for (var i = 0; i < store.Count; i++) {
+            if (store[i] is Silksong::HealthManager)
                 return;
-        // HK target? Walk up to the nearest HK IHitResponder (HealthManager / Breakable / BreakablePole). HK colliders
-        // may sit on a child of the target root, so search parents.
-        var resp = target.GetComponentInParent<IHitResponder>();
+            if (store[i] is HkEnemyHitBridge b && b.gameObject == target)
+                return;
+        }
+        // HK target? Check the target GO first (its own HealthManager), then walk up.
+        var resp = target.GetComponent<IHitResponder>()
+                   ?? target.GetComponentInParent<IHitResponder>();
         var respGo = (resp as Component)?.gameObject;
         if (respGo == null) return;
         var bridge = respGo.GetComponent<HkEnemyHitBridge>();

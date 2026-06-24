@@ -36,6 +36,7 @@ public static class PlaygroundRoutes {
         var node = new Dictionary<string, object?> {
             ["name"] = go.name,
             ["active"] = go.activeSelf,
+            ["layer"] = go.layer,
             ["components"] = go.GetComponents<Component>().Select(c => c == null ? "null" : c.GetType().FullName)
                 .ToArray()
         };
@@ -67,6 +68,7 @@ public static class PlaygroundRoutes {
         if (path.Component == null)
             return new {
                 path = ComponentPath.GetPath(target),
+                layer = target.layer,
                 components = target.GetComponents<Component>()
                     .Select(c => c == null ? "null" : c.GetType().FullName).ToArray()
             };
