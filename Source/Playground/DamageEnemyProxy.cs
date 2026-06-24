@@ -51,6 +51,12 @@ static class DamageEnemyProxy {
             fsm.Variables.BoolVariables = [
                 new FsmBool("circleDirection") { Value = dmg.CircleDirection }
             ];
+            // InitData iterates states/events/globalTransitions. The default Fsm() constructor creates
+            // states = new FsmState[1] but the element has null Transitions → NullRef in InitData when
+            // the GO activates. Set empty arrays so InitData no-ops cleanly.
+            fsm.States = [];
+            fsm.Events = [];
+            fsm.GlobalTransitions = [];
 
             count++;
         }
