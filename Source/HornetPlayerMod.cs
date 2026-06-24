@@ -9,6 +9,7 @@ using HornetPlayer.HornetInHallownest.Validation;
 using HornetPlayer.HornetInHallownest.Validation.Scenarios;
 using HornetPlayer.Playground;
 using Modding;
+using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -59,6 +60,11 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         } catch (Exception e) {
             Playground.Log.Error($"[Unload] inventory reset: {e.Message}");
         }
+
+        finishedEnteringHook?.Dispose();
+        finishedEnteringHook = null;
+        returnToMenuHook?.Dispose();
+        returnToMenuHook = null;
 
         // New lifecycle backbone: tear migrated modules down in reverse registration order, before the legacy systems.
         moduleHost.DeinitializeAll();
@@ -258,31 +264,53 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
 
-        // Auto-spawn Hornet once we're in a gameplay scene and she's absent. A hot-reload despawns her in Unload, so
-        // this brings her back without a manual /spawn-real (and on a fresh boot, fires the first time you load in).
-        // One-shot: it stops after the first auto-spawn, so a later manual /despawn-real stays despawned.
-        host.StartCoroutine(AutoSpawnWhenInGame());
+        // Hornet's presence tracks HK's scene state, trigger-based (no polling) via two hooks on HK's GameManager:
+        // FinishedEnteringScene spawns her once a gameplay scene has placed the Knight; ReturnToMainMenu despawns her on
+        // quit-to-menu. The Knight is HK's to manage; Hornet is a separate DontDestroyOnLoad body HK's teardown doesn't
+        // know about, so without the despawn she'd linger (visible/active) on the menu.
+        InstallSpawnLifecycle();
+        // Hot-reload mid-game: FinishedEnteringScene already fired this scene, so spawn now if we're already placed.
+        var knight = HeroController.UnsafeInstance;
+        if (knight != null && knight.isHeroInPosition && HornetSpawner.HornetRoot == null) HornetSpawner.Spawn();
     }
 
-    private static IEnumerator AutoSpawnWhenInGame() {
-        while (true) {
-            // HK's hero: null at the menu, set + isHeroInPosition once a gameplay scene has placed it. Gate on
-            // isHeroInPosition so we don't spawn mid-transition (before the scene/entry is ready).
-            var knight =
-                HeroController.UnsafeInstance; // UnsafeInstance: no "Couldn't find a Hero" log spam at the menu
-            if (knight != null && knight.isHeroInPosition) {
-                if (HornetSpawner.HornetRoot == null)
+    private Hook? finishedEnteringHook;
+    private Hook? returnToMenuHook;
+
+    private void InstallSpawnLifecycle() {
+        var entered = typeof(GameManager).GetMethod("FinishedEnteringScene", BindingFlags.Public | BindingFlags.Instance);
+        if (entered != null)
+            finishedEnteringHook = new Hook(entered,
+                (Action<Action<GameManager>, GameManager>)((orig, self) => {
+                    orig(self);
+                    if (HornetSpawner.HornetRoot != null) return;
                     try {
                         HornetSpawner.Spawn();
-                        Playground.Log.Info("[AutoSpawn] in gameplay scene + Hornet absent -> spawned");
+                        Playground.Log.Info("[SpawnLifecycle] entered gameplay scene -> spawned Hornet");
                     } catch (Exception e) {
-                        Playground.Log.Error($"[AutoSpawn] {e}");
+                        Playground.Log.Error($"[SpawnLifecycle] {e}");
+                    }
+                }));
+        else
+            Playground.Log.Error("[SpawnLifecycle] GameManager.FinishedEnteringScene not found");
+
+        var quit = typeof(GameManager).GetMethod("ReturnToMainMenu", BindingFlags.Public | BindingFlags.Instance);
+        if (quit != null)
+            returnToMenuHook = new Hook(quit,
+                (Func<Func<GameManager, GameManager.ReturnToMainMenuSaveModes, Action<bool>, IEnumerator>, GameManager,
+                    GameManager.ReturnToMainMenuSaveModes, Action<bool>, IEnumerator>)((orig, self, mode, cb) => {
+                    if (HornetSpawner.HornetRoot != null) {
+                        // Hand the camera back to the Knight first: HeroSwitch points HK's CameraTarget at the active
+                        // hero, so despawning while Hornet is active would leave CameraTarget.Update dereferencing a
+                        // destroyed transform every frame through the menu fade.
+                        HeroSwitch.SetActive(ActiveHero.Knight);
+                        HornetSpawner.Despawn();
+                        Playground.Log.Info("[SpawnLifecycle] quit to menu -> despawned Hornet");
                     }
 
-                yield break;
-            }
-
-            yield return new WaitForSeconds(0.5f);
-        }
+                    return orig(self, mode, cb);
+                }));
+        else
+            Playground.Log.Error("[SpawnLifecycle] GameManager.ReturnToMainMenu not found");
     }
 }
