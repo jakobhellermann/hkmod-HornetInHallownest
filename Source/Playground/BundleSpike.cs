@@ -561,16 +561,23 @@ internal static class BundleSpike {
     }
 
     // Dump a Silksong FSM's bool/int/float variables (name=value) — to inspect gate vars like "Bind Locked".
-    internal static object FsmVars(string fsmName) {
+    internal static object FsmVars(string fsmName, string? goFilter = null) {
         foreach (var f in Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>()) {
             if (f == null || !string.Equals(f.FsmName, fsmName, StringComparison.OrdinalIgnoreCase)) continue;
             if (!f.gameObject.activeInHierarchy) continue;
+            if (!string.IsNullOrEmpty(goFilter) &&
+                f.gameObject.name.IndexOf(goFilter, StringComparison.OrdinalIgnoreCase) < 0) continue;
             var vars = f.FsmVariables;
             var d = new Dictionary<string, string>();
             foreach (var b in vars.BoolVariables) d[b.Name] = "bool:" + b.Value;
             foreach (var n in vars.IntVariables) d[n.Name] = "int:" + n.Value;
             foreach (var ff in vars.FloatVariables) d[ff.Name] = "float:" + ff.Value;
-            return new { fsm = fsmName, go = f.gameObject.name, vars = d };
+            foreach (var g in vars.GameObjectVariables) d[g.Name] = "go:" + (g.Value != null ? g.Value.name : "<null>");
+            // also surface the isolated Silksong PlayMaker global "Hero" (set by the Globalise_Hero_Hornet FSM)
+            string globalHero = "<no global var>";
+            var gh = SilksongPM::PlayMakerGlobals.Instance?.Variables?.FindFsmGameObject("Hero");
+            if (gh != null) globalHero = gh.Value != null ? gh.Value.name : "<null>";
+            return new { fsm = fsmName, go = f.gameObject.name, vars = d, globalHero };
         }
 
         return new { error = "fsm not found" };
@@ -599,10 +606,12 @@ internal static class BundleSpike {
         return !string.IsNullOrEmpty(s) && s != vt.FullName ? s : null;
     }
 
-    internal static object DumpStateActions(string fsmName, string stateName) {
+    internal static object DumpStateActions(string fsmName, string stateName, string? goFilter = null) {
         foreach (var f in Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>()) {
             if (f == null || !string.Equals(f.FsmName, fsmName, StringComparison.OrdinalIgnoreCase)) continue;
             if (!f.gameObject.activeInHierarchy) continue;
+            if (!string.IsNullOrEmpty(goFilter) &&
+                f.gameObject.name.IndexOf(goFilter, StringComparison.OrdinalIgnoreCase) < 0) continue;
             SilksongPM::HutongGames.PlayMaker.Fsm fsm;
             try {
                 fsm = f.Fsm;

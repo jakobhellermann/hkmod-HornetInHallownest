@@ -125,8 +125,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             (req, respond) => BundleSpike.DriveHealthHud(respond)); // drive the health-mask appear chain over frames
         DebugServer.MapGet("/find-event-senders", req => BundleSpike.FindEventSenders(req["event"] ?? "SHOW HP"));
         DebugServer.MapGet("/fsm-state-actions",
-            req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause"));
-        DebugServer.MapGet("/fsm-vars", req => BundleSpike.FsmVars(req["name"] ?? "Bind"));
+            req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause", req["go"]));
+        DebugServer.MapGet("/fsm-vars", req => BundleSpike.FsmVars(req["name"] ?? "Bind", req["go"]));
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapPost("/fsm-trace", req => FsmTracer.SetTargets(req["names"])); // live state/event trace
         DebugServer.MapGet("/probe-cameratarget", _ => BundleSpike.ProbeCameraTarget());
