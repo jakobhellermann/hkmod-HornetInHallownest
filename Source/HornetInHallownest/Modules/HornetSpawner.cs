@@ -1,29 +1,19 @@
 extern alias Silksong;
 using System;
 using System.Linq;
-using System.Reflection;
 using HornetPlayer.HornetInHallownest.Core;
+using HornetPlayer.HornetInHallownest.Util;
 using HornetPlayer.Playground;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-// TEMP: the bring-up bootstraps + HeroSwitch/DamageEnemyProxy/Log still live in Playground (not diagnostics — production systems not yet migrated; SpawnReal will call their migrated forms later).
 using Object = UnityEngine.Object;
 
 namespace HornetPlayer.HornetInHallownest.Modules;
 
-// Owns the real-Hornet spawn: load Hero_Hornet via Addressables, instantiate the FULL prefab, run its real
-// Awake/Start against our prefixed Silksong.* types inside a SilksongContext window, and park it as a
-// DontDestroyOnLoad root. The first system migrated out of the Playground sandbox — the production spawn entry point.
-//
-// As an IModule it owns its lifecycle: Initialize is a no-op (spawn is LAZY — triggered by /spawn-real or the
-// AutoSpawn coroutine once a gameplay scene is ready, not at mod load), Deinitialize despawns. DestroyImmediate (not
-// Destroy) on teardown because Unload->Initialize is synchronous in one frame: a deferred Destroy would leave the old
-// DontDestroyOnLoad hero alive into the next Initialize, holding stale gm/inputHandler refs (the move_input=0 /
-// ia_same=false uncontrollable-hero bug).
-//
-// VALIDATION: this is load-bearing production code, not a shim — there is no "more bring-up makes it unnecessary"
-// path; spawning the real hero IS the mod. It moves as-is. (The bootstraps it calls are the shim-validation frontier.)
+// Instantiate Hero_Hornet via Addressables and fix up everything required for Hollow Knight interop.
 public sealed class HornetSpawner : IModule {
+    private static GameObject? heroPrefab;
+
     // The live spawned HeroController (in the DontDestroyOnLoad follower).
     internal static Silksong::HeroController? RealHero =>
         HornetRoot ? HornetRoot.GetComponentInChildren<Silksong::HeroController>() : null;
@@ -31,8 +21,6 @@ public sealed class HornetSpawner : IModule {
     // Root of the spawned Hornet subtree. PlayMakerFix uses it to tell Hornet's FSMs (resolve actions to Silksong)
     // from HK's FSMs (resolve to HK) — every FSM under here is Silksong-authored.
     internal static GameObject? HornetRoot { get; private set; }
-
-    private static GameObject? heroPrefab;
 
     public string Id => "spawn";
 
@@ -44,24 +32,25 @@ public sealed class HornetSpawner : IModule {
         DespawnReal();
     }
 
-    // Load the Hero_Hornet prefab via Addressables (Silksong's catalog, registered by AddressablesBootstrap):
-    // Addressables pulls the full dependency closure AND owns every bundle, so there's no double-load conflict with the
-    // game's own runtime addressables loads (GameManager.EnsureGlobalPool -> "GlobalPool", etc.). The monoscripts
-    // redirect in AddressablesBootstrap makes all m_Script PPtrs bind to Silksong.* (verified: 63/63 root components
-    // bound, 0 missing, 0 HK Assembly-CSharp).
-    internal static void EnsureHeroPrefab() {
-        if (heroPrefab) return;
-        AddressablesBootstrap.Ensure();
-        heroPrefab = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
-        if (heroPrefab) Log.Info("[HornetSpawner] Hero_Hornet loaded via Addressables");
+    // Hero_Hornet, loaded on first access via Addressables. Addressables pulls the full dependency closure and owns
+    // every bundle, so there's no double-load conflict with the game's own runtime loads (GameManager.EnsureGlobalPool
+    // -> "GlobalPool", etc.); the monoscripts redirect in AddressablesBootstrap binds all m_Script PPtrs to Silksong.*.
+    private static GameObject? HeroPrefab {
+        get {
+            if (heroPrefab) return heroPrefab;
+            AddressablesBootstrap.Ensure();
+            heroPrefab = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
+            if (heroPrefab) Log.Info("[HornetSpawner] Hero_Hornet loaded via Addressables");
+            return heroPrefab;
+        }
     }
 
     // Instantiate the FULL prefab ACTIVE (no stripping) so every component's Awake/Start runs against our prefixed
     // Silksong.* types. Unity swallows per-component Awake exceptions into Player.log — that log is the "what's
     // missing" list (e.g. GameManager.instance null, input/camera singletons absent).
     internal static object SpawnReal() {
-        EnsureHeroPrefab();
-        if (!heroPrefab) return new { error = "Hero_Hornet load via Addressables failed" };
+        var prefab = HeroPrefab;
+        if (!prefab) return new { error = "Hero_Hornet load via Addressables failed" };
         SilksongBootstrap.Ensure();
         ToolItemManagerBootstrap.Ensure(); // #6: surgical ToolItemManager singleton (tools/crests/nail-art data source)
         CollectableItemManagerBootstrap.Ensure(); // #6: surgical CollectableItemManager singleton (inventory items)
@@ -83,7 +72,7 @@ public sealed class HornetSpawner : IModule {
         // Instantiate INACTIVE so we can patch null fields (missing-environment refs) before Awake runs, then activate.
         var staging = new GameObject("hp_real_staging");
         staging.SetActive(false);
-        var inst = Object.Instantiate(heroPrefab, staging.transform);
+        var inst = Object.Instantiate(prefab, staging.transform);
         inst.name = "Hornet_Real";
 
         var hc = inst.GetComponent<Silksong::HeroController>();
@@ -99,9 +88,7 @@ public sealed class HornetSpawner : IModule {
             // NullRef'd later (HeroDownAttack.ContinueBounceTrigger -> hc.CanCustomRecoil() -> no pogo on interactive/
             // pogoable objects). Priming _instance here makes every child Awake see the live hero. HeroController.Awake
             // skips its own assignment when _instance is already set; OnDestroy clears it on despawn.
-            typeof(Silksong::HeroController)
-                .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
-                ?.SetValue(null, hc);
+            typeof(Silksong::HeroController).SetFieldValue("_instance", hc);
         }
 
         // Make the hero its OWN root (no follower wrapper). HeroController.Awake calls DontDestroyOnLoad(gameObject) to
@@ -194,8 +181,7 @@ public sealed class HornetSpawner : IModule {
     // values must be repopulated later (the data exists in the bundle, recoverable via rabex).
     private static void EnsureEmptyConfigs(Component owner) {
         foreach (var name in new[] { "configs", "specialConfigs" }) {
-            var fi = owner.GetType()
-                .GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            var fi = owner.GetType().GetFieldInfo(name, logFailure: false);
             if (fi == null || fi.GetValue(owner) != null) continue;
             fi.SetValue(owner, Array.CreateInstance(fi.FieldType.GetElementType()!, 0));
             Log.Info($"[SpawnReal] initialized null array field '{name}' to empty");
@@ -205,7 +191,7 @@ public sealed class HornetSpawner : IModule {
     // If a (private, serialized) GameObject field is null, give it a throwaway child so Awake's
     // `field.SetActive(...)`-style derefs don't NullRef. Used to patch missing-environment refs before activation.
     private static void EnsureChildField(Component owner, string field) {
-        var fi = owner.GetType().GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        var fi = owner.GetType().GetFieldInfo(field, logFailure: false);
         if (fi == null || fi.FieldType != typeof(GameObject)) return;
         if (fi.GetValue(owner) != null) return;
         var dummy = new GameObject(field);
