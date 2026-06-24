@@ -3,6 +3,7 @@ using System;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace HornetPlayer.Playground;
 
@@ -101,6 +102,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     }
 
     private static Hook? beginSceneTransitionHook;
+    private static Hook? loadSceneHook;       // SceneManager.LoadScene(string, LoadSceneParameters)
+    private static Hook? loadSceneAsyncHook;  // SceneManager.LoadSceneAsync(string, LoadSceneParameters)
     private static Hook? setHazardRespawnHook1; // SetHazardRespawn(Vector3, bool)
     private static Hook? setHazardRespawnHook2; // SetHazardRespawn(HazardRespawnMarker)
 
@@ -154,17 +157,57 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         } else {
             Log.Error("[EnvAdapter] GameManager.BeginSceneTransition not found");
         }
+
+        // Also hook SceneManager.LoadScene/LoadSceneAsync directly: some HK FSMs use the PlayMaker LoadLevel action
+        // which calls SceneManager.LoadScene directly, bypassing GameManager.BeginSceneTransition entirely (e.g. the
+        // Stag station "Stag Control" FSM loads Cinematic_Stag_travel via LoadLevel). Without this hook Hornet stays
+        // in the scene and is destroyed by the synchronous scene load.
+        var smType = typeof(SceneManager);
+        var lsParamsType = typeof(LoadSceneParameters);
+        var loadSceneMI = smType.GetMethod("LoadScene",
+            BindingFlags.Public | BindingFlags.Static, null, [typeof(string), lsParamsType], null);
+        if (loadSceneMI != null) {
+            loadSceneHook = new Hook(loadSceneMI,
+                (Func<Func<string, LoadSceneParameters, Scene>, string, LoadSceneParameters, Scene>)LoadSceneHook);
+            Log.Info("[EnvAdapter] installed: SceneManager.LoadScene deparent hook");
+        } else {
+            Log.Error("[EnvAdapter] SceneManager.LoadScene(string, LoadSceneParameters) not found");
+        }
+        var loadSceneAsyncMI = smType.GetMethod("LoadSceneAsync",
+            BindingFlags.Public | BindingFlags.Static, null, [typeof(string), lsParamsType], null);
+        if (loadSceneAsyncMI != null) {
+            loadSceneAsyncHook = new Hook(loadSceneAsyncMI,
+                (Func<Func<string, LoadSceneParameters, AsyncOperation>, string, LoadSceneParameters, AsyncOperation>)LoadSceneAsyncHook);
+            Log.Info("[EnvAdapter] installed: SceneManager.LoadSceneAsync deparent hook");
+        } else {
+            Log.Error("[EnvAdapter] SceneManager.LoadSceneAsync(string, LoadSceneParameters) not found");
+        }
     }
 
     private static void BeginSceneTransitionHook(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self, GameManager.SceneLoadInfo info) {
         orig(self, info);
-        // Deparent Hornet before the transition coroutine unloads the scene. Mirrors Silksong's
-        // HeroController.OnLevelUnload → SetHeroParent(null) → DontDestroyOnLoad, but checks scene
-        // instead of parent: SetHeroParent(null) skips DontDestroyOnLoad when transform.parent is already
-        // null, even if the GO is still in a scene (e.g. platform destroyed, hero unparented but not in DDOL).
+        DeparentHero("scene transition");
+    }
+
+    // SceneManager.LoadScene is synchronous (mustCompleteNextFrame=true): by the time orig returns the old scene is
+    // already unloaded and Hornet destroyed. Deparent BEFORE calling orig.
+    private static Scene LoadSceneHook(Func<string, LoadSceneParameters, Scene> orig, string sceneName, LoadSceneParameters parameters) {
+        DeparentHero($"SceneManager.LoadScene({sceneName})");
+        return orig(sceneName, parameters);
+    }
+
+    private static AsyncOperation LoadSceneAsyncHook(Func<string, LoadSceneParameters, AsyncOperation> orig, string sceneName, LoadSceneParameters parameters) {
+        DeparentHero($"SceneManager.LoadSceneAsync({sceneName})");
+        return orig(sceneName, parameters);
+    }
+
+    // Mirrors Silksong's HeroController.OnLevelUnload → SetHeroParent(null) → DontDestroyOnLoad, but checks scene
+    // instead of parent: SetHeroParent(null) skips DontDestroyOnLoad when transform.parent is already null, even if
+    // the GO is still in a scene (e.g. platform destroyed, hero unparented but not in DDOL).
+    private static void DeparentHero(string reason) {
         var hero = BundleSpike.RealHero;
         if (hero != null && hero.gameObject.scene.name != "DontDestroyOnLoad") {
-            Log.Info($"[EnvAdapter] deparenting hero before scene transition (was in scene={hero.gameObject.scene.name})");
+            Log.Info($"[EnvAdapter] deparenting hero before {reason} (was in scene={hero.gameObject.scene.name})");
             hero.SetHeroParent(null);
             if (hero.gameObject.scene.name != "DontDestroyOnLoad")
                 UnityEngine.Object.DontDestroyOnLoad(hero.gameObject);
@@ -174,6 +217,10 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     internal static void Cleanup() {
         beginSceneTransitionHook?.Dispose();
         beginSceneTransitionHook = null;
+        loadSceneHook?.Dispose();
+        loadSceneHook = null;
+        loadSceneAsyncHook?.Dispose();
+        loadSceneAsyncHook = null;
         setHazardRespawnHook1?.Dispose();
         setHazardRespawnHook1 = null;
         setHazardRespawnHook2?.Dispose();
