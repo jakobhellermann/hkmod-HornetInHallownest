@@ -25,7 +25,9 @@ public static class PlaygroundRoutes {
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
         DebugServer.MapPost("/invoke", req => Invoke(req["path"], req["method"]));
         DebugServer.MapPost("/unlock-tools", _ => { try { Silksong::ToolItemManager.UnlockAllTools(); Silksong::ToolItemManager.UnlockAllCrests(); return new { ok = true }; } catch (Exception e) { Log.Error($"[unlock-tools] {e}"); return new { error = e.Message, stack = e.StackTrace }; } });
+        DebugServer.MapPost("/cheat-equip", _ => { Silksong::CheatManager.CanChangeEquipsAnywhere = true; return new { ok = true }; });
         DebugServer.MapGet("/collectables", _ => DumpCollectables());
+        DebugServer.MapGet("/gameplay", _ => DumpGameplay());
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
     }
 
@@ -240,6 +242,21 @@ public static class PlaygroundRoutes {
                 .GetField("useResponses", BindingFlags.NonPublic | BindingFlags.Instance)
                 ?.GetValue(i) == null
         }).ToArray();
+    }
+
+    private static object DumpGameplay() {
+        var gameplayType = typeof(Silksong::HeroController).Assembly.GetType("GlobalSettings.Gameplay");
+        if (gameplayType == null) return new { error = "Gameplay type not found" };
+        var baseType = gameplayType.BaseType;
+        var getInstance = baseType?.GetMethod("Get", BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public, null, [typeof(string)], null);
+        var gp = getInstance?.Invoke(null, ["GlobalSettings/Gameplay"]);
+        if (gp == null) return new { error = "Gameplay.Get() returned null" };
+        var fields = new Dictionary<string, object?>();
+        foreach (var f in gameplayType.GetFields(BindingFlags.NonPublic | BindingFlags.Instance)) {
+            var v = f.GetValue(gp);
+            fields[f.Name] = v == null ? "null" : v.ToString();
+        }
+        return fields;
     }
 
     // Get a value safely (catching getter exceptions) and format it bounded to `depth`.

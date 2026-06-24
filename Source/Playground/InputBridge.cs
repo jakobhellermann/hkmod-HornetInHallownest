@@ -58,7 +58,9 @@ internal sealed class InputDriver : MonoBehaviour {
         ("dreamnail", KeyCode.D), // needolin
         ("openinventory",
             KeyCode.K), // open the inventory (Inv pane); ListenForInventoryShortcut reads OpenInventory.WasPressed (K: I/O collide with HK's own inventory)
-        ("opentools", KeyCode.L) // open the Tools/Crests pane directly
+        ("opentools", KeyCode.L), // open the Tools/Crests pane directly
+        ("menusubmit", KeyCode.Y), // inventory equip/submit
+        ("menucancel", KeyCode.X), // inventory cancel/back
     };
 
     private ulong tick;
@@ -97,8 +99,6 @@ internal sealed class InputDriver : MonoBehaviour {
                 ActionFor(ia, name)?.CommitWithState(pressed, tick, dt);
             }
 
-            if (ia.OpenInventory.WasPressed)
-                Log.Info($"[InputDriver] OpenInventory.WasPressed edge #{++InputBridge.OpenInvWasPressedCount}");
             // Recompute the MoveVector (TwoAxis) from the freshly-committed Left/Right/Up/Down. Update is internal.
             moveVectorUpdate ??= ia.MoveVector.GetType().GetMethod("Update",
                 BindingFlags.NonPublic | BindingFlags.Instance, null, [typeof(ulong), typeof(float)], null);
@@ -120,6 +120,7 @@ internal sealed class InputDriver : MonoBehaviour {
             "jump" => ia.Jump, "attack" => ia.Attack, "dash" => ia.Dash,
             "superdash" => ia.SuperDash, "cast" => ia.Cast, "quickcast" => ia.QuickCast, "dreamnail" => ia.DreamNail,
             "openinventory" => ia.OpenInventory, "opentools" => ia.OpenInventoryTools,
+            "menusubmit" => ia.MenuSubmit, "menucancel" => ia.MenuCancel,
             _ => null
         };
     }
