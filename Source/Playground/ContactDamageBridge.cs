@@ -67,6 +67,11 @@ internal static class ContactDamageBridge {
                     ssHazard = MapHazard((int)dh.hazardType);
             }
 
+            // Hazards (acid/lava/pit/spikes) carry damageDealt=0 in HK — the death is intrinsic to the hazard type, not
+            // driven by a damage number. But Silksong's TakeDamage gates its ENTIRE hazard/death body on `damageAmount > 0`
+            // (HeroController:5281; the DieFromHazard switch lives inside it), and it re-normalizes ACID/SPIKES to 1 anyway.
+            // So force a positive amount for real hazards or DieFromHazard never fires (she walks through acid unharmed).
+            if (ssHazard != SHazard.ENEMY && dmg <= 0) dmg = 1;
             if (dmg <= 0) return;
 
             var hc = SHeroController.instance;
@@ -87,17 +92,18 @@ internal static class ContactDamageBridge {
         }
     }
 
-    // Map HK's HazardType enum values to Silksong's. The enums differ:
-    // HK: NON_HAZARD=0, SPIKES=1, ACID=2, LAVA=3, PIT=4
-    // SS: NON_HAZARD=0, ENEMY=1, SPIKES=2, ACID=3, LAVA=4, PIT=5, ...
-    // Without mapping, HK SPIKES(1) becomes SS ENEMY(1) which skips hazard respawn.
+    // Map HK's DamageHero.hazardType to Silksong's HazardType enum. CRITICAL: DamageHero.hazardType is a raw INT, NOT
+    // HK's HazardType enum — and HK's content tagging is inconsistent (spikes sometimes authored as "acid", etc). The
+    // authoritative interpretation is HK's OWN TakeDamage switch (HeroController:2400), which reads the same int:
+    //   1 = generic contact (no special hazard), 2 = SPIKES, 3 = ACID, 4 = LAVA, 5 = PIT.
+    // Mirroring that switch makes Hornet die from a given hazard exactly as HK's Knight would from the same DamageHero.
     private static SHazard MapHazard(int hkHazard) {
         return hkHazard switch {
-            1 => SHazard.SPIKES,   // HK SPIKES -> SS SPIKES
-            2 => SHazard.ACID,     // HK ACID -> SS ACID (HK categorizes spike hazards as ACID; SS SPIKES prefab may be missing)
-            3 => SHazard.LAVA,     // HK LAVA -> SS LAVA
-            4 => SHazard.PIT,      // HK PIT -> SS PIT
-            _ => SHazard.ENEMY,    // unknown -> treat as enemy damage
+            2 => SHazard.SPIKES,
+            3 => SHazard.ACID,
+            4 => SHazard.LAVA,
+            5 => SHazard.PIT,
+            _ => SHazard.ENEMY,    // 1/unknown -> generic contact damage
         };
     }
 

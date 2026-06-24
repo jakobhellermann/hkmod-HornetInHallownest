@@ -193,6 +193,27 @@ internal sealed class HornetDeath : MonoBehaviour {
         return new { ok = true, health = pd != null ? pd.health : -1 };
     }
 
+    // Debug: trigger a specific hazard on Hornet (POST /hazard?type=N), mapping the raw HK DamageHero.hazardType int the
+    // same way ContactDamageBridge does, so we can empirically walk through 2=SPIKES/3=ACID/4=LAVA/5=PIT and observe what
+    // Silksong's TakeDamage actually does for each (DieFromHazard path, anim, respawn) without finding each scene hazard.
+    internal static object Hazard(string typeStr) {
+        var hc = BundleSpike.RealHero;
+        if (hc == null) return new { error = "no Hornet spawned" };
+        if (!int.TryParse(typeStr, out var hk)) return new { error = $"bad type '{typeStr}'" };
+        var ss = hk switch {
+            2 => Silksong::GlobalEnums.HazardType.SPIKES,
+            3 => Silksong::GlobalEnums.HazardType.ACID,
+            4 => Silksong::GlobalEnums.HazardType.LAVA,
+            5 => Silksong::GlobalEnums.HazardType.PIT,
+            _ => Silksong::GlobalEnums.HazardType.ENEMY,
+        };
+        var pd = Silksong::PlayerData.instance;
+        if (pd != null) pd.isInvincible = false;
+        hc.TakeDamage(hc.gameObject, Silksong::GlobalEnums.CollisionSide.left, 1, ss,
+            Silksong::GlobalEnums.DamagePropertyFlags.NonLethal);
+        return new { ok = true, hkType = hk, ssHazard = ss.ToString(), health = pd != null ? pd.health : -1 };
+    }
+
     internal static void Install() {
         if (go != null) return;
         go = new GameObject("HornetPlayer.HornetDeath");

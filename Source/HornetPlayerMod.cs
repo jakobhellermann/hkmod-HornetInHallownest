@@ -152,6 +152,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         });
         DebugServer.MapPost("/kill", _ => HornetDeath.Kill()); // debug: trigger Hornet death (real damage path)
         DebugServer.MapPost("/getup", _ => HornetDeath.ForceGetUp()); // debug: unstick from bench/no_input
+        DebugServer.MapPost("/hazard", req => HornetDeath.Hazard(req["type"] ?? "3")); // debug: trigger hazard N (2=spikes,3=acid,4=lava,5=pit)
         DebugServer.MapGet("/bench-state", _ => BundleSpike.BenchState()); // debug: atBench signal + Hornet sit clips
         DebugServer.MapGet("/hc-probe", req => {
             // which HK HeroController methods get called on the Knight while Hornet active
