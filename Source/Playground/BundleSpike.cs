@@ -159,6 +159,8 @@ internal static class BundleSpike {
         // (PlayerDeadFromHazard → HazardRespawn) runs without NullRefs.
         SilksongBootstrap.SetHeroCtrl(hc);
 
+        DamageEnemyProxy.Install();
+
         var comps = inst.GetComponents<Component>();
         var alive = comps.Count(c => c != null);
         Log.Info(

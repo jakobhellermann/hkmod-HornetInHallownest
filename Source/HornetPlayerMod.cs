@@ -43,6 +43,7 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         UIManagerBootstrap.Cleanup();
         BundleSpike.Cleanup();
         SilksongBootstrap.Cleanup();
+        DamageEnemyProxy.Cleanup();
         ToolItemManagerBootstrap.Cleanup();
         CollectableItemManagerBootstrap.Cleanup();
         ManagerSingletonBootstrap.Cleanup();
