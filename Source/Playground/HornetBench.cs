@@ -111,6 +111,12 @@ internal sealed class HornetBench : MonoBehaviour {
         hero.StartAnimationControlToIdle(); // resume HAC -> stand in Idle
         hero.AffectedByGravity(true);
         hero.RegainControl();
+        // Clear the atBench mirror EnterSit set. Without this it stays true forever after the first rest, and anything
+        // gated on Silksong's atBench silently breaks — e.g. Needolin's "Needolin Sub" has PlayerDataBoolTest(atBench,
+        // isTrue->CANCEL) ("Cancel if at bench to prevent restbench and this from fighting"), so needolin instantly
+        // cancels every press once she has rested anywhere.
+        var spd = Silksong::PlayerData.instance;
+        if (spd != null) spd.atBench = false;
         Log.Info("[HornetBench] Hornet stands up (left bench)");
     }
 
