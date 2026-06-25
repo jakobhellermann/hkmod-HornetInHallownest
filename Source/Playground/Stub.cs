@@ -54,6 +54,22 @@ internal static class Stub {
         // Tool-equipment subsystem isn't initialized -> IsToolEquipped NullRefs; stub the root (no tools equipped),
         // which should cascade-fix ToolItem.IsEquipped / CheckIfToolEquipped / ToolEquipChecker / HeroWispLantern.
         Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped", true); // per-frame (crest equip checks)
+        // ControlReminder lives under HudCamera/In-game/Prompts, which we deactivate in BringUpHud (its other deps
+        // NullRef). Without a ControlReminder MonoBehaviour in the scene, ControlReminder.Instance (FindObjectOfType)
+        // returns null. Stub the edges where the reminder system touches the missing environment:
+        // - get_Instance: silently return null (prevents "Couldn't find ControlReminder instance" log ×3 from
+        //   ToolItemManager.SceneInit's AddReminder calls; SubscribeEvents(null) is a graceful no-op).
+        // - Disappear: derefs Owner.Hide(…) — Owner is null. Called by ReportBoundAttackToolUsed / SetEquippedTools.
+        // - PushSingle/ShowPushed: derefs Instance.pushedSingles / Instance.ShowSingle — Instance is null. Called by
+        //   ShowControlReminderSingleGroup FSM action (Bench/Death FSMs). Purely cosmetic button-prompt UI.
+        // - Appear (SingleConfig/DoubleConfig): derefs Owner.ShowSingle/ShowDouble — Owner is null. Called by DoAppear
+        //   after setting SeenToolEquipPrompt; the PlayerData side-effect is preserved, only the visual Show is skipped.
+        Skip(typeof(Silksong::ControlReminder), "get_Instance", true);
+        Skip(typeof(Silksong::ControlReminder.ConfigBase), "Disappear", true);
+        Skip(typeof(Silksong::ControlReminder), "PushSingle", true);
+        Skip(typeof(Silksong::ControlReminder), "ShowPushed", true);
+        Skip(typeof(Silksong::ControlReminder.SingleConfig), "Appear", true);
+        Skip(typeof(Silksong::ControlReminder.DoubleConfig), "Appear", true);
         Skip(typeof(Silksong::HeroNailImbuement), "Awake");
         Skip(typeof(Silksong::FollowTransform), "OnEnable");
         // NOTE: the PlayMaker-ACTION stubs (SetPolygonCollider.OnEnter, ListenForTauntV2/ListenFor* OnUpdate) were

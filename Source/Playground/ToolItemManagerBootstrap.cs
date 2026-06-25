@@ -1,5 +1,6 @@
 extern alias Silksong;
 using System.Linq;
+using System.Reflection;
 
 namespace HornetPlayer.Playground;
 
@@ -12,9 +13,23 @@ internal static class ToolItemManagerBootstrap {
     private const string GoName = "Silksong_ToolItemManager";
 
     internal static object Ensure() {
+        // equipChangedToolSingleReminder / equipChangedToolModifierReminder are NOT [SerializeField] — they're
+        // private runtime fields initialized only in SceneInit() (see below). On the prefab asset they're null, so
+        // copying them is a no-op; omit them from the field list.
         var mgr = ManagerSingletonBootstrap.BringUp(typeof(Silksong::ToolItemManager), GoName, "toolItems",
-            "crestList", "equipChangedToolSingleReminder", "equipChangedToolModifierReminder");
+            "crestList");
         if (mgr == null) return new { error = "ToolItemManager bring-up failed (see log)" };
+
+        // ToolItemManager.Awake subscribes SceneInit to GameManager.SceneInit — our bootstrap GM never fires that
+        // event, so SceneInit never runs. It's the ONLY place that initializes equipChangedToolSingleReminder /
+        // equipChangedToolModifierReminder (new ControlReminder.{Single,Double}Config). Without it, those fields stay
+        // null and ReportBoundAttackToolUsed NullRefs on .Disappear() when a Red tool was equipped+thrown.
+        // Call SceneInit directly to reuse the real initialization. AddReminder inside it calls ControlReminder.Instance
+        // (stubbed to return null in Stub.cs — no ControlReminder MonoBehaviour in our scene), so SubscribeEvents(null)
+        // is a graceful no-op. Disappear is also stubbed since Owner is null.
+        var sceneInit = mgr.GetType().GetMethod("SceneInit", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (sceneInit != null) sceneInit.Invoke(mgr, null);
+
         return Diag();
     }
 
