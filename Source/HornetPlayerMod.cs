@@ -135,6 +135,14 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/toolmgr", _ => ToolItemManagerBootstrap.Diag());
+        DebugServer.MapPost("/dbg-recoil", req => { // validate recoil/bounce mechanics directly (kind=bounce|dash)
+            var hero = HornetSpawner.RealHero;
+            if (hero == null) return new { error = "no hero" };
+            var kind = req["kind"] ?? "bounce";
+            if (kind == "dash") hero.sprintFSM?.SendEvent("DASH RECOIL");
+            else hero.DownspikeBounce(true);
+            return new { fired = kind };
+        });
         DebugServer.MapGet("/equip-crest", req => { // equip a crest by id + apply its HeroConfig (ResetAllCrestState)
             var id = req["id"] ?? "";
             Silksong::ToolItemManager.SetEquippedCrest(id);

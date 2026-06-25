@@ -2,11 +2,14 @@ extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using HornetPlayer.HornetInHallownest.Util;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using SIHit = Silksong::IHitResponder;
 using SHitInstance = Silksong::HitInstance;
+using SHealthManager = Silksong::HealthManager;
+using SDamageEnemies = Silksong::DamageEnemies;
 
 namespace HornetPlayer.Playground;
 
@@ -61,6 +64,11 @@ internal static class EnemyDamageBridge {
     private static Hook? takeDamageHook;
     private static Hook? soulGainHook;
 
+    // Stand-in HealthManager for the WillDamageEnemyOptions notification (see OnDoDamage). Lives on an INACTIVE GO so
+    // its Awake never runs; the only thing the relevant subscriber (DashStabNailAttack.OnWillDamageEnemy) reads from it
+    // is GetComponent<NonBouncer>() — null here, so the recoil fires.
+    private static SHealthManager? standInHm;
+
 
     internal static void Install() {
         var mi = typeof(Silksong::HitTaker).GetMethod(
@@ -100,7 +108,27 @@ internal static class EnemyDamageBridge {
         // Only HK objects with a PlayMaker FSM care; FSMUtility no-ops otherwise but GetComponent gates the per-hit cost.
         if (target.GetComponent<PlayMakerFSM>() != null)
             FSMUtility.SendEventToGameObject(target, "TAKE DAMAGE");
+        // HK enemies are bridged via an IHitResponder shim (not a Silksong HealthManager), so DamageEnemies.DoDamage
+        // takes its non-HealthManager branch and never fires WillDamageEnemy*/the HealthManager-path notifications. Those
+        // drive the attack-hit recoils (DashStabNailAttack.OnWillDamageEnemy -> sprintFSM "DASH RECOIL"/harpoon bounce).
+        // Re-fire them here for a damaging hit on an HK enemy (HK HealthManager present). Firing on `self` only invokes
+        // the subscribers bound to THIS attacker's damager, so it's targeted (a normal slash has none).
+        if (hit && target.GetComponentInParent<HealthManager>() != null)
+            FireWillDamageEnemy(self);
         return hit;
+    }
+
+    private static void FireWillDamageEnemy(SDamageEnemies self) {
+        if (standInHm == null) {
+            var go = new GameObject("hp_standin_hm");
+            go.SetActive(false);
+            Object.DontDestroyOnLoad(go);
+            standInHm = go.AddComponent<SHealthManager>();
+        }
+
+        self.GetFieldValue<Action>("WillDamageEnemy")?.Invoke();
+        self.GetFieldValue<Action<SHealthManager, SHitInstance>>("WillDamageEnemyOptions")
+            ?.Invoke(standInHm, new SHitInstance { Source = self.gameObject });
     }
 
     private static void OnGetHitResponders(Orig orig, List<SIHit> store, GameObject target, int depth,
@@ -136,6 +164,8 @@ internal static class EnemyDamageBridge {
         takeDamageHook = null;
         soulGainHook?.Dispose();
         soulGainHook = null;
+        if (standInHm != null) Object.Destroy(standInHm.gameObject);
+        standInHm = null;
         // Our component type identity changes on a hot-reload; strip stale bridges so the next Initialize re-adds fresh
         // ones (and they don't linger as orphaned references on HK enemies).
         foreach (var b in Resources.FindObjectsOfTypeAll<HkEnemyHitBridge>())
