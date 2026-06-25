@@ -191,6 +191,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             req => GameCamerasBootstrap.BringUpHud((req["on"] ?? "true").ToLowerInvariant() != "false"));
         DebugServer.MapGet("/probe-actions", _ => BundleSpike.ProbeActions());
         DebugServer.MapGet("/probe-hero-fsms", _ => BundleSpike.ProbeHeroFsms());
+        DebugServer.MapGet("/hero-clips", req => BundleSpike.ListHeroClips(req["filter"])); // list Hornet's tk2d clips
+        DebugServer.MapPost("/play-clip", req => BundleSpike.PlayHeroClip(req["name"])); // play a Hornet clip (anim-control off)
+        DebugServer.MapPost("/hero-anim-resume", _ => BundleSpike.ResumeHeroAnim()); // restore normal animation control
         DebugServer.MapPost("/load-save", req => {
             var slot = int.TryParse(req["slot"], out var s) ? s : 0;
             GameManager.instance.LoadGameFromUI(slot); // HK's GameManager: full UI load (transition + scene)

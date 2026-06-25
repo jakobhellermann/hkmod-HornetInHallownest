@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 
@@ -7,11 +8,27 @@ namespace HornetPlayer.Playground;
 // at Hornet (HeroProxy). The clip names are HK Knight clips ("Collect Normal", "Dreamer Land", "LookUp", …; see the
 // census in playmakerfsm/examples/hero_usage.rs) that DON'T exist in Hornet's Silksong tk2d collection. tk2dSpriteAnimator
 // .Play(string) Debug.LogErrors once PER CALL on a missing clip -> per-cutscene-trigger noise (and violates the
-// zero-error policy). Replace that with a single log-once per clip name + skip, so we get a clean, dedup'd list of the
-// HK clips that need a Hornet mapping (pull them out gradually). tk2d is the shared TeamCherry.TK2D assembly, so this
-// also covers the Knight — but a missing clip on the Knight would be a real HK bug worth seeing, so the global hook is fine.
+// zero-error policy). For an unmapped clip we log-once + skip (a clean, dedup'd list of HK clips still needing a Hornet
+// mapping). tk2d is the shared TeamCherry.TK2D assembly, so this also covers the Knight — but a missing clip on the
+// Knight would be a real HK bug worth seeing, so the global hook is fine.
+//
+// ClipMap: HK clip name -> Hornet clip name. CRITICAL beyond visuals — skipping a clip that a Tk2dPlayAnimationWithEvents
+// action waits on (animationCompleteEvent) HANGS the FSM forever (no clip -> no AnimationCompleted -> the gated event,
+// e.g. FINISHED, never fires). The HK ability/item pickup ("Shiny Control"/"Inspect") plays the "Collect SD *" sequence
+// on the hero and gates on its completion; with the clip skipped, the pickup never returns control (soft-lock). Mapping
+// to a REAL Hornet clip makes AnimationCompleted fire -> the gated event fires -> control returns. Hornet's own item
+// collect is "Collect Normal 1/2/3"; "Collect Normal 3" reads as a clean collect pose, so the whole HK collect sequence
+// maps onto it.
 internal static class Tk2dClipShim {
     private static Hook? hook;
+
+    private static readonly Dictionary<string, string> ClipMap = new() {
+        ["Collect SD 1"] = "Collect Normal 3",
+        ["Collect SD 1 Back"] = "Collect Normal 3",
+        ["Collect SD 2"] = "Collect Normal 3",
+        ["Collect SD 3"] = "Collect Normal 3",
+        ["Collect SD 4"] = "Collect Normal 3"
+    };
 
     internal static void Install() {
         var mi = typeof(tk2dSpriteAnimator).GetMethod("Play", BindingFlags.Public | BindingFlags.Instance,
@@ -27,6 +44,15 @@ internal static class Tk2dClipShim {
 
     private static void OnPlay(Orig orig, tk2dSpriteAnimator self, string name) {
         if (self != null && !string.IsNullOrEmpty(name) && self.GetClipByName(name) == null) {
+            // Remap a known HK clip to a Hornet clip (plays for real -> AnimationCompleted fires -> any WithEvents gate
+            // resolves). Only if the mapped clip actually exists on this animator; else fall through to skip.
+            if (ClipMap.TryGetValue(name, out var mapped) && self.GetClipByName(mapped) != null) {
+                Log.InfoOnce($"clipmap|{self.gameObject.name}|{name}",
+                    $"[Tk2dClipShim] remapped HK clip '{name}' -> Hornet '{mapped}' on '{self.gameObject.name}'");
+                orig(self, mapped);
+                return;
+            }
+
             Log.InfoOnce($"clip|{self.gameObject.name}|{name}",
                 $"[Tk2dClipShim] missing clip '{name}' on '{self.gameObject.name}' -> skipped (needs Hornet mapping)");
             return; // skip orig (it would Debug.LogError per call)

@@ -121,6 +121,41 @@ internal static class BundleSpike {
         };
     }
 
+    // List Hornet's tk2d animation clips — to pick a Hornet clip that maps well onto a missing HK clip (e.g. the
+    // "Collect SD 1 Back" item-collect pose). `filter` (optional substring, case-insensitive) narrows the list.
+    internal static object ListHeroClips(string? filter = null) {
+        var hero = RealHero;
+        var anim = hero != null ? hero.GetComponent<tk2dSpriteAnimator>() : null;
+        if (anim == null || anim.Library == null) return new { error = "no animator/library" };
+        var names = new List<string>();
+        foreach (var c in anim.Library.clips)
+            if (c != null && (string.IsNullOrEmpty(filter) || c.name.ToLowerInvariant().Contains(filter.ToLowerInvariant())))
+                names.Add(c.name);
+        names.Sort();
+        return new { count = names.Count, clips = names };
+    }
+
+    // Play a Hornet clip by name (StopAnimationControl first so HeroController's animator doesn't override it next
+    // frame) — to eyeball a candidate mapping live. /hero-anim-resume restores normal animation control.
+    internal static object PlayHeroClip(string? name) {
+        var hero = RealHero;
+        if (hero == null) return new { error = "no hero" };
+        if (string.IsNullOrEmpty(name)) return new { error = "name required" };
+        var anim = hero.GetComponent<tk2dSpriteAnimator>();
+        if (anim == null) return new { error = "no animator" };
+        if (anim.GetClipByName(name) == null) return new { error = $"clip '{name}' not found on Hornet" };
+        hero.StopAnimationControl();
+        anim.Play(name);
+        return new { played = name };
+    }
+
+    internal static object ResumeHeroAnim() {
+        var hero = RealHero;
+        if (hero == null) return new { error = "no hero" };
+        hero.StartAnimationControlToIdle();
+        return new { resumed = true };
+    }
+
     // Audio diagnostics: which gate in RandomAudioClipTableExtensions.SpawnAndPlayOneShot silently returns null (no SFX).
     internal static object AudioDiag() {
         var prefab = Silksong::GlobalSettings.Audio.DefaultAudioSourcePrefab;
