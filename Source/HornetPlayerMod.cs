@@ -156,6 +156,24 @@ public class HornetPlayerMod : Mod, ITogglableMod {
                 recoilHorVelocity = hero != null ? hero.RECOIL_HOR_VELOCITY : -1f
             };
         });
+        DebugServer.MapPost("/set-pd", req => { // debug: set a Silksong PlayerData field (bool/int/float/string) by name
+            var pd = Silksong::PlayerData.instance;
+            if (pd == null) return new { error = "no PlayerData" };
+            var name = req["field"] ?? "";
+            var fi = typeof(Silksong::PlayerData).GetField(name);
+            if (fi == null) return new { error = $"field '{name}' not found" };
+            var val = req["value"] ?? "";
+            var t = fi.FieldType;
+            object parsed;
+            if (t == typeof(bool)) parsed = val.ToLowerInvariant() == "true";
+            else if (t == typeof(int)) parsed = int.Parse(val, System.Globalization.CultureInfo.InvariantCulture);
+            else if (t == typeof(float)) parsed = float.Parse(val, System.Globalization.CultureInfo.InvariantCulture);
+            else if (t == typeof(string)) parsed = val;
+            else return new { error = $"unsupported type {t.Name}" };
+            var old = fi.GetValue(pd);
+            fi.SetValue(pd, parsed);
+            return new { field = name, old = old?.ToString(), set = parsed.ToString() };
+        });
         DebugServer.MapGet("/colmgr", _ => CollectableItemManagerBootstrap.Ensure());
         DebugServer.MapGet("/diag-input", _ => BundleSpike.DiagInput());
         DebugServer.MapGet("/fsm-state", _ => BundleSpike.FsmState());
