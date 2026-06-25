@@ -54,6 +54,7 @@ internal sealed class InputDriver : MonoBehaviour {
         ("cast", KeyCode.A), // bind/heal + silk skill (Silksong's Cast action; Bind FSM ListenForCast)
         ("quickcast", KeyCode.F), // needle throw / quick tool / silk skill
         ("dreamnail", KeyCode.D), // needolin
+        ("taunt", KeyCode.V), // taunt (ListenForTaunt reads Taunt.WasPressed; V is Silksong's own default taunt key)
         ("openinventory",
             KeyCode.K), // open the inventory (Inv pane); ListenForInventoryShortcut reads OpenInventory.WasPressed (K: I/O collide with HK's own inventory)
         ("opentools", KeyCode.L), // open the Tools/Crests pane directly
@@ -130,6 +131,7 @@ internal sealed class InputDriver : MonoBehaviour {
             "left" => ia.Left, "right" => ia.Right, "up" => ia.Up, "down" => ia.Down,
             "jump" => ia.Jump, "attack" => ia.Attack, "dash" => ia.Dash,
             "superdash" => ia.SuperDash, "cast" => ia.Cast, "quickcast" => ia.QuickCast, "dreamnail" => ia.DreamNail,
+            "taunt" => ia.Taunt,
             "openinventory" => ia.OpenInventory, "opentools" => ia.OpenInventoryTools,
             "menusubmit" => ia.MenuSubmit, "menucancel" => ia.MenuCancel,
             _ => null
