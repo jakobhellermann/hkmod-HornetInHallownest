@@ -27,7 +27,16 @@ internal static class Tk2dClipShim {
         ["Collect SD 1 Back"] = "Collect Normal 3",
         ["Collect SD 2"] = "Collect Normal 3",
         ["Collect SD 3"] = "Collect Normal 3",
-        ["Collect SD 4"] = "Collect Normal 3"
+        ["Collect SD 4"] = "Collect Normal 3",
+        // Mantis Lords (and other bosses) challenge-accept: HK plays "Challenge Start" gated on its completion. Map to
+        // Hornet's "Taunt" — thematically a challenge taunt, and wrapMode Once (so AnimationCompleted fires and the FSM
+        // proceeds; mapping to a LoopSection clip would never complete -> permanent soft-lock).
+        // TODO: the preferred pose is "Challenge Strong" (the dramatic away-from-camera challenge stance) — but it's
+        // LoopSection, so it never fires AnimationCompleted and would soft-lock with the simple remap. To use it, add a
+        // general WithEvents gate fix: hook Tk2dPlayAnimationWithEvents and, when a remapped clip loops, fire the
+        // action's animationCompleteEvent after one clip duration so the pose shows AND the FSM advances. Until then,
+        // "Taunt" (Once) is the stand-in.
+        ["Challenge Start"] = "Taunt"
     };
 
     internal static void Install() {
