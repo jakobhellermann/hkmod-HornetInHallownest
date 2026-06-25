@@ -4,6 +4,7 @@ using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using SGate = Silksong::GlobalEnums.GatePosition;
 
 namespace HornetPlayer.Playground;
 
@@ -199,7 +200,25 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static void BeginSceneTransitionHook(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self,
         GameManager.SceneLoadInfo info) {
         orig(self, info);
+        RelayLeaveScene(info);
         DeparentHero("scene transition");
+    }
+
+    // HK drives the transition on its Knight: GameManager calls hk.LeaveScene(gate), which puts the hero in no_input +
+    // NO_DAMAGE + EXITING_SCENE and replaces gravity/locomotion with a scripted transition_vel walk-out. Hornet's own
+    // HeroController never gets this (HK doesn't know about her), so she stays in WAITING_TO_TRANSITION with gravity on,
+    // full damage mode, and the InputDriver still feeding held input — she runs/falls out the gate and (e.g. dropping
+    // through a bottom gate) lands in a hazard and TAKES damage during the fade. Relay HK's LeaveScene onto her real
+    // Silksong LeaveScene with the same gate so her own code does the exact bookkeeping (the EnterScene side is handled
+    // by HornetSceneEntry). GatePosition is the identical enum in both games -> cast by value. Only for a directional
+    // gate exit (HasValue); null-gate loads (death/menu) have their own paths.
+    private static void RelayLeaveScene(GameManager.SceneLoadInfo info) {
+        if (!HeroSwitch.HornetActive || !info.HeroLeaveDirection.HasValue) return;
+        var hero = BundleSpike.RealHero;
+        if (hero == null) return;
+        var gate = (SGate)(int)info.HeroLeaveDirection.Value;
+        hero.LeaveScene(gate);
+        Log.Info($"[EnvAdapter] relayed LeaveScene(gate={gate}) to Hornet (no_input + NO_DAMAGE + gravity off)");
     }
 
     // SceneManager.LoadScene is synchronous (mustCompleteNextFrame=true): by the time orig returns the old scene is
