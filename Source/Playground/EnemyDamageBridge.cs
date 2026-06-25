@@ -115,6 +115,7 @@ internal static class EnemyDamageBridge {
         // the subscribers bound to THIS attacker's damager, so it's targeted (a normal slash has none).
         if (hit && target.GetComponentInParent<HealthManager>() != null)
             FireWillDamageEnemy(self);
+
         return hit;
     }
 

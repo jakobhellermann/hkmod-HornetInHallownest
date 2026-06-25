@@ -16,10 +16,17 @@ namespace HornetPlayer.Playground;
 // call CanBind, gets null, never calls it -> "Return Bool" stays false -> the gate cancels bind/heal. (Typed
 // GetComponent<T> is unaffected; only the string overload collides.)
 //
-// Fix: on a NULL result, fall back to scanning the object's own components for one whose type Name/FullName matches the
-// requested name. Only activates on null (Unity's normal hit is untouched), and GetComponent(string) is cold (~0/s in
-// gameplay, ~340 calls total at boot), so the cost is nil. Process-wide but harmless: HK calls that legitimately return
-// null just do one extra component scan that also finds nothing.
+// Fix: on a NULL result, fall back to scanning the object's own components for one whose type — OR any of its base
+// types — has Name/FullName matching the requested name. The base-type walk mirrors Unity's native GetComponent(string),
+// which returns a component that IS or DERIVES FROM the named type: e.g. the Sprint FSM resets the dash-stab between
+// strikes via CallMethodProper(behaviour="NailAttackBase", "OnCancelAttack") -> GetComponent("NailAttackBase"), but
+// Hornet's component is DashStabNailAttack (derives from NailAttackBase). An exact-name-only scan misses it, so
+// OnCancelAttack -> DamageEnemies.EndDamage() never runs -> damagedColliders never clears -> each enemy is hit only ONCE
+// per scene (the dash-stab recoil/bounce works on the first hit, then she runs into the enemy). The base walk fixes it.
+//
+// Only activates on null (Unity's normal hit is untouched), and GetComponent(string) is cold (~0/s in gameplay, ~340
+// calls total at boot), so the cost is nil. Process-wide but harmless: HK calls that legitimately return null just do
+// one extra component scan that also finds nothing.
 internal static class GetComponentShim {
     private static Hook? hook;
 
@@ -37,8 +44,8 @@ internal static class GetComponentShim {
                 if (c != null || string.IsNullOrEmpty(name)) return c;
                 foreach (var comp in self.GetComponents<Component>()) {
                     if (comp == null) continue; // a missing-script component
-                    var ty = comp.GetType();
-                    if (ty.Name == name || ty.FullName == name) return comp;
+                    for (var ty = comp.GetType(); ty != null && ty != typeof(object); ty = ty.BaseType)
+                        if (ty.Name == name || ty.FullName == name) return comp;
                 }
 
                 return null;
