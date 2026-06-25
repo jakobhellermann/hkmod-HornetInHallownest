@@ -54,7 +54,6 @@ internal static class Stub {
         // Tool-equipment subsystem isn't initialized -> IsToolEquipped NullRefs; stub the root (no tools equipped),
         // which should cascade-fix ToolItem.IsEquipped / CheckIfToolEquipped / ToolEquipChecker / HeroWispLantern.
         Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped", true); // per-frame (crest equip checks)
-        Skip(typeof(Silksong::KeepWorldScalePositive), "OnEnable");
         Skip(typeof(Silksong::HeroNailImbuement), "Awake");
         Skip(typeof(Silksong::FollowTransform), "OnEnable");
         // NOTE: the PlayMaker-ACTION stubs (SetPolygonCollider.OnEnter, ListenForTauntV2/ListenFor* OnUpdate) were
