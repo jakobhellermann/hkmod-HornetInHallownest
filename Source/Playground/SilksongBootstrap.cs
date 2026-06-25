@@ -67,6 +67,7 @@ internal static class SilksongBootstrap {
             // PlayerData.bindCutscenePlayed — the game sets this after the intro bind cutscene; until then the HUD health
             // stays hidden. We skip the intro, so set it true -> masks self-appear on HUD bring-up (no manual drive).
             pd.bindCutscenePlayed = true;
+            pd.nailUpgrades = 1;
             // Equip a valid crest so ToolItemManager.GetCrestByName(CurrentCrestID) resolves (-> nail arts get a
             // crestConfig, and the inventory crest carousel has a selection). Fresh PlayerData doesn't apply the
             // [DefaultValue("Hunter")] attribute, so set it explicitly. "Hunter" is the starting crest.
