@@ -100,6 +100,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         GetComponentShim.Cleanup();
         CompareTagShim.Cleanup();
         HeroControllerProbe.Cleanup();
+        HarpoonProbe.Cleanup();
+        ShroomBounceBridge.Cleanup();
         EnemyTargetBridge.Cleanup();
         HeroProxy.Cleanup();
         Tk2dClipShim.Cleanup();
@@ -286,6 +288,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         GetComponentShim
             .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
         CompareTagShim.Install(); // CompareTag("Recoiler") -> true (HK has no "Recoiler" tag; else CompareTag throws)
+        HarpoonProbe.Install(); // DIAGNOSTIC: trace harpoon (SuperDash) input -> LookForQueueInput -> DO MOVE
+        ShroomBounceBridge.Install(); // HK BounceShroom/BigBouncer -> Hornet ShroomBounce/BounceHigh on down-attack pogo
         HeroControllerProbe
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
         EnemyTargetBridge

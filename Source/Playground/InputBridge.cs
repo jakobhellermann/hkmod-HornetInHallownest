@@ -107,7 +107,11 @@ internal sealed class InputDriver : MonoBehaviour {
             var dt = Time.deltaTime;
             foreach (var (name, key) in Map) {
                 var pressed = Input.GetKey(key) || Consume(name);
-                ActionFor(ia, name)?.CommitWithState(pressed, tick, dt);
+                var act = ActionFor(ia, name);
+                act?.CommitWithState(pressed, tick, dt);
+                // DIAGNOSTIC (harpoon): confirm the SuperDash WasPressed edge actually gets produced on press.
+                if (name == "superdash" && act != null && act.WasPressed)
+                    Log.Info($"[HarpoonInput] driver committed SuperDash WasPressed (is={act.IsPressed}, pressed={pressed})");
             }
 
             // Recompute the MoveVector (TwoAxis) from the freshly-committed Left/Right/Up/Down. Update is internal.

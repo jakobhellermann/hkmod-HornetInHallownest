@@ -10,6 +10,8 @@ using FsmEvent = SilksongPM::HutongGames.PlayMaker.FsmEvent;
 
 namespace HornetPlayer.Playground;
 
+extern alias Silksong;
+
 // Live FSM execution tracer for the isolated Silksong.PlayMaker runtime (Hornet's FSMs). The /fsm-dump* routes give a
 // STATIC snapshot of an FSM's graph; this shows what actually RUNS at runtime: every state transition and every event,
 // for a chosen FSM, as it happens. Use it to see exactly where an ability FSM goes wrong (e.g. which state it cancels
