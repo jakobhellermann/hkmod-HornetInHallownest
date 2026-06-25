@@ -45,7 +45,8 @@ internal static class GetComponentShim {
                 foreach (var comp in self.GetComponents<Component>()) {
                     if (comp == null) continue; // a missing-script component
                     for (var ty = comp.GetType(); ty != null && ty != typeof(object); ty = ty.BaseType)
-                        if (ty.Name == name || ty.FullName == name) return comp;
+                        if (ty.Name == name || ty.FullName == name)
+                            return comp;
                 }
 
                 return null;

@@ -66,7 +66,7 @@ internal static class ShroomBounceBridge {
                     // FSM) -> the bounce trail sticks to the inert Knight. Re-parent the freshly spawned particles onto
                     // Hornet, keeping BounceLarge's local offset.
                     if (heroParticlesField?.GetValue(null) is GameObject hp && hp != null) {
-                        hp.transform.SetParent(hero.transform, worldPositionStays: false);
+                        hp.transform.SetParent(hero.transform, false);
                         hp.transform.localPosition = new Vector3(0f, -1.5f, -0.002f);
                     }
                 } catch (Exception e) {

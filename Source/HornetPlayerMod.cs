@@ -1,6 +1,7 @@
 ﻿extern alias Silksong;
 using System;
 using System.Collections;
+using System.Globalization;
 using System.Reflection;
 using HornetPlayer.DevServer;
 using HornetPlayer.HornetInHallownest.Core;
@@ -24,7 +25,10 @@ public class HornetPlayerMod : Mod, ITogglableMod {
     // system is migrated it keeps its old Install/Cleanup below. Initialize forward, Deinitialize reverse.
     private readonly ModuleHost moduleHost = new();
 
+    private Hook? finishedEnteringHook;
+
     private GameObject? playgroundHost;
+    private Hook? returnToMenuHook;
     private ValidationRunner? validation;
 
     public static HornetPlayerMod? LoadedInstance { get; private set; }
@@ -136,7 +140,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/toolmgr", _ => ToolItemManagerBootstrap.Diag());
-        DebugServer.MapPost("/dbg-recoil", req => { // validate recoil/bounce mechanics directly (kind=bounce|dash)
+        DebugServer.MapPost("/dbg-recoil", req => {
+            // validate recoil/bounce mechanics directly (kind=bounce|dash)
             var hero = HornetSpawner.RealHero;
             if (hero == null) return new { error = "no hero" };
             var kind = req["kind"] ?? "bounce";
@@ -144,7 +149,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             else hero.DownspikeBounce(true);
             return new { fired = kind };
         });
-        DebugServer.MapGet("/equip-crest", req => { // equip a crest by id + apply its HeroConfig (ResetAllCrestState)
+        DebugServer.MapGet("/equip-crest", req => {
+            // equip a crest by id + apply its HeroConfig (ResetAllCrestState)
             var id = req["id"] ?? "";
             Silksong::ToolItemManager.SetEquippedCrest(id);
             Silksong::ToolItemManager.SendEquippedChangedEvent(true);
@@ -156,7 +162,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
                 recoilHorVelocity = hero != null ? hero.RECOIL_HOR_VELOCITY : -1f
             };
         });
-        DebugServer.MapPost("/set-pd", req => { // debug: set a Silksong PlayerData field (bool/int/float/string) by name
+        DebugServer.MapPost("/set-pd", req => {
+            // debug: set a Silksong PlayerData field (bool/int/float/string) by name
             var pd = Silksong::PlayerData.instance;
             if (pd == null) return new { error = "no PlayerData" };
             var name = req["field"] ?? "";
@@ -166,8 +173,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             var t = fi.FieldType;
             object parsed;
             if (t == typeof(bool)) parsed = val.ToLowerInvariant() == "true";
-            else if (t == typeof(int)) parsed = int.Parse(val, System.Globalization.CultureInfo.InvariantCulture);
-            else if (t == typeof(float)) parsed = float.Parse(val, System.Globalization.CultureInfo.InvariantCulture);
+            else if (t == typeof(int)) parsed = int.Parse(val, CultureInfo.InvariantCulture);
+            else if (t == typeof(float)) parsed = float.Parse(val, CultureInfo.InvariantCulture);
             else if (t == typeof(string)) parsed = val;
             else return new { error = $"unsupported type {t.Name}" };
             var old = fi.GetValue(pd);
@@ -209,7 +216,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         DebugServer.MapGet("/probe-actions", _ => BundleSpike.ProbeActions());
         DebugServer.MapGet("/probe-hero-fsms", _ => BundleSpike.ProbeHeroFsms());
         DebugServer.MapGet("/hero-clips", req => BundleSpike.ListHeroClips(req["filter"])); // list Hornet's tk2d clips
-        DebugServer.MapPost("/play-clip", req => BundleSpike.PlayHeroClip(req["name"])); // play a Hornet clip (anim-control off)
+        DebugServer.MapPost("/play-clip",
+            req => BundleSpike.PlayHeroClip(req["name"])); // play a Hornet clip (anim-control off)
         DebugServer.MapPost("/hero-anim-resume", _ => BundleSpike.ResumeHeroAnim()); // restore normal animation control
         DebugServer.MapPost("/load-save", req => {
             var slot = int.TryParse(req["slot"], out var s) ? s : 0;
@@ -224,7 +232,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             (req, respond) =>
                 validation!.RunRoute(req, respond)); // run a validation scenario (optionally disable=ModuleId,...)
         DebugServer.MapGet("/validate-list", _ => validation!.List()); // list scenarios + module Ids
-        DebugServer.MapGet("/respawn-state", _ => { // compare HK vs Silksong PlayerData respawn (hard-save split)
+        DebugServer.MapGet("/respawn-state", _ => {
+            // compare HK vs Silksong PlayerData respawn (hard-save split)
             var hk = GameManager.instance.playerData;
             var ss = Silksong::PlayerData.instance;
             return new {
@@ -233,7 +242,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
                 ss = ss != null ? new { ss.respawnScene, ss.respawnMarkerName, ss.respawnType, ss.atBench } : null
             };
         });
-        DebugServer.MapPost("/mirror-respawn", _ => { // copy Silksong PD respawn -> HK PD (un-poison a pre-bridge save)
+        DebugServer.MapPost("/mirror-respawn", _ => {
+            // copy Silksong PD respawn -> HK PD (un-poison a pre-bridge save)
             var ss = Silksong::PlayerData.instance;
             var knight = HeroController.UnsafeInstance;
             if (ss == null || knight == null) return new { error = "no Silksong PD / HK hero" };
@@ -298,7 +308,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         ContactDamageBridge
             .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
-        RespawnBridge.Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
+        RespawnBridge
+            .Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
         CoroutineRedirect
             .Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
         HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
@@ -308,7 +319,8 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         GetComponentShim
             .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
         CompareTagShim.Install(); // CompareTag("Recoiler") -> true (HK has no "Recoiler" tag; else CompareTag throws)
-        ShroomBounceBridge.Install(); // HK BounceShroom/BigBouncer -> Hornet ShroomBounce/BounceHigh on down-attack pogo
+        ShroomBounceBridge
+            .Install(); // HK BounceShroom/BigBouncer -> Hornet ShroomBounce/BounceHigh on down-attack pogo
         HeroControllerProbe
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
         EnemyTargetBridge
@@ -338,11 +350,9 @@ public class HornetPlayerMod : Mod, ITogglableMod {
         if (knight != null && knight.isHeroInPosition && HornetSpawner.HornetRoot == null) HornetSpawner.Spawn();
     }
 
-    private Hook? finishedEnteringHook;
-    private Hook? returnToMenuHook;
-
     private void InstallSpawnLifecycle() {
-        var entered = typeof(GameManager).GetMethod("FinishedEnteringScene", BindingFlags.Public | BindingFlags.Instance);
+        var entered =
+            typeof(GameManager).GetMethod("FinishedEnteringScene", BindingFlags.Public | BindingFlags.Instance);
         if (entered != null)
             finishedEnteringHook = new Hook(entered,
                 (Action<Action<GameManager>, GameManager>)((orig, self) => {

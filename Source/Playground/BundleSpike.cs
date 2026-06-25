@@ -129,7 +129,8 @@ internal static class BundleSpike {
         if (anim == null || anim.Library == null) return new { error = "no animator/library" };
         var names = new List<string>();
         foreach (var c in anim.Library.clips)
-            if (c != null && (string.IsNullOrEmpty(filter) || c.name.ToLowerInvariant().Contains(filter.ToLowerInvariant())))
+            if (c != null && (string.IsNullOrEmpty(filter) ||
+                              c.name.ToLowerInvariant().Contains(filter.ToLowerInvariant())))
                 names.Add(c.name);
         names.Sort();
         return new { count = names.Count, clips = names };

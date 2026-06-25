@@ -19,15 +19,17 @@ internal static class CompareTagShim {
     internal static void Install() {
         var goMi = typeof(GameObject).GetMethod("CompareTag", new[] { typeof(string) });
         if (goMi != null)
-            goHook = new Hook(goMi, (Func<Func<GameObject, string, bool>, GameObject, string, bool>)((orig, self, tag) =>
-                tag == RecoilerTag ? HitRecoiler(self.name) : orig(self, tag)));
+            goHook = new Hook(goMi,
+                (Func<Func<GameObject, string, bool>, GameObject, string, bool>)((orig, self, tag) =>
+                    tag == RecoilerTag ? HitRecoiler(self.name) : orig(self, tag)));
         else
             Log.Error("[CompareTagShim] GameObject.CompareTag(string) not found");
 
         var compMi = typeof(Component).GetMethod("CompareTag", new[] { typeof(string) });
         if (compMi != null)
-            compHook = new Hook(compMi, (Func<Func<Component, string, bool>, Component, string, bool>)((orig, self, tag) =>
-                tag == RecoilerTag ? HitRecoiler(self.name) : orig(self, tag)));
+            compHook = new Hook(compMi,
+                (Func<Func<Component, string, bool>, Component, string, bool>)((orig, self, tag) =>
+                    tag == RecoilerTag ? HitRecoiler(self.name) : orig(self, tag)));
         else
             Log.Error("[CompareTagShim] Component.CompareTag(string) not found");
     }
