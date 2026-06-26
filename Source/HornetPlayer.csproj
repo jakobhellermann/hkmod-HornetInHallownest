@@ -127,6 +127,11 @@
         <Reference Include="Newtonsoft.Json" Private="false">
             <HintPath>$(HollowKnightRefs)/Newtonsoft.Json.dll</HintPath>
         </Reference>
+        <!-- Team Cherry's Unity JsonConverters (Vector2/3/Color/…) — the same set Silksong's SaveDataUtility uses to
+             serialize PlayerData cleanly (as {x,y}, not via computed properties like Vector2.normalized). -->
+        <Reference Include="Newtonsoft.Json.UnityConverters" Private="false">
+            <HintPath>$(HollowKnightRefs)/Newtonsoft.Json.UnityConverters.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
     <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(CopyDir)' != ''">

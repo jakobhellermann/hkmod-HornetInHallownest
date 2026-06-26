@@ -17,7 +17,17 @@ using Object = UnityEngine.Object;
 
 namespace HornetPlayer;
 
-public class HornetPlayerMod : Mod, ITogglableMod {
+public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData> {
+    // Persist Hornet's PlayerData inside HK's save file (per slot). The modding API invokes these at HK's native
+    // save/load points (GameManager.SaveGame on bench/autosave; LoadGame on load) — see HornetSaveBridge.
+    public HornetSaveData OnSaveLocal() {
+        return HornetSaveBridge.Snapshot();
+    }
+
+    public void OnLoadLocal(HornetSaveData s) {
+        HornetSaveBridge.Stash(s);
+    }
+
     // Distinct from Silksong's DevUtils server (8200) so both games can be debugged at once.
     private const int DebugServerPort = 8201;
 
@@ -357,13 +367,17 @@ public class HornetPlayerMod : Mod, ITogglableMod {
             finishedEnteringHook = new Hook(entered,
                 (Action<Action<GameManager>, GameManager>)((orig, self) => {
                     orig(self);
-                    if (HornetSpawner.HornetRoot != null) return;
-                    try {
-                        HornetSpawner.Spawn();
-                        Playground.Log.Info("[SpawnLifecycle] entered gameplay scene -> spawned Hornet");
-                    } catch (Exception e) {
-                        Playground.Log.Error($"[SpawnLifecycle] {e}");
-                    }
+                    if (HornetSpawner.HornetRoot == null)
+                        try {
+                            HornetSpawner.Spawn();
+                            Playground.Log.Info("[SpawnLifecycle] entered gameplay scene -> spawned Hornet");
+                        } catch (Exception e) {
+                            Playground.Log.Error($"[SpawnLifecycle] {e}");
+                        }
+
+                    // After spawn (PlayerData.instance exists), apply a save loaded earlier this LoadGame. No-op unless a
+                    // load stashed data; clears itself so it applies exactly once.
+                    HornetSaveBridge.ApplyPending();
                 }));
         else
             Playground.Log.Error("[SpawnLifecycle] GameManager.FinishedEnteringScene not found");
