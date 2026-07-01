@@ -108,6 +108,12 @@ internal sealed class InputDriver : MonoBehaviour {
             var dt = Time.deltaTime;
             foreach (var (name, key) in Map) {
                 var pressed = Input.GetKey(key) || Consume(name);
+                // ESC also drives Silksong's MenuCancel: the inventory closes on OpenInventory(K) or MenuCancel (its
+                // InventoryPaneInput -> PressCancel). The physical ESC only reaches HK's InputHandler (pause), never
+                // Silksong's MenuCancel, so ESC couldn't close the inventory. While the inventory is open HK's pause is
+                // already suppressed (InventoryPauseBridge StopUIInput), so ESC -> close only; while closed MenuCancel is
+                // a harmless no-op and ESC still opens HK's own pause menu.
+                if (name == "menucancel") pressed |= Input.GetKey(KeyCode.Escape);
                 ActionFor(ia, name)?.CommitWithState(pressed, tick, dt);
             }
 

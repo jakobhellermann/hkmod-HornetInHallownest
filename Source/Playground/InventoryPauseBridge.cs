@@ -50,6 +50,22 @@ internal static class InventoryPauseBridge {
                             else hero.RemoveInputBlocker(inputBlocker);
                         }
 
+                        // Put HK into the same input-suppressed state it enters for its OWN UI (PauseGameToggle sets
+                        // isPaused + StopUIInput), minus showing HK's menu — so HK's input systems stop firing behind the
+                        // Silksong inventory. This is the generic root fix for both symptoms: acceptingInput=false
+                        // (StopUIInput) gates HK's ESC pause-poll (InputHandler.Update runs it inside if(acceptingInput));
+                        // isPaused=true gates every HK ListenFor* action (they early-return on gm.isPaused) — incl. the
+                        // Bench Control get-up on up/down. HK's GameManager is the unprefixed one (Silksong's is inactive).
+                        var hkGm = GameManager.instance; // HK's GameManager
+                        if (hkGm != null) {
+                            hkGm.isPaused = value;
+                            var hkIh = hkGm.GetComponent<InputHandler>();
+                            if (hkIh != null) {
+                                if (value) hkIh.StopUIInput();
+                                else hkIh.StartUIInput();
+                            }
+                        }
+
                         Log.Info(
                             $"[InvPause] SetIsInventoryOpen({value}) -> HK world {(value ? "frozen" : "resumed")} "
                             + $"(timeScale={Time.timeScale})");
