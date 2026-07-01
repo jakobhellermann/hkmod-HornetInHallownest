@@ -13,8 +13,16 @@
 # Re-run after a Silksong update to regenerate. Output (Source/lib/*.dll) is gitignored.
 set -euo pipefail
 
-SS="${SS_MANAGED:-$HOME/.local/share/Steam/steamapps/common/Hollow Knight Silksong/Hollow Knight Silksong_Data/Managed}"
-HK="${HK_MANAGED:-$HOME/.local/share/Steam/steamapps/common/Hollow Knight/hollow_knight_Data/Managed}"
+STEAM="$HOME/.local/share/Steam/steamapps/common"
+SS_DEFAULT="$STEAM/Hollow Knight Silksong/Hollow Knight Silksong_Data/Managed"
+HK_DEFAULT="$STEAM/Hollow Knight/hollow_knight_Data/Managed"
+if [ "$(uname)" = "Darwin" ]; then
+  STEAM="$HOME/Library/Application Support/Steam/steamapps/common"
+  SS_DEFAULT="$STEAM/Hollow Knight Silksong/Hollow Knight Silksong.app/Contents/Resources/Data/Managed"
+  HK_DEFAULT="$STEAM/Hollow Knight/hollow_knight.app/Contents/Resources/Data/Managed"
+fi
+SS="${SS_MANAGED:-$SS_DEFAULT}"
+HK="${HK_MANAGED:-$HK_DEFAULT}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 LIB="$HERE/../Source/lib"
 mkdir -p "$LIB"

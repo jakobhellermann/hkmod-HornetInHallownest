@@ -14,10 +14,11 @@
         <!-- Shortens and anonymizes paths in debug symbols relative to the project directory. Breakpoints will not work, however. -->
         <PathMap Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectDirectory)=/</PathMap>
 
-        <!-- todo macOS -->
         <GamePath Condition="'$(GamePath)' == '' And '$(OS)' == 'Windows_NT'">C:/Program Files (x86)/Steam/steamapps/common/Hollow Knight</GamePath>
-        <GamePath Condition="'$(GamePath)' == '' And '$(OS)' != 'Windows_NT'">$(HOME)/.local/share/Steam/steamapps/common/Hollow Knight</GamePath>
-        <HollowKnightRefs>$(GamePath)/hollow_knight_Data/Managed</HollowKnightRefs>
+        <GamePath Condition="'$(GamePath)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/Library/Application Support/Steam/steamapps/common/Hollow Knight</GamePath>
+        <GamePath Condition="'$(GamePath)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Hollow Knight</GamePath>
+        <HollowKnightRefs Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(GamePath)/hollow_knight.app/Contents/Resources/Data/Managed</HollowKnightRefs>
+        <HollowKnightRefs Condition="'$(HollowKnightRefs)' == ''">$(GamePath)/hollow_knight_Data/Managed</HollowKnightRefs>
 
         <CopyDir Condition="'$(CopyDir)' == ''">$(HollowKnightRefs)/Mods/HornetPlayer</CopyDir>
     </PropertyGroup>
