@@ -14,4 +14,8 @@ public class HornetSaveData {
     // [JsonObject(MemberSerialization.Fields)], the same shape its own save uses). Kept as a string so it round-trips
     // onto the LIVE PlayerData.instance via PopulateObject instead of replacing the instance the hero already holds.
     public string? PlayerData;
+
+    // Which hero the player controlled when the save was written: true = Hornet, false = Knight. Restored post-spawn so
+    // loading a save puts you back on the hero you were playing. Absent in old saves -> deserializes to false (Knight).
+    public bool HornetActive;
 }

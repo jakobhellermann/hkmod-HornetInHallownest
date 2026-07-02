@@ -388,6 +388,10 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
                 (Func<Func<GameManager, GameManager.ReturnToMainMenuSaveModes, Action<bool>, IEnumerator>, GameManager,
                     GameManager.ReturnToMainMenuSaveModes, Action<bool>, IEnumerator>)((orig, self, mode, cb) => {
                     if (HornetSpawner.HornetRoot != null) {
+                        // Record the hero the player was actually on: ReturnToMainMenu autosaves, but we must force the
+                        // Knight active below (camera handback), which would otherwise make that save record Knight and
+                        // clobber the "was playing Hornet" state. The override is consumed by the next Snapshot.
+                        HornetSaveBridge.SaveActiveOverride = HeroSwitch.HornetActive;
                         // Hand the camera back to the Knight first: HeroSwitch points HK's CameraTarget at the active
                         // hero, so despawning while Hornet is active would leave CameraTarget.Update dereferencing a
                         // destroyed transform every frame through the menu fade.
