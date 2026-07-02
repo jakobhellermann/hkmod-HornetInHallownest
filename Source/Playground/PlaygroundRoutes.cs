@@ -58,6 +58,7 @@ public static class PlaygroundRoutes {
             ["name"] = go.name,
             ["active"] = go.activeSelf,
             ["layer"] = go.layer,
+            ["tag"] = go.tag,
             ["components"] = go.GetComponents<Component>().Select(c => c == null ? "null" : c.GetType().FullName)
                 .ToArray()
         };
@@ -90,6 +91,7 @@ public static class PlaygroundRoutes {
             return new {
                 path = ComponentPath.GetPath(target),
                 target.layer,
+                target.tag,
                 components = target.GetComponents<Component>()
                     .Select(c => c == null ? "null" : c.GetType().FullName).ToArray()
             };
