@@ -1,0 +1,30 @@
+# Self-contained asset pipeline for HornetPlayer: regenerates the Silksong-derived bundles the mod loads.
+# Two binaries (see src/bin/), pulling rabex + rabex-env straight from git so a fresh checkout builds them
+# without a local rabex-env clone. See ../../CLAUDE.md "Build pipeline" and ../../Makefile.
+[package]
+name = "hornet-asset-pipeline"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+rabex = { version = "0.1", default-features = false, features = ["embed-tpk"] }
+rabex-env = { git = "https://github.com/jakobhellermann/rabex-env.git", rev = "041e6c10f5eb02b405c315e91fca6fb32b84c4d8" }
+anyhow = "1.0"
+rustc-hash = "2.1"
+# rabex-env's utils::find_game (vendored into src/lib.rs) locates the installed game via Steam; steamlocate is a
+# dev-dependency of rabex-env so it isn't pulled transitively through the git dep — declare it directly.
+steamlocate = "2.0"
+
+# rabex is not published in the version rabex-env needs (its patched local 0.1.1 has newer builder APIs), so redirect
+# the crates.io `rabex` — for both this crate AND the rabex-env git dep — to the same git source.
+[patch.crates-io]
+rabex = { git = "https://github.com/jakobhellermann/RustyAssetBundleEXtractor.git", rev = "2178468767a0f36ad75242843a5409257d493445" }
+
+[[bin]]
+name = "remap-monoscripts"
+path = "src/bin/remap-monoscripts.rs"
+
+[[bin]]
+name = "repack-resources"
+path = "src/bin/repack-resources.rs"

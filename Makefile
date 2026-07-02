@@ -3,9 +3,8 @@
 # Run `make all` after a fresh checkout / `git clean`, or a single target as needed.
 # Outputs are gitignored except monoscripts.silksong.bundle (tracked in git).
 
-UNITY ?= $(HOME)/dev/unity
-RABEX := $(UNITY)/rabex-env
-LIB   := $(CURDIR)/Source/lib
+PIPELINE := $(CURDIR)/tools/asset-pipeline
+LIB      := $(CURDIR)/Source/lib
 
 .PHONY: all setup-libs remap-monoscripts repack-resources help
 
@@ -25,9 +24,9 @@ setup-libs:
 
 # Rebuild the hero MonoScripts bundle, rewriting m_AssemblyName -> Silksong.* (incl. PlayMaker.dll -> Silksong.PlayMaker).
 remap-monoscripts:
-	cd $(RABEX) && cargo run --release --example remap_monoscripts
+	cd $(PIPELINE) && cargo run --release --bin remap-monoscripts
 
 # Repack Silksong's resources.assets (the whole ResourceManager container) -> silksong-resources.bundle, which
-# ResourcesShim serves Silksong's Resources.Load from. The output path is hardcoded in the rabex-env example.
+# ResourcesShim serves Silksong's Resources.Load from.
 repack-resources:
-	cd $(RABEX) && cargo run --release --example repack_resources
+	cd $(PIPELINE) && cargo run --release --bin repack-resources
