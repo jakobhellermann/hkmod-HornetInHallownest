@@ -77,6 +77,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
 
                 StuckControlNet(hero);
                 StuckEntryWatch(hero);
+                QuakeFloorBridge.Tick(hero); // down-dash breaks HK quake floors (only iterates while quaking)
             }
 
             // --- The bookkeeping half of InputHandler.Update ---
