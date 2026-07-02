@@ -145,6 +145,13 @@ internal sealed class HornetDeath : MonoBehaviour {
         // and re-assert Hornet active. who==prev so this skips the position handoff, just re-runs SetInert on both.
         HeroSwitch.SetActive(ActiveHero.Hornet);
 
+        // HK's death/respawn disables Hornet's HUD mask renderers, but the per-frame HUD visibility sync only
+        // SetActive-s the "In-game" container ON CHANGE — with it already active, it never re-fires the HUD FSMs'
+        // OnEnable, so the masks stay hidden (the "HUD gone until Tab Tab" symptom; a Tab cycle is exactly this toggle).
+        // Deactivate it once here; CameraSwitchDriver's sync (exec order -8000, runs before this coroutine's frame ends)
+        // re-activates it next frame, re-running the FSMs' appear. No-op if the HUD isn't up.
+        GameCamerasBootstrap.SetHornetHudVisible(false);
+
         Log.Info($"[HornetDeath] revived Hornet at {(Vector2)hero.transform.position} (atBench={atBench})");
     }
 
