@@ -18,6 +18,7 @@
 - XX hardsaves
 - XX save hornet state
 - OOB on scene transitions
+- elevator/lift transitions: Knight strands at shaft top, Hornet falls to bottom, camera-lock stuck up top (dark)
 - spring water
 - swimming
 - cannot pickup geo on dash
