@@ -10,7 +10,7 @@
 - death animation
 - fury area glow doesnt stop
 - hornet bench location
-- VS get animation shows knight always
+- VS/dive animation shows knight always
 - mask shard pickup animation
 - hollow knight statue cutscene
 
@@ -25,7 +25,9 @@
 - dash attack jumpup
 - grubfather?
 - hornet falling after level exit
-- soul totem -> silk
+
+# Balancing
+- soul totem <-> silk
 
 ## Nive to have
 - hud sync? geo on hornet

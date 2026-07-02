@@ -108,6 +108,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         RespawnBridge.Cleanup();
         CoroutineRedirect.Cleanup();
         HornetBench.Cleanup();
+        SoulOrbBridge.Cleanup();
         HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
@@ -323,6 +324,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         CoroutineRedirect
             .Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
         HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
+        SoulOrbBridge.Install(); // HK soul (SoulOrb homing + AddMPCharge) -> Hornet silk (orbs fly to her, grant silk)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
