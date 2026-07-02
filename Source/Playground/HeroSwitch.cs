@@ -400,9 +400,17 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         if (gate == null || gate.GetGatePosition() != GatePosition.bottom)
             return; // only the non-self-completing branch
         gm.FinishedEnteringScene();
+        // The inert Knight never physically lands, so its transitionState stays stuck at DROPPING_DOWN instead of
+        // settling to WAITING_TO_TRANSITION (the normal "in the level, resting" state). HK camera/transition consumers
+        // read the Knight's transitionState as the hero proxy (CameraTarget.hero_ctrl is the Knight — type-incompatible
+        // with Silksong's HeroController, so we can only retarget heroTransform, not hero_ctrl). Most visibly,
+        // CameraTarget.ExitLockZone picks mode=FREE (camera stops following) instead of FOLLOW_HERO whenever Hornet
+        // leaves a CameraLockArea, because the Knight isn't in a WAITING_* state. Settle it to match a finished entry.
+        knight.transitionState = HeroTransitionState.WAITING_TO_TRANSITION;
         hkEntryFixed = true;
         Log.Info("[CameraSwitch] inert Knight stuck in bottom-gate entry (DROPPING_DOWN + gameState=ENTERING_LEVEL) "
-                 + "-> called gm.FinishedEnteringScene() to complete HK's handshake (unblocks transitions)");
+                 + "-> called gm.FinishedEnteringScene() + settled transitionState=WAITING_TO_TRANSITION "
+                 + "(completes HK's handshake, unblocks transitions + keeps the camera following after lock zones)");
     }
 
     private static void SnapHornetToKnight(HeroController knight) {
