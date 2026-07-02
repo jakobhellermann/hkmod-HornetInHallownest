@@ -5,7 +5,7 @@
 # Bugs
 
 ## Cosmetic
-- no sound
+- audio volume not tied to settings
 - camera positioning
 - death animation
 - fury area glow doesnt stop
