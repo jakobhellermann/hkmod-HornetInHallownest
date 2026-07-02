@@ -305,6 +305,14 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
             lastScene = scene;
             pendingSnap = true;
             hkEntryFixed = false;
+
+            // Pre-place Hornet at the entry gate NOW. HK has already relocated the Knight (its transition vehicle) to
+            // the new gate this frame, but Hornet (DontDestroyOnLoad) still holds her previous-scene coords. Enemy FSMs
+            // that sample the hero's entry position fire synchronously off HK's `heroInPosition` event a few frames later
+            // — BEFORE the isHeroInPosition-gated entry-run below moves her — and would read her stale position (e.g.
+            // Ruins Sentry Fat's "Shift Based On Hero Pos" picking the wrong side). One snap here (it also zeroes her
+            // carried velocity so she doesn't drift off the gate); the real walk-in entry still runs at isHeroInPosition.
+            if (knight != null) SnapHornetToKnight(knight);
         }
 
         CompleteStuckHkVerticalEntry(knight);
