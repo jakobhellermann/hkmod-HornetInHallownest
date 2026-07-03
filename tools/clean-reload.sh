@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Clean startup + staged log snapshots for HornetPlayer debugging.
 #
-# Launches Hollow Knight (with the mod), then checkpoints the logs with logsnap at three stages:
+# Launches Hollow Knight (with the mod) via .run/run-hollow-knight.sh (which handles the OS/Rosetta launch),
+# then checkpoints the logs with logsnap at three stages:
 #   "loadgame"  — after boot + mod init
 #   "loadlevel" — after loading a save slot (HK GameManager.LoadGameFromUI via the mod's /load-save route)
 #   "switch"    — after switching control to Hornet (the mod's /switch?who=hornet route)
@@ -12,25 +13,35 @@
 # Usage:  tools/clean-reload.sh [slot]      # slot defaults to 1 ("level 1")
 set -eu
 
-GAME_DIR="/home/jakob/.steamapps/Hollow Knight"   # symlink -> ~/.local/share/Steam/steamapps/common/Hollow Knight
-GAME_BIN="$GAME_DIR/hollow_knight.x86_64"
-LOGDIR="$HOME/.config/unity3d/Team Cherry/Hollow Knight"
+HERE="$(cd "$(dirname "$0")" && pwd)"
+LAUNCHER="$HERE/../.run/run-hollow-knight.sh"
 SLOT="${1:-1}"
 DEV="localhost:8201"
 
+if [ "$(uname)" = Darwin ]; then
+    # macOS splits the two logs across different directories.
+    PLAYER_LOG="$HOME/Library/Logs/Team Cherry/Hollow Knight/Player.log"
+    MODLOG="$HOME/Library/Application Support/unity.Team Cherry.Hollow Knight/ModLog.txt"
+    PKILL_PAT="hollow_knight.app/Contents/MacOS/Hollow Knight"
+else
+    LOGDIR="$HOME/.config/unity3d/Team Cherry/Hollow Knight"
+    PLAYER_LOG="$LOGDIR/Player.log"
+    MODLOG="$LOGDIR/ModLog.txt"
+    PKILL_PAT="hollow_knight.x86_64"
+fi
+
 # 0. Open a fresh logsnap session (cursors at EOF) and kill any running instance before a fresh launch.
-rm -f "$LOGDIR/Player.log" "$LOGDIR/ModLog.txt"
-logsnap open "$LOGDIR/Player.log" "$LOGDIR/ModLog.txt"
-if pkill -f hollow_knight.x86_64 2>/dev/null; then
+rm -f "$PLAYER_LOG" "$MODLOG"
+logsnap open "$PLAYER_LOG" "$MODLOG"
+if pkill -f "$PKILL_PAT" 2>/dev/null; then
     echo "killed running Hollow Knight"
     sleep 1   # let it release the window / log file before relaunch
 fi
 
 dotnet build
 
-# 1. Launch detached so the game survives this script exiting.
-cd "$GAME_DIR" || { echo "game dir not found: $GAME_DIR" >&2; exit 1; }
-DISPLAY= setsid "$GAME_BIN" >/dev/null 2>&1 < /dev/null &
+# 1. Launch detached so the game survives this script exiting (nohup: portable across macOS/Linux).
+nohup "$LAUNCHER" >/dev/null 2>&1 < /dev/null &
 echo "launched Hollow Knight (pid $!)"
 
 # 2. Wait for boot + mod init. The mod's debug server only starts listening at the END of Initialize, so

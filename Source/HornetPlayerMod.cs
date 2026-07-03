@@ -137,6 +137,9 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         Playground.Log.SinkDebug = LogDebug;
         Playground.Log.SinkError = LogError;
 
+        // Must run before any MonoMod Hook is created (it locks MonoMod's platform detection).
+        Playground.RosettaPlatformFix.Apply();
+
         playgroundHost = new GameObject("HornetPlayer.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
         var host = playgroundHost.AddComponent<PlaygroundHost>();
@@ -221,7 +224,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         });
         DebugServer.MapPost("/addr-init", _ => AddressablesBootstrap.Ensure());
         DebugServer.MapGet("/addr-load", req => AddressablesBootstrap.Load(req["key"] ?? "GlobalPool"));
-        DebugServer.MapGet("/addr-load-hero", _ => AddressablesBootstrap.LoadHero());
         DebugServer.MapPost("/gamecameras-init", _ => GameCamerasBootstrap.Ensure());
         DebugServer.MapPost("/hud",
             req => GameCamerasBootstrap.BringUpHud((req["on"] ?? "true").ToLowerInvariant() != "false"));
