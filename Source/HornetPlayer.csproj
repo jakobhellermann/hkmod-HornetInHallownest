@@ -138,6 +138,8 @@
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <!-- ALL B2 libs go to Managed/ ROOT, not Mods/:
              - The two PREFIXED Silksong assemblies (Silksong.AssemblyCSharp + firstpass) MUST be there because Unity
                only resolves nested custom-[Serializable] types from assemblies registered in ScriptingAssemblies.json,

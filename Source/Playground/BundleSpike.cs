@@ -18,8 +18,7 @@ internal static class BundleSpike {
     // Minimal binding test: load a hand-built bundle with one GameObject+MonoBehaviour per test script (m_Script ->
     // CAB-283454ff monoscripts, base fields only). Isolates pure script binding from scene/closure complexity. Needs
     // only the remapped monoscripts bundle resident.
-    private const string MinimalBundlePath =
-        "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/minimal-binding-test.silksong.bundle";
+    private static string MinimalBundlePath => Paths.ModFile("minimal-binding-test.silksong.bundle");
 
     // Spawn moved to HornetInHallownest/Core/HornetSpawner (the first migrated module). These forwarders keep the
     // existing Playground callers (HornetDeath/HornetBench/HeroSwitch/…) and the diagnostics below reading the live

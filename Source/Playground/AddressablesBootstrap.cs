@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -19,34 +18,43 @@ namespace HornetPlayer.Playground;
 // Silksong's real aa folder, then InitializeAsync() reads Silksong's settings.json + catalog.bin and the
 // AssetBundleProvider loads the bundles from Silksong's install — all transparently.
 internal static class AddressablesBootstrap {
-    private const string SilksongAa =
-        "/home/jakob/.local/share/Steam/steamapps/common/Hollow Knight Silksong/Hollow Knight Silksong_Data/StreamingAssets/aa";
-
     // The IL-prefixed MonoScripts bundle (same CAB-283454ff as Silksong's original *_monoscripts.bundle, but m_Script
     // entries repointed to the Silksong.* assemblies). ALL MonoScripts across all 1155 asset bundles are centralized in
     // that one CAB (verified by scan: zero asset bundles carry their own), so substituting this one bundle file makes
     // every m_Script PPtr — hero, GlobalPool, everything — bind to Silksong.* instead of the originals (which collide
-    // with HK's identically-named Assembly-CSharp types).
-    private const string RemappedMonoScripts =
-        "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/monoscripts.silksong.bundle";
+    // with HK's identically-named Assembly-CSharp types). Ships next to the DLL (see Paths.ModFile).
+    private const string MonoScriptsBundle = "monoscripts.silksong.bundle";
 
     // HK's addressables runtime path (= Addressables.RuntimePath), e.g. <hk>/hollow_knight_Data/StreamingAssets/aa.
     private static string HkAa => (Application.streamingAssetsPath + "/aa").Replace('\\', '/');
-    private static string CatalogId => SilksongAa + "/catalog.bin";
 
     // Hot-reload safe: the registered locator + the InternalIdTransformFunc live in Unity's ResourceManager, which
     // survives our DLL reload — a `static bool initialized` would reset per reload and re-register a DUPLICATE locator.
     // So the source of truth is the ResourceManager's locator list, not a static flag.
-    private static bool CatalogRegistered() {
+    private static bool CatalogRegistered(string catalogId) {
         foreach (var loc in Addressables.ResourceLocators)
-            if (loc.LocatorId == CatalogId)
+            if (loc.LocatorId == catalogId)
                 return true;
         return false;
     }
 
     internal static object Ensure() {
+        string silksongAa;
+        string catalogId;
+        string monoScripts;
         try {
-            if (CatalogRegistered()) return new { ok = true, note = "already registered" };
+            silksongAa = Paths.SilksongAa();
+            catalogId = silksongAa + "/catalog.bin";
+            monoScripts = Paths.ModFile(MonoScriptsBundle);
+        } catch (Exception e) {
+            // Detection/asset failure: the mod cannot bring up the hero without Silksong's assets. Log clearly and bail
+            // — Ensure's callers proceed no further, but the rest of the game keeps running.
+            Log.Error($"[Addressables] HornetPlayer cannot start — {e.Message}");
+            return new { ok = false, error = e.Message };
+        }
+
+        try {
+            if (CatalogRegistered(catalogId)) return new { ok = true, note = "already registered" };
 
             var hkAa = HkAa;
             // Redirect any internal id resolved under HK's empty aa -> Silksong's aa. Applies to catalog.bin + every
@@ -56,9 +64,9 @@ internal static class AddressablesBootstrap {
             Addressables.InternalIdTransformFunc = loc => {
                 var id = loc.InternalId;
                 if (id == null) return id;
-                if (id.Contains(hkAa)) id = id.Replace(hkAa, SilksongAa);
-                // Substitute the remapped monoscripts bundle so m_Script PPtrs bind to Silksong.* (see RemappedMonoScripts).
-                if (id.EndsWith("_monoscripts.bundle")) return RemappedMonoScripts;
+                if (id.Contains(hkAa)) id = id.Replace(hkAa, silksongAa);
+                // Substitute the remapped monoscripts bundle so m_Script PPtrs bind to Silksong.* (see MonoScriptsBundle).
+                if (id.EndsWith("_monoscripts.bundle")) return monoScripts;
                 return id;
             };
 
@@ -72,7 +80,7 @@ internal static class AddressablesBootstrap {
             var init = impl.GetType()
                            .GetMethod("InitializeAsync", [typeof(string), typeof(string), typeof(bool)])
                        ?? throw new Exception("AddressablesImpl.InitializeAsync(string,string,bool) not found");
-            var handle = init.Invoke(impl, [SilksongAa + "/settings.json", null, false]);
+            var handle = init.Invoke(impl, [silksongAa + "/settings.json", null, false]);
 
             // handle is AsyncOperationHandle<IResourceLocator> (generic struct) -> reflect WaitForCompletion + Status.
             // Init may report Failed because the settings.json catalog-location discovery comes up empty — that's fine;
@@ -84,7 +92,7 @@ internal static class AddressablesBootstrap {
 
             // Load Silksong's catalog directly (bypasses settings catalog-location discovery). Bundle ids inside resolve
             // via {RuntimePath} -> HK aa -> our InternalIdTransformFunc -> Silksong aa.
-            var cat = Addressables.LoadContentCatalogAsync(CatalogId, false);
+            var cat = Addressables.LoadContentCatalogAsync(catalogId, false);
             cat.WaitForCompletion();
             var ok = cat.Status == AsyncOperationStatus.Succeeded;
             var locatorKeys = ok && cat.Result != null ? cat.Result.LocatorId : null;
@@ -112,46 +120,6 @@ internal static class AddressablesBootstrap {
             return r;
         } catch (Exception e) {
             return new { key, error = (e.InnerException ?? e).GetType().Name + ": " + (e.InnerException ?? e).Message };
-        }
-    }
-
-    // Viability test for "load the hero via Addressables" (option A): load Hero_Hornet through the registered catalog
-    // and report how its ROOT components bound — Silksong.AssemblyCSharp (good), HK's Assembly-CSharp (false-bind), or
-    // null (missing script). This is the make-or-break: if the monoscripts redirect works, every component resolves to
-    // Silksong.*. Does NOT instantiate (inspecting the prefab's components is enough to read the binding). GET /addr-load-hero
-    internal static object LoadHero() {
-        try {
-            Ensure();
-            var h = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet");
-            var prefab = h.WaitForCompletion();
-            if (prefab == null) return new { error = "Hero_Hornet load returned null", status = h.Status.ToString() };
-
-            var comps = prefab.GetComponents<Component>();
-            var byAsm = new Dictionary<string, int>();
-            var rootComponents = new List<string>();
-            var missing = 0;
-            foreach (var c in comps) {
-                if (c == null) {
-                    missing++;
-                    rootComponents.Add("<missing script>");
-                    continue;
-                }
-
-                var asm = c.GetType().Assembly.GetName().Name;
-                byAsm[asm] = byAsm.TryGetValue(asm, out var n) ? n + 1 : 1;
-                rootComponents.Add($"{c.GetType().FullName} [{asm}]");
-            }
-
-            return new {
-                loaded = true,
-                prefab.name, status = h.Status.ToString(),
-                rootTotal = comps.Length, missingScripts = missing,
-                byAssembly = byAsm,
-                rootComponents
-            };
-        } catch (Exception e) {
-            var ex = e.InnerException ?? e;
-            return new { error = ex.GetType().Name + ": " + ex.Message };
         }
     }
 

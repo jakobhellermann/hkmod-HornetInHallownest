@@ -40,13 +40,12 @@ internal static class PlayMakerFix {
         // PlayMaker actions also live in 3 small shared assemblies we prefixed (FadeNestedFadeGroup, GetLocalisedString,
         // ConditionalExpression). They aren't referenced by the mod, so load them from lib — else they resolve to the
         // original-PlayMaker variant via GetGlobalType's loaded-assemblies fallback (type mismatch -> can't create).
-        const string lib = "/home/jakob/dev/hk/mods/HornetPlayer/Source/lib/";
         foreach (var name in new[] {
                      "Silksong.TeamCherryNestedFadeGroup", "Silksong.TeamCherryLocalization",
                      "Silksong.ConditionalExpression"
                  })
             try {
-                AddTypes(map, Assembly.LoadFrom(lib + name + ".dll"));
+                AddTypes(map, Assembly.LoadFrom($"{Paths.ManagedDir}/{name}.dll"));
             } catch (Exception e) {
                 Log.Error($"[PlayMakerFix] load {name}: {e.Message}");
             }

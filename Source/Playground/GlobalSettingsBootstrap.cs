@@ -12,8 +12,7 @@ namespace HornetPlayer.Playground;
 // PPtrs resolve against the hero dep closure that's already resident. Fix: assign each GlobalSettingsBase<T>._instance
 // directly, bypassing Addressables — one generic pass covers all ~8 settings types.
 internal static class GlobalSettingsBootstrap {
-    private const string BundlePath =
-        "/home/jakob/.local/share/Steam/steamapps/common/Hollow Knight Silksong/Hollow Knight Silksong_Data/StreamingAssets/aa/StandaloneLinux64/globalsettings_assets_all.bundle";
+    private static string BundlePath => Paths.SilksongAaBundle("globalsettings_assets_all.bundle");
 
     private static AssetBundle? bundle;
 
