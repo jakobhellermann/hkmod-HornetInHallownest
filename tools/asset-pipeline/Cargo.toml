@@ -9,7 +9,7 @@ publish = false
 
 [dependencies]
 rabex = { version = "0.1", default-features = false, features = ["embed-tpk"] }
-rabex-env = { git = "https://github.com/jakobhellermann/rabex-env.git", rev = "041e6c10f5eb02b405c315e91fca6fb32b84c4d8" }
+rabex-env = { git = "https://github.com/jakobhellermann/rabex-env.git", rev = "6a3ba4ea8e6d506bb04a24ecd78c4bf7619b7b86" }
 anyhow = "1.0"
 rustc-hash = "2.1"
 # rabex-env's utils::find_game (vendored into src/lib.rs) locates the installed game via Steam; steamlocate is a

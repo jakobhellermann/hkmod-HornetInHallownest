@@ -475,7 +475,7 @@ dependencies = [
 [[package]]
 name = "rabex-env"
 version = "0.1.0"
-source = "git+https://github.com/jakobhellermann/rabex-env.git?rev=041e6c10f5eb02b405c315e91fca6fb32b84c4d8#041e6c10f5eb02b405c315e91fca6fb32b84c4d8"
+source = "git+https://github.com/jakobhellermann/rabex-env.git?rev=6a3ba4ea8e6d506bb04a24ecd78c4bf7619b7b86#6a3ba4ea8e6d506bb04a24ecd78c4bf7619b7b86"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -752,9 +752,9 @@ checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
 name = "unity-typetree-gen"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6480cc82d52e440fce086a20853dfa780c2c50a146e5dd6b88cb2bfd564c21e4"
+checksum = "202e283b9fd2fa485035dce70625cb7cf33a1a5664b441f95413b6f088faa0f5"
 dependencies = [
  "dotnetdll",
  "rabex",
