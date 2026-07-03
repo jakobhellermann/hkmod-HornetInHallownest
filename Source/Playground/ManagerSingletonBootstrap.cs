@@ -23,7 +23,7 @@ internal static class ManagerSingletonBootstrap {
 
     private static GameObject? Prefab() {
         if (prefab != null) return prefab;
-        AddressablesBootstrap.Ensure();
+        SilksongCatalog.EnsureMounted();
         // 533 deps mount the bundles carrying the managers' ScriptableObjects (tool/crest/collectable lists) — exactly
         // what we want resident. Cached by Addressables, so repeated calls across managers are cheap.
         prefab = Addressables.LoadAssetAsync<GameObject>("_GameManager").WaitForCompletion();

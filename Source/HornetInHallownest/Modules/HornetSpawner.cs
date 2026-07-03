@@ -22,11 +22,11 @@ public sealed class HornetSpawner : IModule {
 
     // Hero_Hornet, loaded on first access via Addressables. Addressables pulls the full dependency closure and owns
     // every bundle, so there's no double-load conflict with the game's own runtime loads (GameManager.EnsureGlobalPool
-    // -> "GlobalPool", etc.); the monoscripts redirect in AddressablesBootstrap binds all m_Script PPtrs to Silksong.*.
+    // -> "GlobalPool", etc.); the monoscripts redirect in SilksongCatalog binds all m_Script PPtrs to Silksong.*.
     private static GameObject? HeroPrefab {
         get {
             if (heroPrefab) return heroPrefab;
-            AddressablesBootstrap.Ensure();
+            SilksongCatalog.EnsureMounted();
             heroPrefab = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
             if (heroPrefab) Log.Info("[HornetSpawner] Hero_Hornet loaded via Addressables");
             return heroPrefab;

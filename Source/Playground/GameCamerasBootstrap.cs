@@ -78,7 +78,7 @@ internal static class GameCamerasBootstrap {
                 };
             }
 
-            AddressablesBootstrap.Ensure();
+            SilksongCatalog.EnsureMounted();
             var prefab = Addressables.LoadAssetAsync<GameObject>("_GameCameras").WaitForCompletion();
             if (prefab == null) return new { error = "_GameCameras load returned null" };
 

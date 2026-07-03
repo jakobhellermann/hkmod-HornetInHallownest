@@ -86,7 +86,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
         ResourcesShim.Cleanup();
         GameObjectFindShim.Cleanup();
-        AddressablesBootstrap.Cleanup();
+        SilksongCatalog.Cleanup();
         GameCamerasBootstrap.Cleanup();
         UIManagerBootstrap.Cleanup();
         SilksongBootstrap.Cleanup();
@@ -222,8 +222,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             ResourcesShim.Reload();
             return new { ok = true };
         });
-        DebugServer.MapPost("/addr-init", _ => AddressablesBootstrap.Ensure());
-        DebugServer.MapGet("/addr-load", req => AddressablesBootstrap.Load(req["key"] ?? "GlobalPool"));
+        DebugServer.MapGet("/addr-load", req => SilksongCatalog.Load(req["key"] ?? "GlobalPool"));
         DebugServer.MapPost("/gamecameras-init", _ => GameCamerasBootstrap.Ensure());
         DebugServer.MapPost("/hud",
             req => GameCamerasBootstrap.BringUpHud((req["on"] ?? "true").ToLowerInvariant() != "false"));
@@ -303,7 +302,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // (failing) addressables access. Once init fails in a process it stays poisoned (hasStartedInitialization=true,
         // empty locators) and can't be re-init'd, so this must run at Initialize on a fresh process — a hot-reload of
         // our DLL won't undo a poisoned Addressables runtime (Addressables lives in the engine DLL, one per process).
-        AddressablesBootstrap.Ensure();
+        SilksongCatalog.EnsureMounted();
         ResourcesShim.Install(); // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
         GameObjectFindShim.Install(); // LOG-ONLY: surface name/tag GameObject lookups (cross-game collision hazard)
         PlayMakerFix.Apply();

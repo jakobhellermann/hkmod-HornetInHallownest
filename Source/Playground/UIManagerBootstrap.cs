@@ -34,7 +34,7 @@ internal static class UIManagerBootstrap {
                 return new { ok = true, note = "reused", instanceSet = InstanceSet() };
             }
 
-            AddressablesBootstrap.Ensure();
+            SilksongCatalog.EnsureMounted();
             var prefab = Addressables.LoadAssetAsync<GameObject>("_UIManager").WaitForCompletion();
             if (prefab == null) return new { error = "_UIManager load returned null" };
 
