@@ -26,6 +26,8 @@
 - dash attack jumpup
 - grubfather?
 - hornet falling after level exit
+- dash into elevator: bump
+- sprint-attack (dash-stab) misses HK trigger-breakables (e.g. Watcher Knights chandelier rope, Ruins2_03)
 
 # Balancing
 - soul totem <-> silk
