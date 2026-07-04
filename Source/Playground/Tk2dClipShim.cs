@@ -28,6 +28,10 @@ internal static class Tk2dClipShim {
         ["Collect SD 2"] = "Collect Normal 3",
         ["Collect SD 3"] = "Collect Normal 3",
         ["Collect SD 4"] = "Collect Normal 3",
+        // Mask-shard completion (4th piece): "Heart Container UI" plays "Collect Heart Piece End" on the hero gated on
+        // its completion (animationCompleteEvent=FINISHED). Hornet lacks that clip -> no AnimationCompleted -> FINISHED
+        // never fires -> stuck in the receive pose with control relinquished. Map to the same clean collect pose.
+        ["Collect Heart Piece End"] = "Collect Normal 3",
         // Mantis Lords (and other bosses) challenge-accept: HK plays "Challenge Start" gated on its completion. Map to
         // Hornet's "Taunt" — thematically a challenge taunt, and wrapMode Once (so AnimationCompleted fires and the FSM
         // proceeds; mapping to a LoopSection clip would never complete -> permanent soft-lock).
