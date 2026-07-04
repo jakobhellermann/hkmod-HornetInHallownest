@@ -303,9 +303,13 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         // Detect a scene change; defer the Hornet snap until the Knight has actually been placed at the new entry.
         var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
         if (scene != lastScene) {
+            // Leaving a dream scene? HK's "Dream Return" FSM (on the inert Knight) never runs its Prostrate step for
+            // Hornet, so the white dream blanker it would fade out stays faded-in → whitescreen soft-lock. Clear it.
+            var wasDream = lastScene != null && lastScene.StartsWith("Dream", System.StringComparison.Ordinal);
             lastScene = scene;
             pendingSnap = true;
             hkEntryFixed = false;
+            if (wasDream) ClearDreamWhiteBlanker();
 
             // Pre-place Hornet at the entry gate NOW. HK has already relocated the Knight (its transition vehicle) to
             // the new gate this frame, but Hornet (DontDestroyOnLoad) still holds her previous-scene coords. Enemy FSMs
@@ -420,6 +424,16 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         hornet.transform.position = knight.transform.position;
         var rb = hornet.GetComponent<Rigidbody2D>();
         if (rb != null && rb.simulated) rb.linearVelocity = Vector2.zero; // don't carry pre-transition momentum
+    }
+
+    // The white dream blanker (HK's `HudCamera/Blanker White`) fades in on a dream-scene exit and is normally faded out
+    // by the "Dream Return" FSM's Prostrate step — which never runs for Hornet, leaving the screen white. It's used only
+    // for dream white fades (which we bypass), so deactivate it on arrival. It's a persistent HUD object, so this one
+    // deactivation also covers future dream exits. Find() only sees it while active → idempotent (skips if already off).
+    private static void ClearDreamWhiteBlanker() {
+        var gc = GameCameras.instance;
+        var blanker = gc != null ? gc.transform.Find("HudCamera/Blanker White") : null;
+        if (blanker != null) blanker.gameObject.SetActive(false);
     }
 
     private void TraceTick() {
