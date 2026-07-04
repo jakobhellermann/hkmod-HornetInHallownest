@@ -137,6 +137,10 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         Playground.Log.SinkDebug = LogDebug;
         Playground.Log.SinkError = LogError;
 
+        // Where our DLL + shipped data files live. From the Modding API's Mod.ModDirectory (correct even on hot-reload,
+        // where Assembly.Location is empty). Must precede anything reading Paths.ModFile (e.g. ResourcesShim.Install).
+        Playground.Paths.ModDir = ModDirectory;
+
         // Must run before any MonoMod Hook is created (it locks MonoMod's platform detection).
         Playground.RosettaPlatformFix.Apply();
 
@@ -286,7 +290,11 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             return new { realSceneEntry = HornetSceneEntry.Enabled };
         });
         DebugServer.MapPost("/press", req => {
-            var a = (req["a"] ?? "right").ToLowerInvariant(); // left/right/up/down/jump/attack/dash
+            // Accept `a` or `action`; reject unknown names instead of silently pressing `right` (a debug footgun: a
+            // typo used to drive movement and stick move_input). Bounded by `frames` (default 60 ≈ 1s) — never forever.
+            var a = (req["a"] ?? req["action"])?.ToLowerInvariant();
+            if (a == null || !InputBridge.IsKnownAction(a))
+                return new { error = $"unknown action '{a}'; known: {string.Join(",", InputBridge.KnownActions)}" };
             if (!int.TryParse(req["frames"], out var f) || f <= 0) f = 60;
             InputBridge.Press(a, f); // debug-drive an InControl action for f frames (no physical key needed)
             return new { action = a, frames = f };

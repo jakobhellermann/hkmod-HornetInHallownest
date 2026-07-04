@@ -40,6 +40,10 @@ internal static class InputBridge {
     internal static void Press(string action, int frames) {
         Forced[action] = frames;
     }
+
+    // Valid /press action names (the driven set), so the route can reject typos instead of silently pressing a default.
+    internal static string[] KnownActions => InputDriver.ActionNames;
+    internal static bool IsKnownAction(string action) => InputDriver.IsAction(action);
 }
 
 [DefaultExecutionOrder(-10000)] // run before HeroController.Update so WasPressed lands the same frame
@@ -61,6 +65,21 @@ internal sealed class InputDriver : MonoBehaviour {
         ("menusubmit", KeyCode.Z), // inventory equip/submit
         ("menucancel", KeyCode.X) // inventory cancel/back
     };
+
+    internal static string[] ActionNames {
+        get {
+            var names = new string[Map.Length];
+            for (var i = 0; i < Map.Length; i++) names[i] = Map[i].name;
+            return names;
+        }
+    }
+
+    internal static bool IsAction(string name) {
+        foreach (var (n, _) in Map)
+            if (n == name)
+                return true;
+        return false;
+    }
 
     private bool infiniteSilk;
 

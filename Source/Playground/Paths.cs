@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Reflection;
 using UnityEngine;
 
 namespace HornetPlayer.Playground;
@@ -11,11 +10,18 @@ namespace HornetPlayer.Playground;
 // Both throw with an actionable message rather than returning a silently-wrong path; callers turn that into a clear
 // "mod won't work" log without taking down the rest of the game. (An in-game config path may replace the detection later.)
 internal static class Paths {
-    // Directory containing HornetPlayer.dll. The Modding API loads it from Managed/Mods/HornetPlayer and the build ships
-    // data files (the monoscripts bundle) alongside it.
-    internal static string ModDir =>
-        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)?.Replace('\\', '/')
-        ?? throw new InvalidOperationException("could not resolve the mod assembly directory");
+    private static string? _modDir;
+
+    // Directory containing HornetPlayer.dll (data files like the remapped monoscripts bundle ship next to it).
+    // Set once from HornetPlayerMod.Initialize via the Modding API's Mod.ModDirectory — which the loader fills from the
+    // actual load path, so it's correct even on a hot-reload (there Assembly.Location is empty because the assembly is
+    // loaded from an in-memory byte[], and Path.GetDirectoryName("") would throw "Invalid path").
+    internal static string ModDir {
+        get => _modDir
+               ?? throw new InvalidOperationException(
+                   "Paths.ModDir not initialized — set it from HornetPlayerMod.Initialize (Mod.ModDirectory)");
+        set => _modDir = value.Replace('\\', '/');
+    }
 
     // A data file distributed next to the DLL (kept a loose file so it can be regenerated/swapped without rebuilding).
     internal static string ModFile(string name) {
