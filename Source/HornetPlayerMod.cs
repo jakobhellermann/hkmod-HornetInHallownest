@@ -110,6 +110,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HornetBench.Cleanup();
         SoulOrbBridge.Cleanup();
         QuakeFloorBridge.Cleanup();
+        NeedolinDreamNail.Cleanup();
         HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();

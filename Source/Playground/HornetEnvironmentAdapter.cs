@@ -78,6 +78,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 StuckControlNet(hero);
                 StuckEntryWatch(hero);
                 QuakeFloorBridge.Tick(hero); // down-dash breaks HK quake floors (only iterates while quaking)
+                NeedolinDreamNail.Tick(hero); // Needolin acts as a Dream Nail on nearby HK dream objects (edge-triggered)
             }
 
             // --- The bookkeeping half of InputHandler.Update ---
