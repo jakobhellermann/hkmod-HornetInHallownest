@@ -1,5 +1,6 @@
 extern alias Silksong;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -293,6 +294,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
     private bool hkEntryFixed;
     private string? lastScene;
     private bool pendingSnap;
+    private bool dreamReturnPending; // arriving from a dream scene: run the entry then force idle (see DreamReturnEntry)
     private List<string>? traceBuf;
     private float traceT0;
     private bool tracing;
@@ -308,6 +310,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
             var wasDream = lastScene != null && lastScene.StartsWith("Dream", System.StringComparison.Ordinal);
             lastScene = scene;
             pendingSnap = true;
+            dreamReturnPending = wasDream;
             hkEntryFixed = false;
             if (wasDream) ClearDreamWhiteBlanker();
 
@@ -325,10 +328,11 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
             // When Hornet is the active hero, run her REAL Silksong scene-entry (walk/drop-in animation + entry FSMs)
             // from HK's mirrored gate. When the Knight is active, Hornet is an inert prop -> just relocate her.
             if (HeroSwitch.HornetActive && HornetSceneEntry.Enabled && knight.sceneEntryGate != null)
-                StartCoroutine(HornetSceneEntry.Run(knight));
+                StartCoroutine(dreamReturnPending ? DreamReturnEntry(knight) : HornetSceneEntry.Run(knight));
             else
                 SnapHornetToKnight(knight);
             pendingSnap = false;
+            dreamReturnPending = false;
         }
 
         // Tab = switch hero. Forbid it while the inventory is open: switching heroes mid-inventory leaves a broken state
@@ -434,6 +438,18 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         var gc = GameCameras.instance;
         var blanker = gc != null ? gc.transform.Find("HudCamera/Blanker White") : null;
         if (blanker != null) blanker.gameObject.SetActive(false);
+    }
+
+    // Dream-return arrival: run the normal entry (regains control), then force the idle clip once she's grounded. The
+    // return gate "door_dreamReturn" carries "door" in its name so EnterScene takes the door-entry path, but there's no
+    // real door to walk out of, leaving her animator stuck on the airborne/warp clip. HK's "Dream Return" get-up
+    // (StartAnimationControl) would do this; it doesn't run for Hornet.
+    private IEnumerator DreamReturnEntry(HeroController knight) {
+        yield return HornetSceneEntry.Run(knight);
+        var hero = BundleSpike.RealHero;
+        if (hero == null) yield break;
+        for (var i = 0; i < 60 && (hero.cState == null || !hero.cState.onGround); i++) yield return null;
+        hero.StartAnimationControlToIdle();
     }
 
     private void TraceTick() {
