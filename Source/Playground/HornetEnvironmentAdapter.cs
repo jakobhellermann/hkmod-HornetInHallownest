@@ -79,6 +79,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 StuckEntryWatch(hero);
                 QuakeFloorBridge.Tick(hero); // down-dash breaks HK quake floors (only iterates while quaking)
                 NeedolinDreamNail.Tick(hero); // Needolin acts as a Dream Nail on nearby HK dream objects (edge-triggered)
+                GeoDashBridge.Tick(hero); // collect geo during a dash (kinematic HeroBox tunnels past it; only runs while dashing)
             }
 
             // --- The bookkeeping half of InputHandler.Update ---

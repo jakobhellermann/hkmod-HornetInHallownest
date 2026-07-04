@@ -111,6 +111,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         SoulOrbBridge.Cleanup();
         QuakeFloorBridge.Cleanup();
         ConveyorBridge.Cleanup();
+        GeoDashBridge.Cleanup();
         NeedolinDreamNail.Cleanup();
         HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();

@@ -227,6 +227,8 @@ internal static class SilksongBootstrap {
     // (so FreezeInPlace / HazardRespawn don't NullRef on camTarget — our real CameraTarget from the rig),
     // and gm.screenFader_fsm (so hazard respawn's "HAZARD RESPAWN" fade event fires).
     internal static void SetHeroCtrl(Silksong::HeroController hero) {
+        GeoDashBridge.CacheHeroBox(hero); // resolve the HeroBox collider once here, not lazily in the per-frame tick
+
         if (bootstrapGm == null) return;
         try {
             typeof(Silksong::GameManager)
