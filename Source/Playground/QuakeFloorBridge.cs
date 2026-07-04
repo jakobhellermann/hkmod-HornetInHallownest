@@ -31,6 +31,7 @@ namespace HornetPlayer.Playground;
 internal static class QuakeFloorBridge {
     private static Hook? dashHook;
     private static Hook? finishHook;
+    private static Hook? getStateHook;
     private static bool quaking;
     private static readonly List<PlayMakerFSM> floors = new();
     private static readonly List<Collider2D> floorCols = new();
@@ -57,6 +58,20 @@ internal static class QuakeFloorBridge {
                 orig(self, wasDown);
                 if (quaking) EndQuake();
             }));
+
+        // Some HK floors (e.g. Crystal Peak's Loose Floors via the "Detect Quake" FSM) don't use the quake_floor FSM;
+        // they detect the diving hero by calling HeroController.GetState("spellQuake"). Hornet has no such cState, so
+        // report it true while she's mid-down-dash — the whole HK detect-quake -> BREAK sequence (debris, cracks, the
+        // passable Quaked Floor) then runs itself. (Also avoids the "Could not find bool named spellQuake" log.)
+        var getState = typeof(Silksong::HeroController).GetMethod("GetState",
+            BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null);
+        if (getState != null)
+            getStateHook = new Hook(getState,
+                (Func<Func<Silksong::HeroController, string, bool>, Silksong::HeroController, string, bool>)(
+                    (orig, self, name) =>
+                        quaking && HeroSwitch.HornetActive && name == "spellQuake" || orig(self, name)));
+        else Log.Error("[QuakeFloor] HeroController.GetState(string) not found");
+
         Log.Debug("[QuakeFloor] installed: down-dash -> quake-floor break");
     }
 
@@ -108,5 +123,7 @@ internal static class QuakeFloorBridge {
         dashHook = null;
         finishHook?.Dispose();
         finishHook = null;
+        getStateHook?.Dispose();
+        getStateHook = null;
     }
 }
