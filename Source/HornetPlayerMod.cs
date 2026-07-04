@@ -110,6 +110,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HornetBench.Cleanup();
         SoulOrbBridge.Cleanup();
         QuakeFloorBridge.Cleanup();
+        ConveyorBridge.Cleanup();
         NeedolinDreamNail.Cleanup();
         HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();
@@ -337,6 +338,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
         SoulOrbBridge.Install(); // HK soul (SoulOrb homing + AddMPCharge) -> Hornet silk (orbs fly to her, grant silk)
         QuakeFloorBridge.Install(); // Hornet down-dash breaks HK quake floors (Desolate Dive equivalent)
+        ConveyorBridge.Install(); // HK conveyor belts move Hornet (they gate on HK's HeroController type, which she lacks)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
