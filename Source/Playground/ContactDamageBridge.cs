@@ -1,6 +1,7 @@
 extern alias Silksong;
 using System;
 using System.Reflection;
+using HutongGames.PlayMaker;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using SHeroBox = Silksong::HeroBox;
@@ -50,18 +51,32 @@ internal static class ContactDamageBridge {
         // while inert, and leaves her stranded floating in no_input on the next switch. So: no contact damage while inert.
         if (!HeroSwitch.HornetActive) return;
         try {
-            // Read HK's DamageHero for damage + hazardType. Distinguish hazards from enemies by hazardType:
-            // enemies default to hazardType=1 (HK SPIKES); HK's spike hazards actually use 2+ (ACID, LAVA, PIT).
-            // Only map 2+ to Silksong's hazard enum so DieFromHazard fires for real hazards, not enemy hits.
-            // (HK's "damages_hero" PlayMakerFSM can't be found from our assembly — PlayMakerFSM resolves to
-            // Silksong's type, not HK's. DamageHero.hazardType is the reliable signal.)
+            // HK objects damage the hero via one of TWO channels (mirrors HK's OWN HeroBox.CheckForDamage order):
+            //   (a) a "damages_hero" PlayMakerFSM holding int vars damageDealt/hazardType (mines stompers, saws, spike
+            //       hazards, acid colliders, …) — the MAJORITY of HK hazards, and
+            //   (b) a plain DamageHero component (enemies, laser beams, …).
+            // Silksong's HeroBox path (orig above) is a no-op for BOTH: its FSMUtility scans the ISOLATED Silksong
+            // PlayMaker so HK's damages_hero FSM is invisible, and its GetComponent<DamageHero> resolves the Silksong
+            // type so HK's DamageHero is invisible. We read HK's side of each here.
+            // hazardType: enemies default to 1 (generic); real spike/acid/lava/pit hazards use 2+. Only map 2+ to
+            // Silksong's hazard enum so DieFromHazard fires for real hazards, not enemy hits.
             var dmg = 0;
             var ssHazard = SHazard.ENEMY;
-            var dh = other.GetComponentInParent<DamageHero>();
-            if (dh != null && dh.enabled) {
-                dmg = dh.damageDealt;
-                if (dh.hazardType >= 2)
-                    ssHazard = MapHazard(dh.hazardType);
+            // (a) HK's "damages_hero" FSM — resolved via HK's FSMUtility (HK PlayMakerFSM type). Read exactly the two
+            // ints HK's own HeroBox reads (HeroBox.cs:46-47).
+            if (FSMUtility.ContainsFSM(other, "damages_hero")) {
+                var fsm = FSMUtility.LocateFSM(other, "damages_hero");
+                dmg = FSMUtility.GetInt(fsm, "damageDealt");
+                var hkHazard = FSMUtility.GetInt(fsm, "hazardType");
+                if (hkHazard >= 2) ssHazard = MapHazard(hkHazard);
+            } else {
+                // (b) HK's DamageHero component.
+                var dh = other.GetComponentInParent<DamageHero>();
+                if (dh != null && dh.enabled) {
+                    dmg = dh.damageDealt;
+                    if (dh.hazardType >= 2)
+                        ssHazard = MapHazard(dh.hazardType);
+                }
             }
 
             // Hazards (acid/lava/pit/spikes) carry damageDealt=0 in HK — the death is intrinsic to the hazard type, not
