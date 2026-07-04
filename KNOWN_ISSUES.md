@@ -28,13 +28,14 @@
 - elevator/lift transitions: Knight strands at shaft top, Hornet falls to bottom, camera-lock stuck up top (dark)
 - spring water
 - swimming
-- cannot pickup geo on dash
 - ability sync
 - dash attack jumpup
 - grubfather?
 - hornet falling after level exit
 - dash into elevator: bump
 - sprint-attack (dash-stab) misses HK trigger-breakables (e.g. Watcher Knights chandelier rope, Ruins2_03)
+- lantern immer aktiv
+- XX double check descending dark, cdash pickup
 
 # Balancing
 - soul totem <-> silk
@@ -43,7 +44,7 @@
 - hud sync? geo on hornet
 - dirtmouth slowdown
 - crouch mode for knight height:
-    - thorns, crossroads shard, greenpath entry, fungal cornifer
+    - thorns, crossroads shard, greenpath entry, fungal cornifer, godpixel peaks, crusher grub, frogs, catacombs
 
 ## Intermittent / needs debug
 - cannot bench sometimes
