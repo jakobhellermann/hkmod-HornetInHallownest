@@ -56,6 +56,10 @@ internal static class HeroSwitch {
     internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
     internal static bool HornetActive => Active == ActiveHero.Hornet;
 
+    // Set by HornetEnvironmentAdapter's hook when HK runs a dream-gate warp-in (EnterSceneDreamGate) on the Knight;
+    // the entry relay below mirrors it onto Hornet once she's positioned, then clears it.
+    internal static bool DreamGateEntryPending;
+
     // The GameObject of the hero the player currently controls: the spawned Hornet while she's active, else HK's Knight.
     // SINGLE SOURCE OF TRUTH for the "redirect HK's hero reference to the active hero" consumers — HeroProxy (PlayMaker
     // global "Hero" var), EnemyTargetBridge (the GetHero action), GameObjectFindShim ("Player" tag). To add a new such
@@ -325,14 +329,23 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
 
         CompleteStuckHkVerticalEntry(knight);
         if (pendingSnap && knight != null && knight.isHeroInPosition) {
+            // Dream-gate warp-in: HK ran EnterSceneDreamGate on the Knight (no physical gate, so sceneEntryGate==null and
+            // the walk-in path below is skipped). Position Hornet (nothing to walk in from), then run HER own
+            // EnterSceneDreamGate — its FinishedEnteringScene completes the entry (WAITING_TO_ENTER_LEVEL ->
+            // WAITING_TO_TRANSITION + control) and clears the white dream fade.
+            if (HeroSwitch.HornetActive && HeroSwitch.DreamGateEntryPending) {
+                SnapHornetToKnight(knight);
+                BundleSpike.RealHero?.EnterSceneDreamGate();
+            }
             // When Hornet is the active hero, run her REAL Silksong scene-entry (walk/drop-in animation + entry FSMs)
             // from HK's mirrored gate. When the Knight is active, Hornet is an inert prop -> just relocate her.
-            if (HeroSwitch.HornetActive && HornetSceneEntry.Enabled && knight.sceneEntryGate != null)
+            else if (HeroSwitch.HornetActive && HornetSceneEntry.Enabled && knight.sceneEntryGate != null)
                 StartCoroutine(dreamReturnPending ? DreamReturnEntry(knight) : HornetSceneEntry.Run(knight));
             else
                 SnapHornetToKnight(knight);
             pendingSnap = false;
             dreamReturnPending = false;
+            HeroSwitch.DreamGateEntryPending = false;
         }
 
         // Tab = switch hero. Forbid it while the inventory is open: switching heroes mid-inventory leaves a broken state

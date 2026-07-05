@@ -117,6 +117,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
+        HkFsmTracer.Cleanup();
+        DreamReturnBridge.Cleanup();
         GetComponentShim.Cleanup();
         CompareTagShim.Cleanup();
         HeroControllerProbe.Cleanup();
@@ -222,6 +224,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         DebugServer.MapGet("/fsm-vars", req => BundleSpike.FsmVars(req["name"] ?? "Bind", req["go"]));
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapPost("/fsm-trace", req => FsmTracer.SetTargets(req["names"])); // live state/event trace
+        DebugServer.MapPost("/hk-fsm-trace", req => HkFsmTracer.SetTargets(req["names"])); // HK-side FSM trace
         DebugServer.MapGet("/probe-cameratarget", _ => BundleSpike.ProbeCameraTarget());
         DebugServer.MapGet("/probe-sprint-target", _ => BundleSpike.ProbeSprintTarget());
         DebugServer.MapGet("/dump-localization", _ => ResourcesShim.DumpLocalization());
@@ -349,6 +352,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
+        HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
         GetComponentShim
             .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
         CompareTagShim.Install(); // CompareTag("Recoiler") -> true (HK has no "Recoiler" tag; else CompareTag throws)

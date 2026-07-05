@@ -32,6 +32,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static Hook? setHazardRespawnHook1; // SetHazardRespawn(Vector3, bool)
     private static Hook? setHazardRespawnHook2; // SetHazardRespawn(HazardRespawnMarker)
     private static Hook? finishedEnteringSceneHook; // finish cutscene (enterWithoutInput) entries HK's Dream-Return FSM would
+    private static Hook? enterSceneDreamGateHook; // mirror HK's dream-gate warp-in onto Hornet
     private float armedWindow; // seconds left in the post-transition "watch for stuck control" window
     private string? lastScene;
     private float stuckControlTimer;
@@ -169,6 +170,23 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         else
             Log.Error("[EnvAdapter] HeroController.FinishedEnteringScene(bool,bool) not found");
 
+        // Mirror HK's dream-gate warp-in onto Hornet. GameManager drives dream entries with a DIRECT
+        // `hero_ctrl.EnterSceneDreamGate()` on its Knight (GameManager.cs:1809, entryGateName=="dreamGate") — a typed
+        // field call no shim can redirect (unlike the global "Hero" var / FindWithTag / GetComponent indirection).
+        // So Hornet's own EnterSceneDreamGate never runs and she stays stuck in WAITING_TO_ENTER_LEVEL (no_input, the
+        // white dream fade never clears -> whitescreen). Hook HK's method and flag it; HeroSwitch's entry relay then
+        // positions her (snap to Knight at isHeroInPosition) and runs HER EnterSceneDreamGate (same pattern as the
+        // SetHazardRespawn mirror below — both bridge direct gm-driven Knight calls the shims can't touch).
+        var esdg = typeof(HeroController).GetMethod("EnterSceneDreamGate", BindingFlags.Instance | BindingFlags.Public);
+        if (esdg != null)
+            enterSceneDreamGateHook = new Hook(esdg,
+                (Action<Action<HeroController>, HeroController>)((orig, self) => {
+                    orig(self);
+                    if (HeroSwitch.HornetActive) HeroSwitch.DreamGateEntryPending = true;
+                }));
+        else
+            Log.Error("[EnvAdapter] HeroController.EnterSceneDreamGate not found");
+
         var mi = typeof(GameManager).GetMethod("BeginSceneTransition", [typeof(GameManager.SceneLoadInfo)]);
         if (mi != null) {
             beginSceneTransitionHook = new Hook(mi, BeginSceneTransitionHook);
@@ -220,6 +238,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         GameManager.SceneLoadInfo info) {
         orig(self, info);
         RelayLeaveScene(info);
+        DreamReturnBridge.OnBeginSceneTransition(info); // fade the white blanker out on a Dream arrival (Hornet lacks the FSM)
         DeparentHero("scene transition");
     }
 
@@ -305,6 +324,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         setHazardRespawnHook2 = null;
         finishedEnteringSceneHook?.Dispose();
         finishedEnteringSceneHook = null;
+        enterSceneDreamGateHook?.Dispose();
+        enterSceneDreamGateHook = null;
         if (go != null) {
             Destroy(go);
             go = null;
