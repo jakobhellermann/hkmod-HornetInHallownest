@@ -25,6 +25,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static FieldInfo? isGameplaySceneField;
     private static FieldInfo? gameStateField;
     private static MethodInfo? updateButtonQueueingMethod;
+    private static MethodInfo? sendRefreshEventMethod;
 
     private static Hook? beginSceneTransitionHook;
     private static Hook? loadSceneHook; // SceneManager.LoadScene(string, LoadSceneParameters)
@@ -107,6 +108,22 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 // method) to avoid its CheatManager.IsOpen static read, which needn't be initialized here.
                 if (ih.inputActions != null && !ih.inputActions.DreamNail.IsPressed)
                     ih.ForceDreamNailRePress = false;
+
+                // Mark keyboard as the active controller. InputHandler.Update (which we don't run) maintains this from
+                // InControl's device detection (UpdateActiveController, from inputActions.LastInputType); we bypass
+                // InControl, so it stays None -> Platform.WasLastInputKeyboard is false. That silently breaks menus that
+                // special-case keyboard: e.g. Platform.GetMenuAction only maps DreamNail(D)->MenuActions.Super (the
+                // inventory's change-crest shortcut) on the keyboard branch, so D never changed the crest. We ARE keyboard.
+                // Edge-only: set it once when it isn't already keyboard, then fire RefreshActiveControllerEvent (via the
+                // private SendRefreshEvent) so the glyph UIs (UIButtonSkins/ActionButtonIconBase, which cache their icon
+                // and only recompute on that event) switch to keyboard prompts. Skipping the refresh leaves stale glyphs
+                // computed while it was still None. Firing once (not per frame) avoids recomputing every subscriber's icon.
+                if (ih.lastActiveController != Silksong::InControl.BindingSourceType.KeyBindingSource) {
+                    ih.lastActiveController = Silksong::InControl.BindingSourceType.KeyBindingSource;
+                    sendRefreshEventMethod ??= typeof(Silksong::InputHandler)
+                        .GetMethod("SendRefreshEvent", BindingFlags.Instance | BindingFlags.NonPublic);
+                    sendRefreshEventMethod?.Invoke(ih, null);
+                }
             }
         } catch (Exception e) {
             Log.Error($"[EnvAdapter] {e}");
