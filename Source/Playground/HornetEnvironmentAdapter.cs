@@ -31,6 +31,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static Hook? loadSceneAsyncHook; // SceneManager.LoadSceneAsync(string, LoadSceneParameters)
     private static Hook? setHazardRespawnHook1; // SetHazardRespawn(Vector3, bool)
     private static Hook? setHazardRespawnHook2; // SetHazardRespawn(HazardRespawnMarker)
+    private static Hook? finishedEnteringSceneHook; // finish cutscene (enterWithoutInput) entries HK's Dream-Return FSM would
     private float armedWindow; // seconds left in the post-transition "watch for stuck control" window
     private string? lastScene;
     private float stuckControlTimer;
@@ -153,6 +154,21 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         Log.Info(
             $"[EnvAdapter] SetHazardRespawn mirror installed ({setHazardRespawnHook1 != null}, {setHazardRespawnHook2 != null})");
 
+        // Finish HK's "enter without input" cutscene entries (dreamer-free dream return, etc.). Those rely on an HK
+        // hero FSM (e.g. "Dream Return") to close the arrival with RegainControl/StartAnimationControl/AcceptInput.
+        // Hornet has no such FSM, so FinishedEnteringScene consumes enterWithoutInput WITHOUT calling AcceptInput
+        // (HeroController:9292) -> she arrives frozen (acceptingInput=false, the only stuck gate — confirmed live).
+        // Re-implement just HK's "Regain Control" step, right where the skip happens. NOT a clone of the FSM (its
+        // Prostrate/blue-health/dreamOrbs bits don't translate to Hornet) — only the necessary close.
+        var fes = typeof(Silksong::HeroController).GetMethod("FinishedEnteringScene",
+            BindingFlags.Instance | BindingFlags.NonPublic, null, [typeof(bool), typeof(bool)], null);
+        if (fes != null)
+            finishedEnteringSceneHook = new Hook(fes,
+                (Action<Action<Silksong::HeroController, bool, bool>, Silksong::HeroController, bool, bool>)
+                OnFinishedEnteringScene);
+        else
+            Log.Error("[EnvAdapter] HeroController.FinishedEnteringScene(bool,bool) not found");
+
         var mi = typeof(GameManager).GetMethod("BeginSceneTransition", [typeof(GameManager.SceneLoadInfo)]);
         if (mi != null) {
             beginSceneTransitionHook = new Hook(mi, BeginSceneTransitionHook);
@@ -205,6 +221,22 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         orig(self, info);
         RelayLeaveScene(info);
         DeparentHero("scene transition");
+    }
+
+    // Re-implements HK's "Dream Return" FSM's Regain Control step for Hornet (she has no such FSM). enterWithoutInput
+    // entries deliberately skip AcceptInput (HeroController:9292), expecting that FSM to close the arrival; without it
+    // she's frozen. Runs after orig, at the exact skip point — no race, no polling. Excludes dash/sprint/quake
+    // continuations: those also skip AcceptInput but resume via their own completion, not a fresh input grant.
+    private static void OnFinishedEnteringScene(Action<Silksong::HeroController, bool, bool> orig,
+        Silksong::HeroController self, bool setHazardMarker, bool preventRunBob) {
+        var wasEnterWithoutInput = self.enterWithoutInput;
+        var isMoveResume = self.exitedSuperDashing || self.exitedQuake || self.exitedSprinting;
+        orig(self, setHazardMarker, preventRunBob);
+        if (!wasEnterWithoutInput || isMoveResume || !HeroSwitch.HornetActive) return;
+        self.RegainControl();
+        self.StartAnimationControl();
+        self.AcceptInput();
+        Log.Debug("[EnvAdapter] closed enterWithoutInput entry (RegainControl+AcceptInput; Hornet has no arrival FSM)");
     }
 
     // HK drives the transition on its Knight: GameManager calls hk.LeaveScene(gate) THEN hk.LeavingScene(). Hornet's own
@@ -271,6 +303,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         setHazardRespawnHook1 = null;
         setHazardRespawnHook2?.Dispose();
         setHazardRespawnHook2 = null;
+        finishedEnteringSceneHook?.Dispose();
+        finishedEnteringSceneHook = null;
         if (go != null) {
             Destroy(go);
             go = null;
