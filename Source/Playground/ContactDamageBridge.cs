@@ -79,11 +79,13 @@ internal static class ContactDamageBridge {
                 }
             }
 
-            // Hazards (acid/lava/pit/spikes) carry damageDealt=0 in HK — the death is intrinsic to the hazard type, not
-            // driven by a damage number. But Silksong's TakeDamage gates its ENTIRE hazard/death body on `damageAmount > 0`
-            // (HeroController:5281; the DieFromHazard switch lives inside it), and it re-normalizes ACID/SPIKES to 1 anyway.
-            // So force a positive amount for real hazards or DieFromHazard never fires (she walks through acid unharmed).
-            if (ssHazard != SHazard.ENEMY && dmg <= 0) dmg = 1;
+            // Do NOT force a positive amount here. HK authors every killing hazard (acid/spikes/pit) with damageDealt=1
+            // (verified: acid box + White Palace spikes both = 1), and HK's own TakeDamage early-returns on damageAmount<=0
+            // (HeroController:2240) BEFORE the DieFromHazard switch — Silksong's does the same. That early-return IS the
+            // acid-armour "swim" mechanism: the `Acid Armour Check` FSM on each acid box sets DamageHero.damageDealt=0 when
+            // PlayerData.hasAcidArmour is true (Isma's Tear), so touching acid deals 0 -> no death. Forcing dmg=1 here would
+            // override that zero and kill Hornet through acid even with the armour equipped. So pass the real value: 1 kills
+            // (no armour), 0 no-ops (armour or any other SetDamageHeroAmount-driven disable).
             if (dmg <= 0) return;
 
             var hc = SHeroController.instance;
