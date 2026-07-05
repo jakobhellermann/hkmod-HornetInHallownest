@@ -114,7 +114,6 @@ public sealed class HornetSpawner : IModule {
         SilksongBootstrap.SetHeroCtrl(heroController!);
 
         DamageEnemyProxy.Install();
-        RoarLockBridge.Attach(heroController!); // HK boss roars lock Hornet via her Roar and Wound States FSM
 
         Log.Info("[HornetSpawner] instantiated");
         return true;

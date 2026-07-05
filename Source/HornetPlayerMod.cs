@@ -124,6 +124,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         GeoDashBridge.Cleanup();
         NeedolinDreamNail.Cleanup();
         RoarLockBridge.Cleanup();
+        HeroEventBridge.Cleanup();
         HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
@@ -367,6 +368,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         GetComponentShim
             .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
         CompareTagShim.Install(); // CompareTag("Recoiler") -> true (HK has no "Recoiler" tag; else CompareTag throws)
+        HeroEventBridge.Install(); // forward HK FSM events aimed at the "Hero" GO onto Hornet's isolated Silksong FSMs
+        RoarLockBridge.Install(); // roar-specific facing on top of HeroEventBridge (subscribes to its callback)
         ShroomBounceBridge
             .Install(); // HK BounceShroom/BigBouncer -> Hornet ShroomBounce/BounceHigh on down-attack pogo
         HeroControllerProbe
