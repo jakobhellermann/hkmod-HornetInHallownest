@@ -293,6 +293,11 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             HornetSceneEntry.Enabled = (req["on"] ?? "true").ToLowerInvariant() != "false";
             return new { realSceneEntry = HornetSceneEntry.Enabled };
         });
+        DebugServer.MapPost("/warp", req => {
+            var scene = req["scene"];
+            if (string.IsNullOrEmpty(scene)) return new { error = "scene required (e.g. /warp?scene=RestingGrounds_04&x=46.25&y=7.57)" };
+            return DebugWarp.Warp(scene!, DebugWarp.ParseFloat(req["x"]), DebugWarp.ParseFloat(req["y"]));
+        });
         DebugServer.MapPost("/press", req => {
             // Accept `a` or `action`; reject unknown names instead of silently pressing `right` (a debug footgun: a
             // typo used to drive movement and stick move_input). Bounded by `frames` (default 60 ≈ 1s) — never forever.
