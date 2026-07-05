@@ -81,6 +81,16 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         returnToMenuHook?.Dispose();
         returnToMenuHook = null;
 
+        // Before anything despawns Hornet: if the player was on her, TP the Knight onto her spot. Cleanup below hands
+        // control back to the Knight (un-mod safety) and a hot-reload re-activates it — otherwise it reactivates at its
+        // stale pre-switch position and control snaps there (flew OOB on build). Must run here, BEFORE the module host
+        // despawns Hornet (HornetRoot goes null), so it can't live in HeroSwitch.Cleanup.
+        try {
+            HeroSwitch.TpKnightToActiveHornet();
+        } catch (Exception e) {
+            Playground.Log.Error($"[Unload] Knight TP: {e.Message}");
+        }
+
         // New lifecycle backbone: tear migrated modules down in reverse registration order, before the legacy systems.
         moduleHost.DeinitializeAll();
 

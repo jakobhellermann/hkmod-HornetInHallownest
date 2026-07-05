@@ -133,21 +133,23 @@ internal static class HeroSwitch {
             go = null;
         }
 
-        // Before handing control back to the Knight: if the player was on Hornet, TP the Knight onto her. Cleanup runs on
-        // every hot-reload (before SilksongBootstrap.Cleanup destroys Hornet, so she's still alive here), and it restores
-        // the Knight to active — otherwise he'd reactivate at his stale pre-switch position while control snaps to him.
-        if (HornetActive) {
-            var hornet = BundleSpike.HornetRoot;
-            var knight = HeroController.UnsafeInstance;
-            if (hornet != null && knight != null) {
-                knight.transform.position = hornet.transform.position;
-                Log.Info($"[HeroSwitch] Cleanup: TP'd Knight to active Hornet at {hornet.transform.position}");
-            }
-        }
-
         Active = ActiveHero.Knight; // leave HK's Knight controllable after unload
         SetInert(HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.gameObject : null, false);
         RetargetCamera(HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.transform : null);
+    }
+
+    // Call at the very START of Unload — BEFORE the module host despawns Hornet — so the Knight, which Cleanup then
+    // reactivates (and which a hot-reload leaves controllable), ends up at Hornet's spot instead of his stale pre-switch
+    // coords. Must NOT live in Cleanup: by then moduleHost.DeinitializeAll() has already despawned Hornet (HornetRoot null).
+    internal static void TpKnightToActiveHornet() {
+        if (!HornetActive) return;
+        var hornet = BundleSpike.HornetRoot;
+        var knight = HeroController.UnsafeInstance;
+        if (hornet == null || knight == null) return;
+        knight.transform.position = hornet.transform.position;
+        var rb = knight.GetComponent<Rigidbody2D>();
+        if (rb != null && rb.simulated) rb.linearVelocity = Vector2.zero;
+        Log.Info($"[HeroSwitch] pre-unload: TP'd Knight to active Hornet at {hornet.transform.position}");
     }
 
     internal static object Toggle() {
