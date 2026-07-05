@@ -175,6 +175,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         DebugServer.MapGet("/scan-missing", _ => BundleSpike.ScanMissing());
         DebugServer.MapGet("/hero-state", _ => BundleSpike.HeroState());
         DebugServer.MapGet("/toolmgr", _ => ToolItemManagerBootstrap.Diag());
+        DebugServer.MapPost("/unlock-crest-slots", _ => ToolItemManagerBootstrap.UnlockAllCrestSlots());
         DebugServer.MapPost("/dbg-recoil", req => {
             // validate recoil/bounce mechanics directly (kind=bounce|dash)
             var hero = HornetSpawner.RealHero;
@@ -408,6 +409,9 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
                         try {
                             HornetSpawner.Spawn();
                             Playground.Log.Info("[SpawnLifecycle] entered gameplay scene -> spawned Hornet");
+                            // Dev convenience (like the ability-kit grant): unlock every crest's tool slots so all
+                            // tools are equippable without hunting memory lockets. Runs per spawn (idempotent).
+                            ToolItemManagerBootstrap.UnlockAllCrestSlots();
                         } catch (Exception e) {
                             Playground.Log.Error($"[SpawnLifecycle] {e}");
                         }

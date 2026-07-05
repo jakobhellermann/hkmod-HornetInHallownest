@@ -1,4 +1,5 @@
 extern alias Silksong;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -50,6 +51,39 @@ internal static class ToolItemManagerBootstrap {
             currentCrestID = crestId,
             getCrestByNameResolves = byName != null
         };
+    }
+
+    // Unlock every crest's tool slots (the "memory locket" sockets). Each crest's saved slot list (PlayerData.ToolEquips)
+    // carries a per-slot IsUnlocked; the game unlocks them one memory-locket at a time. Here we rebuild each crest's slot
+    // list from its config (ToolCrest.Slots) with every slot IsUnlocked=true — preserving any equipped tool — and mark the
+    // crest itself unlocked. Requires ToolItemManager + PlayerData up (call post-spawn).
+    internal static object UnlockAllCrestSlots() {
+        var pd = Silksong::PlayerData.instance;
+        if (pd == null) return new { error = "PlayerData not ready" };
+        var crests = Silksong::ToolItemManager.GetAllCrests();
+        if (crests == null || crests.Count == 0) return new { error = "no crests (ToolItemManager not up?)" };
+        var equips = pd.ToolEquips;
+        int crestCount = 0, slotCount = 0;
+        foreach (var crest in crests) {
+            if (crest == null) continue;
+            var data = equips.GetData(crest.name);
+            var config = crest.Slots; // SlotInfo[] from the crest config — the authoritative slot count/layout
+            var count = config?.Length ?? data.Slots?.Count ?? 0;
+            var slots = new List<Silksong::ToolCrestsData.SlotData>(count);
+            for (var i = 0; i < count; i++) {
+                var equipped = data.Slots != null && i < data.Slots.Count ? data.Slots[i].EquippedTool : null;
+                slots.Add(new Silksong::ToolCrestsData.SlotData { EquippedTool = equipped, IsUnlocked = true });
+            }
+
+            data.Slots = slots;
+            data.IsUnlocked = true;
+            equips.SetData(crest.name, data);
+            crestCount++;
+            slotCount += count;
+        }
+
+        Log.Info($"[ToolItemManager] unlocked all crest slots: {crestCount} crests, {slotCount} slots");
+        return new { crests = crestCount, slots = slotCount };
     }
 
     internal static void Cleanup() {
