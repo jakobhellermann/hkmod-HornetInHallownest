@@ -299,6 +299,8 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
     private string? lastScene;
     private bool pendingSnap;
     private bool dreamReturnPending; // arriving from a dream scene: run the entry then force idle (see DreamReturnEntry)
+    private MeshRenderer? knightRenderer; // cached once; the inert Knight's body renderer, re-hidden per frame (see Update)
+    private bool knightRendererCached;
     private List<string>? traceBuf;
     private float traceT0;
     private bool tracing;
@@ -371,6 +373,19 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
             var vigGo = knight.vignette.gameObject;
             var shouldBeOn = !HeroSwitch.HornetActive;
             if (vigGo.activeSelf != shouldBeOn) vigGo.SetActive(shouldBeOn);
+        }
+
+        // Re-hide the inert Knight's body: SetInert disables his MeshRenderer once, but HK re-enables it on every scene
+        // ENTRY (same as the vignette above) — so after a transition the Knight shows at the entry gate (where Hornet also
+        // arrives) while she's active. Re-assert per frame from a cached renderer (never GetComponent per frame).
+        if (knight != null && !knightRendererCached) {
+            knightRenderer = knight.GetComponent<MeshRenderer>();
+            knightRendererCached = true;
+        }
+
+        if (knightRenderer != null) {
+            var shouldRender = !HeroSwitch.HornetActive;
+            if (knightRenderer.enabled != shouldRender) knightRenderer.enabled = shouldRender;
         }
 
         var follow = HeroSwitch.HornetActive
