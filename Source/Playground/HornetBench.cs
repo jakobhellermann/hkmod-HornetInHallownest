@@ -75,6 +75,12 @@ internal sealed class HornetBench : MonoBehaviour {
         // Bench heals — HK's heal only touched HK's PlayerData, so heal her Silksong HP too.
         hero.MaxHealth();
 
+        // Refill her tools for free. Tools normally replenish by spending Shell Shards, but Hornet can't collect shards
+        // yet (not implemented) → her tools stay empty and unusable. Until shard collection exists, treat the bench as a
+        // free full refill: set every unlocked tool's AmountLeft to its max (the exact idiom ToolItemManager uses for
+        // IsInfiniteToolUseEnabled — no shard cost). Remove this once shards are collectable.
+        RefillTools();
+
         // Her real sit anim: "Sit" (sit-down) then loop "Sit Idle". tk2d AnimationCompleted chains the loop.
         var anim = hero.AnimCtrl?.animator;
         if (anim != null) {
@@ -87,6 +93,28 @@ internal sealed class HornetBench : MonoBehaviour {
         // GameManager.instance.playerData.atBench = Silksong's PD) allows equipping while resting.
         var spd = Silksong::PlayerData.instance;
         spd?.atBench = true;
+    }
+
+    // Set every unlocked tool's AmountLeft to its storage max — a free refill (no Shell Shard spend), mirroring
+    // ToolItemManager's own IsInfiniteToolUseEnabled path. TEMPORARY: drop when Shell Shard collection is implemented.
+    private static void RefillTools() {
+        try {
+            var spd = Silksong::PlayerData.instance;
+            var tools = spd?.Tools;
+            if (tools == null) return;
+            var n = 0;
+            foreach (var tool in Silksong::ToolItemManager.GetUnlockedTools()) {
+                if (tool == null) continue;
+                var data = tools.GetData(tool.name);
+                data.AmountLeft = Silksong::ToolItemManager.GetToolStorageAmount(tool);
+                tools.SetData(tool.name, data);
+                n++;
+            }
+
+            Log.Info($"[HornetBench] refilled {n} tools to full (Shell Shards not yet collectable)");
+        } catch (System.Exception e) {
+            Log.Error($"[HornetBench] tool refill failed: {e.Message}");
+        }
     }
 
     // Find the active HK bench FSM hung in "Startle" and push it past the un-completing wake animation toward "Resting".
