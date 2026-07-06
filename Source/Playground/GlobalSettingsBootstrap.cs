@@ -12,13 +12,12 @@ namespace HornetPlayer.Playground;
 // PPtrs resolve against the hero dep closure that's already resident. Fix: assign each GlobalSettingsBase<T>._instance
 // directly, bypassing Addressables — one generic pass covers all ~8 settings types.
 internal static class GlobalSettingsBootstrap {
-    private static string BundlePath => Paths.SilksongAaBundle("globalsettings_assets_all.bundle");
-
     private static AssetBundle? bundle;
 
     // True only when WE loaded the bundle via LoadFromFile (so Cleanup may Unload it). False when we reused a bundle
     // Addressables already mounted — Addressables owns it; unloading it would break the live catalog.
     private static bool ownsBundle;
+    private static string BundlePath => Paths.SilksongAaBundle("globalsettings_assets_all.bundle");
 
     internal static int Apply() {
         if (bundle == null) {

@@ -27,8 +27,9 @@ internal static class SilksongCatalog {
         Log.Info($"[Addressables] Silksong catalog mounted (locator={locator})");
     }
 
-    private static bool IsRegistered(string catalogId) =>
-        Addressables.ResourceLocators.Any(l => l.LocatorId == catalogId);
+    private static bool IsRegistered(string catalogId) {
+        return Addressables.ResourceLocators.Any(l => l.LocatorId == catalogId);
+    }
 
     private static void InstallIdTransform(string silksongAa, string monoScriptsBundle) {
         var hkAa = $"{Application.streamingAssetsPath}/aa".Replace('\\', '/');
@@ -49,11 +50,13 @@ internal static class SilksongCatalog {
     // so the runtime is marked started and the following LoadContentCatalogAsync doesn't chain-wait on HK's default init.
     private static void MarkRuntimeStarted(string settingsPath) {
         var impl = typeof(Addressables)
-                       .GetProperty("m_Addressables", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Public)
+                       .GetProperty("m_Addressables",
+                           BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Public)
                        ?.GetValue(null)
                    ?? throw new InvalidOperationException("Addressables.m_Addressables not found");
         var init = impl.GetType().GetMethod("InitializeAsync", [typeof(string), typeof(string), typeof(bool)])
-                   ?? throw new InvalidOperationException("AddressablesImpl.InitializeAsync(string,string,bool) not found");
+                   ?? throw new InvalidOperationException(
+                       "AddressablesImpl.InitializeAsync(string,string,bool) not found");
         var handle = init.Invoke(impl, [settingsPath, null, false])!;
         handle.GetType().GetMethod("WaitForCompletion")!.Invoke(handle, null);
     }
@@ -72,7 +75,9 @@ internal static class SilksongCatalog {
             EnsureMounted();
             var h = Addressables.LoadAssetAsync<GameObject>(key);
             var obj = h.WaitForCompletion();
-            return new { key, status = h.Status.ToString(), loaded = obj != null, name = obj != null ? obj.name : null };
+            return new {
+                key, status = h.Status.ToString(), loaded = obj != null, name = obj != null ? obj.name : null
+            };
         } catch (Exception e) {
             var ex = e.InnerException ?? e;
             return new { key, error = $"{ex.GetType().Name}: {ex.Message}" };
@@ -81,5 +86,6 @@ internal static class SilksongCatalog {
 
     // Process-lifetime state; nothing safe to tear down per hot-reload (clearing the transform / locator mid-session
     // would break in-flight Silksong loads).
-    internal static void Cleanup() { }
+    internal static void Cleanup() {
+    }
 }

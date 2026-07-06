@@ -1,7 +1,6 @@
 extern alias Silksong;
 using System;
 using System.Reflection;
-using HutongGames.PlayMaker;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using SHeroBox = Silksong::HeroBox;
@@ -69,7 +68,8 @@ internal static class ContactDamageBridge {
                 dmg = FSMUtility.GetInt(fsm, "damageDealt");
                 var hkHazard = FSMUtility.GetInt(fsm, "hazardType");
                 if (hkHazard >= 2) ssHazard = MapHazard(hkHazard);
-            } else {
+            }
+            else {
                 // (b) HK's DamageHero component.
                 var dh = other.GetComponentInParent<DamageHero>();
                 if (dh != null && dh.enabled) {

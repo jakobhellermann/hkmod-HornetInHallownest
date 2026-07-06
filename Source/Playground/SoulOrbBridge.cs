@@ -37,8 +37,9 @@ internal static class SoulOrbBridge {
         var start = typeof(SoulOrb).GetMethod("Start", BindingFlags.Instance | BindingFlags.NonPublic);
         var onEnable = typeof(SoulOrb).GetMethod("OnEnable", BindingFlags.Instance | BindingFlags.NonPublic);
         targetField = typeof(SoulOrb).GetField("target", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (start == null || onEnable == null || targetField == null)
+        if (start == null || onEnable == null || targetField == null) {
             Log.Error("[SoulOrbBridge] SoulOrb.Start / OnEnable / target field not found");
+        }
         else {
             startHook = new Hook(start, (Action<Action<SoulOrb>, SoulOrb>)((orig, self) => {
                 orig(self);

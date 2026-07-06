@@ -18,16 +18,6 @@ using Object = UnityEngine.Object;
 namespace HornetPlayer;
 
 public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData> {
-    // Persist Hornet's PlayerData inside HK's save file (per slot). The modding API invokes these at HK's native
-    // save/load points (GameManager.SaveGame on bench/autosave; LoadGame on load) — see HornetSaveBridge.
-    public HornetSaveData OnSaveLocal() {
-        return HornetSaveBridge.Snapshot();
-    }
-
-    public void OnLoadLocal(HornetSaveData s) {
-        HornetSaveBridge.Stash(s);
-    }
-
     // Distinct from Silksong's DevUtils server (8200) so both games can be debugged at once.
     private const int DebugServerPort = 8201;
 
@@ -42,6 +32,16 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
     private ValidationRunner? validation;
 
     public static HornetPlayerMod? LoadedInstance { get; private set; }
+
+    // Persist Hornet's PlayerData inside HK's save file (per slot). The modding API invokes these at HK's native
+    // save/load points (GameManager.SaveGame on bench/autosave; LoadGame on load) — see HornetSaveBridge.
+    public HornetSaveData OnSaveLocal() {
+        return HornetSaveBridge.Snapshot();
+    }
+
+    public void OnLoadLocal(HornetSaveData s) {
+        HornetSaveBridge.Stash(s);
+    }
 
     public override string GetVersion() {
         return Assembly.GetExecutingAssembly().GetName().Version.ToString();
@@ -156,10 +156,10 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
         // Where our DLL + shipped data files live. From the Modding API's Mod.ModDirectory (correct even on hot-reload,
         // where Assembly.Location is empty). Must precede anything reading Paths.ModFile (e.g. ResourcesShim.Install).
-        Playground.Paths.ModDir = ModDirectory;
+        Paths.ModDir = ModDirectory;
 
         // Must run before any MonoMod Hook is created (it locks MonoMod's platform detection).
-        Playground.RosettaPlatformFix.Apply();
+        RosettaPlatformFix.Apply();
 
         playgroundHost = new GameObject("HornetPlayer.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
@@ -310,7 +310,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         });
         DebugServer.MapPost("/warp", req => {
             var scene = req["scene"];
-            if (string.IsNullOrEmpty(scene)) return new { error = "scene required (e.g. /warp?scene=RestingGrounds_04&x=46.25&y=7.57)" };
+            if (string.IsNullOrEmpty(scene))
+                return new { error = "scene required (e.g. /warp?scene=RestingGrounds_04&x=46.25&y=7.57)" };
             return DebugWarp.Warp(scene!, DebugWarp.ParseFloat(req["x"]), DebugWarp.ParseFloat(req["y"]));
         });
         DebugServer.MapPost("/press", req => {
@@ -360,7 +361,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
         SoulOrbBridge.Install(); // HK soul (SoulOrb homing + AddMPCharge) -> Hornet silk (orbs fly to her, grant silk)
         QuakeFloorBridge.Install(); // Hornet down-dash breaks HK quake floors (Desolate Dive equivalent)
-        ConveyorBridge.Install(); // HK conveyor belts move Hornet (they gate on HK's HeroController type, which she lacks)
+        ConveyorBridge
+            .Install(); // HK conveyor belts move Hornet (they gate on HK's HeroController type, which she lacks)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)

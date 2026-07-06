@@ -2,7 +2,6 @@ extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using HutongGames.PlayMaker;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -69,7 +68,7 @@ internal static class QuakeFloorBridge {
             getStateHook = new Hook(getState,
                 (Func<Func<Silksong::HeroController, string, bool>, Silksong::HeroController, string, bool>)(
                     (orig, self, name) =>
-                        quaking && HeroSwitch.HornetActive && name == "spellQuake" || orig(self, name)));
+                        (quaking && HeroSwitch.HornetActive && name == "spellQuake") || orig(self, name)));
         else Log.Error("[QuakeFloor] HeroController.GetState(string) not found");
 
         Log.Debug("[QuakeFloor] installed: down-dash -> quake-floor break");

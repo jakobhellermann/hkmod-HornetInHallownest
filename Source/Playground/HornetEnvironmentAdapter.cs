@@ -32,7 +32,10 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static Hook? loadSceneAsyncHook; // SceneManager.LoadSceneAsync(string, LoadSceneParameters)
     private static Hook? setHazardRespawnHook1; // SetHazardRespawn(Vector3, bool)
     private static Hook? setHazardRespawnHook2; // SetHazardRespawn(HazardRespawnMarker)
-    private static Hook? finishedEnteringSceneHook; // finish cutscene (enterWithoutInput) entries HK's Dream-Return FSM would
+
+    private static Hook?
+        finishedEnteringSceneHook; // finish cutscene (enterWithoutInput) entries HK's Dream-Return FSM would
+
     private static Hook? enterSceneDreamGateHook; // mirror HK's dream-gate warp-in onto Hornet
     private float armedWindow; // seconds left in the post-transition "watch for stuck control" window
     private string? lastScene;
@@ -81,8 +84,10 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 StuckControlNet(hero);
                 StuckEntryWatch(hero);
                 QuakeFloorBridge.Tick(hero); // down-dash breaks HK quake floors (only iterates while quaking)
-                NeedolinDreamNail.Tick(hero); // Needolin acts as a Dream Nail on nearby HK dream objects (edge-triggered)
-                GeoDashBridge.Tick(hero); // collect geo during a dash (kinematic HeroBox tunnels past it; only runs while dashing)
+                NeedolinDreamNail
+                    .Tick(hero); // Needolin acts as a Dream Nail on nearby HK dream objects (edge-triggered)
+                GeoDashBridge
+                    .Tick(hero); // collect geo during a dash (kinematic HeroBox tunnels past it; only runs while dashing)
             }
 
             // --- The bookkeeping half of InputHandler.Update ---
@@ -255,7 +260,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         GameManager.SceneLoadInfo info) {
         orig(self, info);
         RelayLeaveScene(info);
-        DreamReturnBridge.OnBeginSceneTransition(info); // fade the white blanker out on a Dream arrival (Hornet lacks the FSM)
+        DreamReturnBridge
+            .OnBeginSceneTransition(info); // fade the white blanker out on a Dream arrival (Hornet lacks the FSM)
         DeparentHero("scene transition");
     }
 

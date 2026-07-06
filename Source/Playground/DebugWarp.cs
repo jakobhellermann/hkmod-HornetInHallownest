@@ -66,6 +66,7 @@ internal static class DebugWarp {
         Log.Info($"[Warp] arrived at '{scene}'{(x.HasValue ? $" placed ({x}, {y})" : "")}, faded in");
     }
 
-    internal static float? ParseFloat(string? s) =>
-        float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+    internal static float? ParseFloat(string? s) {
+        return float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : null;
+    }
 }

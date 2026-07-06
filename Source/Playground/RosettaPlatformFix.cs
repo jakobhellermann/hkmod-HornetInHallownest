@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using MonoMod.Utils;
 
 namespace HornetPlayer.Playground;
 
@@ -13,8 +14,9 @@ internal static class RosettaPlatformFix {
     internal static void Apply() {
         if (!IsTranslatedByRosetta()) return;
         try {
-            MonoMod.Utils.PlatformHelper.Current = MonoMod.Utils.Platform.MacOS | MonoMod.Utils.Platform.Bits64;
-            Log.Info($"[RosettaFix] under Rosetta — forced MonoMod platform to {MonoMod.Utils.PlatformHelper.Current} (x86 detour backend)");
+            PlatformHelper.Current = MonoMod.Utils.Platform.MacOS | MonoMod.Utils.Platform.Bits64;
+            Log.Info(
+                $"[RosettaFix] under Rosetta — forced MonoMod platform to {PlatformHelper.Current} (x86 detour backend)");
         } catch (Exception e) {
             Log.Error($"[RosettaFix] could not override PlatformHelper.Current (already locked): {e.Message}");
         }

@@ -14,7 +14,7 @@ internal static class GeoDashBridge {
     private static Collider2D? heroBox;
     private static readonly Collider2D[] hits = new Collider2D[16];
     private static MethodInfo? geoTrigger;
-    private static ContactFilter2D filter = new ContactFilter2D { useTriggers = true, useLayerMask = false };
+    private static readonly ContactFilter2D filter = new() { useTriggers = true, useLayerMask = false };
     private static Vector2 prevCenter;
     private static bool hadPrev;
 

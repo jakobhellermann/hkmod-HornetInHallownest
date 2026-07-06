@@ -8,14 +8,13 @@ namespace HornetPlayer.Playground;
 // SceneData, a tools blob, …). Old saves missing a field deserialize it to null/default, so adding fields is backward-
 // compatible. Bump Version + branch in HornetSaveBridge when a field's meaning changes incompatibly.
 public class HornetSaveData {
-    public int Version = 1;
+    // Which hero the player controlled when the save was written: true = Hornet, false = Knight. Restored post-spawn so
+    // loading a save puts you back on the hero you were playing. Absent in old saves -> deserializes to false (Knight).
+    public bool HornetActive;
 
     // The whole Silksong PlayerData as a JSON string (JsonConvert; Silksong's PlayerData is
     // [JsonObject(MemberSerialization.Fields)], the same shape its own save uses). Kept as a string so it round-trips
     // onto the LIVE PlayerData.instance via PopulateObject instead of replacing the instance the hero already holds.
     public string? PlayerData;
-
-    // Which hero the player controlled when the save was written: true = Hornet, false = Knight. Restored post-spawn so
-    // loading a save puts you back on the hero you were playing. Absent in old saves -> deserializes to false (Knight).
-    public bool HornetActive;
+    public int Version = 1;
 }

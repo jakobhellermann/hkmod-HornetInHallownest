@@ -1,7 +1,9 @@
 extern alias Silksong;
+using System;
 using System.Collections;
-using HutongGames.PlayMaker; // HK's shared PlayMaker — the blankers live on HK's GameCameras
 using UnityEngine;
+using UnityEngine.SceneManagement;
+// HK's shared PlayMaker — the blankers live on HK's GameCameras
 using USceneManager = UnityEngine.SceneManagement.SceneManager;
 using Object = UnityEngine.Object;
 using HeroTransitionState = Silksong::GlobalEnums.HeroTransitionState;
@@ -44,8 +46,8 @@ internal static class DreamReturnBridge {
         subscribed = true;
     }
 
-    private static void OnActiveSceneChanged(UnityEngine.SceneManagement.Scene from,
-        UnityEngine.SceneManagement.Scene to) {
+    private static void OnActiveSceneChanged(Scene from,
+        Scene to) {
         if (!pending) return;
         pending = false;
 
@@ -110,7 +112,7 @@ internal static class DreamReturnBridge {
         // context, and control must stay restored even if the anim resume throws.
         try {
             hero.StartAnimationControl();
-        } catch (System.Exception e) {
+        } catch (Exception e) {
             Log.Error($"[DreamReturn] StartAnimationControl threw: {e.Message}");
         }
 

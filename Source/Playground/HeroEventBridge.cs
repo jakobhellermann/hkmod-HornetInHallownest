@@ -1,9 +1,10 @@
 extern alias SilksongPM;
 using System;
 using System.Reflection;
-using HutongGames.PlayMaker; // HK's PlayMaker — the FSMs that emit events at the hero
+using HutongGames.PlayMaker;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
+// HK's PlayMaker — the FSMs that emit events at the hero
 
 namespace HornetPlayer.Playground;
 
@@ -23,11 +24,11 @@ namespace HornetPlayer.Playground;
 // Feature-specific reactions that need to prep state BEFORE the event lands (e.g. roar facing direction) subscribe to
 // BeforeForward — no feature logic lives here.
 internal static class HeroEventBridge {
+    private static Hook? hook;
+
     // (eventName, senderGameObject) — senderGameObject is the emitting FSM's owner (may be null). Fires once per
     // forwarded HK event, immediately BEFORE the event is delivered to Hornet's FSMs.
     internal static event Action<string, GameObject?>? BeforeForward;
-
-    private static Hook? hook;
 
     internal static void Install() {
         if (hook != null) return;

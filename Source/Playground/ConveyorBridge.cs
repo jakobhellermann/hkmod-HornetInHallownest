@@ -17,7 +17,8 @@ internal static class ConveyorBridge {
     private static Hook? exitHook;
 
     internal static void Install() {
-        var enter = typeof(ConveyorBelt).GetMethod("OnCollisionEnter2D", BindingFlags.Instance | BindingFlags.NonPublic);
+        var enter = typeof(ConveyorBelt).GetMethod("OnCollisionEnter2D",
+            BindingFlags.Instance | BindingFlags.NonPublic);
         var exit = typeof(ConveyorBelt).GetMethod("OnCollisionExit2D", BindingFlags.Instance | BindingFlags.NonPublic);
         if (enter == null || exit == null) {
             Log.Error("[Conveyor] ConveyorBelt.OnCollision{Enter,Exit}2D not found");

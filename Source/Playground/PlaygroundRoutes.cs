@@ -25,7 +25,10 @@ public static class PlaygroundRoutes {
         DebugServer.MapPost("/set-active", req => SetActive(req["name"], req["path"], req["active"]));
         DebugServer.MapPost("/set-field", req => SetField(req["path"], req["field"], req["value"]));
         DebugServer.MapPost("/invoke", req => Invoke(req["path"], req["method"]));
-        DebugServer.MapPost("/save", _ => { GameManager.instance.SaveGame(); return new { ok = true, saving = true }; });
+        DebugServer.MapPost("/save", _ => {
+            GameManager.instance.SaveGame();
+            return new { ok = true, saving = true };
+        });
         DebugServer.MapPost("/unlock-tools", _ => {
             try {
                 Silksong::ToolItemManager.UnlockAllTools();

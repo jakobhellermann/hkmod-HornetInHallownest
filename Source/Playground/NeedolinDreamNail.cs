@@ -1,8 +1,8 @@
 extern alias Silksong;
 extern alias SilksongPM;
 using System.Reflection;
-using HutongGames.PlayMaker; // HK's PlayMakerFSM (for BroadcastEvent); Hornet's own FSMs use SilksongPM::PlayMakerFSM
 using UnityEngine;
+// HK's PlayMakerFSM (for BroadcastEvent); Hornet's own FSMs use SilksongPM::PlayMakerFSM
 using Object = UnityEngine.Object;
 
 namespace HornetPlayer.Playground;
@@ -92,19 +92,19 @@ internal static class NeedolinDreamNail {
             // vanilla — only a wounded dreamer reacts; everything else ignores it. (First Needolin wounds via the hitbox
             // above; a second one, with the dreamer now in "Wound Idle", frees it.)
             PlayMakerFSM.BroadcastEvent("DREAM FOCUS START");
-        } else if (col != null) {
+        }
+        else if (col != null) {
             col.enabled = false;
         }
     }
 
     private static bool IsNeedolinPlaying(Silksong::HeroController hero) {
-        if (silkSpecials == null) {
+        if (silkSpecials == null)
             foreach (var f in hero.GetComponents<SilksongPM::PlayMakerFSM>())
                 if (f.FsmName == "Silk Specials") {
                     silkSpecials = f;
                     break;
                 }
-        }
 
         return silkSpecials != null && silkSpecials.ActiveStateName == "Needolin Sub";
     }

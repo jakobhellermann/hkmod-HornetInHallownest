@@ -49,7 +49,8 @@ internal static class HornetSaveBridge {
             PlayerData = spd != null ? JsonConvert.SerializeObject(spd, SaveSettings) : null,
             HornetActive = SaveActiveOverride ?? HeroSwitch.HornetActive
         };
-        Log.Info($"[HornetSave] snapshot PlayerData ({(data.PlayerData?.Length ?? 0)} chars), hornetActive={data.HornetActive}");
+        Log.Info(
+            $"[HornetSave] snapshot PlayerData ({data.PlayerData?.Length ?? 0} chars), hornetActive={data.HornetActive}");
         return data;
     }
 
@@ -75,7 +76,7 @@ internal static class HornetSaveBridge {
 
         SaveActiveOverride = null; // back in gameplay: live HeroSwitch state is authoritative for future saves again
 
-        if (pendingPlayerData != null) {
+        if (pendingPlayerData != null)
             try {
                 JsonConvert.PopulateObject(pendingPlayerData, spd, SaveSettings);
                 Log.Info("[HornetSave] applied loaded PlayerData onto live instance");
@@ -84,7 +85,6 @@ internal static class HornetSaveBridge {
             } finally {
                 pendingPlayerData = null;
             }
-        }
 
         if (pendingHornetActive != null) {
             var want = pendingHornetActive.Value ? ActiveHero.Hornet : ActiveHero.Knight;
@@ -93,6 +93,7 @@ internal static class HornetSaveBridge {
                 HeroSwitch.SetActive(want);
                 Log.Info($"[HornetSave] restored active hero: {want}");
             }
+
             pendingHornetActive = null;
         }
     }

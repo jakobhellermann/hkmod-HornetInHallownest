@@ -22,6 +22,9 @@ internal static class InputBridge {
     // Debug drive (for /press): force an action pressed for `frames` ticks, so we can demo without a physical key.
     internal static readonly Dictionary<string, int> Forced = new();
 
+    // Valid /press action names (the driven set), so the route can reject typos instead of silently pressing a default.
+    internal static string[] KnownActions => InputDriver.ActionNames;
+
     internal static void Install() {
         if (go != null) return;
         go = new GameObject("HornetPlayer.InputDriver");
@@ -41,9 +44,9 @@ internal static class InputBridge {
         Forced[action] = frames;
     }
 
-    // Valid /press action names (the driven set), so the route can reject typos instead of silently pressing a default.
-    internal static string[] KnownActions => InputDriver.ActionNames;
-    internal static bool IsKnownAction(string action) => InputDriver.IsAction(action);
+    internal static bool IsKnownAction(string action) {
+        return InputDriver.IsAction(action);
+    }
 }
 
 [DefaultExecutionOrder(-10000)] // run before HeroController.Update so WasPressed lands the same frame
@@ -66,6 +69,10 @@ internal sealed class InputDriver : MonoBehaviour {
         ("menucancel", KeyCode.X) // inventory cancel/back
     };
 
+    private bool infiniteSilk;
+
+    private ulong tick;
+
     internal static string[] ActionNames {
         get {
             var names = new string[Map.Length];
@@ -73,17 +80,6 @@ internal sealed class InputDriver : MonoBehaviour {
             return names;
         }
     }
-
-    internal static bool IsAction(string name) {
-        foreach (var (n, _) in Map)
-            if (n == name)
-                return true;
-        return false;
-    }
-
-    private bool infiniteSilk;
-
-    private ulong tick;
 
     private void Update() {
         try {
@@ -143,6 +139,13 @@ internal sealed class InputDriver : MonoBehaviour {
         } catch (Exception e) {
             Log.Error($"[InputDriver] {e}");
         }
+    }
+
+    internal static bool IsAction(string name) {
+        foreach (var (n, _) in Map)
+            if (n == name)
+                return true;
+        return false;
     }
 
     private static bool Consume(string name) {

@@ -53,12 +53,12 @@ internal static class HeroSwitch {
     // re-enable the ones we disabled — not FSMs the game itself had disabled for gameplay reasons.
     private static readonly HashSet<PlayMakerFSM> disabledByUs = new();
 
-    internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
-    internal static bool HornetActive => Active == ActiveHero.Hornet;
-
     // Set by HornetEnvironmentAdapter's hook when HK runs a dream-gate warp-in (EnterSceneDreamGate) on the Knight;
     // the entry relay below mirrors it onto Hornet once she's positioned, then clears it.
     internal static bool DreamGateEntryPending;
+
+    internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
+    internal static bool HornetActive => Active == ActiveHero.Hornet;
 
     // The GameObject of the hero the player currently controls: the spawned Hornet while she's active, else HK's Knight.
     // SINGLE SOURCE OF TRUTH for the "redirect HK's hero reference to the active hero" consumers — HeroProxy (PlayMaker
@@ -163,7 +163,8 @@ internal static class HeroSwitch {
 
         var prev = Active;
         Active = who;
-        if (who != ActiveHero.Hornet) QuakeFloorBridge.CancelIfActive(); // undo a scoped down-dash "Player" tag if mid-dash
+        if (who != ActiveHero.Hornet)
+            QuakeFloorBridge.CancelIfActive(); // undo a scoped down-dash "Player" tag if mid-dash
         var knightGo = HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.gameObject : null;
         var hornetGo = BundleSpike.HornetRoot;
 
@@ -309,12 +310,18 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
     // --- Keybind trace recorder (F9 toggles) --- captures Hornet's per-FRAME state (finer than the 12Hz HTTP poll) so a
     // repro doesn't have to race a fixed poll window. Writes a TSV on stop; read /tmp/hornet_trace_live.tsv afterwards.
     private const string TracePath = "/tmp/hornet_trace_live.tsv";
+
+    private bool
+        dreamReturnPending; // arriving from a dream scene: run the entry then force idle (see DreamReturnEntry)
+
     private bool hkEntryFixed;
+
+    private MeshRenderer?
+        knightRenderer; // cached once; the inert Knight's body renderer, re-hidden per frame (see Update)
+
+    private bool knightRendererCached;
     private string? lastScene;
     private bool pendingSnap;
-    private bool dreamReturnPending; // arriving from a dream scene: run the entry then force idle (see DreamReturnEntry)
-    private MeshRenderer? knightRenderer; // cached once; the inert Knight's body renderer, re-hidden per frame (see Update)
-    private bool knightRendererCached;
     private List<string>? traceBuf;
     private float traceT0;
     private bool tracing;
@@ -327,7 +334,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         if (scene != lastScene) {
             // Leaving a dream scene? HK's "Dream Return" FSM (on the inert Knight) never runs its Prostrate step for
             // Hornet, so the white dream blanker it would fade out stays faded-in → whitescreen soft-lock. Clear it.
-            var wasDream = lastScene != null && lastScene.StartsWith("Dream", System.StringComparison.Ordinal);
+            var wasDream = lastScene != null && lastScene.StartsWith("Dream", StringComparison.Ordinal);
             lastScene = scene;
             pendingSnap = true;
             dreamReturnPending = wasDream;
@@ -355,10 +362,13 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
             }
             // When Hornet is the active hero, run her REAL Silksong scene-entry (walk/drop-in animation + entry FSMs)
             // from HK's mirrored gate. When the Knight is active, Hornet is an inert prop -> just relocate her.
-            else if (HeroSwitch.HornetActive && HornetSceneEntry.Enabled && knight.sceneEntryGate != null)
+            else if (HeroSwitch.HornetActive && HornetSceneEntry.Enabled && knight.sceneEntryGate != null) {
                 StartCoroutine(dreamReturnPending ? DreamReturnEntry(knight) : HornetSceneEntry.Run(knight));
-            else
+            }
+            else {
                 SnapHornetToKnight(knight);
+            }
+
             pendingSnap = false;
             dreamReturnPending = false;
             HeroSwitch.DreamGateEntryPending = false;

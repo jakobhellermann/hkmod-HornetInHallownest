@@ -16,10 +16,9 @@ namespace HornetPlayer.Playground;
 // Container keys are LOWERCASE Resources paths (Unity's own convention), so we lowercase the request before lookup. We
 // only serve when HK's own Resources.Load misses; anything we still can't serve is logged once for visibility.
 internal static class ResourcesShim {
-    private static string BundlePath => Paths.ModFile("silksong-resources.bundle");
-
     private static Hook? hook;
     private static AssetBundle? bundle;
+    private static string BundlePath => Paths.ModFile("silksong-resources.bundle");
 
     internal static void Install() {
         if (hook != null) return;
