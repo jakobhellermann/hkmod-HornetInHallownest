@@ -66,19 +66,31 @@ internal sealed class HornetDeath : MonoBehaviour {
                 yield break;
             }
 
-            // HK's full death sequence inline: FreezeInPlace -> SaveGame -> wait (death anim plays) -> FadeOut ->
-            // ReadyForRespawn -> BeginSceneTransition(respawnScene). On return the transition is kicked, RespawningHero set.
-            yield return hkGm.PlayerDead(DeathWait);
+            // HK special-cases death in a dream/godhome zone (HeroController.Die): instead of the normal death -> bench
+            // respawn it does a "dream return" — wake up standing at the dream entry (door_dreamReturn), no bench. Route
+            // there so a dream-boss death doesn't wrongly sit Hornet on the last bench (the reported "she lands on the
+            // bench"). GetCurrentMapZone() = HK's sm.mapZone for the CURRENT (dream) scene — HK owns the scene here.
+            // Exactly the two zones HeroController.Die skips the normal death for (HeroController.cs:4237). NOT
+            // WHITE_PALACE — a WP death is a real death (bench respawn), just with a special fade.
+            var mapZone = hkGm.GetCurrentMapZone();
+            if (mapZone is "DREAM_WORLD" or "GODS_GLORY") {
+                yield return DreamReturnRoutine(hkGm);
+            }
+            else {
+                // HK's full death sequence inline: FreezeInPlace -> SaveGame -> wait (death anim plays) -> FadeOut ->
+                // ReadyForRespawn -> BeginSceneTransition(respawnScene). On return the transition is kicked, RespawningHero set.
+                yield return hkGm.PlayerDead(DeathWait);
 
-            // Wait for the respawn to settle — RespawningHero consumed by EnterHero + the Knight placed at the marker
-            // (isHeroInPosition). Bounded by a timeout so a bench-respawn quirk can never hang us (which would strand
-            // `handling`). After the timeout we revive anyway — better visible-and-controllable than stuck dead.
-            var t = 0f;
-            while (t < 6f) {
-                var k = HeroController.UnsafeInstance;
-                if (k != null && !hkGm.RespawningHero && k.isHeroInPosition) break;
-                t += Time.unscaledDeltaTime;
-                yield return null;
+                // Wait for the respawn to settle — RespawningHero consumed by EnterHero + the Knight placed at the marker
+                // (isHeroInPosition). Bounded by a timeout so a bench-respawn quirk can never hang us (which would strand
+                // `handling`). After the timeout we revive anyway — better visible-and-controllable than stuck dead.
+                var t = 0f;
+                while (t < 6f) {
+                    var k = HeroController.UnsafeInstance;
+                    if (k != null && !hkGm.RespawningHero && k.isHeroInPosition) break;
+                    t += Time.unscaledDeltaTime;
+                    yield return null;
+                }
             }
 
             Revive(HeroController.UnsafeInstance);
@@ -95,6 +107,50 @@ internal sealed class HornetDeath : MonoBehaviour {
         } finally {
             handling = false;
             wasDead = false;
+        }
+    }
+
+    // Dream/godhome death -> HK's "dream return" instead of the bench respawn. Mirrors the essential of HK's "Hero Death
+    // Anim" FSM "Dream Return" state: MaxHealth + EnterWithoutInput, then BeginSceneTransition(dreamReturnScene,
+    // "door_dreamReturn", Dream). The Knight (HK-owned) is placed at the dream-entry gate; Revive then snaps Hornet onto
+    // it. atBench stays false there, so Revive takes the normal ground-idle path (no bench sit).
+    private IEnumerator DreamReturnRoutine(GameManager hkGm) {
+        var pd = PlayerData.instance;
+        var returnScene = pd != null ? pd.dreamReturnScene : null;
+        if (string.IsNullOrEmpty(returnScene)) {
+            Log.Error("[HornetDeath] dream death but dreamReturnScene empty — falling back to bench respawn");
+            yield return hkGm.PlayerDead(DeathWait);
+            yield break;
+        }
+
+        Log.Info($"[HornetDeath] dream/godhome death -> dream return to '{returnScene}'@door_dreamReturn (no bench)");
+
+        // Let Hornet's death anim play a beat before the transition (mirrors HK's ~2s dream-death anim window).
+        yield return new WaitForSeconds(DeathWait);
+
+        var knight = HeroController.UnsafeInstance;
+        knight?.MaxHealth();
+        knight?.EnterWithoutInput(true); // wake at the entry without immediately grabbing input, like HK's dream return
+
+        var fromScene = hkGm.GetSceneNameString();
+        hkGm.BeginSceneTransition(new GameManager.SceneLoadInfo {
+            SceneName = returnScene,
+            EntryGateName = "door_dreamReturn",
+            Visualization = GameManager.SceneLoadVisualizations.Dream,
+            PreventCameraFadeOut = true,
+            WaitForSceneTransitionCameraFade = false,
+            AlwaysUnloadUnusedAssets = true
+        });
+
+        // A dream return is a plain scene transition (not ReadyForRespawn), so RespawningHero is never set. Gate on the
+        // scene actually CHANGING first (else the pre-transition isHeroInPosition would let us exit immediately), then on
+        // the Knight being placed at the entry gate. Timeout-bounded so a stuck transition can't strand `handling`.
+        var t = 0f;
+        while (t < 8f) {
+            var k = HeroController.UnsafeInstance;
+            if (k != null && hkGm.GetSceneNameString() != fromScene && k.isHeroInPosition) break;
+            t += Time.unscaledDeltaTime;
+            yield return null;
         }
     }
 
