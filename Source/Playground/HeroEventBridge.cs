@@ -54,7 +54,7 @@ internal static class HeroEventBridge {
             var hero = BundleSpike.RealHero;
             if (hero == null || go != hero.gameObject) return; // only events aimed at the active Hornet
 
-            BeforeForward?.Invoke(name!, self.GameObject); // self is `this` of the instance method — never null
+            BeforeForward?.Invoke(name, self.GameObject); // self is `this` of the instance method — never null
             // Hornet's FSMs on the hero GO (~16) — more targeted than upstream's global FsmList scan; SendEvent no-ops on
             // any FSM without a transition for this event in its current state.
             foreach (var fsm in hero.gameObject.GetComponents<SilksongPM::PlayMakerFSM>())
