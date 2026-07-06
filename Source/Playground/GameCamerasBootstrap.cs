@@ -268,6 +268,19 @@ internal static class GameCamerasBootstrap {
         FindByName(hudCam, "Hud Canvas")?.gameObject.SetActive(true);
         var layerFixes = RemapSortingLayers(hudCam);
 
+        // Cross-game tag-index collision: some Silksong HUD GOs (the Counters) carry a tag index that, resolved against
+        // HK's TagManager, comes out as "Boss" — a gameplay-enemy tag. HK FSMs that gate on GetTagCount("Boss") then
+        // miscount Hornet's HUD as bosses (e.g. the Collector cancels its jar summon when >=4 "Boss" objects exist ->
+        // never drops jars). HUD objects have no business carrying a gameplay tag, so clear it.
+        var untagged = 0;
+        foreach (var t in hudCam.GetComponentsInChildren<Transform>(true))
+            if (t.CompareTag("Boss")) {
+                t.gameObject.tag = "Untagged";
+                untagged++;
+            }
+
+        if (untagged > 0) Log.Info($"[HUD] cleared bogus 'Boss' tag off {untagged} HUD object(s) (tag-index collision)");
+
         // Silk meter: the HUD's OWN SilkSpool (Thread/Spool) has the visual refs (capR/seg1/silkChunkPrefab); our
         // bootstrap's BARE SilkSpool (on the GM GO, added for AddUsingSilk) hijacked SilkSpool.Instance, so the real
         // one's Awake returned early ("if (Instance) return") and the meter never drew. Re-point Instance to the real
