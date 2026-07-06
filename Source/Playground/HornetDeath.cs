@@ -82,6 +82,16 @@ internal sealed class HornetDeath : MonoBehaviour {
             }
 
             Revive(HeroController.UnsafeInstance);
+
+            // Revive toggles the Hornet HUD off (SetHornetHudVisible(false)); CameraSwitchDriver re-activates it next
+            // frame. The tool-icon refresh EnterSit already fired is lost across that toggle (ToolHudIcon doesn't re-read
+            // on SetActive re-enable), so the counts show stale-depleted after a bench respawn. Re-fire the refresh once
+            // the HUD is active again (two frames covers the -8000 CameraSwitchDriver re-activation).
+            if (PlayerData.instance != null && PlayerData.instance.atBench) {
+                yield return null;
+                yield return null;
+                HornetBench.RefreshToolHud();
+            }
         } finally {
             handling = false;
             wasDead = false;

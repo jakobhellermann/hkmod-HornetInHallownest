@@ -1,4 +1,5 @@
 extern alias Silksong;
+using System;
 using UnityEngine;
 using SHeroController = Silksong::HeroController;
 
@@ -111,10 +112,22 @@ internal sealed class HornetBench : MonoBehaviour {
                 n++;
             }
 
+            RefreshToolHud();
+
             Log.Info($"[HornetBench] refilled {n} tools to full (Shell Shards not yet collectable)");
-        } catch (System.Exception e) {
+        } catch (Exception e) {
             Log.Error($"[HornetBench] tool refill failed: {e.Message}");
         }
+    }
+
+    // Setting AmountLeft directly doesn't notify the HUD — the tool icons redraw only on BoundAttackToolUpdated (attack
+    // tools) / the "TOOL EQUIPS CHANGED" event (quick tools). Fire both so refilled counts show. Must be called while the
+    // HUD "In-game" container is ACTIVE: ToolHudIcon subscribes in Awake and does NOT re-read on SetActive re-enable, so
+    // an event fired while it's inactive is lost. The death respawn toggles the HUD off/on (HornetDeath.Revive), so it
+    // re-fires this AFTER the re-activation — see there.
+    internal static void RefreshToolHud() {
+        Silksong::ToolItemManager.ReportAllBoundAttackToolsUpdated();
+        Silksong::ToolItemManager.SendEquippedChangedEvent(true);
     }
 
     // Find the active HK bench FSM hung in "Startle" and push it past the un-completing wake animation toward "Resting".
