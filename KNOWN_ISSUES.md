@@ -19,6 +19,7 @@
 - VS/dive animation shows knight always
 - mask shard pickup animation
 - hollow knight statue cutscene
+- kings brand cutscene
 
 ## Integration
 - XX hardsaves
@@ -34,6 +35,7 @@
 - sprint-attack (dash-stab) misses HK trigger-breakables (e.g. Watcher Knights chandelier rope, Ruins2_03)
 - lantern immer aktiv
 - XX double check descending dark, cdash pickup
+- weaver entry
 
 # Balancing
 - soul totem <-> silk
@@ -42,7 +44,7 @@
 - hud sync? geo on hornet
 - dirtmouth slowdown
 - crouch mode for knight height:
-    - thorns, crossroads shard, greenpath entry, fungal cornifer, godpixel peaks, crusher grub, frogs, catacombs
+    - thorns, crossroads shard, greenpath entry, fungal cornifer, godpixel peaks, crusher grub, frogs, catacombs, geo egg drop, mato down, lots in deepnest
 
 ## Intermittent / needs debug
 - cannot bench sometimes

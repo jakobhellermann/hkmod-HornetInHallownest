@@ -115,8 +115,52 @@ public sealed class HornetSpawner : IModule {
 
         DamageEnemyProxy.Install();
 
+        ApplyColliderHeight();
+
         Log.Info("[HornetSpawner] instantiated");
         return true;
+    }
+
+    // Collider-height toggle (dev knob, Digit8 via InputDriver). HK's level geometry is built for the Knight's collider
+    // (0.50 × 1.28); Hornet's Silksong collider is 0.50 × 2.08 — same width but 0.80 taller (almost all upward) — so low
+    // passages the Knight clears block her. When true we match the Knight's height so she fits the same corridors. This
+    // is the terrain collider (col2d): HeroController never resizes it at runtime and it's separate from the HeroBox
+    // hurtbox (combat untouched), so a one-time set is safe. Default ON (the traversal fix). Cost is cosmetic — her tall
+    // sprite clips through genuinely low ceilings. (Scuttle can't help: it only resizes the hurtbox.)
+    internal static bool KnightHeightCollider = true;
+
+    // The two terrain-collider configs, feet-anchored. Width and feet-bottom are shared; only the height differs, and
+    // the offset is COMPUTED from them (feetBottom + height/2) so there's no second hardcoded offset to keep in sync.
+    private const float ColliderWidth = 0.50f; // both games' hero terrain collider width (identical, so gaps match)
+    private const float KnightHeight = 1.28f; // HK Knight terrain-collider height — she fits the same corridors
+    private const float HornetHeight = 2.08f; // Hornet's native Silksong terrain-collider height
+    private const float FeetBottomLocalY = -1.55f; // collider bottom in hero-local Y (her sprite feet); both anchor here
+
+    // Hornet's terrain collider (col2d), cached at spawn. Single source of truth for her body height — ContactDamageBridge
+    // reads its live bounds to make hazards respect the current height (no duplicated magic number).
+    internal static BoxCollider2D? TerrainCollider { get; private set; }
+
+    // Apply the current KnightHeightCollider setting to the live hero's terrain collider, FEET-ANCHORED: keep the collider
+    // bottom at her feet (FeetBottomLocalY) and only change the height — so ground-snap (feet-anchored) stays correct.
+    internal static void ApplyColliderHeight() {
+        var root = HornetRoot;
+        if (!root) return;
+        TerrainCollider = root.GetComponent<BoxCollider2D>();
+        if (!TerrainCollider) {
+            Log.Error("[HornetSpawner] no terrain BoxCollider2D on Hornet_Real — collider height not applied");
+            return;
+        }
+
+        var height = KnightHeightCollider ? KnightHeight : HornetHeight;
+        TerrainCollider.size = new Vector2(ColliderWidth, height);
+        TerrainCollider.offset = new Vector2(0f, FeetBottomLocalY + height / 2f);
+    }
+
+    // Flip the collider-height setting and re-apply to the live hero. Returns the new state.
+    internal static bool ToggleColliderHeight() {
+        KnightHeightCollider = !KnightHeightCollider;
+        ApplyColliderHeight();
+        return KnightHeightCollider;
     }
 
     internal static bool Despawn() {

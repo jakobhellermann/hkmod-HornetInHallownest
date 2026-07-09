@@ -1,6 +1,7 @@
 extern alias Silksong;
 using System;
 using System.Reflection;
+using HornetPlayer.HornetInHallownest.Modules;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using SHeroBox = Silksong::HeroBox;
@@ -90,6 +91,21 @@ internal static class ContactDamageBridge {
 
             var hc = SHeroController.instance;
             if (hc == null) return;
+
+            // Knight-height collider toggle: her terrain collider (col2d) is shrunk to the Knight's height so she FITS
+            // low passages, but her HeroBox hurtbox is still her full tall Silksong box (HeroBoxNormal ~2.25) — so ceiling
+            // spikes in a passage she now fits through would still hit her phantom upper body through that tall hurtbox.
+            // SCOPE: only while the toggle is ON, and only for real HAZARDS (ssHazard != ENEMY) — enemy combat keeps her
+            // full hurtbox, no balance change. Rule: skip a hazard whose collider sits entirely above her actual body,
+            // i.e. above the top of her (now Knight-height) terrain collider. The cutoff is read from the LIVE terrain
+            // collider bounds (single source of truth — tracks whatever height the toggle set, no magic number). Fail-open:
+            // if either collider is missing, take the hit. Bounds reads only happen during active hazard overlap (rare).
+            if (HornetSpawner.KnightHeightCollider && ssHazard != SHazard.ENEMY) {
+                var body = HornetSpawner.TerrainCollider;
+                var dmgCol = other.GetComponent<Collider2D>();
+                if (body != null && dmgCol != null && dmgCol.bounds.min.y >= body.bounds.max.y) return;
+            }
+
             Log.InfoOnce($"contact:{other.name}",
                 $"[ContactDamageBridge] HK contact damage from '{other.name}' dmg={dmg} hazard={ssHazard}");
             // damageSide = the side the damager is on (matches HeroBox.CheckForDamage's own computation).

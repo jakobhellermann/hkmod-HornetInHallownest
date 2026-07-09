@@ -2,6 +2,7 @@ extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using HornetPlayer.HornetInHallownest.Modules;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using SsActions = Silksong::HeroActions;
@@ -100,6 +101,13 @@ internal sealed class InputDriver : MonoBehaviour {
             if (Input.GetKeyDown(KeyCode.B)) {
                 infiniteSilk = !infiniteSilk;
                 Log.Info($"[InputDriver] infinite silk: {infiniteSilk}");
+            }
+
+            // Digit8 = toggle Hornet's terrain-collider height (Knight 1.28 <-> her native full 2.08). Dev knob to test
+            // which low corridors she fits through; on = Knight height (the traversal fix). Later: a proper mod menu.
+            if (Input.GetKeyDown(KeyCode.Alpha8)) {
+                var knightHeight = HornetSpawner.ToggleColliderHeight();
+                Log.Info($"[InputDriver] collider height: {(knightHeight ? "Knight (1.28)" : "Hornet full (2.08)")}");
             }
 
             if (infiniteSilk) {
