@@ -723,6 +723,29 @@ internal static class BundleSpike {
         };
     }
 
+    // HK-side counterpart to FsmVars: dump an HK (global PlayMaker) FSM's variables by name, with an optional GO filter
+    // (many scene objects share an FSM name like "Fade", so pass go=... to disambiguate — e.g. go=RestBench Spider).
+    // FsmVars only scans the isolated Silksong PlayMakerFSM type, so HK scene-object FSMs (benches, traps, levers) are
+    // invisible to it; this scans HK's PlayMakerFSM type instead.
+    internal static object FsmVarsHk(string fsmName, string? goFilter = null) {
+        foreach (var f in Resources.FindObjectsOfTypeAll<PlayMakerFSM>()) {
+            if (f == null || !string.Equals(f.FsmName, fsmName, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!f.gameObject.activeInHierarchy) continue;
+            if (!string.IsNullOrEmpty(goFilter) &&
+                f.gameObject.name.IndexOf(goFilter, StringComparison.OrdinalIgnoreCase) < 0) continue;
+            var vars = f.FsmVariables;
+            var d = new Dictionary<string, string>();
+            foreach (var b in vars.BoolVariables) d[b.Name] = "bool:" + b.Value;
+            foreach (var n in vars.IntVariables) d[n.Name] = "int:" + n.Value;
+            foreach (var ff in vars.FloatVariables) d[ff.Name] = "float:" + ff.Value;
+            foreach (var v3 in vars.Vector3Variables) d[v3.Name] = "v3:" + v3.Value;
+            foreach (var g in vars.GameObjectVariables) d[g.Name] = "go:" + (g.Value != null ? g.Value.name : "<null>");
+            return new { fsm = f.FsmName, go = f.gameObject.name, activeState = f.Fsm.ActiveStateName, vars = d };
+        }
+
+        return new { error = "hk fsm not found", hint = "pass go=<substring> if the name is shared" };
+    }
+
     internal static object FsmDump(string name) {
         if (HornetRoot == null) return new { error = "not spawned" };
         var fsms = HornetRoot.GetComponentsInChildren<SilksongPM::PlayMakerFSM>(true);

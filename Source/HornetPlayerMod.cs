@@ -124,6 +124,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         GeoDashBridge.Cleanup();
         NeedolinDreamNail.Cleanup();
         RoarLockBridge.Cleanup();
+        SpiderTrapBenchFix.Cleanup();
         HeroEventBridge.Cleanup();
         HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();
@@ -234,6 +235,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause",
                 req["go"]));
         DebugServer.MapGet("/fsm-vars", req => BundleSpike.FsmVars(req["name"] ?? "Bind", req["go"]));
+        DebugServer.MapGet("/fsm-vars-hk", req => BundleSpike.FsmVarsHk(req["name"] ?? "Fade", req["go"]));
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapPost("/fsm-trace", req => FsmTracer.SetTargets(req["names"])); // live state/event trace
         DebugServer.MapPost("/hk-fsm-trace", req => HkFsmTracer.SetTargets(req["names"])); // HK-side FSM trace
@@ -385,6 +387,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             .Install(); // catch AmbiguousMatchException in CallMethodProper.DoCache when HeroProxy repoints to Hornet
         PlayMakerWarningContext
             .Install(); // add GO+scene context to "Could not find FSM" / dedup "Fsm not initialized" burst
+        SpiderTrapBenchFix
+            .Install(); // Deepnest trap bench: patch the Fade FSM's Knight-calibrated 'Hero Land Y' into Hornet's frame
         // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 
