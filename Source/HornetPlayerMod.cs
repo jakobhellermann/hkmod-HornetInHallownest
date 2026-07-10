@@ -80,6 +80,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         finishedEnteringHook = null;
         returnToMenuHook?.Dispose();
         returnToMenuHook = null;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= DespawnOutsideGameplay;
 
         // Before anything despawns Hornet: if the player was on her, TP the Knight onto her spot. Cleanup below hands
         // control back to the Knight (un-mod safety) and a hot-reload re-activates it — otherwise it reactivates at its
@@ -458,5 +459,18 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
                 }));
         else
             Playground.Log.Error("[SpawnLifecycle] GameManager.ReturnToMainMenu not found");
+
+        // Like HK's own hero, Hornet has no place in non-gameplay scenes (End_Credits, cinematics). Despawn her there so
+        // HK owns the camera/scene — else the camera keeps following her and the credits render off-screen (blackscreen).
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += DespawnOutsideGameplay;
+    }
+
+    private void DespawnOutsideGameplay(UnityEngine.SceneManagement.Scene scene,
+        UnityEngine.SceneManagement.LoadSceneMode mode) {
+        var gm = GameManager.UnsafeInstance;
+        if (HornetSpawner.HornetRoot == null || gm == null || gm.IsGameplayScene()) return;
+        HeroSwitch.SetActive(ActiveHero.Knight); // hand camera back before despawn (CameraTarget would deref her)
+        HornetSpawner.Despawn();
+        Playground.Log.Info($"[SpawnLifecycle] non-gameplay scene '{scene.name}' -> despawned Hornet");
     }
 }
