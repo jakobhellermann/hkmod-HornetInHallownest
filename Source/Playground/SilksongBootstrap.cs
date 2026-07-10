@@ -35,25 +35,7 @@ internal static class SilksongBootstrap {
         done = true;
         try {
             var pd = Silksong::PlayerData.instance; // create/get the PlayerData singleton
-            // Fresh PlayerData has every ability locked (e.g. HeroController.CanDash() gates on playerData.hasDash).
-            // Grant Hornet's full movement + combat kit so every move is usable in the playground.
-            pd.hasDash = true; // dash (Swift Step)
-            pd.hasWalljump = true; // wall jump
-            pd.hasDoubleJump = true; // double jump
-            pd.hasBrolly = true; // float / glide (umbrella)
-            pd.hasSuperJump = true; // needle super-jump
-            pd.hasHarpoonDash = true; // silk harpoon dash
-            pd.hasChargeSlash = true; // charge slash (nail art)
-            pd.hasQuill = true;
-            pd.hasParry = true;
-            pd.hasNeedolin = true;
-            pd.hasNeedleThrow = true;
-            pd.hasThreadSphere = true;
-            pd.hasSilkSpecial = true; // silk special / arts
-            pd.hasSilkCharge = true;
-            pd.hasSilkBomb = true;
-            pd.hasSilkBossNeedle = true;
-            pd.hasNeedolinMemoryPowerup = true;
+            // Abilities are seeded from the Knight's progression at spawn (PlayerDataSync); only Hornet-only bits here.
             // Silk resource so silk-cost abilities can actually fire.
             pd.silkMax = 9;
             pd.silk = 9;
@@ -67,7 +49,7 @@ internal static class SilksongBootstrap {
             // PlayerData.bindCutscenePlayed — the game sets this after the intro bind cutscene; until then the HUD health
             // stays hidden. We skip the intro, so set it true -> masks self-appear on HUD bring-up (no manual drive).
             pd.bindCutscenePlayed = true;
-            pd.nailUpgrades = 1;
+            // nailUpgrades is seeded from HK's nailSmithUpgrades at spawn (PlayerDataSync.Seed).
             // Equip a valid crest so ToolItemManager.GetCrestByName(CurrentCrestID) resolves (-> nail arts get a
             // crestConfig, and the inventory crest carousel has a selection). Fresh PlayerData doesn't apply the
             // [DefaultValue("Hunter")] attribute, so set it explicitly. "Hunter" is the starting crest.

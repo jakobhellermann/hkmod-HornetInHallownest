@@ -125,6 +125,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         NeedolinDreamNail.Cleanup();
         RoarLockBridge.Cleanup();
         SpiderTrapBenchFix.Cleanup();
+        PlayerDataSync.Cleanup();
         HeroEventBridge.Cleanup();
         HeroSfxShim.Cleanup();
         FreezeMomentFix.Cleanup();
@@ -236,6 +237,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
                 req["go"]));
         DebugServer.MapGet("/fsm-vars", req => BundleSpike.FsmVars(req["name"] ?? "Bind", req["go"]));
         DebugServer.MapGet("/fsm-vars-hk", req => BundleSpike.FsmVarsHk(req["name"] ?? "Fade", req["go"]));
+        DebugServer.MapPost("/grant-kit", _ => PlayerDataSync.GrantFullKit()); // debug: full ability kit (bypass HK sync)
         DebugServer.MapGet("/find-fsm-action", req => BundleSpike.FindFsmAction(req["needle"] ?? "SetSprint"));
         DebugServer.MapPost("/fsm-trace", req => FsmTracer.SetTargets(req["names"])); // live state/event trace
         DebugServer.MapPost("/hk-fsm-trace", req => HkFsmTracer.SetTargets(req["names"])); // HK-side FSM trace
@@ -389,6 +391,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             .Install(); // add GO+scene context to "Could not find FSM" / dedup "Fsm not initialized" burst
         SpiderTrapBenchFix
             .Install(); // Deepnest trap bench: patch the Fade FSM's Knight-calibrated 'Hero Land Y' into Hornet's frame
+        PlayerDataSync
+            .Install(); // mirror the Knight's HK progression onto Hornet's Silksong PlayerData (hooks; seed runs at spawn)
         // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 

@@ -633,6 +633,12 @@ internal static class BundleSpike {
         return new { fsm = name, evt, sentToFsms = sent, enabledFirst = enabledCount };
     }
 
+    // Appear any newly-unlocked mask: each health_display FSM sits in Inactive and, on MAX HP UP, re-checks
+    // CurrentMaxHealth and appears if within it. Fire after maxHealth grows outside the normal pickup cutscene (sync).
+    internal static void RefreshMaxHealthHud() {
+        SendToHealthDisplays("MAX HP UP");
+    }
+
     private static void SendToHealthDisplays(string evt) {
         foreach (var f in Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>())
             if (f != null && string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase) &&
