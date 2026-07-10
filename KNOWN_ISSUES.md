@@ -9,7 +9,6 @@
     - needolin on a dreamer fires instantly (the dream-nail hitbox is armed the moment the tune starts) — should have a wind-up instead of triggering immediately
     - freeing prompt shows "HOLD A to Focus" (HK's Focus binding) — for Hornet it should read the needolin key ("HOLD D")
     - after a dream-scene exit Hornet's animator stays on the airborne/warp-in clip until any action (dash/attack) — HK's "Dream Return" get-up (StartAnimationControl) doesn't run for her
-    - can't silkspear
     - dreamer walls are climbable
 - audio volume not tied to settings
 - camera positioning
