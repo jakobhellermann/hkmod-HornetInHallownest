@@ -22,7 +22,6 @@
 
 ## Integration
 - XX hardsaves
-- XX acid swimming should float
 - XX game finish animation not shown
 - dream-scene input softlock: dream sequences (enter cutscene / dreamer confrontation / textbox) call HeroController.IgnoreInput on Hornet (via global "Hero") and never restore AcceptInput → acceptingInput stuck false, can't move (controlReqlinquished stays false, so StuckControlNet doesn't catch it). Happens on dream entry and after textbox interaction. Fix options: extend StuckControlNet to also restore stuck acceptingInput, or trace each dream sequence's IgnoreInput/AcceptInput for Hornet
 - OOB on scene transitions
@@ -50,3 +49,4 @@
 ## Double check
 - scream control dung defender - fixed?
 - acid before ismas
+- acid / water swim

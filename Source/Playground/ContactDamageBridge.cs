@@ -87,6 +87,13 @@ internal static class ContactDamageBridge {
             // PlayerData.hasAcidArmour is true (Isma's Tear), so touching acid deals 0 -> no death. Forcing dmg=1 here would
             // override that zero and kill Hornet through acid even with the armour equipped. So pass the real value: 1 kills
             // (no armour), 0 no-ops (armour or any other SetDamageHeroAmount-driven disable).
+
+            // Acid + zeroed damage == she has Isma's Tear -> float/swim on the surface (HK acid isn't a Silksong water
+            // region, so her real HeroWaterController never fires on its own). ACID with dmg>0 = no armour -> falls through
+            // to the lethal path below, same as HK.
+            if (ssHazard == SHazard.ACID && dmg == 0)
+                AcidSwimBridge.NotifyInAcid(other);
+
             if (dmg <= 0) return;
 
             var hc = SHeroController.instance;
