@@ -81,7 +81,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                     .GetField("isGameplayScene", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 isGameplaySceneField?.SetValue(hero, true);
 
-                StuckControlNet(hero);
+                // StuckControlNet(hero);
                 StuckEntryWatch(hero);
                 QuakeFloorBridge.Tick(hero); // down-dash breaks HK quake floors (only iterates while quaking)
                 NeedolinDreamNail
