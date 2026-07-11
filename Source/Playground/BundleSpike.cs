@@ -639,6 +639,17 @@ internal static class BundleSpike {
         SendToHealthDisplays("MAX HP UP");
     }
 
+    // Full re-sync of the health HUD from PlayerData — both mask COUNT and FILL. "HUD APPEAR RESET" is a global
+    // transition (from any state -> Init) so every mask re-reads CurrentMaxHealth/health: over-max masks shrink to
+    // Inactive, in-range masks re-appear and re-fill from `health`. Unlike RefreshMaxHealthHud ("MAX HP UP", which can
+    // only ever ADD a mask) this can also REMOVE masks when maxHealth dropped. The HUD rig is DontDestroyOnLoad, so on a
+    // reused rig (new save / menu re-entry) the mask FSMs still show the previous life's count/fill until forced back
+    // through Init — this is that force. SendToHealthDisplays re-enables the self-disabled (EnableFsmSelf(false)) FSMs
+    // first, so it reaches masks parked in Idle/Inactive.
+    internal static void ResetHealthHud() {
+        SendToHealthDisplays("HUD APPEAR RESET");
+    }
+
     private static void SendToHealthDisplays(string evt) {
         foreach (var f in Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>())
             if (f != null && string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase) &&

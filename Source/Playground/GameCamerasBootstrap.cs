@@ -303,6 +303,12 @@ internal static class GameCamerasBootstrap {
             Log.Error($"[HUD] HUDIn: {e.Message}");
         }
 
+        // Re-sync the masks from current PlayerData. The rig is DontDestroyOnLoad, so on a reused rig (new save / menu
+        // re-entry) the mask FSMs still show the previous life's count/fill; force them back through Init so maxHealth/
+        // health are re-read (over-max masks shrink, in-range masks re-fill). BringUpHud only runs on spawn (guarded by
+        // HornetRoot==null), so this is NOT per room-transition or per hero-switch — no repeated appear animation.
+        BundleSpike.ResetHealthHud();
+
         var uiSet = Silksong::UIManager.instance != null;
         return new {
             ok = true, hudOn = true, camEnabled = cam != null && cam.enabled, uiManager = uiSet, layerFixes,
