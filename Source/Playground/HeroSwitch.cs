@@ -449,8 +449,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
     // Knight, we own its half of HK's handshake: call HK's own public FinishedEnteringScene() (which also fires
     // OnFinishedEnteringScene that HK scene-setup hangs off, not just the gameState flip). Deterministic on state — no
     // timer/threshold — gated to the one branch the inert Knight breaks; self-guarding (gameState flips to PLAYING) plus
-    // a once-per-scene flag. NOTE: Hornet's OWN movement freeze on up-entries (she lands but loses no_input so her
-    // OnCollisionEnter2D completion is missed) is a sibling bug, logged by HornetEnvironmentAdapter.StuckEntryWatch.
+    // a once-per-scene flag.
     private void CompleteStuckHkVerticalEntry(HeroController? knight) {
         if (hkEntryFixed || !HeroSwitch.HornetActive || knight == null || knight.enabled)
             return; // only the INERT Knight

@@ -37,16 +37,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         finishedEnteringSceneHook; // finish cutscene (enterWithoutInput) entries HK's Dream-Return FSM would
 
     private static Hook? enterSceneDreamGateHook; // mirror HK's dream-gate warp-in onto Hornet
-    private bool stuckEntryLogged;
-
-    // Log-only watchdog for the bottom-gate (vertical / "up") entry hang. EnterScene's bottom branch ends at
-    // transitionState=DROPPING_DOWN and relies on OnCollisionEnter2D's no_input branch to call FinishedEnteringScene on
-    // landing. If hero_state has left no_input by the time she lands she takes the NORMAL landing path instead, so the
-    // entry never completes: cState.transitioning stays true (Update movement returns early -> frozen) and acceptingInput
-    // stays false, with NO error logged. Surface it so the next occurrence is caught in the log. (Observed 2026-06-21;
-    // root cause = hero_state leaving no_input mid-drop, NOT yet fixed -> restart clears it.) Log-only on purpose: a
-    // forced FinishedEnteringScene here would be the kind of patch-over-root-cause we're avoiding.
-    private float stuckEntryTimer;
 
     private void Update() {
         try {
@@ -78,7 +68,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                     .GetField("isGameplayScene", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 isGameplaySceneField?.SetValue(hero, true);
 
-                StuckEntryWatch(hero);
                 QuakeFloorBridge.Tick(hero); // down-dash breaks HK quake floors (only iterates while quaking)
                 NeedolinDreamNail
                     .Tick(hero); // Needolin acts as a Dream Nail on nearby HK dream objects (edge-triggered)
@@ -348,27 +337,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         if (go != null) {
             Destroy(go);
             go = null;
-        }
-    }
-
-    private void StuckEntryWatch(Silksong::HeroController hero) {
-        var cs = hero.cState;
-        var stuck = cs.onGround && cs.transitioning && !hero.acceptingInput
-                    && hero.transitionState == Silksong::GlobalEnums.HeroTransitionState.DROPPING_DOWN;
-        if (!stuck) {
-            stuckEntryTimer = 0f;
-            stuckEntryLogged = false;
-            return;
-        }
-
-        stuckEntryTimer += Time.deltaTime;
-        if (stuckEntryTimer > 0.75f && !stuckEntryLogged) {
-            stuckEntryLogged = true;
-            Log.Error(
-                $"[EnvAdapter] STUCK ENTRY: grounded+transitioning+!acceptingInput, transitionState=DROPPING_DOWN, "
-                + $"hero_state={hero.hero_state} (needs no_input for OnCollisionEnter2D to finish the entry), "
-                + $"gate={hero.gatePosition}, pos={(Vector2)hero.transform.position}. "
-                + "FinishedEnteringScene never ran -> frozen; restart to clear. (bottom-gate entry hang)");
         }
     }
 
