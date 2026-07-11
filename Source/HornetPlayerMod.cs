@@ -136,6 +136,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Cleanup();
         DreamReturnBridge.Cleanup();
         GetComponentShim.Cleanup();
+        HeroFsmShim.Cleanup();
         CompareTagShim.Cleanup();
         HeroControllerProbe.Cleanup();
         ShroomBounceBridge.Cleanup();
@@ -382,6 +383,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
         GetComponentShim
             .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
+        HeroFsmShim
+            .Install(); // hero-owned HK FSM lookups (Dream Return / ProxyFSM) -> inert dummy (kills "Could not find FSM")
         CompareTagShim.Install(); // CompareTag("Recoiler") -> true (HK has no "Recoiler" tag; else CompareTag throws)
         HeroEventBridge.Install(); // forward HK FSM events aimed at the "Hero" GO onto Hornet's isolated Silksong FSMs
         RoarLockBridge.Install(); // roar-specific facing on top of HeroEventBridge (subscribes to its callback)
