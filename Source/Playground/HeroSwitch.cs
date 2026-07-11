@@ -447,6 +447,9 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         if (GameCamerasBootstrap.HornetHudReady) {
             GameCamerasBootstrap.SetHornetHudVisible(HeroSwitch.HornetActive);
             GameCamerasBootstrap.SetHkHudVisible(!HeroSwitch.HornetActive);
+            // Keep Hornet's Blue Health Control FSM at scene-ready (Idle) while her HUD is up, so relayed blue-health
+            // grants land instead of being ignored in its post-init "Wait" state.
+            if (HeroSwitch.HornetActive) BlueHealthBridge.KeepReady();
         }
         else {
             GameCamerasBootstrap.SetHkHudVisible(true); // no Hornet HUD -> always show HK's
