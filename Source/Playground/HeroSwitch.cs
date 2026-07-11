@@ -149,7 +149,7 @@ internal static class HeroSwitch {
         knight.transform.position = hornet.transform.position;
         var rb = knight.GetComponent<Rigidbody2D>();
         if (rb != null && rb.simulated) rb.linearVelocity = Vector2.zero;
-        Log.Info($"[HeroSwitch] pre-unload: TP'd Knight to active Hornet at {hornet.transform.position}");
+        Log.Debug($"[HeroSwitch] pre-unload: TP'd Knight to active Hornet at {hornet.transform.position}");
     }
 
     internal static object Toggle() {
@@ -189,7 +189,7 @@ internal static class HeroSwitch {
         var follow = TransformOf(who == ActiveHero.Hornet ? hornetGo : knightGo);
         RetargetCamera(follow);
 
-        // Log.Info($"[HeroSwitch] active={Active} following={(follow != null ? follow.name : "?")}");
+        // Log.Debug($"[HeroSwitch] active={Active} following={(follow != null ? follow.name : "?")}");
         return new { active = Active.ToString(), following = follow != null ? follow.name : null };
     }
 
@@ -241,6 +241,21 @@ internal static class HeroSwitch {
                 // works here -> kill it outright, keep only the radial vignette.
                 var border = v.Find("Darkness Border");
                 if (border != null) border.gameObject.SetActive(false);
+            }
+
+            // Mirror the Knight's reactivation control-restore (above), for Hornet. While she was inert, any scene
+            // transition the Knight drove (e.g. a door up-interact) ran WITHOUT her HornetSceneEntry entry, so the
+            // OnNextLevelReady RegainControl relay never fired for her — controlReqlinquished sticks true + acceptingInput
+            // stays false, so on switch-in she's frozen (no_input). On becoming active, restore control. isHeroInPosition
+            // is forced first: she's snapped to the Knight's spot on the switch but never ran SendHeroInPosition (it lives
+            // in EnterScene, skipped while inert), so AcceptInput — gated on it — would otherwise no-op and keep her frozen.
+            if (!inert) {
+                var hc = hero.GetComponent<Silksong::HeroController>();
+                if (hc != null) {
+                    hc.isHeroInPosition = true;
+                    hc.RegainControl();
+                    hc.StartAnimationControl();
+                }
             }
         }
 
@@ -381,7 +396,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.Tab)) {
             var gcam = GameCameras.instance;
             if (gcam != null && gcam.mainCamera != null && !gcam.mainCamera.enabled)
-                Log.Info("[HeroSwitch] Tab ignored — world frozen (inventory open); close it first");
+                Log.Debug("[HeroSwitch] Tab ignored — world frozen (inventory open); close it first");
             else
                 HeroSwitch.Toggle();
         }
@@ -468,7 +483,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         // leaves a CameraLockArea, because the Knight isn't in a WAITING_* state. Settle it to match a finished entry.
         knight.transitionState = HeroTransitionState.WAITING_TO_TRANSITION;
         hkEntryFixed = true;
-        Log.Info("[CameraSwitch] inert Knight stuck in bottom-gate entry (DROPPING_DOWN + gameState=ENTERING_LEVEL) "
+        Log.Debug("[CameraSwitch] inert Knight stuck in bottom-gate entry (DROPPING_DOWN + gameState=ENTERING_LEVEL) "
                  + "-> called gm.FinishedEnteringScene() + settled transitionState=WAITING_TO_TRANSITION "
                  + "(completes HK's handshake, unblocks transitions + keeps the camera following after lock zones)");
     }
@@ -511,13 +526,13 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
                 traceBuf = new List<string> {
                     "t\tscene\ttransState\theroState\tonGround\tcReq\tvx\tvy\tx\ty"
                 };
-                Log.Info("[Trace] recording started (F9 to stop)");
+                Log.Debug("[Trace] recording started (F9 to stop)");
             }
             else {
                 tracing = false;
                 try {
                     File.WriteAllLines(TracePath, traceBuf!);
-                    Log.Info($"[Trace] wrote {traceBuf!.Count - 1} frames -> {TracePath}");
+                    Log.Debug($"[Trace] wrote {traceBuf!.Count - 1} frames -> {TracePath}");
                 } catch (Exception e) {
                     Log.Error($"[Trace] write failed: {e.Message}");
                 }
