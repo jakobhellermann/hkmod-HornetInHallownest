@@ -478,6 +478,12 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         UnityEngine.SceneManagement.LoadSceneMode mode) {
         var gm = GameManager.UnsafeInstance;
         if (HornetSpawner.HornetRoot == null || gm == null || gm.IsGameplayScene()) return;
+        // EXCEPTION: stag travel (Cinematic_Stag_travel) is a HK "Cinematic" (non-gameplay) scene, but the hero RIDES
+        // THROUGH it — HK's Knight is DontDestroyOnLoad and is never deactivated there; StagTravel.Start just plays the
+        // full-screen cinematic then BeginSceneTransition's onward to the destination (gate "door_stagExit"). Despawning
+        // Hornet here forced a full respawn on arrival (fresh HeroController/FSMs -> sprint & other carry-through state
+        // reset). Mirror HK: let her ride through (she's already deparented to DDOL) and enter the destination normally.
+        if (gm.IsStagTravelScene()) return;
         HeroSwitch.SetActive(ActiveHero.Knight); // hand camera back before despawn (CameraTarget would deref her)
         HornetSpawner.Despawn();
         Playground.Log.Debug($"[SpawnLifecycle] non-gameplay scene '{scene.name}' -> despawned Hornet");
