@@ -3,7 +3,6 @@ using System;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using SGate = Silksong::GlobalEnums.GatePosition;
 
 namespace HornetPlayer.Playground;
@@ -28,8 +27,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static MethodInfo? sendRefreshEventMethod;
 
     private static Hook? beginSceneTransitionHook;
-    private static Hook? loadSceneHook; // SceneManager.LoadScene(string, LoadSceneParameters)
-    private static Hook? loadSceneAsyncHook; // SceneManager.LoadSceneAsync(string, LoadSceneParameters)
     private static Hook? setHazardRespawnHook1; // SetHazardRespawn(Vector3, bool)
     private static Hook? setHazardRespawnHook2; // SetHazardRespawn(HazardRespawnMarker)
 
@@ -203,42 +200,15 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
             Log.Error("[EnvAdapter] GameManager.BeginSceneTransition not found");
         }
 
-        // Also hook SceneManager.LoadScene/LoadSceneAsync directly: some HK FSMs use the PlayMaker LoadLevel action
-        // which calls SceneManager.LoadScene directly, bypassing GameManager.BeginSceneTransition entirely (e.g. the
-        // Stag station "Stag Control" FSM loads Cinematic_Stag_travel via LoadLevel). Without this hook Hornet stays
-        // in the scene and is destroyed by the synchronous scene load.
-        var smType = typeof(SceneManager);
-        // LoadSceneParameters is a struct — GetMethod with Type[] fails to match value types with
-        // the default binder in some Unity versions. Walk the methods manually instead.
-        MethodInfo? loadSceneMI = null;
-        MethodInfo? loadSceneAsyncMI = null;
-        foreach (var m in smType.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
-            if (m.Name != "LoadScene" && m.Name != "LoadSceneAsync") continue;
-            var ps = m.GetParameters();
-            if (ps.Length != 2 || ps[0].ParameterType != typeof(string)) continue;
-            if (ps[1].ParameterType != typeof(LoadSceneParameters)) continue;
-            if (m.Name == "LoadScene") loadSceneMI = m;
-            else loadSceneAsyncMI = m;
-        }
-
-        if (loadSceneMI != null) {
-            loadSceneHook = new Hook(loadSceneMI,
-                (Func<Func<string, LoadSceneParameters, Scene>, string, LoadSceneParameters, Scene>)LoadSceneHook);
-            Log.Debug("[EnvAdapter] installed: SceneManager.LoadScene deparent hook");
-        }
-        else {
-            Log.Error("[EnvAdapter] SceneManager.LoadScene(string, LoadSceneParameters) not found");
-        }
-
-        if (loadSceneAsyncMI != null) {
-            loadSceneAsyncHook = new Hook(loadSceneAsyncMI,
-                (Func<Func<string, LoadSceneParameters, AsyncOperation>, string, LoadSceneParameters, AsyncOperation>)
-                LoadSceneAsyncHook);
-            Log.Debug("[EnvAdapter] installed: SceneManager.LoadSceneAsync deparent hook");
-        }
-        else {
-            Log.Error("[EnvAdapter] SceneManager.LoadSceneAsync(string, LoadSceneParameters) not found");
-        }
+        // NOTE: there used to be a direct hook on SceneManager.LoadScene/LoadSceneAsync here — meant to deparent Hornet
+        // when an HK FSM (PlayMaker LoadLevel action) loads a scene directly, bypassing GameManager.BeginSceneTransition
+        // (theorised for the Stag "Stag Control" FSM -> Cinematic_Stag_travel). It never actually bound: `typeof(SceneManager)`
+        // resolved to HK's Assembly-CSharp `SceneManager` class (global namespace, wins over the using-imported
+        // UnityEngine.SceneManagement.SceneManager), which has no LoadScene overloads -> it silently logged "not found"
+        // every load and hooked nothing. Since it was a no-op and everything works (BeginSceneTransition covers the real
+        // transitions), it's removed rather than "fixed" — making it bind would fire DeparentHero on EVERY LoadScene,
+        // untested new behaviour. If Hornet is ever destroyed on a direct-LoadScene transition (e.g. taking a Stag),
+        // re-add a hook on typeof(UnityEngine.SceneManagement.SceneManager) with a real repro.
     }
 
     private static void BeginSceneTransitionHook(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self,
@@ -292,20 +262,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                   $"(no_input + NO_DAMAGE + gravity off; exitedSprinting={hero.exitedSprinting})");
     }
 
-    // SceneManager.LoadScene is synchronous (mustCompleteNextFrame=true): by the time orig returns the old scene is
-    // already unloaded and Hornet destroyed. Deparent BEFORE calling orig.
-    private static Scene LoadSceneHook(Func<string, LoadSceneParameters, Scene> orig, string sceneName,
-        LoadSceneParameters parameters) {
-        DeparentHero($"SceneManager.LoadScene({sceneName})");
-        return orig(sceneName, parameters);
-    }
-
-    private static AsyncOperation LoadSceneAsyncHook(Func<string, LoadSceneParameters, AsyncOperation> orig,
-        string sceneName, LoadSceneParameters parameters) {
-        DeparentHero($"SceneManager.LoadSceneAsync({sceneName})");
-        return orig(sceneName, parameters);
-    }
-
     // Mirrors Silksong's HeroController.OnLevelUnload → SetHeroParent(null) → DontDestroyOnLoad, but checks scene
     // instead of parent: SetHeroParent(null) skips DontDestroyOnLoad when transform.parent is already null, even if
     // the GO is still in a scene (e.g. platform destroyed, hero unparented but not in DDOL).
@@ -322,10 +278,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     internal static void Cleanup() {
         beginSceneTransitionHook?.Dispose();
         beginSceneTransitionHook = null;
-        loadSceneHook?.Dispose();
-        loadSceneHook = null;
-        loadSceneAsyncHook?.Dispose();
-        loadSceneAsyncHook = null;
         setHazardRespawnHook1?.Dispose();
         setHazardRespawnHook1 = null;
         setHazardRespawnHook2?.Dispose();
