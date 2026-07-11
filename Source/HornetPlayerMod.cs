@@ -112,7 +112,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HornetEnvironmentAdapter.Cleanup();
         HeroSwitch.Cleanup();
         EnemyDamageBridge.Cleanup();
-        DamagesEnemyFsmShim.Cleanup();
+        FsmLookupShim.Cleanup();
         PogoNonBounceShim.Cleanup();
         ContactDamageBridge.Cleanup();
         AcidSwimBridge.Cleanup();
@@ -136,7 +136,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Cleanup();
         DreamReturnBridge.Cleanup();
         GetComponentShim.Cleanup();
-        HeroFsmShim.Cleanup();
         CompareTagShim.Cleanup();
         HeroControllerProbe.Cleanup();
         ShroomBounceBridge.Cleanup();
@@ -359,8 +358,9 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSwitch.Install();
         EnemyDamageBridge
             .Install(); // forward Hornet's Silksong nail damage onto HK enemies/breakables (cross-game responder bridge)
-        DamagesEnemyFsmShim
-            .Install(); // stand in for the HK "damages_enemy" FSM that HK breakables read off Hornet's slash
+        FsmLookupShim
+            .Install(); // one place for HK "find FSM on a cross-game object": hero-owned inert (Dream Return/ProxyFSM)
+        // + the slash's "damages_enemy" dummy HK breakables/bells read (folds in the old Hero/DamagesEnemy shims)
         PogoNonBounceShim
             .Install(); // honour HK's NonBouncer so Hornet doesn't pogo off HK-non-pogoable objects (bell, …)
         ContactDamageBridge
@@ -383,8 +383,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
         GetComponentShim
             .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
-        HeroFsmShim
-            .Install(); // hero-owned HK FSM lookups (Dream Return / ProxyFSM) -> inert dummy (kills "Could not find FSM")
         CompareTagShim.Install(); // CompareTag("Recoiler") -> true (HK has no "Recoiler" tag; else CompareTag throws)
         HeroEventBridge.Install(); // forward HK FSM events aimed at the "Hero" GO onto Hornet's isolated Silksong FSMs
         RoarLockBridge.Install(); // roar-specific facing on top of HeroEventBridge (subscribes to its callback)
