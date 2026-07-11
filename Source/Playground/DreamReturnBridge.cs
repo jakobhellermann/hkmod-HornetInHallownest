@@ -10,9 +10,10 @@ using HeroTransitionState = Silksong::GlobalEnums.HeroTransitionState;
 
 namespace HornetPlayer.Playground;
 
-// The dreamer "get Dream Nail" cutscene (and any HK Dream-visualization transition) fades a WHITE blanker IN during the
-// cutscene, then relies on HK's Knight "Dream Return" FSM (state Prostrate) to fade it back OUT on arrival in the dream
-// scene (SendEvent "FADE OUT" -> "HUD Blanker White" + "HUD Blanker") and return control. Hornet has NO such FSM — the
+// Any HK "entering dream" transition (Dream / GrimmDream / GodsAndGlory — e.g. the dreamer "get Dream Nail" cutscene AND
+// the Godhome boss-VICTORY return to the Hall of Gods) fades a WHITE blanker IN during the transition, then relies on
+// HK's Knight "Dream Return" FSM (state Prostrate) to fade it back OUT on arrival (SendEvent "FADE OUT" -> "HUD Blanker
+// White" + "HUD Blanker") and return control. Hornet has NO such FSM — the
 // cutscene's SetFsmBool(gameObject="Hero", fsmName="Dream Return", ...) fails ("Could not find FSM: Dream Return") — so
 // the white never lifts => whitescreen (root-caused via HkFsmTracer: Control@Dreamer Scene 2 completes and transitions,
 // but no one fades the white on the far side).
@@ -32,11 +33,19 @@ internal static class DreamReturnBridge {
     // re-entry can place Hornet at the gate itself, without going through HK's Knight.
     internal static void OnBeginSceneTransition(GameManager.SceneLoadInfo info) {
         if (!HeroSwitch.HornetActive) return;
-        if (info.Visualization != GameManager.SceneLoadVisualizations.Dream) return;
+        // HK treats Dream / GrimmDream / GodsAndGlory as "entering dream" (GameManager.cs: hero_ctrl.IsEnteringDream is
+        // set for exactly these three) — all three fade the WHITE blanker in and rely on the Knight "Dream Return" FSM to
+        // fade it back OUT + return control on arrival. Cover the same set: GodsAndGlory is the Godhome boss-return path
+        // (state Prostrate -> "FADE OUT"), which the Dream-only check missed -> the white never lifted on a boss VICTORY
+        // return to the Hall of Gods = whitescreen. (Death returns already worked via HornetDeath.DreamReturnRoutine.)
+        var vis = info.Visualization;
+        if (vis != GameManager.SceneLoadVisualizations.Dream &&
+            vis != GameManager.SceneLoadVisualizations.GrimmDream &&
+            vis != GameManager.SceneLoadVisualizations.GodsAndGlory) return;
         pending = true;
         pendingGate = info.EntryGateName;
         Subscribe();
-        Log.Info($"[DreamReturn] Dream transition -> '{info.SceneName}' (gate '{pendingGate}'); " +
+        Log.Info($"[DreamReturn] {vis} transition -> '{info.SceneName}' (gate '{pendingGate}'); " +
                  "will fade blanker(s) out on arrival");
     }
 
