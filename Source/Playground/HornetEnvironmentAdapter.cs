@@ -199,16 +199,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         else {
             Log.Error("[EnvAdapter] GameManager.BeginSceneTransition not found");
         }
-
-        // NOTE: there used to be a direct hook on SceneManager.LoadScene/LoadSceneAsync here — meant to deparent Hornet
-        // when an HK FSM (PlayMaker LoadLevel action) loads a scene directly, bypassing GameManager.BeginSceneTransition
-        // (theorised for the Stag "Stag Control" FSM -> Cinematic_Stag_travel). It never actually bound: `typeof(SceneManager)`
-        // resolved to HK's Assembly-CSharp `SceneManager` class (global namespace, wins over the using-imported
-        // UnityEngine.SceneManagement.SceneManager), which has no LoadScene overloads -> it silently logged "not found"
-        // every load and hooked nothing. Since it was a no-op and everything works (BeginSceneTransition covers the real
-        // transitions), it's removed rather than "fixed" — making it bind would fire DeparentHero on EVERY LoadScene,
-        // untested new behaviour. If Hornet is ever destroyed on a direct-LoadScene transition (e.g. taking a Stag),
-        // re-add a hook on typeof(UnityEngine.SceneManagement.SceneManager) with a real repro.
     }
 
     private static void BeginSceneTransitionHook(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self,
