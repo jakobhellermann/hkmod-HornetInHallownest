@@ -51,9 +51,6 @@ internal static class Stub {
 
         Skip(typeof(Silksong::PersonalObjectPool), "OnStart"); // Start
         Skip(typeof(Silksong::HeroAnimationController), "UpdateToolEquipFlags"); // Start
-        // Tool-equipment subsystem isn't initialized -> IsToolEquipped NullRefs; stub the root (no tools equipped),
-        // which should cascade-fix ToolItem.IsEquipped / CheckIfToolEquipped / ToolEquipChecker / HeroWispLantern.
-        Skip(typeof(Silksong::ToolItemManager), "IsToolEquipped", true); // per-frame (crest equip checks)
         // ControlReminder lives under HudCamera/In-game/Prompts, which we deactivate in BringUpHud (its other deps
         // NullRef). Without a ControlReminder MonoBehaviour in the scene, ControlReminder.Instance (FindObjectOfType)
         // returns null. Stub the edges where the reminder system touches the missing environment:
