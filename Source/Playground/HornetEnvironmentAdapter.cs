@@ -37,9 +37,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         finishedEnteringSceneHook; // finish cutscene (enterWithoutInput) entries HK's Dream-Return FSM would
 
     private static Hook? enterSceneDreamGateHook; // mirror HK's dream-gate warp-in onto Hornet
-    private float armedWindow; // seconds left in the post-transition "watch for stuck control" window
-    private string? lastScene;
-    private float stuckControlTimer;
     private bool stuckEntryLogged;
 
     // Log-only watchdog for the bottom-gate (vertical / "up") entry hang. EnterScene's bottom branch ends at
@@ -81,7 +78,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                     .GetField("isGameplayScene", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 isGameplaySceneField?.SetValue(hero, true);
 
-                // StuckControlNet(hero);
                 StuckEntryWatch(hero);
                 QuakeFloorBridge.Tick(hero); // down-dash breaks HK quake floors (only iterates while quaking)
                 NeedolinDreamNail
@@ -352,47 +348,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         if (go != null) {
             Destroy(go);
             go = null;
-        }
-    }
-
-    // Safety net for stuck controlReqlinquished. Her scene-entry (EnterScene) clears the flag via its closing
-    // RegainControl; on HK transitions where EnterScene doesn't run/complete (no sceneEntryGate, faded coroutine) the
-    // flag sticks true and silently gates double-jump/attack/sprint (all check !controlReqlinquished) — abilities die
-    // with NO error log. We can't just watch "controlReqlinquished true for a while": SPRINT and DASH set it true BY
-    // DESIGN (the Sprint FSM runs with controlReqlinquished + hero_state=no_input), so a continuous watch clobbers a
-    // long dash/sprint. So scope it tightly:
-    //   - only within a short window AFTER a scene change (the only time the stick happens), and
-    //   - never while dashing/sprinting (legit controlReqlinquished), and
-    //   - only when settled (transitionState idle, not mid walk-in), with a debounce.
-    private void StuckControlNet(Silksong::HeroController hero) {
-        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (scene != lastScene) {
-            lastScene = scene;
-            armedWindow = 5f;
-            stuckControlTimer = 0f;
-        }
-
-        if (armedWindow <= 0f) return;
-        armedWindow -= Time.deltaTime;
-
-        // Don't disarm on the first !controlReqlinquished frame: at scene-change detection the flag may not be set yet
-        // (EnterScene sets it a few frames later). Just run the window; the exclusions below keep it from false-firing.
-        var cs = hero.cState;
-        var legit = cs.dashing || cs.isSprinting || cs.shadowDashing ||
-                    cs.superDashing; // these use controlReqlinquished by design
-        var stuck = hero.controlReqlinquished && !cs.dead && !legit
-                    && hero.transitionState == Silksong::GlobalEnums.HeroTransitionState.WAITING_TO_TRANSITION;
-        if (!stuck) {
-            stuckControlTimer = 0f;
-            return;
-        }
-
-        stuckControlTimer += Time.deltaTime;
-        if (stuckControlTimer > 0.5f) {
-            hero.RegainControl();
-            stuckControlTimer = 0f;
-            armedWindow = 0f;
-            Log.Info("[EnvAdapter] cleared stuck controlReqlinquished (RegainControl after settled transition)");
         }
     }
 

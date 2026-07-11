@@ -22,6 +22,20 @@ internal static class HornetSceneEntry {
         var hkGate = knight.sceneEntryGate;
         if (hc == null || hkGate == null) yield break;
 
+        // Mirror the hero handshake from Silksong's GameManager.OnNextLevelReady, which runs on scene-ready BEFORE
+        // EnterHero -> hero_ctrl.EnterScene. Our GM GO is inactive, so OnNextLevelReady never fires for Hornet — and
+        // its RegainControl is the ONLY thing that clears controlReqlinquished after a door up-interact (whose
+        // EnterDoorSequence.RelinquishControl relinquished her ~1s earlier, in the departing scene). Silksong's own
+        // door EnterScene path does NOT RegainControl (unlike HK's, which does it at EnterScene's tail), so without
+        // this the flag sticks true across the transition and silently gates CanSprint()/mantle/double-jump — dash
+        // ends abruptly instead of flowing into sprint. Native order is regain-then-enter; keep it. SuppressRegainControl
+        // is honoured exactly as OnNextLevelReady does (dream/cutscene entries that must stay relinquished set it).
+        if (Silksong::GameManager.SuppressRegainControl)
+            Silksong::GameManager.SuppressRegainControl = false;
+        else
+            hc.RegainControl(allowInput: false);
+        hc.StartAnimationControl();
+
         var gateGo = BuildGate(hkGate);
         var tp = gateGo.GetComponent<Silksong::TransitionPoint>();
         // EnterScene's StartCoroutine(EnterHeroSub...) runs on `hc`, so it must be the runner; we just await it here.
