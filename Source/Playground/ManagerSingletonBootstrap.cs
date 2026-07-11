@@ -77,7 +77,7 @@ internal static class ManagerSingletonBootstrap {
         go.SetActive(true); // -> the manager's real Awake: base.Awake registers the ManagerSingleton, etc.
 
         if (SilentInstance(managerType) == null) SetSingleton(managerType, mgr); // belt-and-suspenders if Awake bailed
-        Log.Info($"[Manager] {managerType.Name} up: instance={SilentInstance(managerType) != null}");
+        Log.Debug($"[Manager] {managerType.Name} up: instance={SilentInstance(managerType) != null}");
         return mgr;
     }
 

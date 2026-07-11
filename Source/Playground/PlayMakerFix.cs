@@ -54,7 +54,7 @@ internal static class PlayMakerFix {
             SeedInto(SilksongStatic(typeof(SilksongPM::HutongGames.PlayMaker.ReflectionUtils), "typeLookup"), map);
         var seededAction =
             SeedInto(SilksongStatic(typeof(SilksongPM::HutongGames.PlayMaker.ActionData), "ActionTypeLookup"), map);
-        Log.Info(
+        Log.Debug(
             $"[PlayMakerFix] seeded Silksong.PlayMaker (isolated): typeLookup+={seededRefl}, ActionTypeLookup+={seededAction} from {map.Count} types");
     }
 

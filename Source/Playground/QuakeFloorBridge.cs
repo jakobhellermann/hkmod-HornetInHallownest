@@ -99,7 +99,7 @@ internal static class QuakeFloorBridge {
                 floorCols.Add(fsm.GetComponent<Collider2D>());
             }
 
-        Log.Info($"[QuakeFloor] QUAKE FALL START -> {floors.Count} floors");
+        Log.Debug($"[QuakeFloor] QUAKE FALL START -> {floors.Count} floors");
     }
 
     private static void EndQuake() {

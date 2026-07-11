@@ -63,7 +63,7 @@ internal static class DebugWarp {
             hero.AcceptInput();
         }
 
-        Log.Info($"[Warp] arrived at '{scene}'{(x.HasValue ? $" placed ({x}, {y})" : "")}, faded in");
+        Log.Debug($"[Warp] arrived at '{scene}'{(x.HasValue ? $" placed ({x}, {y})" : "")}, faded in");
     }
 
     internal static float? ParseFloat(string? s) {

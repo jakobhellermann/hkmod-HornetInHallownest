@@ -79,7 +79,7 @@ internal static class CallMethodProperFix {
         }
 
         hook = new Hook(mi, DoCacheHook);
-        Log.Info("[CallMethodProperFix] installed");
+        Log.Debug("[CallMethodProperFix] installed");
     }
 
     // For an instance method `bool DoCache()`, MonoMod's orig delegate includes the instance: Func<CallMethodProper, bool>.
@@ -103,7 +103,7 @@ internal static class CallMethodProperFix {
                     if (altMethod != null) {
                         cachedMethodInfoField?.SetValue(self, altMethod);
                         cachedParameterInfoField?.SetValue(self, altMethod.GetParameters());
-                        Log.InfoOnce($"redirect|{methodName}|{type.Name}|{goName}|{fsmName}|{stateName}",
+                        Log.DebugOnce($"redirect|{methodName}|{type.Name}|{goName}|{fsmName}|{stateName}",
                             $"[CallMethodProperFix] redirected '{methodName}' -> '{redirect}' on {type.Name} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
                         return true;
                     }
@@ -155,7 +155,7 @@ internal static class CallMethodProperFix {
             if (resolved != null) {
                 cachedMethodInfoField?.SetValue(self, resolved);
                 cachedParameterInfoField?.SetValue(self, resolved.GetParameters());
-                Log.InfoOnce($"disambig|{methodName}|{type.Name}|{label}",
+                Log.DebugOnce($"disambig|{methodName}|{type.Name}|{label}",
                     $"[CallMethodProperFix] disambiguated '{methodName}' on {type.Name} ({label}) -> {resolved}");
                 return true;
             }

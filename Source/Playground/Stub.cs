@@ -239,7 +239,7 @@ internal static class Stub {
                     $"[Fsm.InitData] NullRef in FSM='{fsmName}' GO='{goName}' ({fsmType.Assembly.GetName().Name}): {e}");
             }
         })));
-        Log.Info($"[Stub] instrumented Fsm.InitData on {fsmType.Assembly.GetName().Name}");
+        Log.Debug($"[Stub] instrumented Fsm.InitData on {fsmType.Assembly.GetName().Name}");
     }
 
     // Stub `method` on every Silksong type in `ns` whose name starts with `prefix` (category stub).
@@ -260,7 +260,7 @@ internal static class Stub {
             n++;
         }
 
-        Log.Info($"[Stub] category {ns}.{prefix}*::{method} -> {n} types");
+        Log.Debug($"[Stub] category {ns}.{prefix}*::{method} -> {n} types");
     }
 
     // Stub every method named `method` on `type` (all overloads/visibilities) to log-once + return default.
@@ -286,7 +286,7 @@ internal static class Stub {
     //   Logged — logs each distinct stub once, then silent (InfoOnce dedup)
     //   Silent — never logs
     public static void Logged(string label) {
-        Log.InfoOnce($"stub|{label}", $"[Stub] >> {label} (stubbed, no-op)");
+        Log.DebugOnce($"stub|{label}", $"[Stub] >> {label} (stubbed, no-op)");
     }
 
     public static void Silent(string label) {

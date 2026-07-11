@@ -66,7 +66,7 @@ internal static class InventoryPauseBridge {
                             }
                         }
 
-                        Log.Info(
+                        Log.Debug(
                             $"[InvPause] SetIsInventoryOpen({value}) -> HK world {(value ? "frozen" : "resumed")} "
                             + $"(timeScale={Time.timeScale})");
                     } catch (Exception e) {

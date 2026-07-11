@@ -59,7 +59,7 @@ internal static class SpiderTrapBenchFix {
 
             var before = landY.Value;
             landY.Value = before + delta;
-            Log.Info($"[SpiderTrapBench] raised '{LandYVar}' {before} -> {landY.Value} (+{delta} collider feet-delta) so "
+            Log.Debug($"[SpiderTrapBench] raised '{LandYVar}' {before} -> {landY.Value} (+{delta} collider feet-delta) so "
                      + "Hornet's higher grounded Y still trips the Fall land-check (else the trap FSM hangs, no control back)");
         } catch (Exception e) {
             Log.Error($"[SpiderTrapBench] {e.Message}");

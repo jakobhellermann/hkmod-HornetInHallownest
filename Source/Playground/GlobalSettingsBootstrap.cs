@@ -44,10 +44,10 @@ internal static class GlobalSettingsBootstrap {
             if (bundle == null) {
                 bundle = AssetBundle.LoadFromFile(BundlePath);
                 ownsBundle = true;
-                Log.Info($"[GlobalSettings] LoadFromFile (no mounted bundle among {scanned} loaded)");
+                Log.Debug($"[GlobalSettings] LoadFromFile (no mounted bundle among {scanned} loaded)");
             }
             else {
-                Log.Info($"[GlobalSettings] reusing mounted bundle '{bundle.name}' (scanned {scanned} loaded)");
+                Log.Debug($"[GlobalSettings] reusing mounted bundle '{bundle.name}' (scanned {scanned} loaded)");
             }
         }
 
@@ -76,11 +76,11 @@ internal static class GlobalSettingsBootstrap {
             // _instance is ignored on the first Get(), which then caches an EMPTY SO (null tool refs -> NullRefs in
             // GetTotalFrostSpeed/GetMaxFallVelocity). Set it so Get() returns our real, populated SO.
             baseT?.GetField("_foundInstance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, true);
-            Log.Info($"[GlobalSettings] {so.GetType().Name}._instance <- '{so.name}'");
+            Log.Debug($"[GlobalSettings] {so.GetType().Name}._instance <- '{so.name}'");
             n++;
         }
 
-        Log.Info($"[GlobalSettings] bootstrapped {n} GlobalSettings instances");
+        Log.Debug($"[GlobalSettings] bootstrapped {n} GlobalSettings instances");
         return n;
     }
 

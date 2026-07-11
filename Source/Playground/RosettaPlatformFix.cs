@@ -15,7 +15,7 @@ internal static class RosettaPlatformFix {
         if (!IsTranslatedByRosetta()) return;
         try {
             PlatformHelper.Current = MonoMod.Utils.Platform.MacOS | MonoMod.Utils.Platform.Bits64;
-            Log.Info(
+            Log.Debug(
                 $"[RosettaFix] under Rosetta — forced MonoMod platform to {PlatformHelper.Current} (x86 detour backend)");
         } catch (Exception e) {
             Log.Error($"[RosettaFix] could not override PlatformHelper.Current (already locked): {e.Message}");

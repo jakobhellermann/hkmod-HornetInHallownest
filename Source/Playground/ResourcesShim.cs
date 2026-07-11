@@ -24,7 +24,7 @@ internal static class ResourcesShim {
         if (hook != null) return;
         bundle = AssetBundle.LoadFromFile(BundlePath);
         if (bundle == null) Log.Error($"[ResShim] LoadFromFile failed: {BundlePath}");
-        else Log.Info($"[ResShim] loaded resources bundle ({bundle.GetAllAssetNames().Length} assets)");
+        else Log.Debug($"[ResShim] loaded resources bundle ({bundle.GetAllAssetNames().Length} assets)");
 
         var mi = typeof(Resources).GetMethod(nameof(Resources.Load), [typeof(string), typeof(Type)]);
         if (mi == null) {
@@ -85,7 +85,7 @@ internal static class ResourcesShim {
         }
 
         if (served != null)
-            Log.InfoOnce($"resserve|{key}",
+            Log.DebugOnce($"resserve|{key}",
                 $"[Resources.Load] SERVE '{path}' as {type?.Name} <- silksong-resources.bundle");
         return served;
     }
@@ -108,7 +108,7 @@ internal static class ResourcesShim {
         }
 
         bundle = AssetBundle.LoadFromFile(BundlePath);
-        Log.Info(bundle != null
+        Log.Debug(bundle != null
             ? $"[ResShim] reloaded bundle ({bundle.GetAllAssetNames().Length} assets)"
             : $"[ResShim] reload FAILED: {BundlePath}");
     }

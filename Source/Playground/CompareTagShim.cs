@@ -36,7 +36,7 @@ internal static class CompareTagShim {
 
     // Logs once per object name (CompareTag is hot in combat — avoid per-frame spam) so it's visible when it fires.
     private static bool HitRecoiler(string name) {
-        Log.InfoOnce($"comparetag-recoiler:{name}",
+        Log.DebugOnce($"comparetag-recoiler:{name}",
             $"[CompareTagShim] CompareTag(\"Recoiler\") on '{name}' -> forced true (TODO: narrow to real recoilers)");
         return true;
     }

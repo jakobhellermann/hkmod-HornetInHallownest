@@ -28,7 +28,7 @@ public sealed class HornetSpawner : IModule {
             if (heroPrefab) return heroPrefab;
             SilksongCatalog.EnsureMounted();
             heroPrefab = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
-            if (heroPrefab) Log.Info("[HornetSpawner] Hero_Hornet loaded via Addressables");
+            if (heroPrefab) Log.Debug("[HornetSpawner] Hero_Hornet loaded via Addressables");
             return heroPrefab;
         }
     }

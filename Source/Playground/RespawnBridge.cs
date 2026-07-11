@@ -40,7 +40,7 @@ internal static class RespawnBridge {
         var hk = HeroController.UnsafeInstance;
         if (hk == null) return;
         hk.SetBenchRespawn(marker, scene, type, facingRight);
-        Log.Info($"[RespawnBridge] mirrored SetBenchRespawn -> HK PlayerData: {scene}/{marker} type={type}");
+        Log.Debug($"[RespawnBridge] mirrored SetBenchRespawn -> HK PlayerData: {scene}/{marker} type={type}");
     }
 
     private static void OnSetHazardRespawn(Action<SHeroController, Vector3, bool> orig,

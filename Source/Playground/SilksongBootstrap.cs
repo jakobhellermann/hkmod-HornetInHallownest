@@ -197,7 +197,7 @@ internal static class SilksongBootstrap {
             // gm.GameState (LookForInput gates on == PLAYING) is maintained per-frame by HornetEnvironmentAdapter,
             // which also mirrors HK's pause onto it — so it's not set here.
 
-            Log.Info($"[Bootstrap] GameManager.instance={(Silksong::GameManager.instance != null)}, " +
+            Log.Debug($"[Bootstrap] GameManager.instance={(Silksong::GameManager.instance != null)}, " +
                      $"playerData={pd != null}, inputHandler={(gm.GetComponent<Silksong::InputHandler>() != null)}");
         } catch (Exception e) {
             Log.Error($"[Bootstrap] FAILED: {e}");
@@ -235,7 +235,7 @@ internal static class SilksongBootstrap {
                         ?.SetValue(bootstrapGm, sf);
             }
 
-            Log.Info("[Bootstrap] hero_ctrl + camTarget + screenFader wired");
+            Log.Debug("[Bootstrap] hero_ctrl + camTarget + screenFader wired");
         } catch (Exception e) {
             Log.Error($"[Bootstrap] SetHeroCtrl: {e.Message}");
         }

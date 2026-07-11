@@ -48,7 +48,7 @@ internal sealed class HornetDeath : MonoBehaviour {
         // when Hornet "dies" she's an inert prop and ContactDamageBridge wouldn't have hurt her anyway.)
         if (dead && !wasDead && !handling && HeroSwitch.HornetActive) {
             handling = true;
-            Log.Info("[HornetDeath] Hornet died -> handing off to HK bench respawn");
+            Log.Debug("[HornetDeath] Hornet died -> handing off to HK bench respawn");
             StartCoroutine(DeathRoutine());
         }
 
@@ -123,7 +123,7 @@ internal sealed class HornetDeath : MonoBehaviour {
             yield break;
         }
 
-        Log.Info($"[HornetDeath] dream/godhome death -> dream return to '{returnScene}'@door_dreamReturn (no bench)");
+        Log.Debug($"[HornetDeath] dream/godhome death -> dream return to '{returnScene}'@door_dreamReturn (no bench)");
 
         // Let Hornet's death anim play a beat before the transition (mirrors HK's ~2s dream-death anim window).
         yield return new WaitForSeconds(DeathWait);
@@ -218,7 +218,7 @@ internal sealed class HornetDeath : MonoBehaviour {
         // re-activates it next frame, re-running the FSMs' appear. No-op if the HUD isn't up.
         GameCamerasBootstrap.SetHornetHudVisible(false);
 
-        Log.Info($"[HornetDeath] revived Hornet at {(Vector2)hero.transform.position} (atBench={atBench})");
+        Log.Debug($"[HornetDeath] revived Hornet at {(Vector2)hero.transform.position} (atBench={atBench})");
     }
 
     private static IEnumerator Empty() {
@@ -323,7 +323,7 @@ internal sealed class HornetDeath : MonoBehaviour {
                     if (HeroSwitch.HornetActive) return;
                     orig(self, go, side, dmg, hazard);
                 }));
-            Log.Info("[HornetDeath] hooked TakeDamage on HK HeroController");
+            Log.Debug("[HornetDeath] hooked TakeDamage on HK HeroController");
         }
         else {
             Log.Error("[HornetDeath] HeroController.TakeDamage not found");

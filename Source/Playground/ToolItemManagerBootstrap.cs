@@ -82,7 +82,7 @@ internal static class ToolItemManagerBootstrap {
             slotCount += count;
         }
 
-        Log.Info($"[ToolItemManager] unlocked all crest slots: {crestCount} crests, {slotCount} slots");
+        Log.Debug($"[ToolItemManager] unlocked all crest slots: {crestCount} crests, {slotCount} slots");
         return new { crests = crestCount, slots = slotCount };
     }
 

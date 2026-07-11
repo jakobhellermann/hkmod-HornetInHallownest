@@ -49,7 +49,7 @@ internal static class HornetSaveBridge {
             PlayerData = spd != null ? JsonConvert.SerializeObject(spd, SaveSettings) : null,
             HornetActive = SaveActiveOverride ?? HeroSwitch.HornetActive
         };
-        Log.Info(
+        Log.Debug(
             $"[HornetSave] snapshot PlayerData ({data.PlayerData?.Length ?? 0} chars), hornetActive={data.HornetActive}");
         return data;
     }
@@ -57,7 +57,7 @@ internal static class HornetSaveBridge {
     internal static void Stash(HornetSaveData? data) {
         pendingPlayerData = data?.PlayerData;
         pendingHornetActive = data?.HornetActive;
-        if (pendingPlayerData != null) Log.Info("[HornetSave] stashed loaded PlayerData (apply on spawn)");
+        if (pendingPlayerData != null) Log.Debug("[HornetSave] stashed loaded PlayerData (apply on spawn)");
         ApplyPending(); // apply now if the instance already exists; otherwise deferred
     }
 
@@ -79,7 +79,7 @@ internal static class HornetSaveBridge {
         if (pendingPlayerData != null)
             try {
                 JsonConvert.PopulateObject(pendingPlayerData, spd, SaveSettings);
-                Log.Info("[HornetSave] applied loaded PlayerData onto live instance");
+                Log.Debug("[HornetSave] applied loaded PlayerData onto live instance");
             } catch (Exception e) {
                 Log.Error($"[HornetSave] PopulateObject failed: {e.Message}");
             } finally {
@@ -91,7 +91,7 @@ internal static class HornetSaveBridge {
             // Guard on a real change so a Knight-save doesn't trigger a redundant switch (camera snap) on every load.
             if (HeroSwitch.Active != want) {
                 HeroSwitch.SetActive(want);
-                Log.Info($"[HornetSave] restored active hero: {want}");
+                Log.Debug($"[HornetSave] restored active hero: {want}");
             }
 
             pendingHornetActive = null;

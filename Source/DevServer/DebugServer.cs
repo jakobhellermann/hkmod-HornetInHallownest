@@ -45,7 +45,7 @@ public static class DebugServer {
         var normalized = Normalize(path);
         var key = Key(method, normalized);
         routes[key] = new Route(method.ToUpperInvariant(), normalized, sync, async);
-        // Log.Info($"[DebugServer] mapped {key}");
+        // Log.Debug($"[DebugServer] mapped {key}");
     }
 
     public static void Start(MonoBehaviour host, int port) {

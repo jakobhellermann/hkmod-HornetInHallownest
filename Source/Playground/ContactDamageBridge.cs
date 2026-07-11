@@ -113,7 +113,7 @@ internal static class ContactDamageBridge {
                 if (body != null && dmgCol != null && dmgCol.bounds.min.y >= body.bounds.max.y) return;
             }
 
-            Log.InfoOnce($"contact:{other.name}",
+            Log.DebugOnce($"contact:{other.name}",
                 $"[ContactDamageBridge] HK contact damage from '{other.name}' dmg={dmg} hazard={ssHazard}");
             // damageSide = the side the damager is on (matches HeroBox.CheckForDamage's own computation).
             var side = other.transform.position.x > self.transform.position.x ? SSide.right : SSide.left;

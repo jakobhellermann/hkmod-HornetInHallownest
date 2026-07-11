@@ -33,7 +33,7 @@ internal static class ShroomBounceBridge {
             BindingFlags.NonPublic | BindingFlags.Static);
         hook = new Hook(mi,
             (Action<Action<SHeroDownAttack, GameObject?>, SHeroDownAttack, GameObject>)OnContinueBounce);
-        Log.Info("[ShroomBounce] installed: HeroDownAttack.ContinueBounceTrigger");
+        Log.Debug("[ShroomBounce] installed: HeroDownAttack.ContinueBounceTrigger");
     }
 
     private static void OnContinueBounce(Action<SHeroDownAttack, GameObject?> orig, SHeroDownAttack self,
@@ -70,7 +70,7 @@ internal static class ShroomBounceBridge {
                         hp.transform.localPosition = new Vector3(0f, -1.5f, -0.002f);
                     }
                 } catch (Exception e) {
-                    Log.InfoOnce("shroom-bouncelarge-fail", $"[ShroomBounce] BounceLarge effects skipped: {e.Message}");
+                    Log.DebugOnce("shroom-bouncelarge-fail", $"[ShroomBounce] BounceLarge effects skipped: {e.Message}");
                 }
 
                 return;

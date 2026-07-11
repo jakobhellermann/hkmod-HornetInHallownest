@@ -24,7 +24,7 @@ internal static class SilksongCatalog {
         InstallIdTransform(aa, Paths.ModFile(MonoScriptsBundleName));
         MarkRuntimeStarted($"{aa}/settings.json");
         var locator = LoadCatalog(catalogId);
-        Log.Info($"[Addressables] Silksong catalog mounted (locator={locator})");
+        Log.Debug($"[Addressables] Silksong catalog mounted (locator={locator})");
     }
 
     private static bool IsRegistered(string catalogId) {

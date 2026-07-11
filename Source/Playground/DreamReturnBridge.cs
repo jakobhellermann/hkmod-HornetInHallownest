@@ -45,7 +45,7 @@ internal static class DreamReturnBridge {
         pending = true;
         pendingGate = info.EntryGateName;
         Subscribe();
-        Log.Info($"[DreamReturn] {vis} transition -> '{info.SceneName}' (gate '{pendingGate}'); " +
+        Log.Debug($"[DreamReturn] {vis} transition -> '{info.SceneName}' (gate '{pendingGate}'); " +
                  "will fade blanker(s) out on arrival");
     }
 
@@ -80,7 +80,7 @@ internal static class DreamReturnBridge {
         if (hornet == null || string.IsNullOrEmpty(pendingGate)) return;
         var gate = GameObject.Find(pendingGate);
         if (gate == null) {
-            Log.Info($"[DreamReturn] re-entry gate '{pendingGate}' not found in scene");
+            Log.Debug($"[DreamReturn] re-entry gate '{pendingGate}' not found in scene");
             return;
         }
 
@@ -90,14 +90,14 @@ internal static class DreamReturnBridge {
         hornet.transform.position = pos;
         var rb = hornet.GetComponent<Rigidbody2D>();
         if (rb != null && rb.simulated) rb.linearVelocity = Vector2.zero;
-        Log.Info($"[DreamReturn] same-scene re-entry: placed Hornet at gate '{pendingGate}' {pos}");
+        Log.Debug($"[DreamReturn] same-scene re-entry: placed Hornet at gate '{pendingGate}' {pos}");
     }
 
     private static IEnumerator FadeInAfterSettle() {
         yield return new WaitForSeconds(0.5f); // let the new scene's blanker FSMs (re)init before we send the event
         var white = FadeBlankerOut("Blanker White");
         var black = FadeBlankerOut("Blanker");
-        Log.Info($"[DreamReturn] arrival: faded blankers out (white={white}, black={black})");
+        Log.Debug($"[DreamReturn] arrival: faded blankers out (white={white}, black={black})");
         CompleteArrival();
     }
 
@@ -109,7 +109,7 @@ internal static class DreamReturnBridge {
     private static void CompleteArrival() {
         var hero = BundleSpike.RealHero;
         if (hero == null) return;
-        Log.Info($"[DreamReturn] pre-complete: transitionState={hero.transitionState}, " +
+        Log.Debug($"[DreamReturn] pre-complete: transitionState={hero.transitionState}, " +
                  $"controlReq={hero.controlReqlinquished}, enterWithoutInput={hero.enterWithoutInput}");
         if (hero.transitionState == HeroTransitionState.WAITING_TO_ENTER_LEVEL)
             hero.transitionState = HeroTransitionState.WAITING_TO_TRANSITION; // the normal resting gameplay state
@@ -130,7 +130,7 @@ internal static class DreamReturnBridge {
         // Seer in and activates the hidden First Platforms; without it she's on the bare entry dais, walks off, and the
         // Dream Fall Catcher re-transitions her back = a respawn loop). Hornet's arrival skips Get Up, so broadcast it.
         PlayMakerFSM.BroadcastEvent("DREAM WAKE");
-        Log.Info($"[DreamReturn] completed arrival + DREAM WAKE: transitionState={hero.transitionState}, " +
+        Log.Debug($"[DreamReturn] completed arrival + DREAM WAKE: transitionState={hero.transitionState}, " +
                  $"controlReq={hero.controlReqlinquished}");
     }
 

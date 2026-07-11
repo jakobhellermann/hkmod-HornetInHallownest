@@ -145,7 +145,7 @@ internal static class GameCamerasBootstrap {
             holder.SetActive(true); // ACTIVATE -> Awakes/Starts run (GameCameras.Awake/Start skipped in Stub)
 
             var instanceSet = Silksong::GameCameras.SilentInstance != null;
-            Log.Info(
+            Log.Debug(
                 $"[GameCameras] rig ACTIVE+neutered: instance={instanceSet}, cams={cams} listeners={listeners} controllers={controllers} blur={blur}");
             return new {
                 ok = true,
@@ -258,7 +258,7 @@ internal static class GameCamerasBootstrap {
             var skins = Object.FindObjectsByType<Silksong::UIButtonSkins>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var s in skins) setupRefs?.Invoke(s, null);
-            Log.Info($"[HUD] wired UIButtonSkins.ih on {skins.Length} instance(s) before HUD activation");
+            Log.Debug($"[HUD] wired UIButtonSkins.ih on {skins.Length} instance(s) before HUD activation");
         } catch (Exception e) {
             Log.Error($"[HUD] UIButtonSkins.SetupRefs: {e.Message}");
         }
@@ -279,7 +279,7 @@ internal static class GameCamerasBootstrap {
                 untagged++;
             }
 
-        if (untagged > 0) Log.Info($"[HUD] cleared bogus 'Boss' tag off {untagged} HUD object(s) (tag-index collision)");
+        if (untagged > 0) Log.Debug($"[HUD] cleared bogus 'Boss' tag off {untagged} HUD object(s) (tag-index collision)");
 
         // Silk meter: the HUD's OWN SilkSpool (Thread/Spool) has the visual refs (capR/seg1/silkChunkPrefab); our
         // bootstrap's BARE SilkSpool (on the GM GO, added for AddUsingSilk) hijacked SilkSpool.Instance, so the real

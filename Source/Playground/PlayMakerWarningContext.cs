@@ -39,7 +39,7 @@ internal static class PlayMakerWarningContext {
         var mi = typeof(ActionHelpers).GetMethod("GetGameObjectFsm", BindingFlags.Public | BindingFlags.Static);
         if (mi != null) {
             getGameObjectFsmHook = new Hook(mi, GetGameObjectFsmHook);
-            Log.Info("[PlayMakerCtx] installed: ActionHelpers.GetGameObjectFsm");
+            Log.Debug("[PlayMakerCtx] installed: ActionHelpers.GetGameObjectFsm");
         }
         else {
             Log.Error("[PlayMakerCtx] ActionHelpers.GetGameObjectFsm not found");
@@ -51,7 +51,7 @@ internal static class PlayMakerWarningContext {
         var fsmUpdate = typeof(Fsm).GetMethod("Update", BindingFlags.Public | BindingFlags.Instance);
         if (fsmUpdate != null) {
             fsmUpdateHook = new Hook(fsmUpdate, FsmUpdateHook);
-            Log.Info("[PlayMakerCtx] installed: Fsm.Update context fallback");
+            Log.Debug("[PlayMakerCtx] installed: Fsm.Update context fallback");
         }
         else {
             Log.Error("[PlayMakerCtx] Fsm.Update not found");
@@ -95,7 +95,7 @@ internal static class PlayMakerWarningContext {
             var goCtx = pendingFsm == fsmName && pendingGo != null
                 ? $" on GO '{pendingGo.name}' (scene={pendingGo.scene.name})"
                 : "";
-            Log.InfoOnce($"notfound|{fsmName}|{caller}",
+            Log.DebugOnce($"notfound|{fsmName}|{caller}",
                 $"[PlayMakerCtx] FSM '{fsmName}' not found{goCtx} — called by FSM: {caller}");
             return;
         }
@@ -111,7 +111,7 @@ internal static class PlayMakerWarningContext {
             condition.StartsWith("Error Loading Action:") ||
             condition.StartsWith("get_actions: Fsm not initialized:") ||
             condition.StartsWith("get_fsm: Fsm not initialized:"))
-            Log.InfoOnce($"warn|{condition}",
+            Log.DebugOnce($"warn|{condition}",
                 $"[PlayMakerCtx] {condition} (root cause: inactive Silksong_GameManager — FSM init chain aborted)");
     }
 

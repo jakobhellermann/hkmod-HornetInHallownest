@@ -89,7 +89,7 @@ internal sealed class HornetBench : MonoBehaviour {
             anim.AnimationCompleted = (a, _) => a.Play("Sit Idle");
         }
 
-        Log.Info($"[HornetBench] Hornet sits (atBench) at {(Vector2)hero.transform.position}, healed");
+        Log.Debug($"[HornetBench] Hornet sits (atBench) at {(Vector2)hero.transform.position}, healed");
         // Mirror atBench onto Silksong's PlayerData so inventory CanChangeEquips() (reads
         // GameManager.instance.playerData.atBench = Silksong's PD) allows equipping while resting.
         var spd = Silksong::PlayerData.instance;
@@ -114,7 +114,7 @@ internal sealed class HornetBench : MonoBehaviour {
 
             RefreshToolHud();
 
-            Log.Info($"[HornetBench] refilled {n} tools to full (Shell Shards not yet collectable)");
+            Log.Debug($"[HornetBench] refilled {n} tools to full (Shell Shards not yet collectable)");
         } catch (Exception e) {
             Log.Error($"[HornetBench] tool refill failed: {e.Message}");
         }
@@ -137,7 +137,7 @@ internal sealed class HornetBench : MonoBehaviour {
         foreach (var fsm in FindObjectsByType<PlayMakerFSM>(FindObjectsSortMode.InstanceID))
             if (fsm.FsmName == "Bench Control" && fsm.ActiveStateName == "Startle") {
                 fsm.SendEvent("FINISHED"); // Startle -> Update Map Silently -> Resting (the Wake-To-Sit complete event)
-                Log.Info("[HornetBench] bench wake hung in 'Startle' (Wake-To-Sit never completes on inert Knight) "
+                Log.Debug("[HornetBench] bench wake hung in 'Startle' (Wake-To-Sit never completes on inert Knight) "
                          + "-> sent FINISHED to advance toward 'Resting' (get-up ready, frees the bench)");
                 return true;
             }
@@ -158,7 +158,7 @@ internal sealed class HornetBench : MonoBehaviour {
         // cancels every press once she has rested anywhere.
         var spd = Silksong::PlayerData.instance;
         if (spd != null) spd.atBench = false;
-        Log.Info("[HornetBench] Hornet stands up (left bench)");
+        Log.Debug("[HornetBench] Hornet stands up (left bench)");
     }
 
     internal static void Install() {

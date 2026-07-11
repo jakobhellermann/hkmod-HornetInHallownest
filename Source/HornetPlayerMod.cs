@@ -55,7 +55,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             var gc = GameCameras.instance;
             if (gc != null && gc.mainCamera != null && !gc.mainCamera.enabled) {
                 gc.mainCamera.enabled = true;
-                Playground.Log.Info(
+                Playground.Log.Debug(
                     $"[Unload] re-enabled HK mainCamera '{gc.mainCamera.name}' (left disabled by inventory DisplayFrozenCamera.Freeze)");
             }
         } catch (Exception e) {
@@ -68,7 +68,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             var pd = Silksong::PlayerData.instance;
             if (pd != null && pd.isInventoryOpen) {
                 pd.isInventoryOpen = false;
-                Playground.Log.Info("[Unload] cleared stuck isInventoryOpen");
+                Playground.Log.Debug("[Unload] cleared stuck isInventoryOpen");
             }
 
             if (Time.timeScale <= 0.0001f) Time.timeScale = 1f;
@@ -431,7 +431,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
                     if (HornetSpawner.HornetRoot == null)
                         try {
                             HornetSpawner.Spawn();
-                            Playground.Log.Info("[SpawnLifecycle] entered gameplay scene -> spawned Hornet");
+                            Playground.Log.Debug("[SpawnLifecycle] entered gameplay scene -> spawned Hornet");
                             // Dev convenience (like the ability-kit grant): unlock every crest's tool slots so all
                             // tools are equippable without hunting memory lockets. Runs per spawn (idempotent).
                             ToolItemManagerBootstrap.UnlockAllCrestSlots();
@@ -461,7 +461,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
                         // destroyed transform every frame through the menu fade.
                         HeroSwitch.SetActive(ActiveHero.Knight);
                         HornetSpawner.Despawn();
-                        Playground.Log.Info("[SpawnLifecycle] quit to menu -> despawned Hornet");
+                        Playground.Log.Debug("[SpawnLifecycle] quit to menu -> despawned Hornet");
                     }
 
                     return orig(self, mode, cb);
@@ -480,6 +480,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         if (HornetSpawner.HornetRoot == null || gm == null || gm.IsGameplayScene()) return;
         HeroSwitch.SetActive(ActiveHero.Knight); // hand camera back before despawn (CameraTarget would deref her)
         HornetSpawner.Despawn();
-        Playground.Log.Info($"[SpawnLifecycle] non-gameplay scene '{scene.name}' -> despawned Hornet");
+        Playground.Log.Debug($"[SpawnLifecycle] non-gameplay scene '{scene.name}' -> despawned Hornet");
     }
 }

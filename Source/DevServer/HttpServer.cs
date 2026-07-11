@@ -64,7 +64,7 @@ internal class HttpServer : IDisposable {
         var route = resolve(method, path);
 
         if (route == null) {
-            Log.Info($"[DebugServer] {method} {path} -> 404");
+            Log.Debug($"[DebugServer] {method} {path} -> 404");
             WriteResponse(ctx, DevResponse.Json(new { error = "no such route", method, path }, 404));
             return;
         }
@@ -86,7 +86,7 @@ internal class HttpServer : IDisposable {
             response = DevResponse.Json(new { error = e.Message, type = e.GetType().Name }, 500);
         }
 
-        Log.Info($"[DebugServer] {method} {path} -> {response.StatusCode}");
+        Log.Debug($"[DebugServer] {method} {path} -> {response.StatusCode}");
         WriteResponse(ctx, response);
     }
 

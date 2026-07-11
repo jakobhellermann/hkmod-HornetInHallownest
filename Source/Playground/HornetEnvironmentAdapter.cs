@@ -159,7 +159,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                     if (ssPd != null && marker != null)
                         ssPd.SetHazardRespawn(marker.transform.position, marker.respawnFacingRight);
                 }));
-        Log.Info(
+        Log.Debug(
             $"[EnvAdapter] SetHazardRespawn mirror installed ({setHazardRespawnHook1 != null}, {setHazardRespawnHook2 != null})");
 
         // Finish HK's "enter without input" cutscene entries (dreamer-free dream return, etc.). Those rely on an HK
@@ -197,7 +197,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         var mi = typeof(GameManager).GetMethod("BeginSceneTransition", [typeof(GameManager.SceneLoadInfo)]);
         if (mi != null) {
             beginSceneTransitionHook = new Hook(mi, BeginSceneTransitionHook);
-            Log.Info("[EnvAdapter] installed: GameManager.BeginSceneTransition deparent hook");
+            Log.Debug("[EnvAdapter] installed: GameManager.BeginSceneTransition deparent hook");
         }
         else {
             Log.Error("[EnvAdapter] GameManager.BeginSceneTransition not found");
@@ -224,7 +224,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         if (loadSceneMI != null) {
             loadSceneHook = new Hook(loadSceneMI,
                 (Func<Func<string, LoadSceneParameters, Scene>, string, LoadSceneParameters, Scene>)LoadSceneHook);
-            Log.Info("[EnvAdapter] installed: SceneManager.LoadScene deparent hook");
+            Log.Debug("[EnvAdapter] installed: SceneManager.LoadScene deparent hook");
         }
         else {
             Log.Error("[EnvAdapter] SceneManager.LoadScene(string, LoadSceneParameters) not found");
@@ -234,7 +234,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
             loadSceneAsyncHook = new Hook(loadSceneAsyncMI,
                 (Func<Func<string, LoadSceneParameters, AsyncOperation>, string, LoadSceneParameters, AsyncOperation>)
                 LoadSceneAsyncHook);
-            Log.Info("[EnvAdapter] installed: SceneManager.LoadSceneAsync deparent hook");
+            Log.Debug("[EnvAdapter] installed: SceneManager.LoadSceneAsync deparent hook");
         }
         else {
             Log.Error("[EnvAdapter] SceneManager.LoadSceneAsync(string, LoadSceneParameters) not found");
@@ -288,8 +288,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         var gate = (SGate)(int)info.HeroLeaveDirection.Value;
         hero.LeaveScene(gate);
         hero.RecordLeaveSceneCState();
-        Log.Info($"[EnvAdapter] relayed LeaveScene(gate={gate}) + RecordLeaveSceneCState to Hornet " +
-                 $"(no_input + NO_DAMAGE + gravity off; exitedSprinting={hero.exitedSprinting})");
+        Log.Debug($"[EnvAdapter] relayed LeaveScene(gate={gate}) + RecordLeaveSceneCState to Hornet " +
+                  $"(no_input + NO_DAMAGE + gravity off; exitedSprinting={hero.exitedSprinting})");
     }
 
     // SceneManager.LoadScene is synchronous (mustCompleteNextFrame=true): by the time orig returns the old scene is
@@ -312,7 +312,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static void DeparentHero(string reason) {
         var hero = BundleSpike.RealHero;
         if (hero != null && hero.gameObject.scene.name != "DontDestroyOnLoad") {
-            Log.Info($"[EnvAdapter] deparenting hero before {reason} (was in scene={hero.gameObject.scene.name})");
+            Log.Debug($"[EnvAdapter] deparenting hero before {reason} (was in scene={hero.gameObject.scene.name})");
             hero.SetHeroParent(null);
             if (hero.gameObject.scene.name != "DontDestroyOnLoad")
                 DontDestroyOnLoad(hero.gameObject);

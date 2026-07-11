@@ -60,13 +60,13 @@ internal static class Tk2dClipShim {
             // Remap a known HK clip to a Hornet clip (plays for real -> AnimationCompleted fires -> any WithEvents gate
             // resolves). Only if the mapped clip actually exists on this animator; else fall through to skip.
             if (ClipMap.TryGetValue(name, out var mapped) && self.GetClipByName(mapped) != null) {
-                Log.InfoOnce($"clipmap|{self.gameObject.name}|{name}",
+                Log.DebugOnce($"clipmap|{self.gameObject.name}|{name}",
                     $"[Tk2dClipShim] remapped HK clip '{name}' -> Hornet '{mapped}' on '{self.gameObject.name}'");
                 orig(self, mapped);
                 return;
             }
 
-            Log.InfoOnce($"clip|{self.gameObject.name}|{name}",
+            Log.DebugOnce($"clip|{self.gameObject.name}|{name}",
                 $"[Tk2dClipShim] missing clip '{name}' on '{self.gameObject.name}' -> skipped (needs Hornet mapping)");
             return; // skip orig (it would Debug.LogError per call)
         }

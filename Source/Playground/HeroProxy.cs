@@ -44,7 +44,7 @@ public static class HeroProxy {
         if (target == null) return;
         if (heroVar.Value != target) {
             heroVar.Value = target;
-            Log.Info($"[HeroProxy] global 'Hero' -> '{target.name}'");
+            Log.Debug($"[HeroProxy] global 'Hero' -> '{target.name}'");
         }
     }
 

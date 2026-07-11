@@ -83,7 +83,7 @@ internal static class DamageEnemyProxy {
             if (mi != null) setDirectionHook = new Hook(mi, SetDirectionHook);
         }
 
-        Log.Info($"[DamageEnemyProxy] installed on {count} slash GOs");
+        Log.Debug($"[DamageEnemyProxy] installed on {count} slash GOs");
     }
 
     // Silksong has AttackTypes values 8+ that don't exist in HK's enum. Map those to Generic (1).

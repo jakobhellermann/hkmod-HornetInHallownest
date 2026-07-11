@@ -51,7 +51,7 @@ internal static class GameObjectFindShim {
         AddHook("FindGameObjectWithTag",
             typeof(GameObject).GetMethod(nameof(GameObject.FindGameObjectWithTag), [typeof(string)]),
             (Func<Func<string, GameObject>, string, GameObject>)TagDetour);
-        Log.Info($"[Find] shim installed on {hooks.Count} lookup methods");
+        Log.Debug($"[Find] shim installed on {hooks.Count} lookup methods");
     }
 
     private static void AddHook(string label, MethodInfo? mi, Delegate detour) {
@@ -83,7 +83,7 @@ internal static class GameObjectFindShim {
         // HeroController.instance / UnsafeInstance directly (not the tag), so this only steers the tag-based "who is the
         // player" consumers. Only "Player", only while HornetActive (when the Knight is active we leave native behavior).
         if (tag == "Player" && HeroSwitch.HornetActive && HeroSwitch.ActiveHeroGameObject is { } hero) {
-            Log.Info("[Find] FindWithTag('Player') -> REDIRECT to Hornet");
+            Log.Debug("[Find] FindWithTag('Player') -> REDIRECT to Hornet");
             return hero;
         }
 
@@ -105,7 +105,7 @@ internal static class GameObjectFindShim {
     // In Silksong context: resolve known keys to the Silksong object; block the rest to null (+log once) so Silksong
     // code never silently picks up HK's same-named object. Unknown blocks are the to-do list for the Resolve() map.
     private static GameObject? Intercept(string method, string key, GameObject? redirect) {
-        Log.Info(redirect != null
+        Log.Debug(redirect != null
             ? $"[Find] {method}('{key}') -> REDIRECT '{redirect.name}' (silksong-context)"
             : $"[Find] {method}('{key}') -> null (silksong-context, no Resolve mapping — BLOCKED; add to map if needed)");
         return redirect;

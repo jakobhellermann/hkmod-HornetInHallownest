@@ -57,7 +57,7 @@ internal static class BundleSpike {
         }
 
         var total = byScene.Values.Sum();
-        Log.Info(
+        Log.Debug(
             $"[ScanMissing] {total} missing-script slots; scene GOs={sceneHits.Count} asset GOs={assetHits.Count}");
         return new {
             totalMissingSlots = total, perScene = byScene, sceneObjects = sceneHits, assetObjects = assetHits

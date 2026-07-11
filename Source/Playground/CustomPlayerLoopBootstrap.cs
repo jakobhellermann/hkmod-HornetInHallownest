@@ -29,7 +29,7 @@ internal static class CustomPlayerLoopBootstrap {
             }
 
             if (Contains(PlayerLoop.GetCurrentPlayerLoop(), lateType)) {
-                Log.Info("[CustomPlayerLoop] LateFixedUpdate phase already installed");
+                Log.Debug("[CustomPlayerLoop] LateFixedUpdate phase already installed");
                 return;
             }
 

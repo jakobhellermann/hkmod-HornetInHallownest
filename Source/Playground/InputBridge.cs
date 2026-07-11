@@ -90,24 +90,24 @@ internal sealed class InputDriver : MonoBehaviour {
                 var knight = HeroController.UnsafeInstance;
                 if (hornet != null && knight != null) {
                     hornet.transform.position = knight.transform.position;
-                    Log.Info($"[InputDriver] teleported Hornet -> Knight at {knight.transform.position}");
+                    Log.Debug($"[InputDriver] teleported Hornet -> Knight at {knight.transform.position}");
                 }
                 else {
-                    Log.Info($"[InputDriver] TP failed: hornet={hornet != null} knight={knight != null}");
+                    Log.Debug($"[InputDriver] TP failed: hornet={hornet != null} knight={knight != null}");
                 }
             }
 
             // Toggle infinite silk (B key). When on, refill silk to max each frame.
             if (Input.GetKeyDown(KeyCode.B)) {
                 infiniteSilk = !infiniteSilk;
-                Log.Info($"[InputDriver] infinite silk: {infiniteSilk}");
+                Log.Debug($"[InputDriver] infinite silk: {infiniteSilk}");
             }
 
             // Digit8 = toggle Hornet's terrain-collider height (Knight 1.28 <-> her native full 2.08). Dev knob to test
             // which low corridors she fits through; on = Knight height (the traversal fix). Later: a proper mod menu.
             if (Input.GetKeyDown(KeyCode.Alpha8)) {
                 var knightHeight = HornetSpawner.ToggleColliderHeight();
-                Log.Info($"[InputDriver] collider height: {(knightHeight ? "Knight (1.28)" : "Hornet full (2.08)")}");
+                Log.Debug($"[InputDriver] collider height: {(knightHeight ? "Knight (1.28)" : "Hornet full (2.08)")}");
             }
 
             if (infiniteSilk) {

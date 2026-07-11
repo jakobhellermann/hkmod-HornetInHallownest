@@ -25,7 +25,7 @@ internal static class PlayMakerUnity2dBootstrap {
             go.AddComponent<Silksong::PlayMakerUnity2d>(); // Awake: fsmProxy = that FSM -> isAvailable() == true
             Object.DontDestroyOnLoad(go);
             var ok = Silksong::PlayMakerUnity2d.isAvailable();
-            Log.Info($"[PMUnity2d] manager created, isAvailable={ok}");
+            Log.Debug($"[PMUnity2d] manager created, isAvailable={ok}");
         } catch (Exception e) {
             Log.Error($"[PMUnity2d] failed: {e.InnerException ?? e}");
         }

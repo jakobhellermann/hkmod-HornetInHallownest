@@ -36,7 +36,7 @@ internal static class CoroutineRedirect {
         }
 
         hook = new Hook(mi, (HookedDel)RedirectCoroutine);
-        Log.Info("[CoroutineRedirect] installed: MonoBehaviour.StartCoroutine");
+        Log.Debug("[CoroutineRedirect] installed: MonoBehaviour.StartCoroutine");
     }
 
     private static Coroutine RedirectCoroutine(OrigDel orig, MonoBehaviour self, IEnumerator routine) {

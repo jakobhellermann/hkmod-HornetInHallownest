@@ -60,7 +60,7 @@ internal static class PlayerDataSync {
         foreach (var kv in bools) kv.Value(ss, hk.GetBool(kv.Key));
         foreach (var kv in ints) kv.Value(ss, hk.GetInt(kv.Key));
         ss.hasBrolly = true; // no HK equivalent
-        Log.Info("[PlayerDataSync] seeded HK -> Hornet PlayerData");
+        Log.Debug("[PlayerDataSync] seeded HK -> Hornet PlayerData");
     }
 
     // HK's 3 nail arts + Shade Cloak fill Hornet's leftover unlocks: 1st art -> charge attack; the rest (2nd art, 3rd
