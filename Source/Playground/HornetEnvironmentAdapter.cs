@@ -122,6 +122,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         go = new GameObject("HornetPlayer.EnvironmentAdapter");
         go.AddComponent<HornetEnvironmentAdapter>();
         DontDestroyOnLoad(go);
+        // Stand in for Silksong's NextSceneWillActivate -> recycle pooled tools/audio (see RecycleSilksongPooledObjects).
+        UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnActiveSceneChanged;
         // Hook HK's GameManager.BeginSceneTransition: it fires at the start of a scene transition, before the scene
         // unloads. Silksong's own GameManager never fires its UnloadingLevel event (GM GO inactive), and
         // HeroController.OnLevelUnload never subscribes to it (subscription is in SetupGameRefs, which we skip).
@@ -210,6 +212,29 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         DeparentHero("scene transition");
     }
 
+    // Silksong's GameManager.SetupGameRefs (GameManager.cs:3456) subscribes AutoRecycleSelf.RecycleActiveRecyclers +
+    // PlayAudioAndRecycle.RecycleActiveRecyclers to its NextSceneWillActivate event — that's what despawns thrown tools
+    // and one-shot audio (pooled via PersonalObjectPool + AutoRecycleSelf) on every scene change. We skip SetupGameRefs
+    // (GM GO inactive) AND Silksong's GM never runs the scene-load flow that raises that event, so those pooled objects
+    // linger across HK transitions: a tool thrown before a transition kept ticking ToolBreakRangeHandler.Update against a
+    // now-destroyed camera transform -> a per-frame NullReferenceException until AutoRecycleSelf's own timer reclaimed it.
+    // Mirror Silksong's single NextSceneWillActivate firing: hook Unity's activeSceneChanged (one fire per real room
+    // change — additive boundary loads don't switch the active scene) and recycle there. Static, Silksong-scoped — no-op
+    // when none are active (Knight active / Hornet despawned).
+    private static void OnActiveSceneChanged(Scene from, Scene to) {
+        RecycleSilksongPooledObjects();
+    }
+
+    private static void RecycleSilksongPooledObjects() {
+        try {
+            Silksong::AutoRecycleSelf.RecycleActiveRecyclers();
+            Silksong::PlayAudioAndRecycle.RecycleActiveRecyclers();
+            Silksong::ResetDynamicHierarchy.ForceReconnectAll(); // 3rd NextSceneWillActivate subscriber (same intent)
+        } catch (Exception e) {
+            Log.Error($"[EnvAdapter] RecycleActiveRecyclers: {e.Message}");
+        }
+    }
+
     // Re-implements HK's "Dream Return" FSM's Regain Control step for Hornet (she has no such FSM). enterWithoutInput
     // entries deliberately skip AcceptInput (HeroController:9292), expecting that FSM to close the arrival; without it
     // she's frozen. Runs after orig, at the exact skip point — no race, no polling. Excludes dash/sprint/quake
@@ -266,6 +291,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     }
 
     internal static void Cleanup() {
+        UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         beginSceneTransitionHook?.Dispose();
         beginSceneTransitionHook = null;
         setHazardRespawnHook1?.Dispose();
