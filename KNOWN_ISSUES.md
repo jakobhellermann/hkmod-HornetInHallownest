@@ -1,32 +1,29 @@
-# Second try
-- blue hearts
-- big door oob
-
 # Bugs
 
 ## Cosmetic
 - dreamer:
-    - needolin on a dreamer fires instantly (the dream-nail hitbox is armed the moment the tune starts) — should have a wind-up instead of triggering immediately
-    - freeing prompt shows "HOLD A to Focus" (HK's Focus binding) — for Hornet it should read the needolin key ("HOLD D")
-    - (?) after a dream-scene exit Hornet's animator stays on the airborne/warp-in clip until any action (dash/attack) — HK's "Dream Return" get-up (StartAnimationControl) doesn't run for her
+    - needolin on a dreamer fires instantly
+    - freeing prompt shows "HOLD A to Focus" instead of HOLD D
     - dreamer walls are climbable
 - camera positioning
 - death animation
 - hornet bench location
 - VS/dive animation shows knight always
-- (?) mask shard pickup animation
 - hollow knight statue cutscene
 - kings brand cutscene
+- hornet hud is too large, it overlaps with text boxes
 
 ## Integration
 - XX hardsaves
 - XX game finish animation not shown
+- XX full mask shard -> instant hud update
 - OOB on scene transitions immediate walkback
 - elevator/lift transitions: Knight strands at shaft top, Hornet falls to bottom, camera-lock stuck up top (dark)
 - dash into elevator: bump
 - sprint-attack (dash-stab) misses HK trigger-breakables (e.g. Watcher Knights chandelier rope, Ruins2_03)
 - lantern always active
 - weaver entry not showing up
+- beastling call
 
 # Balancing
 - soul totem <-> silk
@@ -34,6 +31,7 @@
 ## Nive to have
 - hud sync? geo on hornet
 - dirtmouth slowdown
+- hive knight bee knockback
 
 ## Intermittent / needs debug
 - cannot bench sometimes
