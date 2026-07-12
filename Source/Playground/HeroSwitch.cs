@@ -414,19 +414,6 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
             if (vigGo.activeSelf != shouldBeOn) vigGo.SetActive(shouldBeOn);
         }
 
-        // Re-hide the inert Knight's body: SetInert disables his MeshRenderer once, but HK re-enables it on every scene
-        // ENTRY (same as the vignette above) — so after a transition the Knight shows at the entry gate (where Hornet also
-        // arrives) while she's active. Re-assert per frame from a cached renderer (never GetComponent per frame).
-        if (knight != null && !knightRendererCached) {
-            knightRenderer = knight.GetComponent<MeshRenderer>();
-            knightRendererCached = true;
-        }
-
-        if (knightRenderer != null) {
-            var shouldRender = !HeroSwitch.HornetActive;
-            if (knightRenderer.enabled != shouldRender) knightRenderer.enabled = shouldRender;
-        }
-
         var follow = HeroSwitch.HornetActive
             ? HeroSwitch.TransformOf(BundleSpike.HornetRoot)
             : knight != null
@@ -453,6 +440,28 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         }
         else {
             GameCamerasBootstrap.SetHkHudVisible(true); // no Hornet HUD -> always show HK's
+        }
+    }
+
+    // Re-hide the inert Knight's body while Hornet is active. SetInert disables his MeshRenderer once, but HK re-enables
+    // it during scene entry (HeroController.EnterScene, top-gate branch: renderer.enabled=false → fade → renderer.enabled
+    // =true) — so after a transition the Knight shows at the entry gate (where Hornet also arrives).
+    //
+    // Why LateUpdate, not Update (unlike the vignette re-hide): EnterScene is a COROUTINE, and its renderer re-enable
+    // runs in the coroutine-continuation phase, which Unity schedules AFTER Update but BEFORE LateUpdate. Re-asserting in
+    // Update (order -8000, earliest) loses the same-frame race — HK flips it back on after us and it renders that frame.
+    // LateUpdate runs after the continuation, so we win before the frame is drawn (the vignette's re-enabler is an FSM in
+    // Update, so Update suffices there). Re-assert from a cached renderer (never GetComponent per frame).
+    private void LateUpdate() {
+        var knight = HeroController.UnsafeInstance;
+        if (knight != null && !knightRendererCached) {
+            knightRenderer = knight.GetComponent<MeshRenderer>();
+            knightRendererCached = true;
+        }
+
+        if (knightRenderer != null) {
+            var shouldRender = !HeroSwitch.HornetActive;
+            if (knightRenderer.enabled != shouldRender) knightRenderer.enabled = shouldRender;
         }
     }
 
