@@ -63,10 +63,14 @@ internal static class ResourcesShim {
 
         var bundleAsset = ServeFromBundle(path, type);
         if (bundleAsset != null) return bundleAsset;
-        if (bundleAsset == null)
-            Log.ErrorOnce($"resmiss|{path.ToLowerInvariant()}",
-                $"[Resources.Load] NULL '{path}' as {type?.Name} was loaded as null from hk context but is present in hkss. Are you missing SilksongContext?");
 
+        // Languages/* misses are benign: Silksong's Language.HasLanguageFile is a presence probe
+        // (Resources.Load(sheet, typeof(TextAsset)) != null) that treats null as "sheet absent" and returns false. Sheets
+        // we don't pack (e.g. "EN_exception list") legitimately miss both HK and the bundle. Return null quietly.
+        if (path.StartsWith("Languages/")) return null;
+
+        Log.ErrorOnce($"resmiss|{path.ToLowerInvariant()}",
+            $"[Resources.Load] NULL '{path}' as {type?.Name} missed both HK's Resources and silksong-resources.bundle.");
         return orig0;
     }
 
@@ -79,6 +83,13 @@ internal static class ResourcesShim {
         Object served;
         try {
             served = type != null ? bundle!.LoadAsset(key, type) : bundle!.LoadAsset(key);
+            // Unity's typed LoadAsset(name, type) can miss when the caller asks for a BASE type but the bundle holds a
+            // DERIVED concrete asset (e.g. Resources.Load("LocalizationProjectSettings", typeof(LocalizationProjectSettingsBase))
+            // — the asset is the derived LocalizationProjectSettings). Retry untyped and accept if it's actually assignable.
+            if (served == null && type != null) {
+                var any = bundle!.LoadAsset(key);
+                if (any != null && type.IsInstanceOfType(any)) served = any;
+            }
         } catch (Exception e) {
             Log.Error($"[ResShim] LoadAsset '{key}' threw: {e.Message}");
             return null;
