@@ -3,6 +3,7 @@ using System;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using SGate = Silksong::GlobalEnums.GatePosition;
 
 namespace HornetPlayer.Playground;
@@ -27,6 +28,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static MethodInfo? sendRefreshEventMethod;
 
     private static Hook? beginSceneTransitionHook;
+    private static Hook? loadSceneHook; // SceneManager.LoadScene(string, LoadSceneParameters) — direct-load deparent
+    private static Hook? loadSceneAsyncHook; // SceneManager.LoadSceneAsync(string, LoadSceneParameters)
     private static Hook? setHazardRespawnHook1; // SetHazardRespawn(Vector3, bool)
     private static Hook? setHazardRespawnHook2; // SetHazardRespawn(HazardRespawnMarker)
 
@@ -201,6 +204,55 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         else {
             Log.Error("[EnvAdapter] GameManager.BeginSceneTransition not found");
         }
+
+        // Deparent Hornet before a DIRECT SceneManager.LoadScene/LoadSceneAsync — the path HK FSMs take via the PlayMaker
+        // LoadLevel action (e.g. Stag "Stag Control" -> Cinematic_Stag_travel), which bypasses GameManager.BeginSceneTransition
+        // (so the hook above never fires for it). Without deparenting, a Hornet parented to a scene object is destroyed by the
+        // synchronous unload. MUST fully-qualify the type: a bare `SceneManager` binds to HK's Assembly-CSharp SceneManager
+        // class (global namespace wins over the using), which has no LoadScene overloads. LoadSceneParameters is a struct;
+        // GetMethod(Type[]) mis-binds value types on some Unity versions, so walk manually.
+        var smType = typeof(UnityEngine.SceneManagement.SceneManager);
+        MethodInfo? loadSceneMI = null;
+        MethodInfo? loadSceneAsyncMI = null;
+        foreach (var m in smType.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
+            if (m.Name != "LoadScene" && m.Name != "LoadSceneAsync") continue;
+            var ps = m.GetParameters();
+            if (ps.Length != 2 || ps[0].ParameterType != typeof(string)) continue;
+            if (ps[1].ParameterType != typeof(LoadSceneParameters)) continue;
+            if (m.Name == "LoadScene") loadSceneMI = m;
+            else loadSceneAsyncMI = m;
+        }
+
+        if (loadSceneMI != null) {
+            loadSceneHook = new Hook(loadSceneMI,
+                (Func<Func<string, LoadSceneParameters, Scene>, string, LoadSceneParameters, Scene>)LoadSceneHook);
+            Log.Debug("[EnvAdapter] installed: SceneManager.LoadScene deparent hook");
+        }
+        else {
+            Log.Error("[EnvAdapter] SceneManager.LoadScene(string, LoadSceneParameters) not found");
+        }
+
+        if (loadSceneAsyncMI != null) {
+            loadSceneAsyncHook = new Hook(loadSceneAsyncMI,
+                (Func<Func<string, LoadSceneParameters, AsyncOperation>, string, LoadSceneParameters, AsyncOperation>)
+                LoadSceneAsyncHook);
+            Log.Debug("[EnvAdapter] installed: SceneManager.LoadSceneAsync deparent hook");
+        }
+        else {
+            Log.Error("[EnvAdapter] SceneManager.LoadSceneAsync(string, LoadSceneParameters) not found");
+        }
+    }
+
+    private static Scene LoadSceneHook(Func<string, LoadSceneParameters, Scene> orig, string sceneName,
+        LoadSceneParameters parameters) {
+        DeparentHero($"SceneManager.LoadScene({sceneName})");
+        return orig(sceneName, parameters);
+    }
+
+    private static AsyncOperation LoadSceneAsyncHook(Func<string, LoadSceneParameters, AsyncOperation> orig,
+        string sceneName, LoadSceneParameters parameters) {
+        DeparentHero($"SceneManager.LoadSceneAsync({sceneName})");
+        return orig(sceneName, parameters);
     }
 
     private static void BeginSceneTransitionHook(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self,
@@ -294,6 +346,10 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
         UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         beginSceneTransitionHook?.Dispose();
         beginSceneTransitionHook = null;
+        loadSceneHook?.Dispose();
+        loadSceneHook = null;
+        loadSceneAsyncHook?.Dispose();
+        loadSceneAsyncHook = null;
         setHazardRespawnHook1?.Dispose();
         setHazardRespawnHook1 = null;
         setHazardRespawnHook2?.Dispose();
