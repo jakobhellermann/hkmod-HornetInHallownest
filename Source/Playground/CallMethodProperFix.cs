@@ -52,11 +52,40 @@ internal static class CallMethodProperFix {
     };
 
     // HK-only methods with no Silksong equivalent. When Hornet is active and HK HUD FSMs call these on
-    // Silksong's HeroController (via HeroProxy), they silently no-op instead of logging an error.
+    // Silksong's HeroController (via HeroProxy), they no-op instead of logging an error.
     private static readonly HashSet<string> HkOnlyMethods = new() {
         "ClearMP", "ClearMPSendEvents", "AddMPCharge", "StartMPDrain", "StopMPDrain",
-        "TryAddMPChargeSpa", "SetMPCharge"
+        "TryAddMPChargeSpa", "AddMPChargeSpa", "SetMPCharge"
     };
+
+    // The subset of HkOnlyMethods that should still have an effect on Hornet: HK's hot spring passively
+    // refills SOUL while the hero rests in it (HeroController.TryAddMPChargeSpa). Hornet has no soul — her
+    // equivalent resource is silk — so these map onto a silk gain, the same soul->silk seam as SoulOrbBridge.
+    private static readonly HashSet<string> SpaChargeMethods = new() {
+        "TryAddMPChargeSpa", "AddMPChargeSpa"
+    };
+
+    // Parameterless stand-ins invoked in place of the HK-only methods when Hornet is active. Pointing
+    // cachedMethodInfo at a parameterless method makes DoMethodCall take its `cachedParameterInfo.Length == 0`
+    // branch (Invoke(cachedBehaviour, null)), so the FSM's argument list is ignored entirely — no signature/
+    // count matching — and DoCache returns true, so HK never logs "Method Name is invalid".
+    private static readonly MethodInfo? spaChargeStandIn =
+        typeof(CallMethodProperFix).GetMethod(nameof(SpaChargeSilk), BindingFlags.NonPublic | BindingFlags.Static);
+
+    private static readonly MethodInfo? noOpStandIn =
+        typeof(CallMethodProperFix).GetMethod(nameof(HkOnlyNoOp), BindingFlags.NonPublic | BindingFlags.Static);
+
+    // Grant Hornet one silk (like SoulOrbBridge's per-orb grant); return true so the spa FSM's "Did Add"
+    // result / "MP GAIN SPA" success path proceeds. AddSilk clamps to the spool max, so repeated spa ticks
+    // just top her off.
+    private static bool SpaChargeSilk() {
+        if (BundleSpike.RealHero is { } hero)
+            hero.AddSilk(1, true);
+        return true;
+    }
+
+    // The remaining HK-only MP methods (ClearMP/SetMPCharge/drain/...) have no Hornet equivalent — no-op.
+    private static bool HkOnlyNoOp() => false;
 
     private static readonly FieldInfo? errorStringField =
         typeof(CallMethodProper).GetField("errorString", AllInstance);
@@ -109,10 +138,23 @@ internal static class CallMethodProperFix {
                     }
                 }
 
-                // Suppress known HK-only methods when Hornet is active (HK HUD FSMs calling on Silksong's HeroController).
-                // These are no-ops — the method doesn't exist on Silksong's HeroController and the FSM continues normally.
-                if (HeroSwitch.HornetActive && IsHkOnlyMethod(methodName))
+                // Known HK-only methods called on Silksong's HeroController while Hornet is active. Returning
+                // false here does NOT suppress the error — HK's DoMethodCall logs errorString ("Method Name is
+                // invalid: X") for any DoCache that returns false. Instead redirect to a parameterless stand-in
+                // and return true, so the call resolves cleanly with no error. The spa soul-charge maps to a
+                // silk gain; the rest no-op.
+                if (HeroSwitch.HornetActive && IsHkOnlyMethod(methodName)) {
+                    var standIn = SpaChargeMethods.Contains(methodName!) ? spaChargeStandIn : noOpStandIn;
+                    if (standIn != null) {
+                        cachedMethodInfoField?.SetValue(self, standIn);
+                        cachedParameterInfoField?.SetValue(self, standIn.GetParameters());
+                        Log.DebugOnce($"hkonly|{methodName}|{goName}|{fsmName}|{stateName}",
+                            $"[CallMethodProperFix] HK-only '{methodName}' -> {standIn.Name} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
+                        return true;
+                    }
+
                     return false;
+                }
                 Log.Error(
                     $"[CallMethodProperFix] method '{methodName}' not found on {type?.Name ?? "?"} (scene={scene} go={goName} fsm={fsmName} state={stateName})");
             }
