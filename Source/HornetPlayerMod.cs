@@ -403,7 +403,16 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
     private void DespawnOutsideGameplay(UnityEngine.SceneManagement.Scene scene,
         UnityEngine.SceneManagement.LoadSceneMode mode) {
         var gm = GameManager.UnsafeInstance;
-        if (HornetSpawner.HornetRoot == null || gm == null || gm.IsGameplayScene()) return;
+        if (HornetSpawner.HornetRoot == null || gm == null) return;
+        // sceneLoaded also fires for HK's additive gameplay transitions (room-to-room + Pantheon boss loads go through
+        // GameManager.LoadSceneAsync(..., Additive)), which load the new scene while the PREVIOUS scene is still active.
+        // gm.IsGameplayScene() reads the ACTIVE scene, so on an additive load it classifies the stale previous scene, not
+        // the one that just loaded — so entering the first Pantheon boss (GG_Ghost_Xero, a gameplay scene) from the
+        // non-gameplay GG_Boss_Door_Entrance misreads as non-gameplay and wrongly despawns Hornet. The non-gameplay scenes
+        // this handler targets (credits/cinematics/menu) are loaded SINGLE-mode, so the loaded scene is already active.
+        // Only act when the loaded scene is the active one; skip additive loads (Hornet stays — correct for gameplay).
+        if (scene.name != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) return;
+        if (gm.IsGameplayScene()) return;
         // EXCEPTION: stag travel (Cinematic_Stag_travel) is a HK "Cinematic" (non-gameplay) scene, but the hero RIDES
         // THROUGH it — HK's Knight is DontDestroyOnLoad and is never deactivated there; StagTravel.Start just plays the
         // full-screen cinematic then BeginSceneTransition's onward to the destination (gate "door_stagExit"). Despawning
