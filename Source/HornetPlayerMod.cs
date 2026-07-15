@@ -117,14 +117,12 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         AcidSwimBridge.Cleanup();
         HornetDeath.Cleanup();
         RespawnBridge.Cleanup();
-        CoroutineRedirect.Cleanup();
         SoulOrbBridge.Cleanup();
         RoarLockBridge.Cleanup();
         SpiderTrapBenchFix.Cleanup();
         PlayerDataSync.Cleanup();
         HeroEventBridge.Cleanup();
         HeroSfxShim.Cleanup();
-        FreezeMomentFix.Cleanup();
         FsmTracer.Cleanup();
         HkFsmTracer.Cleanup();
         DreamReturnBridge.Cleanup();
@@ -349,11 +347,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
         RespawnBridge
             .Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
-        CoroutineRedirect
-            .Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
         SoulOrbBridge.Install(); // HK soul (SoulOrb homing + AddMPCharge) -> Hornet silk (orbs fly to her, grant silk)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
-        FreezeMomentFix.Install();
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
         HeroEventBridge.Install(); // forward HK FSM events aimed at the "Hero" GO onto Hornet's isolated Silksong FSMs
@@ -380,6 +375,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new DashGeoPickupModule());
         moduleHost.Add(new PogoModule());
         moduleHost.Add(new AnimationRemapModule());
+        moduleHost.Add(new MinorFixesModule());
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
