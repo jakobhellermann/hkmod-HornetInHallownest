@@ -89,7 +89,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSwitch.Cleanup();
         EnemyDamageBridge.Cleanup();
         AcidSwimBridge.Cleanup();
-        SpiderTrapBenchFix.Cleanup();
         HeroSfxShim.Cleanup();
         FsmTracer.Cleanup();
         HkFsmTracer.Cleanup();
@@ -314,8 +313,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
         PlayMakerWarningContext
             .Install(); // add GO+scene context to "Could not find FSM" / dedup "Fsm not initialized" burst
-        SpiderTrapBenchFix
-            .Install(); // Deepnest trap bench: patch the Fade FSM's Knight-calibrated 'Hero Land Y' into Hornet's frame
         // NOTE: HeroTargetModule.SyncGlobal (PlayMaker global "Hero") is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 
@@ -336,6 +333,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new InventoryModule());
         moduleHost.Add(new DeathModule());
         moduleHost.Add(new HeroBroadcastModule());
+        moduleHost.Add(new SceneFixesModule());
         moduleHost.Add(new ContactDamageModule());
         moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new BenchModule());
