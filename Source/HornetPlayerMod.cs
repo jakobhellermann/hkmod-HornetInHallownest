@@ -87,7 +87,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HornetEnvironmentAdapter.Cleanup();
         HeroSwitch.Cleanup();
         EnemyDamageBridge.Cleanup();
-        FsmLookupShim.Cleanup();
         AcidSwimBridge.Cleanup();
         HornetDeath.Cleanup();
         RespawnBridge.Cleanup();
@@ -310,9 +309,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSwitch.Install();
         EnemyDamageBridge
             .Install(); // forward Hornet's Silksong nail damage onto HK enemies/breakables (cross-game responder bridge)
-        FsmLookupShim
-            .Install(); // one place for HK "find FSM on a cross-game object": hero-owned inert (Dream Return/ProxyFSM)
-        // + the slash's "damages_enemy" dummy HK breakables/bells read (folds in the old Hero/DamagesEnemy shims)
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
         RespawnBridge
             .Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
@@ -339,6 +335,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new AnimationRemapModule());
         moduleHost.Add(new MinorFixesModule());
         moduleHost.Add(new PlayerDataSyncModule());
+        moduleHost.Add(new FsmLookupModule());
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
