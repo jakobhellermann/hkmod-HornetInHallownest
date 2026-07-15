@@ -114,7 +114,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSwitch.Cleanup();
         EnemyDamageBridge.Cleanup();
         FsmLookupShim.Cleanup();
-        PogoNonBounceShim.Cleanup();
         AcidSwimBridge.Cleanup();
         HornetDeath.Cleanup();
         RespawnBridge.Cleanup();
@@ -130,7 +129,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Cleanup();
         DreamReturnBridge.Cleanup();
         HeroControllerProbe.Cleanup();
-        ShroomBounceBridge.Cleanup();
         EnemyTargetBridge.Cleanup();
         HeroProxy.Cleanup();
         Tk2dClipShim.Cleanup();
@@ -349,8 +347,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         FsmLookupShim
             .Install(); // one place for HK "find FSM on a cross-game object": hero-owned inert (Dream Return/ProxyFSM)
         // + the slash's "damages_enemy" dummy HK breakables/bells read (folds in the old Hero/DamagesEnemy shims)
-        PogoNonBounceShim
-            .Install(); // honour HK's NonBouncer so Hornet doesn't pogo off HK-non-pogoable objects (bell, …)
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
         RespawnBridge
             .Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
@@ -363,8 +359,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
         HeroEventBridge.Install(); // forward HK FSM events aimed at the "Hero" GO onto Hornet's isolated Silksong FSMs
         RoarLockBridge.Install(); // roar-specific facing on top of HeroEventBridge (subscribes to its callback)
-        ShroomBounceBridge
-            .Install(); // HK BounceShroom/BigBouncer -> Hornet ShroomBounce/BounceHigh on down-attack pogo
         HeroControllerProbe
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
         EnemyTargetBridge
@@ -386,6 +380,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new PlayerLoopModule());
         moduleHost.Add(new BreakableFloorModule());
         moduleHost.Add(new DashGeoPickupModule());
+        moduleHost.Add(new PogoModule());
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
