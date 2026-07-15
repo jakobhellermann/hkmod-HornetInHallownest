@@ -21,7 +21,7 @@ internal static class BundleSpike {
     private static string MinimalBundlePath => Paths.ModFile("minimal-binding-test.silksong.bundle");
 
     // Spawn moved to HornetInHallownest/Core/HornetSpawner (the first migrated module). These forwarders keep the
-    // existing Playground callers (HornetDeath/HornetBench/HeroSwitch/…) and the diagnostics below reading the live
+    // existing Playground callers (DeathModule/BenchModule/HeroSwitch/…) and the diagnostics below reading the live
     // spawn state without churn; they get repointed to HornetSpawner when each of those systems migrates in turn.
     internal static Silksong::HeroController? RealHero => HornetSpawner.RealHero;
     internal static GameObject? HornetRoot => HornetSpawner.HornetRoot;

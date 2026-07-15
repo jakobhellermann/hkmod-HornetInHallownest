@@ -65,7 +65,7 @@ public sealed class ContactDamageModule : ModuleBase {
             var side = other.transform.position.x > self.transform.position.x ? SSide.right : SSide.left;
             // TODO: use lethal death animation if appropriate 
             // NonLethal: routes a fatal hit through Die(nonLethal), which skips the lethal corpse/cocoon block
-            // but still reaches the PlayerDead handoff HornetDeath intercepts.
+            // but still reaches the PlayerDead handoff DeathModule intercepts.
             hc.TakeDamage(other, side, dmg, ssHazard, SDmgFlags.NonLethal);
         } catch (Exception e) {
             LogError(e.Message);

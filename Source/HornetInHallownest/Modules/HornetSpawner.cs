@@ -93,7 +93,7 @@ public sealed class HornetSpawner : ModuleBase {
         }
 
         // Re-arm the global hero-box gate. HeroBox.Inactive is a STATIC bool that Die() sets true (no damage during the
-        // death sequence) and HornetDeath.Revive clears. A death that didn't complete the revive (e.g. one before this
+        // death sequence) and DeathModule.Revive clears. A death that didn't complete the revive (e.g. one before this
         // code existed, or a mid-death hot-reload) leaves it stuck true across reloads — the Silksong assembly's statics
         // aren't reset by the mod hot-reload — so CheckForDamage skips forever and Hornet takes no damage. Reset on spawn.
         Silksong::HeroBox.Inactive = false;

@@ -88,8 +88,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSwitch.Cleanup();
         EnemyDamageBridge.Cleanup();
         AcidSwimBridge.Cleanup();
-        HornetDeath.Cleanup();
-        RespawnBridge.Cleanup();
         RoarLockBridge.Cleanup();
         SpiderTrapBenchFix.Cleanup();
         HeroEventBridge.Cleanup();
@@ -123,6 +121,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         playgroundHost = new GameObject("HornetPlayer.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
         var host = playgroundHost.AddComponent<PlaygroundHost>();
+        ModuleBase.CoroutineHost = host;
 
         validation = new ValidationRunner(moduleHost)
             .Register(new SpawnSanityScenario());
@@ -221,10 +220,10 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             GameManager.instance.LoadGameFromUI(slot); // HK's GameManager: full UI load (transition + scene)
             return new { ok = true, slot };
         });
-        DebugServer.MapPost("/kill", _ => HornetDeath.Kill()); // debug: trigger Hornet death (real damage path)
-        DebugServer.MapPost("/getup", _ => HornetDeath.ForceGetUp()); // debug: unstick from bench/no_input
+        DebugServer.MapPost("/kill", _ => DeathModule.Kill()); // debug: trigger Hornet death (real damage path)
+        DebugServer.MapPost("/getup", _ => DeathModule.ForceGetUp()); // debug: unstick from bench/no_input
         DebugServer.MapPost("/hazard",
-            req => HornetDeath.Hazard(req["type"] ?? "3")); // debug: trigger hazard N (2=spikes,3=acid,4=lava,5=pit)
+            req => DeathModule.Hazard(req["type"] ?? "3")); // debug: trigger hazard N (2=spikes,3=acid,4=lava,5=pit)
         DebugServer.MapPost("/acid-offset", req => {
             if (float.TryParse(req["value"], out var v)) AcidSwimBridge.SurfaceOffset = v;
             return new { AcidSwimBridge.SurfaceOffset }; // tune where Hornet's origin sits vs the acid surface line
@@ -309,9 +308,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSwitch.Install();
         EnemyDamageBridge
             .Install(); // forward Hornet's Silksong nail damage onto HK enemies/breakables (cross-game responder bridge)
-        HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
-        RespawnBridge
-            .Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
@@ -341,6 +337,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new FsmMethodCallRemapModule());
         moduleHost.Add(new HeroTargetModule());
         moduleHost.Add(new InventoryModule());
+        moduleHost.Add(new DeathModule());
         moduleHost.Add(new ContactDamageModule());
         moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new BenchModule());

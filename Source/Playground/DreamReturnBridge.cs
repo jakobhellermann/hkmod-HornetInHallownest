@@ -37,7 +37,7 @@ internal static class DreamReturnBridge {
         // set for exactly these three) — all three fade the WHITE blanker in and rely on the Knight "Dream Return" FSM to
         // fade it back OUT + return control on arrival. Cover the same set: GodsAndGlory is the Godhome boss-return path
         // (state Prostrate -> "FADE OUT"), which the Dream-only check missed -> the white never lifted on a boss VICTORY
-        // return to the Hall of Gods = whitescreen. (Death returns already worked via HornetDeath.DreamReturnRoutine.)
+        // return to the Hall of Gods = whitescreen. (Death returns already worked via DeathModule.DreamReturnRoutine.)
         var vis = info.Visualization;
         if (vis != GameManager.SceneLoadVisualizations.Dream &&
             vis != GameManager.SceneLoadVisualizations.GrimmDream &&

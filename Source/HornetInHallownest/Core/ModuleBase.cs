@@ -1,8 +1,10 @@
 extern alias Silksong;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
+using UnityEngine;
 using Log = HornetPlayer.Playground.Log;
 
 namespace HornetPlayer.HornetInHallownest.Core;
@@ -10,6 +12,8 @@ namespace HornetPlayer.HornetInHallownest.Core;
 public abstract class ModuleBase {
     private const BindingFlags AllMethods =
         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+
+    internal static MonoBehaviour CoroutineHost = null!;
 
     private readonly List<IDisposable> disposables = [];
 
@@ -43,6 +47,10 @@ public abstract class ModuleBase {
     protected T Track<T>(T disposable) where T : IDisposable {
         disposables.Add(disposable);
         return disposable;
+    }
+
+    protected Coroutine StartCoroutine(IEnumerator routine) {
+        return CoroutineHost.StartCoroutine(routine);
     }
 
     protected void LogInfo(object? msg) => Log.Info($"[{Id}] {msg}");
