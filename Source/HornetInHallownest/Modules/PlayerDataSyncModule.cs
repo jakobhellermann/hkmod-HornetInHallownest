@@ -1,15 +1,18 @@
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
+using HornetPlayer.HornetInHallownest.Core;
+using HornetPlayer.Playground;
 using Modding;
 using SPlayerData = Silksong::PlayerData;
 
-namespace HornetPlayer.Playground;
+namespace HornetPlayer.HornetInHallownest.Modules;
 
-// HK (Knight) progression -> Hornet's Silksong PlayerData. Seed() at spawn is authoritative; the hooks mirror live
-// pickups. Grant-only. SS writes are direct/unhooked, so no feedback loop. See docs/playerdata-sync.md.
-internal static class PlayerDataSync {
-    // HK field name -> how to apply it to Silksong PD. Single source: Seed() iterates these, the hooks dispatch by name.
+// HK (Knight) progression -> Hornet's Silksong PlayerData. SyncHKToSS() at spawn is the full authoritative sync; the
+// ModHooks mirror live pickups. Grant-only, and the Silksong writes are direct/unhooked, so there's no feedback loop.
+// See docs/playerdata-sync.md.
+public sealed class PlayerDataSyncModule : ModuleBase {
+    // HK field name -> how to apply it to Silksong PD. Single source: SyncHKToSS() iterates these, hooks dispatch by name.
     private static readonly Dictionary<string, Action<SPlayerData, bool>> bools = new() {
         ["hasDash"] = (ss, v) => ss.hasDash = v,
         ["hasWalljump"] = (ss, v) => ss.hasWalljump = v,
@@ -43,24 +46,25 @@ internal static class PlayerDataSync {
         ["MPReserveMax"] = (ss, v) => ss.silkMax = 9 + v / 33 * 3 // soul vessels -> silk capacity (base 9, +3/vessel)
     };
 
-    internal static void Install() {
+    public override string Id => "playerdata-sync";
+
+    public override void Initialize() {
         ModHooks.SetPlayerBoolHook += OnSetBool;
         ModHooks.SetPlayerIntHook += OnSetInt;
     }
 
-    internal static void Cleanup() {
+    protected override void OnDeinitialize() {
         ModHooks.SetPlayerBoolHook -= OnSetBool;
         ModHooks.SetPlayerIntHook -= OnSetInt;
     }
 
-    internal static void Seed() {
+    internal static void SyncHKToSS() {
         var hk = PlayerData.instance;
         var ss = SPlayerData.instance;
         if (hk == null || ss == null) return;
         foreach (var kv in bools) kv.Value(ss, hk.GetBool(kv.Key));
         foreach (var kv in ints) kv.Value(ss, hk.GetInt(kv.Key));
         ss.hasBrolly = true; // no HK equivalent
-        Log.Debug("[PlayerDataSync] seeded HK -> Hornet PlayerData");
     }
 
     // HK's 3 nail arts + Shade Cloak fill Hornet's leftover unlocks: 1st art -> charge attack; the rest (2nd art, 3rd

@@ -103,9 +103,9 @@ public sealed class HornetSpawner : ModuleBase {
         // feature must DEFER the switch until the Knight's entry has completed (isHeroInPosition + grounded).
         HeroSwitch.SetActive(HeroSwitch.Active);
 
-        // Seed BEFORE BringUpHud so the health masks / silk meter appear at the Knight's capacity (maxHealth/silkMax),
+        // Sync BEFORE BringUpHud so the health masks / silk meter appear at the Knight's capacity (maxHealth/silkMax),
         // not the bootstrap defaults. HK PD is loaded by now (post scene-entry) -> authoritative over HornetSaveData.
-        PlayerDataSync.Seed();
+        PlayerDataSyncModule.SyncHKToSS();
 
         try {
             GameCamerasBootstrap.BringUpHud(true);
