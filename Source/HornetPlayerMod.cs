@@ -89,7 +89,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSwitch.Cleanup();
         EnemyDamageBridge.Cleanup();
         AcidSwimBridge.Cleanup();
-        HeroSfxShim.Cleanup();
         FsmTracer.Cleanup();
         HkFsmTracer.Cleanup();
         DreamReturnBridge.Cleanup();
@@ -306,7 +305,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSwitch.Install();
         EnemyDamageBridge
             .Install(); // forward Hornet's Silksong nail damage onto HK enemies/breakables (cross-game responder bridge)
-        HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
         HeroControllerProbe
@@ -326,6 +324,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new MinorFixesModule());
         moduleHost.Add(new PlayerDataSyncModule());
         moduleHost.Add(new FsmLookupModule());
+        moduleHost.Add(new HeroSfxModule());
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());

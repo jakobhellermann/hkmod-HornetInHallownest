@@ -10,7 +10,6 @@
     - freeing prompt shows "HOLD A to Focus" (HK's Focus binding) — for Hornet it should read the needolin key ("HOLD D")
     - (?) after a dream-scene exit Hornet's animator stays on the airborne/warp-in clip until any action (dash/attack) — HK's "Dream Return" get-up (StartAnimationControl) doesn't run for her
     - dreamer walls are climbable
-- audio volume not tied to settings
 - camera positioning
 - death animation
 - hornet bench location
