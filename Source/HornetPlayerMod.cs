@@ -114,7 +114,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         EnemyDamageBridge.Cleanup();
         FsmLookupShim.Cleanup();
         PogoNonBounceShim.Cleanup();
-        ContactDamageBridge.Cleanup();
         AcidSwimBridge.Cleanup();
         HornetDeath.Cleanup();
         RespawnBridge.Cleanup();
@@ -360,8 +359,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // + the slash's "damages_enemy" dummy HK breakables/bells read (folds in the old Hero/DamagesEnemy shims)
         PogoNonBounceShim
             .Install(); // honour HK's NonBouncer so Hornet doesn't pogo off HK-non-pogoable objects (bell, …)
-        ContactDamageBridge
-            .Install(); // reverse: HK enemies/hazards deal contact damage to Hornet (HeroBox reads HK DamageHero/FSM)
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
         RespawnBridge
             .Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
@@ -403,6 +400,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new TagModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
+        moduleHost.Add(new ContactDamageModule());
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
 
