@@ -120,7 +120,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         RespawnBridge.Cleanup();
         CoroutineRedirect.Cleanup();
         SoulOrbBridge.Cleanup();
-        GeoDashBridge.Cleanup();
         RoarLockBridge.Cleanup();
         SpiderTrapBenchFix.Cleanup();
         PlayerDataSync.Cleanup();
@@ -386,6 +385,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // Initialize is a no-op (spawn is lazy, via /spawn-real or AutoSpawn); its Deinitialize despawns Hornet.
         moduleHost.Add(new PlayerLoopModule());
         moduleHost.Add(new BreakableFloorModule());
+        moduleHost.Add(new DashGeoPickupModule());
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());

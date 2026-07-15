@@ -77,8 +77,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                     .GetField("isGameplayScene", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 isGameplaySceneField?.SetValue(hero, true);
 
-                GeoDashBridge
-                    .Tick(hero); // collect geo during a dash (kinematic HeroBox tunnels past it; only runs while dashing)
                 HornetPlayerMod.LoadedInstance?.Modules
                     .HornetActiveUpdate(hero); // migrated per-frame modules (Needolin, GeoDash, QuakeFloor, …)
             }
