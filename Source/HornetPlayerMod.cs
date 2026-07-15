@@ -121,7 +121,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         RespawnBridge.Cleanup();
         CoroutineRedirect.Cleanup();
         SoulOrbBridge.Cleanup();
-        BlueHealthBridge.Cleanup();
         QuakeFloorBridge.Cleanup();
         GeoDashBridge.Cleanup();
         RoarLockBridge.Cleanup();
@@ -365,8 +364,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         CoroutineRedirect
             .Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
         SoulOrbBridge.Install(); // HK soul (SoulOrb homing + AddMPCharge) -> Hornet silk (orbs fly to her, grant silk)
-        BlueHealthBridge
-            .Install(); // HK lifeblood (scuttlers' EventRegister "ADD BLUE HEALTH") -> Hornet's Blue Health Control FSM
         QuakeFloorBridge.Install(); // Hornet down-dash breaks HK quake floors (Desolate Dive equivalent)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();
