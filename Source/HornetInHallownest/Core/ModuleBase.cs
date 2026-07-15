@@ -1,3 +1,4 @@
+extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -15,6 +16,10 @@ public abstract class ModuleBase {
     public abstract string Id { get; }
 
     public abstract void Initialize();
+
+    // Per-frame hook, called only while Hornet is the active hero.
+    public virtual void HornetActiveUpdate(Silksong::HeroController hero) {
+    }
 
     public void Deinitialize() {
         OnDeinitialize();

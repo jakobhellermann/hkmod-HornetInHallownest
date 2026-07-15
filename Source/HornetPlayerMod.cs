@@ -25,6 +25,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
     // system is migrated it keeps its old Install/Cleanup below. Initialize forward, Deinitialize reverse.
     private readonly ModuleHost moduleHost = new();
 
+    internal ModuleHost Modules => moduleHost;
+
     private Hook? finishedEnteringHook;
 
     private GameObject? playgroundHost;
@@ -123,7 +125,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         BlueHealthBridge.Cleanup();
         QuakeFloorBridge.Cleanup();
         GeoDashBridge.Cleanup();
-        NeedolinDreamNail.Cleanup();
         RoarLockBridge.Cleanup();
         SpiderTrapBenchFix.Cleanup();
         PlayerDataSync.Cleanup();
@@ -401,6 +402,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
         moduleHost.Add(new ContactDamageModule());
+        moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
 

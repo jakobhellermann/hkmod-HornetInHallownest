@@ -1,3 +1,4 @@
+extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,6 +28,17 @@ public sealed class ModuleHost {
             } catch (Exception e) {
                 Log.Error($"[ModuleHost] init '{m.Id}': {e}");
             }
+    }
+
+    public void HornetActiveUpdate(Silksong::HeroController hero) {
+        foreach (var m in modules) {
+            if (!active.Contains(m.Id)) continue;
+            try {
+                m.HornetActiveUpdate(hero);
+            } catch (Exception e) {
+                Log.Error($"[ModuleHost] update '{m.Id}': {e}");
+            }
+        }
     }
 
     public void DeinitializeAll() {

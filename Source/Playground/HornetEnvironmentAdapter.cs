@@ -1,6 +1,7 @@
 extern alias Silksong;
 using System;
 using System.Reflection;
+using HornetPlayer.HornetInHallownest.Modules;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -69,10 +70,10 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 isGameplaySceneField?.SetValue(hero, true);
 
                 QuakeFloorBridge.Tick(hero); // down-dash breaks HK quake floors (only iterates while quaking)
-                NeedolinDreamNail
-                    .Tick(hero); // Needolin acts as a Dream Nail on nearby HK dream objects (edge-triggered)
                 GeoDashBridge
                     .Tick(hero); // collect geo during a dash (kinematic HeroBox tunnels past it; only runs while dashing)
+                HornetPlayerMod.LoadedInstance?.Modules
+                    .HornetActiveUpdate(hero); // migrated per-frame modules (Needolin, …)
             }
 
             // --- The bookkeeping half of InputHandler.Update ---
