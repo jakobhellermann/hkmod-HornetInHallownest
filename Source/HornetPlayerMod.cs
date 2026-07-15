@@ -123,7 +123,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         SoulOrbBridge.Cleanup();
         BlueHealthBridge.Cleanup();
         QuakeFloorBridge.Cleanup();
-        ConveyorBridge.Cleanup();
         GeoDashBridge.Cleanup();
         NeedolinDreamNail.Cleanup();
         RoarLockBridge.Cleanup();
@@ -374,8 +373,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         BlueHealthBridge
             .Install(); // HK lifeblood (scuttlers' EventRegister "ADD BLUE HEALTH") -> Hornet's Blue Health Control FSM
         QuakeFloorBridge.Install(); // Hornet down-dash breaks HK quake floors (Desolate Dive equivalent)
-        ConveyorBridge
-            .Install(); // HK conveyor belts move Hornet (they gate on HK's HeroController type, which she lacks)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
@@ -407,6 +404,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // New lifecycle backbone: register migrated modules in order, then init them. Spawn is the first module — its
         // Initialize is a no-op (spawn is lazy, via /spawn-real or AutoSpawn); its Deinitialize despawns Hornet.
         moduleHost.Add(new TagModule());
+        moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
 
