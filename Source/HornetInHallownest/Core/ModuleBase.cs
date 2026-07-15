@@ -36,6 +36,13 @@ public abstract class ModuleBase {
         return disposable;
     }
 
+    protected void LogInfo(object? msg) => Log.Info($"[{Id}] {msg}");
+    protected void LogDebug(object? msg) => Log.Debug($"[{Id}] {msg}");
+    protected void LogError(object? msg) => Log.Error($"[{Id}] {msg}");
+    protected void LogInfoOnce(string key, object? msg) => Log.InfoOnce(key, $"[{Id}] {msg}");
+    protected void LogDebugOnce(string key, object? msg) => Log.DebugOnce(key, $"[{Id}] {msg}");
+    protected void LogErrorOnce(string key, object? msg) => Log.ErrorOnce(key, $"[{Id}] {msg}");
+
     protected Hook Detour<TDelegate>(Type type, string method, TDelegate hook, params Type[] paramTypes)
         where TDelegate : Delegate {
         var mi = paramTypes.Length > 0

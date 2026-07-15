@@ -141,7 +141,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroProxy.Cleanup();
         Tk2dClipShim.Cleanup();
         InventoryPauseBridge.Cleanup();
-        CallMethodProperFix.Cleanup();
         PlayMakerWarningContext.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
@@ -390,8 +389,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         Tk2dClipShim.Install(); // log-once + skip missing tk2d clips (HK-Knight clip names absent on Hornet's animator)
         InventoryPauseBridge
             .Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
-        CallMethodProperFix
-            .Install(); // catch AmbiguousMatchException in CallMethodProper.DoCache when HeroProxy repoints to Hornet
         PlayMakerWarningContext
             .Install(); // add GO+scene context to "Could not find FSM" / dedup "Fsm not initialized" burst
         SpiderTrapBenchFix
@@ -405,6 +402,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // Initialize is a no-op (spawn is lazy, via /spawn-real or AutoSpawn); its Deinitialize despawns Hornet.
         moduleHost.Add(new TagModule());
         moduleHost.Add(new ConveyorModule());
+        moduleHost.Add(new FsmMethodCallRemapModule());
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
 
