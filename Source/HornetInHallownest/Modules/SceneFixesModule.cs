@@ -21,8 +21,32 @@ public sealed class SceneFixesModule : ModuleBase {
             case "Deepnest_Spider_Town":
                 FixSpiderTrapBench();
                 break;
+            case "White_Palace_12":
+                DisableWhitePalace12Saws(scene);
+                break;
         }
     }
+
+    #region White_Palace_12 saws
+
+    private static readonly string[] WhitePalace12DisabledSaws = { "wp_saw (18)", "wp_saw (22)", "wp_saw (23)" };
+
+    private void DisableWhitePalace12Saws(Scene scene) {
+        try {
+            var count = 0;
+            foreach (var root in scene.GetRootGameObjects())
+                if (Array.IndexOf(WhitePalace12DisabledSaws, root.name) >= 0) {
+                    root.SetActive(false);
+                    count++;
+                }
+
+            LogDebug($"disabled {count}/{WhitePalace12DisabledSaws.Length} saws");
+        } catch (Exception e) {
+            LogError(e.Message);
+        }
+    }
+
+    #endregion
 
     #region Deepnest_Spider_Town trap bench
 
