@@ -346,8 +346,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         GameObjectFindShim.Install(); // LOG-ONLY: surface name/tag GameObject lookups (cross-game collision hazard)
         PlayMakerFix.Apply();
         Stub.Install();
-        CustomPlayerLoopBootstrap
-            .Ensure(); // install Silksong's real LateFixedUpdate phase (drives DamageEnemies + cycle-gated FSMs)
         InputBridge.Install();
         HornetEnvironmentAdapter.Install();
         HeroSwitch.Install();
@@ -393,6 +391,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
         // New lifecycle backbone: register migrated modules in order, then init them. Spawn is the first module — its
         // Initialize is a no-op (spawn is lazy, via /spawn-real or AutoSpawn); its Deinitialize despawns Hornet.
+        moduleHost.Add(new PlayerLoopModule());
         moduleHost.Add(new TagModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
