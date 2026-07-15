@@ -98,7 +98,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.DeinitializeAll();
 
         ResourcesShim.Cleanup();
-        GameObjectFindShim.Cleanup();
         SilksongCatalog.Cleanup();
         GameCamerasBootstrap.Cleanup();
         UIManagerBootstrap.Cleanup();
@@ -132,7 +131,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         FsmTracer.Cleanup();
         HkFsmTracer.Cleanup();
         DreamReturnBridge.Cleanup();
-        GetComponentShim.Cleanup();
         HeroControllerProbe.Cleanup();
         ShroomBounceBridge.Cleanup();
         EnemyTargetBridge.Cleanup();
@@ -343,7 +341,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // our DLL won't undo a poisoned Addressables runtime (Addressables lives in the engine DLL, one per process).
         SilksongCatalog.EnsureMounted();
         ResourcesShim.Install(); // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
-        GameObjectFindShim.Install(); // LOG-ONLY: surface name/tag GameObject lookups (cross-game collision hazard)
         PlayMakerFix.Apply();
         Stub.Install();
         InputBridge.Install();
@@ -367,8 +364,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         FreezeMomentFix.Install();
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
-        GetComponentShim
-            .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
         HeroEventBridge.Install(); // forward HK FSM events aimed at the "Hero" GO onto Hornet's isolated Silksong FSMs
         RoarLockBridge.Install(); // roar-specific facing on top of HeroEventBridge (subscribes to its callback)
         ShroomBounceBridge
@@ -392,7 +387,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // New lifecycle backbone: register migrated modules in order, then init them. Spawn is the first module — its
         // Initialize is a no-op (spawn is lazy, via /spawn-real or AutoSpawn); its Deinitialize despawns Hornet.
         moduleHost.Add(new PlayerLoopModule());
-        moduleHost.Add(new TagModule());
+        moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
         moduleHost.Add(new ContactDamageModule());
