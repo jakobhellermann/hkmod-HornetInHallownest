@@ -120,7 +120,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         RespawnBridge.Cleanup();
         CoroutineRedirect.Cleanup();
         SoulOrbBridge.Cleanup();
-        QuakeFloorBridge.Cleanup();
         GeoDashBridge.Cleanup();
         RoarLockBridge.Cleanup();
         SpiderTrapBenchFix.Cleanup();
@@ -359,7 +358,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         CoroutineRedirect
             .Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
         SoulOrbBridge.Install(); // HK soul (SoulOrb homing + AddMPCharge) -> Hornet silk (orbs fly to her, grant silk)
-        QuakeFloorBridge.Install(); // Hornet down-dash breaks HK quake floors (Desolate Dive equivalent)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FreezeMomentFix.Install();
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
@@ -387,6 +385,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // New lifecycle backbone: register migrated modules in order, then init them. Spawn is the first module — its
         // Initialize is a no-op (spawn is lazy, via /spawn-real or AutoSpawn); its Deinitialize despawns Hornet.
         moduleHost.Add(new PlayerLoopModule());
+        moduleHost.Add(new BreakableFloorModule());
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());

@@ -163,8 +163,6 @@ internal static class HeroSwitch {
 
         var prev = Active;
         Active = who;
-        if (who != ActiveHero.Hornet)
-            QuakeFloorBridge.CancelIfActive(); // undo a scoped down-dash "Player" tag if mid-dash
         var knightGo = HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.gameObject : null;
         var hornetGo = BundleSpike.HornetRoot;
 
