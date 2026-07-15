@@ -69,6 +69,8 @@ internal static class Stub {
         Skip(typeof(Silksong::ControlReminder.DoubleConfig), "Appear", true);
         Skip(typeof(Silksong::HeroNailImbuement), "Awake");
         Skip(typeof(Silksong::FollowTransform), "OnEnable");
+        // NullReferenceException in MappableControllerButton.SetupRef
+        Skip(typeof(Silksong::MappableControllerButton), "ShowCurrentBinding");
         // NOTE: the PlayMaker-ACTION stubs (SetPolygonCollider.OnEnter, ListenForTauntV2/ListenFor* OnUpdate) were
         // removed. They were workarounds for the pre-B era when those actions MIS-RESOLVED to HK's same-named versions
         // (wrong field layout -> NullRef). With Silksong.PlayMaker isolation they resolve to the correct Silksong
