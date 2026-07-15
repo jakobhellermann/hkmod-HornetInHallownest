@@ -17,6 +17,7 @@
 - XX hardsaves
 - XX game finish animation not shown
 - XX full mask shard -> instant hud update
+- XX shriek trigger
 - OOB on scene transitions immediate walkback
 - elevator/lift transitions: Knight strands at shaft top, Hornet falls to bottom, camera-lock stuck up top (dark)
 - dash into elevator: bump
@@ -24,6 +25,7 @@
 - lantern always active
 - weaver entry not showing up
 - beastling call
+- abyss water oob
 
 # Balancing
 - soul totem <-> silk
@@ -38,6 +40,7 @@
 
 ## Double check
 - XX double check descending dark, cdash pickup
+- king soul fragment softlock whitesceen
 - scream control dung defender - fixed?
 - acid before ismas
 - acid / water swim
