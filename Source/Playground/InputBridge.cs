@@ -116,7 +116,7 @@ internal sealed class InputDriver : MonoBehaviour {
             }
 
             // Don't drive input while HK is paused (HornetEnvironmentAdapter mirrors PAUSED to her GameManager) —
-            // EXCEPT while the inventory is open: InventoryPauseBridge sets timeScale=0 to freeze the world, but the
+            // EXCEPT while the inventory is open: InventoryModule sets timeScale=0 to freeze the world, but the
             // inventory FSM still reads inputActions to navigate/close, so keep feeding input in that case. The hero's
             // own input blocker (added in the bridge) stops her from acting on it, so only the inventory consumes it.
             var pd = Silksong::PlayerData.instance;
@@ -134,7 +134,7 @@ internal sealed class InputDriver : MonoBehaviour {
                 // ESC also drives Silksong's MenuCancel: the inventory closes on OpenInventory(K) or MenuCancel (its
                 // InventoryPaneInput -> PressCancel). The physical ESC only reaches HK's InputHandler (pause), never
                 // Silksong's MenuCancel, so ESC couldn't close the inventory. While the inventory is open HK's pause is
-                // already suppressed (InventoryPauseBridge StopUIInput), so ESC -> close only; while closed MenuCancel is
+                // already suppressed (InventoryModule StopUIInput), so ESC -> close only; while closed MenuCancel is
                 // a harmless no-op and ESC still opens HK's own pause menu.
                 if (name == "menucancel") pressed |= Input.GetKey(KeyCode.Escape);
                 ActionFor(ia, name)?.CommitWithState(pressed, tick, dt);

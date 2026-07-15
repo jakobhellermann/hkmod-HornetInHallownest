@@ -50,34 +50,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
     }
 
     public void Unload() {
-        // Unload-safe inventory: if the inventory was open at reload, its DisplayFrozenCamera.Freeze left HK's main
-        // camera disabled (Camera.main.enabled=false, showing a frozen snapshot). A hot-reload despawns the inventory
-        // before it can Unfreeze -> the main camera stays off -> black screen. Re-enable HK's main camera on teardown.
-        try {
-            var gc = GameCameras.instance;
-            if (gc != null && gc.mainCamera != null && !gc.mainCamera.enabled) {
-                gc.mainCamera.enabled = true;
-                Playground.Log.Debug(
-                    $"[Unload] re-enabled HK mainCamera '{gc.mainCamera.name}' (left disabled by inventory DisplayFrozenCamera.Freeze)");
-            }
-        } catch (Exception e) {
-            Playground.Log.Error($"[Unload] camera restore: {e.Message}");
-        }
-
-        // Hot-reload while inventory was open leaves isInventoryOpen=true on Silksong's PlayerData -> IsPaused()=true
-        // -> CanInput()=false -> hero stuck. Clear it + restore timeScale.
-        try {
-            var pd = Silksong::PlayerData.instance;
-            if (pd != null && pd.isInventoryOpen) {
-                pd.isInventoryOpen = false;
-                Playground.Log.Debug("[Unload] cleared stuck isInventoryOpen");
-            }
-
-            if (Time.timeScale <= 0.0001f) Time.timeScale = 1f;
-        } catch (Exception e) {
-            Playground.Log.Error($"[Unload] inventory reset: {e.Message}");
-        }
-
+        // Inventory-open-at-reload safety (frozen world / HK camera off / stuck isInventoryOpen) lives in
+        // InventoryModule.OnDeinitialize (run by moduleHost.DeinitializeAll below).
         finishedEnteringHook?.Dispose();
         finishedEnteringHook = null;
         returnToMenuHook?.Dispose();
@@ -125,7 +99,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Cleanup();
         DreamReturnBridge.Cleanup();
         HeroControllerProbe.Cleanup();
-        InventoryPauseBridge.Cleanup();
         PlayMakerWarningContext.Cleanup();
         DebugServer.Stop();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
@@ -350,8 +323,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         RoarLockBridge.Install(); // roar-specific facing on top of HeroEventBridge (subscribes to its callback)
         HeroControllerProbe
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
-        InventoryPauseBridge
-            .Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
         PlayMakerWarningContext
             .Install(); // add GO+scene context to "Could not find FSM" / dedup "Fsm not initialized" burst
         SpiderTrapBenchFix
@@ -372,6 +343,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
         moduleHost.Add(new HeroTargetModule());
+        moduleHost.Add(new InventoryModule());
         moduleHost.Add(new ContactDamageModule());
         moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new BenchModule());
