@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 namespace HornetPlayer.HornetInHallownest.Modules;
 
 // Instantiate Hero_Hornet via Addressables and fix up everything required for Hollow Knight interop.
-public sealed class HornetSpawner : IModule {
+public sealed class HornetSpawner : ModuleBase {
     private static GameObject? heroPrefab;
 
     // The live spawned HeroController (in the DontDestroyOnLoad follower).
@@ -37,13 +37,13 @@ public sealed class HornetSpawner : IModule {
         ? HeroController.UnsafeInstance.transform.position
         : Vector3.zero;
 
-    public string Id => "spawn";
+    public override string Id => "spawn";
 
     // Lazy: nothing at mod init. SpawnReal is driven by the /spawn-real route or the AutoSpawn coroutine.
-    public void Initialize() {
+    public override void Initialize() {
     }
 
-    public void Deinitialize() {
+    protected override void OnDeinitialize() {
         Despawn();
     }
 

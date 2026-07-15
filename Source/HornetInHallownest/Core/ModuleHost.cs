@@ -9,11 +9,11 @@ namespace HornetPlayer.HornetInHallownest.Core;
 // Ordered list of lifecycle modules 
 public sealed class ModuleHost {
     private readonly HashSet<string> active = [];
-    private readonly List<IModule> modules = [];
+    private readonly List<ModuleBase> modules = [];
 
-    public IReadOnlyList<IModule> Modules => modules;
+    public IReadOnlyList<ModuleBase> Modules => modules;
 
-    public ModuleHost Add(IModule m) {
+    public ModuleHost Add(ModuleBase m) {
         if (modules.Any(x => x.Id == m.Id)) throw new ArgumentException($"duplicate module Id '{m.Id}'");
         modules.Add(m);
         return this;
@@ -41,7 +41,7 @@ public sealed class ModuleHost {
         }
     }
 
-    public IModule? Get(string id) {
+    public ModuleBase? Get(string id) {
         return modules.FirstOrDefault(m => m.Id == id);
     }
 

@@ -136,7 +136,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Cleanup();
         DreamReturnBridge.Cleanup();
         GetComponentShim.Cleanup();
-        CompareTagShim.Cleanup();
         HeroControllerProbe.Cleanup();
         ShroomBounceBridge.Cleanup();
         EnemyTargetBridge.Cleanup();
@@ -383,7 +382,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
         GetComponentShim
             .Install(); // cross-game GetComponent(string) name-collision fallback (fixes CallMethodProper bind/heal)
-        CompareTagShim.Install(); // CompareTag("Recoiler") -> true (HK has no "Recoiler" tag; else CompareTag throws)
         HeroEventBridge.Install(); // forward HK FSM events aimed at the "Hero" GO onto Hornet's isolated Silksong FSMs
         RoarLockBridge.Install(); // roar-specific facing on top of HeroEventBridge (subscribes to its callback)
         ShroomBounceBridge
@@ -408,6 +406,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
         // New lifecycle backbone: register migrated modules in order, then init them. Spawn is the first module — its
         // Initialize is a no-op (spawn is lazy, via /spawn-real or AutoSpawn); its Deinitialize despawns Hornet.
+        moduleHost.Add(new TagModule());
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
 
