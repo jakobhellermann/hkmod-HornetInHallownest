@@ -41,6 +41,17 @@ public sealed class ModuleHost {
         }
     }
 
+    public void HornetToggled(bool hornetActive) {
+        foreach (var m in modules) {
+            if (!active.Contains(m.Id)) continue;
+            try {
+                m.HornetToggled(hornetActive);
+            } catch (Exception e) {
+                Log.Error($"[ModuleHost] toggle '{m.Id}': {e}");
+            }
+        }
+    }
+
     public void DeinitializeAll() {
         for (var i = modules.Count - 1; i >= 0; i--) {
             var m = modules[i];

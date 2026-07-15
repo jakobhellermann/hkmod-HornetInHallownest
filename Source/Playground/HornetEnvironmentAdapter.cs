@@ -39,6 +39,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
 
     private static Hook? enterSceneDreamGateHook; // mirror HK's dream-gate warp-in onto Hornet
 
+    private bool wasHornetActive;
+
     private void Update() {
         try {
             var paused = Time.timeScale <= 0.0001f;
@@ -63,6 +65,12 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
             // Only drive Hornet while SHE is the active character; when Knight is active she stays inert (HeroSwitch
             // disabled her HeroController + Rigidbody) so we must NOT force-enable her here.
             var hero = BundleSpike.RealHero;
+            var active = hero != null && HeroSwitch.HornetActive;
+            if (active != wasHornetActive) {
+                wasHornetActive = active;
+                HornetPlayerMod.LoadedInstance?.Modules.HornetToggled(active);
+            }
+
             if (hero != null && HeroSwitch.HornetActive) {
                 if (!hero.enabled) hero.enabled = true;
                 isGameplaySceneField ??= typeof(Silksong::HeroController)

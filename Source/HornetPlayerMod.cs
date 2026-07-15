@@ -120,7 +120,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HornetDeath.Cleanup();
         RespawnBridge.Cleanup();
         CoroutineRedirect.Cleanup();
-        HornetBench.Cleanup();
         SoulOrbBridge.Cleanup();
         BlueHealthBridge.Cleanup();
         QuakeFloorBridge.Cleanup();
@@ -365,7 +364,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             .Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
         CoroutineRedirect
             .Install(); // redirect coroutines from inactive Silksong GM to active host (hazard respawn etc.)
-        HornetBench.Install(); // mirror HK bench rest onto Hornet (sit anim + heal her Silksong HP)
         SoulOrbBridge.Install(); // HK soul (SoulOrb homing + AddMPCharge) -> Hornet silk (orbs fly to her, grant silk)
         BlueHealthBridge
             .Install(); // HK lifeblood (scuttlers' EventRegister "ADD BLUE HEALTH") -> Hornet's Blue Health Control FSM
@@ -403,6 +401,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new FsmMethodCallRemapModule());
         moduleHost.Add(new ContactDamageModule());
         moduleHost.Add(new NeedolinDreamNailModule());
+        moduleHost.Add(new BenchModule());
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
 

@@ -102,7 +102,7 @@ internal sealed class HornetDeath : MonoBehaviour {
             if (PlayerData.instance != null && PlayerData.instance.atBench) {
                 yield return null;
                 yield return null;
-                HornetBench.RefreshToolHud();
+                HornetInHallownest.Modules.BenchModule.RefreshToolHud();
             }
         } finally {
             handling = false;

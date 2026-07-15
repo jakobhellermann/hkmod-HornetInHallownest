@@ -21,6 +21,10 @@ public abstract class ModuleBase {
     public virtual void HornetActiveUpdate(Silksong::HeroController hero) {
     }
 
+    // Called when switching between hornet and knight
+    public virtual void HornetToggled(bool active) {
+    }
+
     public void Deinitialize() {
         OnDeinitialize();
         for (var i = disposables.Count - 1; i >= 0; i--)
