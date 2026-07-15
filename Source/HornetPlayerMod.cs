@@ -1,6 +1,5 @@
 ﻿extern alias Silksong;
 using System;
-using System.Collections;
 using System.Globalization;
 using System.Reflection;
 using HornetPlayer.DevServer;
@@ -12,7 +11,6 @@ using HornetPlayer.HornetInHallownest.Validation;
 using HornetPlayer.HornetInHallownest.Validation.Scenarios;
 using HornetPlayer.Playground;
 using Modding;
-using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -28,10 +26,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
     internal ModuleHost Modules => moduleHost;
 
-    private Hook? finishedEnteringHook;
-
     private GameObject? playgroundHost;
-    private Hook? returnToMenuHook;
     private ValidationRunner? validation;
 
     public static HornetPlayerMod? LoadedInstance { get; private set; }
@@ -52,12 +47,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
     public void Unload() {
         // Inventory-open-at-reload safety (frozen world / HK camera off / stuck isInventoryOpen) lives in
-        // InventoryModule.OnDeinitialize (run by moduleHost.DeinitializeAll below).
-        finishedEnteringHook?.Dispose();
-        finishedEnteringHook = null;
-        returnToMenuHook?.Dispose();
-        returnToMenuHook = null;
-        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= DespawnOutsideGameplay;
+        // InventoryModule.OnDeinitialize (run by moduleHost.DeinitializeAll below). The spawn/despawn lifecycle hooks
+        // (FinishedEnteringScene/ReturnToMainMenu/sceneLoaded) live in HornetSpawner, torn down by DeinitializeAll too.
 
         // Before anything despawns Hornet: if the player was on her, TP the Knight onto her spot. Cleanup below hands
         // control back to the Knight (un-mod safety) and a hot-reload re-activates it — otherwise it reactivates at its
@@ -90,7 +81,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         AcidSwimBridge.Cleanup();
         FsmTracer.Cleanup();
         HkFsmTracer.Cleanup();
-        DreamReturnBridge.Cleanup();
         HeroControllerProbe.Cleanup();
         PlayMakerWarningContext.Cleanup();
         DebugServer.Stop();
@@ -264,10 +254,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
                 _ => HeroSwitch.Toggle()
             };
         });
-        DebugServer.MapPost("/scene-entry", req => {
-            HornetSceneEntry.Enabled = (req["on"] ?? "true").ToLowerInvariant() != "false";
-            return new { realSceneEntry = HornetSceneEntry.Enabled };
-        });
         DebugServer.MapPost("/warp", req => {
             var scene = req["scene"];
             if (string.IsNullOrEmpty(scene))
@@ -311,8 +297,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // NOTE: HeroTargetModule.SyncGlobal (PlayMaker global "Hero") is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 
-        // New lifecycle backbone: register migrated modules in order, then init them. Spawn is the first module — its
-        // Initialize is a no-op (spawn is lazy, via /spawn-real or AutoSpawn); its Deinitialize despawns Hornet.
+        // New lifecycle backbone: register migrated modules in order, then init them. Initialize runs forward,
+        // Deinitialize reverse — HornetSpawner is last so it despawns Hornet first on teardown.
         moduleHost.Add(new PlayerLoopModule());
         moduleHost.Add(new BreakableFloorModule());
         moduleHost.Add(new DashGeoPickupModule());
@@ -334,93 +320,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new ContactDamageModule());
         moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new BenchModule());
+        moduleHost.Add(new SceneTransitionModule());
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
-
-        // Hornet's presence tracks HK's scene state, trigger-based (no polling) via two hooks on HK's GameManager:
-        // FinishedEnteringScene spawns her once a gameplay scene has placed the Knight; ReturnToMainMenu despawns her on
-        // quit-to-menu. The Knight is HK's to manage; Hornet is a separate DontDestroyOnLoad body HK's teardown doesn't
-        // know about, so without the despawn she'd linger (visible/active) on the menu.
-        InstallSpawnLifecycle();
-        // Hot-reload mid-game: FinishedEnteringScene already fired this scene, so spawn now if we're already placed.
-        var knight = HeroController.UnsafeInstance;
-        if (knight != null && knight.isHeroInPosition && HornetSpawner.HornetRoot == null) HornetSpawner.Spawn();
-    }
-
-    private void InstallSpawnLifecycle() {
-        var entered =
-            typeof(GameManager).GetMethod("FinishedEnteringScene", BindingFlags.Public | BindingFlags.Instance);
-        if (entered != null)
-            finishedEnteringHook = new Hook(entered,
-                (Action<Action<GameManager>, GameManager>)((orig, self) => {
-                    orig(self);
-                    if (HornetSpawner.HornetRoot == null)
-                        try {
-                            HornetSpawner.Spawn();
-                            Playground.Log.Debug("[SpawnLifecycle] entered gameplay scene -> spawned Hornet");
-                            // Dev convenience (like the ability-kit grant): unlock every crest's tool slots so all
-                            // tools are equippable without hunting memory lockets. Runs per spawn (idempotent).
-                            ToolItemManagerBootstrap.UnlockAllCrestSlots();
-                        } catch (Exception e) {
-                            Playground.Log.Error($"[SpawnLifecycle] {e}");
-                        }
-
-                    // After spawn (PlayerData.instance exists), apply a save loaded earlier this LoadGame. No-op unless a
-                    // load stashed data; clears itself so it applies exactly once.
-                    HornetSaveBridge.ApplyPending();
-                }));
-        else
-            Playground.Log.Error("[SpawnLifecycle] GameManager.FinishedEnteringScene not found");
-
-        var quit = typeof(GameManager).GetMethod("ReturnToMainMenu", BindingFlags.Public | BindingFlags.Instance);
-        if (quit != null)
-            returnToMenuHook = new Hook(quit,
-                (Func<Func<GameManager, GameManager.ReturnToMainMenuSaveModes, Action<bool>, IEnumerator>, GameManager,
-                    GameManager.ReturnToMainMenuSaveModes, Action<bool>, IEnumerator>)((orig, self, mode, cb) => {
-                    if (HornetSpawner.HornetRoot != null) {
-                        // Record the hero the player was actually on: ReturnToMainMenu autosaves, but we must force the
-                        // Knight active below (camera handback), which would otherwise make that save record Knight and
-                        // clobber the "was playing Hornet" state. The override is consumed by the next Snapshot.
-                        HornetSaveBridge.SaveActiveOverride = HeroSwitch.HornetActive;
-                        // Hand the camera back to the Knight first: HeroSwitch points HK's CameraTarget at the active
-                        // hero, so despawning while Hornet is active would leave CameraTarget.Update dereferencing a
-                        // destroyed transform every frame through the menu fade.
-                        HeroSwitch.SetActive(ActiveHero.Knight);
-                        HornetSpawner.Despawn();
-                        Playground.Log.Debug("[SpawnLifecycle] quit to menu -> despawned Hornet");
-                    }
-
-                    return orig(self, mode, cb);
-                }));
-        else
-            Playground.Log.Error("[SpawnLifecycle] GameManager.ReturnToMainMenu not found");
-
-        // Like HK's own hero, Hornet has no place in non-gameplay scenes (End_Credits, cinematics). Despawn her there so
-        // HK owns the camera/scene — else the camera keeps following her and the credits render off-screen (blackscreen).
-        UnityEngine.SceneManagement.SceneManager.sceneLoaded += DespawnOutsideGameplay;
-    }
-
-    private void DespawnOutsideGameplay(UnityEngine.SceneManagement.Scene scene,
-        UnityEngine.SceneManagement.LoadSceneMode mode) {
-        var gm = GameManager.UnsafeInstance;
-        if (HornetSpawner.HornetRoot == null || gm == null) return;
-        // sceneLoaded also fires for HK's additive gameplay transitions (room-to-room + Pantheon boss loads go through
-        // GameManager.LoadSceneAsync(..., Additive)), which load the new scene while the PREVIOUS scene is still active.
-        // gm.IsGameplayScene() reads the ACTIVE scene, so on an additive load it classifies the stale previous scene, not
-        // the one that just loaded — so entering the first Pantheon boss (GG_Ghost_Xero, a gameplay scene) from the
-        // non-gameplay GG_Boss_Door_Entrance misreads as non-gameplay and wrongly despawns Hornet. The non-gameplay scenes
-        // this handler targets (credits/cinematics/menu) are loaded SINGLE-mode, so the loaded scene is already active.
-        // Only act when the loaded scene is the active one; skip additive loads (Hornet stays — correct for gameplay).
-        if (scene.name != UnityEngine.SceneManagement.SceneManager.GetActiveScene().name) return;
-        if (gm.IsGameplayScene()) return;
-        // EXCEPTION: stag travel (Cinematic_Stag_travel) is a HK "Cinematic" (non-gameplay) scene, but the hero RIDES
-        // THROUGH it — HK's Knight is DontDestroyOnLoad and is never deactivated there; StagTravel.Start just plays the
-        // full-screen cinematic then BeginSceneTransition's onward to the destination (gate "door_stagExit"). Despawning
-        // Hornet here forced a full respawn on arrival (fresh HeroController/FSMs -> sprint & other carry-through state
-        // reset). Mirror HK: let her ride through (she's already deparented to DDOL) and enter the destination normally.
-        if (gm.IsStagTravelScene()) return;
-        HeroSwitch.SetActive(ActiveHero.Knight); // hand camera back before despawn (CameraTarget would deref her)
-        HornetSpawner.Despawn();
-        Playground.Log.Debug($"[SpawnLifecycle] non-gameplay scene '{scene.name}' -> despawned Hornet");
     }
 }

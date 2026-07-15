@@ -1,11 +1,9 @@
 extern alias Silksong;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using GlobalEnums;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -52,10 +50,6 @@ internal static class HeroSwitch {
     // We only disable FSMs that are currently enabled, and remember which ones we touched. On restore, we only
     // re-enable the ones we disabled — not FSMs the game itself had disabled for gameplay reasons.
     private static readonly HashSet<PlayMakerFSM> disabledByUs = new();
-
-    // Set by HornetEnvironmentAdapter's hook when HK runs a dream-gate warp-in (EnterSceneDreamGate) on the Knight;
-    // the entry relay below mirrors it onto Hornet once she's positioned, then clears it.
-    internal static bool DreamGateEntryPending;
 
     internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
     internal static bool HornetActive => Active == ActiveHero.Hornet;
@@ -311,81 +305,24 @@ internal static class HeroSwitch {
 
 // Drives the active-hero switch: Tab toggles; re-asserts the camera target each frame (cheap) so it survives HK
 // re-grabbing HeroController.instance on scene init. Early execution order so the retarget lands before
-// CameraTarget.Update (order 0) reads heroTransform the same frame.
-//
-// Scene transitions: only HK's Knight is HK's transition vehicle — it gets relocated to the new scene's entry gate.
-// Hornet is DontDestroyOnLoad and keeps her old world coordinates, so after a transition she's stranded in random
-// geometry / off in nirvana, and the camera (following her, or her after a Tab) points there. So on every scene change
-// we snap Hornet onto the Knight once HK reports the Knight is positioned (isHeroInPosition), which keeps both heroes in
-// the playable area of the new scene.
+// CameraTarget.Update (order 0) reads heroTransform the same frame. Scene-transition arrival/entry lives in
+// SceneTransitionModule's own driver (runs one step earlier, -8001, so its snap lands before this retarget).
 [DefaultExecutionOrder(-8000)]
 internal sealed class CameraSwitchDriver : MonoBehaviour {
     // --- Keybind trace recorder (F9 toggles) --- captures Hornet's per-FRAME state (finer than the 12Hz HTTP poll) so a
     // repro doesn't have to race a fixed poll window. Writes a TSV on stop; read /tmp/hornet_trace_live.tsv afterwards.
     private const string TracePath = "/tmp/hornet_trace_live.tsv";
 
-    private bool
-        dreamReturnPending; // arriving from a dream scene: run the entry then force idle (see DreamReturnEntry)
-
-    private bool hkEntryFixed;
-
     private MeshRenderer?
-        knightRenderer; // cached once; the inert Knight's body renderer, re-hidden per frame (see Update)
+        knightRenderer; // cached once; the inert Knight's body renderer, re-hidden per frame (see LateUpdate)
 
     private bool knightRendererCached;
-    private string? lastScene;
-    private bool pendingSnap;
     private List<string>? traceBuf;
     private float traceT0;
     private bool tracing;
 
     private void Update() {
         var knight = HeroController.UnsafeInstance;
-
-        // Detect a scene change; defer the Hornet snap until the Knight has actually been placed at the new entry.
-        var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-        if (scene != lastScene) {
-            // Leaving a dream scene? HK's "Dream Return" FSM (on the inert Knight) never runs its Prostrate step for
-            // Hornet, so the white dream blanker it would fade out stays faded-in → whitescreen soft-lock. Clear it.
-            var wasDream = lastScene != null && lastScene.StartsWith("Dream", StringComparison.Ordinal);
-            lastScene = scene;
-            pendingSnap = true;
-            dreamReturnPending = wasDream;
-            hkEntryFixed = false;
-            if (wasDream) ClearDreamWhiteBlanker();
-
-            // Pre-place Hornet at the entry gate NOW. HK has already relocated the Knight (its transition vehicle) to
-            // the new gate this frame, but Hornet (DontDestroyOnLoad) still holds her previous-scene coords. Enemy FSMs
-            // that sample the hero's entry position fire synchronously off HK's `heroInPosition` event a few frames later
-            // — BEFORE the isHeroInPosition-gated entry-run below moves her — and would read her stale position (e.g.
-            // Ruins Sentry Fat's "Shift Based On Hero Pos" picking the wrong side). One snap here (it also zeroes her
-            // carried velocity so she doesn't drift off the gate); the real walk-in entry still runs at isHeroInPosition.
-            if (knight != null) SnapHornetToKnight(knight);
-        }
-
-        CompleteStuckHkVerticalEntry(knight);
-        if (pendingSnap && knight != null && knight.isHeroInPosition) {
-            // Dream-gate warp-in: HK ran EnterSceneDreamGate on the Knight (no physical gate, so sceneEntryGate==null and
-            // the walk-in path below is skipped). Position Hornet (nothing to walk in from), then run HER own
-            // EnterSceneDreamGate — its FinishedEnteringScene completes the entry (WAITING_TO_ENTER_LEVEL ->
-            // WAITING_TO_TRANSITION + control) and clears the white dream fade.
-            if (HeroSwitch.HornetActive && HeroSwitch.DreamGateEntryPending) {
-                SnapHornetToKnight(knight);
-                BundleSpike.RealHero?.EnterSceneDreamGate();
-            }
-            // When Hornet is the active hero, run her REAL Silksong scene-entry (walk/drop-in animation + entry FSMs)
-            // from HK's mirrored gate. When the Knight is active, Hornet is an inert prop -> just relocate her.
-            else if (HeroSwitch.HornetActive && HornetSceneEntry.Enabled && knight.sceneEntryGate != null) {
-                StartCoroutine(dreamReturnPending ? DreamReturnEntry(knight) : HornetSceneEntry.Run(knight));
-            }
-            else {
-                SnapHornetToKnight(knight);
-            }
-
-            pendingSnap = false;
-            dreamReturnPending = false;
-            HeroSwitch.DreamGateEntryPending = false;
-        }
 
         // Tab = switch hero. Forbid it while the inventory is open: switching heroes mid-inventory leaves a broken state
         // (the inventory belongs to the active hero + freezes the world via DisplayFrozenCamera). Detect "inventory open"
@@ -458,71 +395,6 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
             var shouldRender = !HeroSwitch.HornetActive;
             if (knightRenderer.enabled != shouldRender) knightRenderer.enabled = shouldRender;
         }
-    }
-
-    // Principled completion of HK's scene-entry handshake that the inert Knight can no longer finish. HK's GameManager
-    // delegates entry to hero_ctrl (the Knight); its HeroController.EnterScene calls gm.FinishedEnteringScene()
-    // (-> gameState ENTERING_LEVEL -> PLAYING) at the end. TOP-gate / horizontal entries complete on a fixed timer, but
-    // the BOTTOM-gate branch (an "up" transition) ends at transitionState=DROPPING_DOWN and only completes once the
-    // Knight physically LANDS (its OnCollisionEnter2D). While Hornet is active the Knight is inert (HeroController
-    // disabled + Rigidbody2D.simulated off), so it never falls/lands -> gameState stays ENTERING_LEVEL forever -> HK's
-    // TransitionPoint.TryDoTransition bails (`gm.gameState != PLAYING`) for EVERY later gate -> Hornet falls through
-    // wells (this also strands her on the NEXT transition, not just the up one). Since we took the hero role from the
-    // Knight, we own its half of HK's handshake: call HK's own public FinishedEnteringScene() (which also fires
-    // OnFinishedEnteringScene that HK scene-setup hangs off, not just the gameState flip). Deterministic on state — no
-    // timer/threshold — gated to the one branch the inert Knight breaks; self-guarding (gameState flips to PLAYING) plus
-    // a once-per-scene flag.
-    private void CompleteStuckHkVerticalEntry(HeroController? knight) {
-        if (hkEntryFixed || !HeroSwitch.HornetActive || knight == null || knight.enabled)
-            return; // only the INERT Knight
-        var gm = GameManager.UnsafeInstance;
-        if (gm == null || gm.gameState != GameState.ENTERING_LEVEL) return;
-        if (knight.transitionState != HeroTransitionState.DROPPING_DOWN) return; // reached the terminal landing-wait
-        var gate = knight.sceneEntryGate;
-        if (gate == null || gate.GetGatePosition() != GatePosition.bottom)
-            return; // only the non-self-completing branch
-        gm.FinishedEnteringScene();
-        // The inert Knight never physically lands, so its transitionState stays stuck at DROPPING_DOWN instead of
-        // settling to WAITING_TO_TRANSITION (the normal "in the level, resting" state). HK camera/transition consumers
-        // read the Knight's transitionState as the hero proxy (CameraTarget.hero_ctrl is the Knight — type-incompatible
-        // with Silksong's HeroController, so we can only retarget heroTransform, not hero_ctrl). Most visibly,
-        // CameraTarget.ExitLockZone picks mode=FREE (camera stops following) instead of FOLLOW_HERO whenever Hornet
-        // leaves a CameraLockArea, because the Knight isn't in a WAITING_* state. Settle it to match a finished entry.
-        knight.transitionState = HeroTransitionState.WAITING_TO_TRANSITION;
-        hkEntryFixed = true;
-        Log.Debug("[CameraSwitch] inert Knight stuck in bottom-gate entry (DROPPING_DOWN + gameState=ENTERING_LEVEL) "
-                 + "-> called gm.FinishedEnteringScene() + settled transitionState=WAITING_TO_TRANSITION "
-                 + "(completes HK's handshake, unblocks transitions + keeps the camera following after lock zones)");
-    }
-
-    private static void SnapHornetToKnight(HeroController knight) {
-        var hornet = BundleSpike.HornetRoot;
-        if (hornet == null) return;
-        hornet.transform.position = knight.transform.position;
-        var rb = hornet.GetComponent<Rigidbody2D>();
-        if (rb != null && rb.simulated) rb.linearVelocity = Vector2.zero; // don't carry pre-transition momentum
-    }
-
-    // The white dream blanker (HK's `HudCamera/Blanker White`) fades in on a dream-scene exit and is normally faded out
-    // by the "Dream Return" FSM's Prostrate step — which never runs for Hornet, leaving the screen white. It's used only
-    // for dream white fades (which we bypass), so deactivate it on arrival. It's a persistent HUD object, so this one
-    // deactivation also covers future dream exits. Find() only sees it while active → idempotent (skips if already off).
-    private static void ClearDreamWhiteBlanker() {
-        var gc = GameCameras.instance;
-        var blanker = gc != null ? gc.transform.Find("HudCamera/Blanker White") : null;
-        if (blanker != null) blanker.gameObject.SetActive(false);
-    }
-
-    // Dream-return arrival: run the normal entry (regains control), then force the idle clip once she's grounded. The
-    // return gate "door_dreamReturn" carries "door" in its name so EnterScene takes the door-entry path, but there's no
-    // real door to walk out of, leaving her animator stuck on the airborne/warp clip. HK's "Dream Return" get-up
-    // (StartAnimationControl) would do this; it doesn't run for Hornet.
-    private IEnumerator DreamReturnEntry(HeroController knight) {
-        yield return HornetSceneEntry.Run(knight);
-        var hero = BundleSpike.RealHero;
-        if (hero == null) yield break;
-        for (var i = 0; i < 60 && (hero.cState == null || !hero.cState.onGround); i++) yield return null;
-        hero.StartAnimationControlToIdle();
     }
 
     private void TraceTick() {
