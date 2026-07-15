@@ -226,7 +226,12 @@ public sealed class SceneTransitionModule : ModuleBase {
         self.RegainControl();
         self.StartAnimationControl();
         self.AcceptInput();
-        LogDebug("closed enterWithoutInput entry (RegainControl+AcceptInput; Hornet has no arrival FSM)");
+        // The white blanker stays in its "Fade In" state (opaque, no auto-exit) until a "FADE OUT" event. On a cutscene
+        // arrival (e.g. the White Palace half-Kingsoul dream) HK's Knight arrival FSM sends it; Hornet has none, so a
+        // no-op here left a permanent whitescreen. Send it ourselves (same call the dream-return path uses). Harmless
+        // no-op if the blanker isn't faded in (Idle/Faded Out ignore FADE OUT).
+        FadeBlankerOut("Blanker White");
+        LogDebug("closed enterWithoutInput entry (RegainControl+AcceptInput+FADE OUT white; Hornet has no arrival FSM)");
     }
 
     // Run Hornet's REAL EnterScene from a Silksong TransitionPoint fabricated to mirror HK's gate, so she walks/drops in
