@@ -3,29 +3,21 @@ using UnityEngine;
 
 namespace HornetPlayer.Playground;
 
-// HeroController + FSMs deref GlobalSettings singletons (Gameplay/UI/Effects/Camera/…). Each is a
-// GlobalSettingsBase<T> whose Get() does Addressables.LoadAssetAsync("GlobalSettings/<name>.asset") — a Silksong
-// addressables key HK's catalog doesn't have (and we load bundles manually, not via Addressables), so Get() falls
-// back to an EMPTY ScriptableObject.CreateInstance<T>() with null tool/config fields -> NullRefs (e.g.
-// GetMaxFallVelocity -> Gameplay.WeightedAnkletTool.Status). All real, populated SOs live in ONE bundle that is NOT
-// a Hero_Hornet dependency (GlobalSettings load via Addressables at boot), so we load it explicitly. Their tool/crest
-// PPtrs resolve against the hero dep closure that's already resident. Fix: assign each GlobalSettingsBase<T>._instance
-// directly, bypassing Addressables — one generic pass covers all ~8 settings types.
+// HeroController + FSMs deref GlobalSettings singletons (Gameplay/UI/Effects/Camera/…). Each GlobalSettingsBase<T>.Get()
+// loads via an addressables key HK's catalog lacks, so it falls back to an empty SO -> NullRefs (e.g. GetMaxFallVelocity).
+// The real SOs live in one bundle (not a Hero_Hornet dep), so we load it explicitly and assign each _instance directly.
 internal static class GlobalSettingsBootstrap {
     private static AssetBundle? bundle;
 
-    // True only when WE loaded the bundle via LoadFromFile (so Cleanup may Unload it). False when we reused a bundle
+    // True only when we loaded the bundle via LoadFromFile (so Cleanup may Unload it). False when we reused a bundle
     // Addressables already mounted — Addressables owns it; unloading it would break the live catalog.
     private static bool ownsBundle;
     private static string BundlePath => Paths.SilksongAaBundle("globalsettings_assets_all.bundle");
 
     internal static int Apply() {
         if (bundle == null) {
-            // ToolItemManagerBootstrap loads `_GameManager` via Addressables (runs just before us in SpawnReal), and
-            // globalsettings_assets_all IS in its dep closure -> the Silksong catalog already mounted this bundle. A
-            // second LoadFromFile of the same files throws "another AssetBundle with the same files is already loaded".
-            // Reuse the mounted one (and leave ownership with Addressables). Addressables names its bundles by HASH,
-            // not "globalsettings", so match by CONTENT (an asset path with global+settings), not by bundle.name.
+            // The globalsettings bundle is usually already mounted by Addressables (in _GameManager's dep closure); a
+            // second LoadFromFile of the same files throws. Reuse it — matched by content (Addressables names by hash).
             var scanned = 0;
             foreach (var b in AssetBundle.GetAllLoadedAssetBundles()) {
                 if (b == null) continue;
@@ -57,9 +49,8 @@ internal static class GlobalSettingsBootstrap {
         }
 
         var n = 0;
-        // Do NOT LoadAllAssets: this is a catch-all bundle (quests, particles, …). Loading every ScriptableObject runs
-        // their OnEnable — MainQuest.OnEnable -> QuestType.Create -> LocalisedString -> Localization cctor (throws), and
-        // we don't want those side-effects anyway. Load ONLY the "Global … Settings" assets by name.
+        // Do not LoadAllAssets: this catch-all bundle's other SOs run side-effecting OnEnables (e.g. MainQuest ->
+        // Localization cctor throws). Load only the "Global … Settings" assets by name.
         foreach (var name in bundle.GetAllAssetNames()) {
             var lower = name.ToLowerInvariant();
             if (!(lower.Contains("global") && lower.Contains("settings"))) continue;
@@ -71,10 +62,8 @@ internal static class GlobalSettingsBootstrap {
             var f = baseT?.GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
             if (f == null) continue;
             f.SetValue(null, so);
-            // CRITICAL: Get() gates on _foundInstance — `if (!_foundInstance) { ...Addressables (missing) -> empty
-            // CreateInstance<T>()...; _foundInstance = true; } return _instance;`. Without setting _foundInstance our
-            // _instance is ignored on the first Get(), which then caches an EMPTY SO (null tool refs -> NullRefs in
-            // GetTotalFrostSpeed/GetMaxFallVelocity). Set it so Get() returns our real, populated SO.
+            // critical: Get() gates on _foundInstance; without setting it, our _instance is ignored on the first Get()
+            // and an empty SO is cached instead. Set it so Get() returns our populated SO.
             baseT?.GetField("_foundInstance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, true);
             Log.Debug($"[GlobalSettings] {so.GetType().Name}._instance <- '{so.name}'");
             n++;
@@ -85,7 +74,7 @@ internal static class GlobalSettingsBootstrap {
     }
 
     internal static void Cleanup() {
-        // Only unload a bundle WE loaded. If we reused the Addressables-mounted one, leave it to Addressables.
+        // Only unload a bundle we loaded. If we reused the Addressables-mounted one, leave it to Addressables.
         if (bundle != null && ownsBundle) bundle.Unload(true);
         bundle = null;
         ownsBundle = false;

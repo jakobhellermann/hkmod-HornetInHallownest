@@ -7,13 +7,9 @@ using Object = UnityEngine.Object;
 
 namespace HornetPlayer.Playground;
 
-// Bring up Silksong's UIManager singleton so the HUD's components stop NullRef-ing on UIManager.instance (the
-// "Couldn't find a UIManager" burst when the in-game HUD activates). UIManager.instance does
-// FindObjectOfType<Silksong.UIManager>() and, on a miss, logs that error + returns null — and HK's own `_UIManager` is
-// a DIFFERENT type, so it never matches. We load Silksong's `_UIManager` addressable prefab (it carries UICanvas + the
-// serialized refs the HUD reads) and set the private static _instance. Kept DORMANT (inactive holder) like the camera
-// rig: serialized fields are live on an inactive GO, and we skip UIManager.Awake/Start's heavier menu/canvas setup
-// until proven necessary. Mirrors GameCamerasBootstrap.
+// Bring up Silksong's UIManager singleton so the HUD stops NullRef-ing on UIManager.instance. Load the `_UIManager`
+// addressable prefab and set the private static _instance. Kept dormant (inactive holder) — serialized fields are live
+// without running Awake/Start's heavier menu/canvas setup. Mirrors GameCamerasBootstrap.
 internal static class UIManagerBootstrap {
     private const string Name = "Silksong_UIManager";
     private static GameObject? ui;
@@ -38,7 +34,7 @@ internal static class UIManagerBootstrap {
             var prefab = Addressables.LoadAssetAsync<GameObject>("_UIManager").WaitForCompletion();
             if (prefab == null) return new { error = "_UIManager load returned null" };
 
-            // Instantiate under an INACTIVE holder so UIManager.Awake/Start don't run; we only need instance + fields.
+            // Instantiate under an inactive holder so UIManager.Awake/Start don't run; we only need instance + fields.
             var holder = new GameObject("hp_ui_holder");
             holder.SetActive(false);
             var inst = Object.Instantiate(prefab, holder.transform);

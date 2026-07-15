@@ -2,10 +2,8 @@ extern alias Silksong;
 
 namespace HornetPlayer.Playground;
 
-// SURGICAL bring-up of Silksong's `CollectableItemManager` (open item #6) — the singleton the inventory's item panes
-// deref (it owns the collectable master list + answers IsInHiddenMode). Same mechanism as ToolItemManager: copy its
-// two serialized assets (`masterList`, `invalidTemplate`) off the _GameManager prefab onto a fresh single-manager GO,
-// run only its (trivial) Awake. See ManagerSingletonBootstrap.
+// Bring up Silksong's `CollectableItemManager` (inventory item panes deref it). Copies its two serialized assets off
+// the _GameManager prefab onto a single-manager GO — see ManagerSingletonBootstrap.
 internal static class CollectableItemManagerBootstrap {
     private const string GoName = "Silksong_CollectableItemManager";
 

@@ -7,25 +7,18 @@ using Object = UnityEngine.Object;
 
 namespace HornetPlayer.Playground;
 
-// Shared mechanism for the SURGICAL manager bring-ups (open item #6). Silksong's `_GameManager` prefab carries ~17
-// ManagerSingletons (ToolItemManager, CollectableItemManager, QuestManager, …) ALL as components on its ROOT
-// GameObject (verified: `rabex addressable _GameManager file tree --scripts` — they share GO #4003832963127629806).
-// Because they share one GO we CANNOT activate just one (Unity fires Awake for every component on an active GO), and
-// bringing up the whole prefab was TRIED + REJECTED (commit `um`: reaches into HK-owned scene/render, doesn't converge).
-//
-// So we never INSTANTIATE the prefab. We load the prefab ASSET, read the wanted manager's serialized [SerializeField]
-// asset refs straight off its component (Instantiate would NOT clone ScriptableObject refs anyway — they point at the
-// shared bundle assets), and copy them onto a FRESH GameObject carrying only that one manager. Activating that GO runs
-// exactly ONE Awake — the manager's own — which registers its ManagerSingleton. Mirrors the "real Awake on its own GO"
-// pattern (see GameCamerasBootstrap / [[prefer-real-over-reflection]]).
+// Shared mechanism for the surgical manager bring-ups. Silksong's `_GameManager` prefab carries ~17 ManagerSingletons
+// on one root GO, so we can't activate just one (Unity Awakes every component), and the whole prefab was tried +
+// rejected (reaches into HK-owned scene/render). Instead: load the prefab asset, copy the wanted manager's serialized
+// [SerializeField] asset refs onto a fresh single-manager GO, activate it -> only its own Awake runs (registers the
+// ManagerSingleton).
 internal static class ManagerSingletonBootstrap {
-    private static GameObject? prefab; // the loaded _GameManager prefab ASSET (donor of serialized field values)
+    private static GameObject? prefab; // the loaded _GameManager prefab asset (donor of serialized field values)
 
     private static GameObject? Prefab() {
         if (prefab != null) return prefab;
         SilksongCatalog.EnsureMounted();
-        // 533 deps mount the bundles carrying the managers' ScriptableObjects (tool/crest/collectable lists) — exactly
-        // what we want resident. Cached by Addressables, so repeated calls across managers are cheap.
+        // Deps mount the bundles carrying the managers' ScriptableObjects; Addressables caches, so repeated calls cheap.
         prefab = Addressables.LoadAssetAsync<GameObject>("_GameManager").WaitForCompletion();
         return prefab;
     }
@@ -61,7 +54,7 @@ internal static class ManagerSingletonBootstrap {
         }
 
         var go = new GameObject(goName);
-        go.SetActive(false); // inactive -> AddComponent does NOT fire Awake yet; copy fields first
+        go.SetActive(false); // inactive -> AddComponent does not fire Awake yet; copy fields first
         var mgr = go.AddComponent(managerType);
         foreach (var name in serializedFields) {
             var f = GetField(managerType, name);
@@ -106,9 +99,7 @@ internal static class ManagerSingletonBootstrap {
             ?.GetSetMethod(true)?.Invoke(null, [mgr]);
     }
 
-    // DestroyImmediate the brought-up GO (its ManagerSingleton.OnDestroy nulls UnsafeInstance) so a mod toggle-off /
-    // hot-reload leaves no leaked manager. Synchronous (not Object.Destroy) so it's gone before a reload's Initialize
-    // runs BringUp again — matches SilksongBootstrap/GameCamerasBootstrap teardown.
+    // DestroyImmediate (not Object.Destroy) so the GO is gone before a hot-reload's Initialize runs BringUp again.
     internal static void Destroy(string goName) {
         var g = FindExisting(goName);
         if (g != null) Object.DestroyImmediate(g);

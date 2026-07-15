@@ -5,37 +5,25 @@ using System.Reflection;
 
 namespace HornetPlayer.Playground;
 
-// SURGICAL bring-up of Silksong's `ToolItemManager` (open item #6) — the singleton the tools/crests/nail-art systems
-// deref. It carries two serialized assets: `toolItems` (ToolItemList) + `crestList` (ToolCrestList). The mechanics
-// (load the _GameManager prefab ASSET, copy serialized fields onto a fresh single-manager GO, run only its Awake) live
-// in ManagerSingletonBootstrap — see there for why we don't instantiate the prefab. `cursedCrest` (the 3rd
-// SerializeField) is NOT copied: ToolItemManager.Awake derives it from crestList by name.
+// Bring up Silksong's `ToolItemManager` (tools/crests/nail-arts deref it). Copies its `toolItems` + `crestList`
+// serialized assets onto a single-manager GO (see ManagerSingletonBootstrap); `cursedCrest` is derived by its Awake.
 internal static class ToolItemManagerBootstrap {
     private const string GoName = "Silksong_ToolItemManager";
 
     internal static object Ensure() {
-        // equipChangedToolSingleReminder / equipChangedToolModifierReminder are NOT [SerializeField] — they're
-        // private runtime fields initialized only in SceneInit() (see below). On the prefab asset they're null, so
-        // copying them is a no-op; omit them from the field list.
         var mgr = ManagerSingletonBootstrap.BringUp(typeof(Silksong::ToolItemManager), GoName, "toolItems",
             "crestList");
         if (mgr == null) return new { error = "ToolItemManager bring-up failed (see log)" };
 
-        // ToolItemManager.Awake subscribes SceneInit to GameManager.SceneInit — our bootstrap GM never fires that
-        // event, so SceneInit never runs. It's the ONLY place that initializes equipChangedToolSingleReminder /
-        // equipChangedToolModifierReminder (new ControlReminder.{Single,Double}Config). Without it, those fields stay
-        // null and ReportBoundAttackToolUsed NullRefs on .Disappear() when a Red tool was equipped+thrown.
-        // Call SceneInit directly to reuse the real initialization. AddReminder inside it calls ControlReminder.Instance
-        // (stubbed to return null in Stub.cs — no ControlReminder MonoBehaviour in our scene), so SubscribeEvents(null)
-        // is a graceful no-op. Disappear is also stubbed since Owner is null.
+        // Our bootstrap GM never fires GameManager.SceneInit, so ToolItemManager.SceneInit (the only place that inits
+        // the equipChangedTool*Reminder fields) never runs -> ReportBoundAttackToolUsed NullRefs. Call it directly.
         var sceneInit = mgr.GetType().GetMethod("SceneInit", BindingFlags.NonPublic | BindingFlags.Instance);
         if (sceneInit != null) sceneInit.Invoke(mgr, null);
 
         return Diag();
     }
 
-    // Diagnostic: confirm the singleton resolves and the serialized lists are populated, and probe GetCrestByName
-    // (which relies on the SO's OnEnable-built name dictionary — verifies that fired on bundle load).
+    // Diagnostic: confirm the singleton + serialized lists resolve, and that GetCrestByName works.
     internal static object Diag() {
         var mgr = Silksong::ToolItemManager.SilentInstance;
         if (mgr == null) return new { error = "ToolItemManager singleton null (Ensure not run / spawn first)" };
@@ -53,10 +41,8 @@ internal static class ToolItemManagerBootstrap {
         };
     }
 
-    // Unlock every crest's tool slots (the "memory locket" sockets). Each crest's saved slot list (PlayerData.ToolEquips)
-    // carries a per-slot IsUnlocked; the game unlocks them one memory-locket at a time. Here we rebuild each crest's slot
-    // list from its config (ToolCrest.Slots) with every slot IsUnlocked=true — preserving any equipped tool — and mark the
-    // crest itself unlocked. Requires ToolItemManager + PlayerData up (call post-spawn).
+    // Unlock every crest + all its tool slots: rebuild each crest's slot list from its config with IsUnlocked=true,
+    // preserving equipped tools. Requires ToolItemManager + PlayerData up (post-spawn).
     internal static object UnlockAllCrestSlots() {
         var pd = Silksong::PlayerData.instance;
         if (pd == null) return new { error = "PlayerData not ready" };
