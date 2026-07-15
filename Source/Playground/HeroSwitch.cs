@@ -160,6 +160,10 @@ internal static class HeroSwitch {
         var knightGo = HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.gameObject : null;
         var hornetGo = BundleSpike.HornetRoot;
 
+        // Reparent the vignette off the Knight (onto the camera) BEFORE the inert sweep, so SetAllKnightFsms doesn't
+        // disable its Darkness Control FSM.
+        EnsureVignetteOnCamera();
+
         // Knight inert when Hornet is active, and vice-versa. Hornet's enabled state is owned per-frame by
         // HornetEnvironmentAdapter (gated on HornetActive) — here we only flip her Rigidbody so she doesn't fall.
         SetInert(knightGo, who != ActiveHero.Knight);
@@ -217,23 +221,17 @@ internal static class HeroSwitch {
                 hk.GetComponent<HeroAnimationController>()?.StartControl();
             }
 
-            // The Knight's screen-edge vignette would otherwise keep darkening the view while she's the inactive hero;
-            // kill the renderer + its FSM (so nothing re-enables it), restore when she's active again.
-            if (hk.vignette != null) hk.vignette.enabled = !inert;
-            if (hk.vignetteFSM != null) hk.vignetteFSM.enabled = !inert;
+            // The Knight's screen vignette IS the scene's real darkening (HK-driven, per-scene via its Darkness Control
+            // FSM). It's reparented to the camera (EnsureVignetteOnCamera) so it stays screen-centred, and kept live for
+            // BOTH heroes so Tab doesn't flip scene brightness (~40% in White Palace). So it's deliberately NOT tied to
+            // the inert Knight here — neither renderer nor FSM is touched.
         }
         else {
-            // Hornet's "Vignette": the soft radial darkening (its own SpriteRenderer) follows her active state — show it
-            // only while she's the active, camera-centred hero.
+            // Hornet's own "Vignette" stays OFF always: the Knight's camera-parented vignette now provides the scene
+            // darkening for both heroes (EnsureVignetteOnCamera), so hers would double-darken. Her weaker Silksong
+            // vignette (different material/layer, undriven here) never matched anyway.
             var v = hero.transform.Find("Vignette");
-            if (v != null) {
-                v.gameObject.SetActive(!inert);
-                // "Darkness Border" (hard black frame, black_solid*) is meant to be positioned by Silksong's camera rig;
-                // standalone it's pinned to Hornet and blacks out a chunk of HK's screen wherever she stands. It never
-                // works here -> kill it outright, keep only the radial vignette.
-                var border = v.Find("Darkness Border");
-                if (border != null) border.gameObject.SetActive(false);
-            }
+            if (v != null) v.gameObject.SetActive(false);
 
             // Mirror the Knight's reactivation control-restore (above), for Hornet. While she was inert, any scene
             // transition the Knight drove (e.g. a door up-interact) ran WITHOUT her HornetSceneEntry entry, so the
@@ -301,6 +299,28 @@ internal static class HeroSwitch {
             .GetField("heroTransform", BindingFlags.Instance | BindingFlags.NonPublic);
         heroTransformField?.SetValue(camTarget, t);
     }
+
+    // Reparent the Knight's screen vignette to the render camera so it stays screen-centred regardless of which hero is
+    // active (and wherever the inert Knight is), then keep it centred + live. This is the scene's real darkening (its
+    // Darkness Control FSM keeps driving it per scene) — reused for BOTH heroes so Tab doesn't flip brightness. Being off
+    // the Knight's subtree also spares its FSM from SetAllKnightFsms' inert sweep. Cheap: a parent-ref compare per frame.
+    // Called at the top of SetActive (before the inert sweep) and per-frame from CameraSwitchDriver (HK re-parents on
+    // scene entry). Idempotent.
+    internal static void EnsureVignetteOnCamera() {
+        var knight = HeroController.UnsafeInstance;
+        if (knight == null || knight.vignette == null) return;
+        var gc = GameCameras.instance;
+        var cam = gc != null ? gc.mainCamera : null;
+        if (cam == null) return;
+        var vt = knight.vignette.transform;
+        if (vt.parent == cam.transform) return;
+        vt.SetParent(cam.transform, true); // keep world scale/rotation
+        var lp = vt.localPosition;
+        vt.localPosition = new Vector3(0f, 0f, lp.z); // centre on the optical axis, keep depth
+        var go = knight.vignette.gameObject;
+        if (!go.activeSelf) go.SetActive(true);
+        if (knight.vignetteFSM != null && !knight.vignetteFSM.enabled) knight.vignetteFSM.enabled = true;
+    }
 }
 
 // Drives the active-hero switch: Tab toggles; re-asserts the camera target each frame (cheap) so it survives HK
@@ -338,16 +358,10 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
 
         TraceTick();
 
-        // The inert, off-camera Knight's Vignette must be fully off (its black plates otherwise frame HK's screen
-        // centered on the off-screen Knight). Toggle the whole Vignette GAMEOBJECT, not just hk.vignette.enabled: the
-        // hard border is the `black_solid` plates under "Darkness Border", which are SEPARATE child SpriteRenderers the
-        // component-level disable misses (deactivating the GO also stops the vignetteFSM that re-enables them). Sync to
-        // the active hero each frame — HK re-enables it on every scene entry, and the Knight needs it back when active.
-        if (knight != null && knight.vignette != null) {
-            var vigGo = knight.vignette.gameObject;
-            var shouldBeOn = !HeroSwitch.HornetActive;
-            if (vigGo.activeSelf != shouldBeOn) vigGo.SetActive(shouldBeOn);
-        }
+        // Keep the Knight's vignette parented to the camera (screen-centred) and live for both heroes — the scene's real
+        // darkening, so Tab doesn't flip brightness. Re-asserted per frame because HK re-parents/re-enables it on every
+        // scene entry. Its Darkness Border (black screen-frame plates) is now correctly centred on the camera too.
+        HeroSwitch.EnsureVignetteOnCamera();
 
         var follow = HeroSwitch.HornetActive
             ? HeroSwitch.TransformOf(BundleSpike.HornetRoot)
