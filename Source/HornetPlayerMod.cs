@@ -131,7 +131,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroControllerProbe.Cleanup();
         EnemyTargetBridge.Cleanup();
         HeroProxy.Cleanup();
-        Tk2dClipShim.Cleanup();
         InventoryPauseBridge.Cleanup();
         PlayMakerWarningContext.Cleanup();
         DebugServer.Stop();
@@ -363,7 +362,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
         EnemyTargetBridge
             .Install(); // redirect HK enemy "where's the hero" queries (LineOfSightDetector LoS) to the active hero
-        Tk2dClipShim.Install(); // log-once + skip missing tk2d clips (HK-Knight clip names absent on Hornet's animator)
         InventoryPauseBridge
             .Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
         PlayMakerWarningContext
@@ -381,6 +379,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new BreakableFloorModule());
         moduleHost.Add(new DashGeoPickupModule());
         moduleHost.Add(new PogoModule());
+        moduleHost.Add(new AnimationRemapModule());
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
