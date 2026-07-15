@@ -117,7 +117,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         AcidSwimBridge.Cleanup();
         HornetDeath.Cleanup();
         RespawnBridge.Cleanup();
-        SoulOrbBridge.Cleanup();
         RoarLockBridge.Cleanup();
         SpiderTrapBenchFix.Cleanup();
         PlayerDataSync.Cleanup();
@@ -127,8 +126,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HkFsmTracer.Cleanup();
         DreamReturnBridge.Cleanup();
         HeroControllerProbe.Cleanup();
-        EnemyTargetBridge.Cleanup();
-        HeroProxy.Cleanup();
         InventoryPauseBridge.Cleanup();
         PlayMakerWarningContext.Cleanup();
         DebugServer.Stop();
@@ -347,7 +344,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HornetDeath.Install(); // Hornet death -> HK bench respawn (Die's gm.PlayerDead handoff retargeted to HK's world)
         RespawnBridge
             .Install(); // mirror Silksong SetBenchRespawn/SetHazardRespawn onto HK PlayerData (hard-save points)
-        SoulOrbBridge.Install(); // HK soul (SoulOrb homing + AddMPCharge) -> Hornet silk (orbs fly to her, grant silk)
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
@@ -355,8 +351,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         RoarLockBridge.Install(); // roar-specific facing on top of HeroEventBridge (subscribes to its callback)
         HeroControllerProbe
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
-        EnemyTargetBridge
-            .Install(); // redirect HK enemy "where's the hero" queries (LineOfSightDetector LoS) to the active hero
         InventoryPauseBridge
             .Install(); // inventory open/close -> freeze/resume HK's world (SetIsInventoryOpen -> timeScale)
         PlayMakerWarningContext
@@ -365,7 +359,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             .Install(); // Deepnest trap bench: patch the Fade FSM's Knight-calibrated 'Hero Land Y' into Hornet's frame
         PlayerDataSync
             .Install(); // mirror the Knight's HK progression onto Hornet's Silksong PlayerData (hooks; seed runs at spawn)
-        // NOTE: HeroProxy has no Install — its global-"Hero" -> active-hero sync is driven per-frame from CameraSwitchDriver.Update.
+        // NOTE: HeroTargetModule.SyncGlobal (PlayMaker global "Hero") is driven per-frame from CameraSwitchDriver.Update.
         // BundleSpike.Run();
 
         // New lifecycle backbone: register migrated modules in order, then init them. Spawn is the first module — its
@@ -379,6 +373,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
         moduleHost.Add(new FsmMethodCallRemapModule());
+        moduleHost.Add(new HeroTargetModule());
         moduleHost.Add(new ContactDamageModule());
         moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new BenchModule());

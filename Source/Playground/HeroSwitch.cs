@@ -424,7 +424,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
 
         // Point HK's PlayMaker global "Hero" at the active hero (enemy chase/face track her; hero method calls go to her).
         // Re-asserted per frame because HK re-binds it on scene entry — same reason the vignette/HUD are synced here.
-        HeroProxy.SyncGlobal();
+        HornetInHallownest.Modules.HeroTargetModule.SyncGlobal();
 
         // HUD follows the active hero: Hornet's HUD (if brought up) while she's active, HK's Knight HUD otherwise. Synced
         // per-frame (cheap, SetActive-on-change) because HK re-enables its hudCanvas on every scene entry — same reason
