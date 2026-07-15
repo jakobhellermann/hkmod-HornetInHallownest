@@ -7,6 +7,7 @@ using HornetPlayer.DevServer;
 using HornetPlayer.HornetInHallownest.Core;
 using HornetPlayer.HornetInHallownest.Modules;
 using HornetPlayer.HornetInHallownest.Util;
+using HornetPlayer.HornetInHallownest.Save;
 using HornetPlayer.HornetInHallownest.Validation;
 using HornetPlayer.HornetInHallownest.Validation.Scenarios;
 using HornetPlayer.Playground;
@@ -88,9 +89,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSwitch.Cleanup();
         EnemyDamageBridge.Cleanup();
         AcidSwimBridge.Cleanup();
-        RoarLockBridge.Cleanup();
         SpiderTrapBenchFix.Cleanup();
-        HeroEventBridge.Cleanup();
         HeroSfxShim.Cleanup();
         FsmTracer.Cleanup();
         HkFsmTracer.Cleanup();
@@ -311,8 +310,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         HeroSfxShim.Install(); // Hornet one-shot SFX (dash/attack/slash) via PlayClipAtPoint (bypass SS audio gates)
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
         HkFsmTracer.Install(); // HK-side FSM tracer (armed via POST /hk-fsm-trace?names=...)
-        HeroEventBridge.Install(); // forward HK FSM events aimed at the "Hero" GO onto Hornet's isolated Silksong FSMs
-        RoarLockBridge.Install(); // roar-specific facing on top of HeroEventBridge (subscribes to its callback)
         HeroControllerProbe
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
         PlayMakerWarningContext
@@ -338,6 +335,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new HeroTargetModule());
         moduleHost.Add(new InventoryModule());
         moduleHost.Add(new DeathModule());
+        moduleHost.Add(new HeroBroadcastModule());
         moduleHost.Add(new ContactDamageModule());
         moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new BenchModule());
