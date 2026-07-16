@@ -5,6 +5,8 @@ using UnityEngine.SceneManagement;
 
 namespace HornetPlayer.HornetInHallownest.Modules;
 
+extern alias Silksong;
+
 public sealed class SceneFixesModule : ModuleBase {
     public override void Initialize() {
         UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
@@ -14,9 +16,12 @@ public sealed class SceneFixesModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (birthplaceForcedCharm) RestoreBirthplaceCharm();
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
+        if (birthplaceForcedCharm && scene.name != "Abyss_06_Core") RestoreBirthplaceCharm();
+
         switch (scene.name) {
             case "Deepnest_Spider_Town":
                 FixSpiderTrapBench();
@@ -24,8 +29,34 @@ public sealed class SceneFixesModule : ModuleBase {
             case "White_Palace_12":
                 DisableWhitePalace12Saws(scene);
                 break;
+            case "Abyss_06_Core":
+                OpenBirthplaceForKingsoulOwner();
+                break;
         }
     }
+
+    #region Abyss birthplace floor
+
+    private bool birthplaceForcedCharm;
+    private bool priorEquippedCharm36;
+
+    // Hornet doesn't equip kingsoul, so pretend it is equipped in the abyss scene if we have it
+    // royalCharmState 3 = King Soul, 4 = Void Heart
+    private void OpenBirthplaceForKingsoulOwner() {
+        var pd = PlayerData.instance;
+        if (pd.royalCharmState <= 2 || pd.equippedCharm_36) return;
+        priorEquippedCharm36 = pd.equippedCharm_36;
+        pd.equippedCharm_36 = true;
+        birthplaceForcedCharm = true;
+    }
+
+    private void RestoreBirthplaceCharm() {
+        birthplaceForcedCharm = false;
+        var pd = PlayerData.instance;
+        pd.equippedCharm_36 = priorEquippedCharm36;
+    }
+
+    #endregion
 
     #region White_Palace_12 saws
 
