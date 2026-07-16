@@ -318,6 +318,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new HeroBroadcastModule());
         moduleHost.Add(new SceneFixesModule());
         moduleHost.Add(new ContactDamageModule());
+        moduleHost.Add(new ShadowDashModule());
         moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new BenchModule());
         moduleHost.Add(new SceneTransitionModule());
