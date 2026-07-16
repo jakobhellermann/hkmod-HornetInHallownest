@@ -152,12 +152,19 @@ public sealed class HornetSpawner : ModuleBase {
         Object.DontDestroyOnLoad(hornetInstance);
         Object.DestroyImmediate(staging);
 
+        HornetRoot = hornetInstance;
+        realHero = heroController;
+
+        PlayerDataSyncModule.SyncHKToSS();
+        try {
+            GameCamerasBootstrap.BringUpHud(true);
+        } catch (Exception e) {
+            Log.Error($"[HornetSpawner] BringUpHud: {e}");
+        }
+
         using (SilksongContext.Enter()) {
             hornetInstance.SetActive(true);
         }
-
-        HornetRoot = hornetInstance;
-        realHero = heroController;
 
         var vignette = hornetInstance.transform.Find("Vignette");
         if (vignette) {
@@ -177,16 +184,6 @@ public sealed class HornetSpawner : ModuleBase {
         // mid-entry breaks HK's entry handshake (it never finishes -> Hornet ends in nirvana). A "reload stays on Hornet"
         // feature must DEFER the switch until the Knight's entry has completed (isHeroInPosition + grounded).
         HeroSwitch.SetActive(HeroSwitch.Active);
-
-        // Sync BEFORE BringUpHud so the health masks / silk meter appear at the Knight's capacity (maxHealth/silkMax),
-        // not the bootstrap defaults. HK PD is loaded by now (post scene-entry) -> authoritative over HornetSaveData.
-        PlayerDataSyncModule.SyncHKToSS();
-
-        try {
-            GameCamerasBootstrap.BringUpHud(true);
-        } catch (Exception e) {
-            Log.Error($"[HornetSpawner] BringUpHud: {e}");
-        }
 
         // Wire gm.hero_ctrl + bare CameraController.camTarget so Silksong's hazard respawn flow
         // (PlayerDeadFromHazard → HazardRespawn) runs without NullRefs.

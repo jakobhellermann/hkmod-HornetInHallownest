@@ -120,6 +120,25 @@ internal static class Stub {
                         throw;
                     }
                 })));
+        // HeroController.Start runs an initial AddSilk(CurrentSilkMax) which nullref'd in SpawnNewChunk (null animator?)
+        var addSilk = typeof(Silksong::HeroController).GetMethod("AddSilk",
+            BindingFlags.Instance | BindingFlags.Public, null,
+            [typeof(int), typeof(bool), typeof(Silksong::SilkSpool.SilkAddSource), typeof(bool)], null);
+        if (addSilk != null)
+            detours.Add(new Hook(addSilk,
+                (Action<Action<Silksong::HeroController, int, bool, Silksong::SilkSpool.SilkAddSource, bool>,
+                    Silksong::HeroController, int, bool, Silksong::SilkSpool.SilkAddSource, bool>)
+                ((orig, self, amount, heroEffect, source, force) => {
+                    try {
+                        orig(self, amount, heroEffect, source, force);
+                    } catch (Exception e) {
+                        Log.InfoOnce("addsilk-guard",
+                            $"[AddSilk] caught addsilk NullRef {e.Message}");
+                    }
+                })));
+        else
+            Log.Error("[Stub] HeroController.AddSilk(int,bool,SilkAddSource,bool) not found");
+
         // SimpleFadeOut::SetColor throws nullref, because Awake is never ran
         Skip(typeof(Silksong::CameraController), "ScreenFlash");
         // GameCameras.Start does only `gs.LoadOverscanSettings(); SetOverscan(gs.overScanAdjustment)` — gs is
