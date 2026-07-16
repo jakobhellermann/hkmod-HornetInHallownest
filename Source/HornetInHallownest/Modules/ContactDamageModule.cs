@@ -37,11 +37,14 @@ public sealed class ContactDamageModule : ModuleBase {
                 var fsm = FSMUtility.LocateFSM(other, "damages_hero");
                 dmg = FSMUtility.GetInt(fsm, "damageDealt");
                 var hkHazard = FSMUtility.GetInt(fsm, "hazardType");
+                if (ShadowDashModule.ShadeDashActive && IsShadeDashAllowed(other)) return;
                 if (hkHazard >= 2) ssHazard = MapHazard(hkHazard);
             }
             else {
                 var damageHero = other.GetComponentInParent<DamageHero>();
                 if (damageHero && damageHero.enabled) {
+                    if (ShadowDashModule.ShadeDashActive &&
+                        (damageHero.shadowDashHazard || IsShadeDashAllowed(other))) return;
                     dmg = damageHero.damageDealt;
                     if (damageHero.hazardType >= 2) ssHazard = MapHazard(damageHero.hazardType);
                 }
@@ -70,6 +73,14 @@ public sealed class ContactDamageModule : ModuleBase {
         } catch (Exception e) {
             LogError(e.Message);
         }
+    }
+
+    // Allowlist for specific attacks that are impossible to dodge and are balanced around shade cloak.
+    private static bool IsShadeDashAllowed(GameObject go) {
+        var t = go.transform;
+        return t.name == "hurtbox"
+               && t.parent && t.parent.name == "slash_core"
+               && t.parent.parent && t.parent.parent.name.StartsWith("mega_mantis_tall_slash", StringComparison.Ordinal); // traitor lord shockwave
     }
 
     private static SHazard MapHazard(int hkHazard) {

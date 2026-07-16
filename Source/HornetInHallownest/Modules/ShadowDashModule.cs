@@ -51,11 +51,15 @@ public sealed class ShadowDashModule : ModuleBase {
         }
     }
 
+    internal static bool ShadeDashActive { get; private set; }
+
     private static void ShadowDashStart() {
+        ShadeDashActive = true;
         PlayMakerFSM.BroadcastEvent("SHADOW DASH START");
     }
 
     private static void ShadowDashEnd() {
+        ShadeDashActive = false;
         PlayMakerFSM.BroadcastEvent("SHADOW DASH END");
     }
 
