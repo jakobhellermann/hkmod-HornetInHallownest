@@ -189,8 +189,6 @@ public sealed class HornetSpawner : ModuleBase {
         // (PlayerDeadFromHazard → HazardRespawn) runs without NullRefs.
         SilksongBootstrap.SetHeroCtrl(heroController!);
 
-        DamageEnemyProxy.Install();
-
         ApplyColliderHeight();
 
         Log.Info("[HornetSpawner] instantiated");

@@ -29,8 +29,6 @@ public sealed class FsmLookupModule : ModuleBase {
     protected override void OnDeinitialize() {
         heroDummies.Clear();
         damagesDummy = null;
-        dirVar = null;
-        dmgVar = null;
         if (holder) Object.Destroy(holder);
         holder = null;
     }
@@ -43,8 +41,11 @@ public sealed class FsmLookupModule : ModuleBase {
     private PlayMakerFSM? TryPatch(GameObject go, string fsmName) {
         if (heroInertNames.Contains(fsmName) && go.GetComponent<Silksong::HeroController>())
             return HeroDummy(fsmName);
-        if (fsmName == "damages_enemy" && go.GetComponentInParent<Silksong::DamageEnemies>())
-            return DamagesDummy(go);
+        if (fsmName == "damages_enemy") {
+            var de = go.GetComponentInParent<Silksong::DamageEnemies>();
+            if (de) return DamagesDummy(de);
+        }
+
         return null;
     }
 
@@ -72,37 +73,33 @@ public sealed class FsmLookupModule : ModuleBase {
     }
 
     #region damages_enemy — Hornet's slash uses a DamageEnemies component, not an FSM; hand HK's readers a stand-in
+    // Some FSMs like stag bell read vars off of the shasl "damages_enemy" fsm.
     private PlayMakerFSM? damagesDummy;
-    private FsmFloat? dirVar;
-    private FsmInt? dmgVar;
+    private FsmInt? damageDealt;
+    private FsmInt? attackType;
+    private FsmFloat? direction;
+    private FsmBool? circleDirection;
 
-    private PlayMakerFSM DamagesDummy(GameObject go) {
+    private PlayMakerFSM DamagesDummy(Silksong::DamageEnemies de) {
         if (!damagesDummy) {
             damagesDummy = NewDummy("damages_enemy");
-            dirVar = new FsmFloat("direction");
-            dmgVar = new FsmInt("damageDealt");
-            damagesDummy.Fsm.Variables.FloatVariables = [dirVar];
-            damagesDummy.Fsm.Variables.IntVariables = [dmgVar];
+            var v = damagesDummy.Fsm.Variables;
+            v.IntVariables = [damageDealt = new FsmInt("damageDealt"), attackType = new FsmInt("attackType")];
+            v.FloatVariables =
+                [direction = new FsmFloat("direction"), new FsmFloat("magnitudeMult") { Value = 1f }, new FsmFloat("Multiplier") { Value = 1f }];
+            v.BoolVariables = [circleDirection = new FsmBool("circleDirection")];
         }
 
-        dirVar!.Value = SlashDirection(go);
-        dmgVar!.Value = NailDamage();
+        damageDealt!.Value = de.damageDealt;
+        attackType!.Value = MapAttackType((int)de.attackType);
+        direction!.Value = de.direction;
+        circleDirection!.Value = de.CircleDirection;
         return damagesDummy;
     }
 
-    // TC angle: 0=right 90=up 180=left 270=down. Vertical slashes are named Up/Down; horizontal topple toward facing.
-    private static float SlashDirection(GameObject go) {
-        var de = go.GetComponentInParent<Silksong::DamageEnemies>();
-        var name = de ? de.gameObject.name : go.name;
-        if (name.Contains("Up", StringComparison.OrdinalIgnoreCase)) return 90f;
-        if (name.Contains("Down", StringComparison.OrdinalIgnoreCase)) return 270f;
-        var hc = Silksong::HeroController.UnsafeInstance;
-        return hc && hc.cState is { facingRight: true } ? 0f : 180f;
-    }
-
-    private static int NailDamage() {
-        var pd = Silksong::PlayerData.instance;
-        return pd is { nailDamage: > 0 } ? pd.nailDamage : 5;
+    // Silksong attacktypes 0-7 are unchanged, 8+ have no equivalent
+    private static int MapAttackType(int ss) {
+        return ss <= 7 ? ss : 1;
     }
     #endregion
 }

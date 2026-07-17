@@ -68,7 +68,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         GameCamerasBootstrap.Cleanup();
         UIManagerBootstrap.Cleanup();
         SilksongBootstrap.Cleanup();
-        DamageEnemyProxy.Cleanup();
         ToolItemManagerBootstrap.Cleanup();
         CollectableItemManagerBootstrap.Cleanup();
         ManagerSingletonBootstrap.Cleanup();
