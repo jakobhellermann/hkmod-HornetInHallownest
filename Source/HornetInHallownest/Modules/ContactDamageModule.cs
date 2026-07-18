@@ -78,9 +78,20 @@ public sealed class ContactDamageModule : ModuleBase {
     // Allowlist for specific attacks that are impossible to dodge and are balanced around shade cloak.
     private static bool IsShadeDashAllowed(GameObject go) {
         var t = go.transform;
-        return t.name == "hurtbox"
-               && t.parent && t.parent.name == "slash_core"
-               && t.parent.parent && t.parent.parent.name.StartsWith("mega_mantis_tall_slash", StringComparison.Ordinal); // traitor lord shockwave
+        
+        // traitor lord shockwave
+        if (t.name == "hurtbox"
+            && t.parent && t.parent.name == "slash_core"
+            && t.parent.parent && t.parent.parent.name.StartsWith("mega_mantis_tall_slash", StringComparison.Ordinal)) {
+            return true;
+        }
+
+        // radiance beam
+        if (t.name == "Radiant Beam R(Clone)") {
+            return true;
+        }
+
+        return false;
     }
 
     private static SHazard MapHazard(int hkHazard) {
