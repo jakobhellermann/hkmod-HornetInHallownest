@@ -130,7 +130,7 @@ internal static class BundleSpike {
         foreach (var c in anim.Library.clips)
             if (c != null && (string.IsNullOrEmpty(filter) ||
                               c.name.ToLowerInvariant().Contains(filter.ToLowerInvariant())))
-                names.Add(c.name);
+                names.Add($"{c.name} [{c.wrapMode}, {(c.frames != null ? c.frames.Length : 0)}f]");
         names.Sort();
         return new { count = names.Count, clips = names };
     }
