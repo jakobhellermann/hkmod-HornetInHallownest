@@ -24,7 +24,20 @@ public sealed class MinorFixesModule : ModuleBase {
         host = Object.FindAnyObjectByType<PlaygroundHost>();
         Detour(typeof(MonoBehaviour), "StartCoroutine", OnStartCoroutine, typeof(IEnumerator));
         Detour(typeof(Silksong::GameManager), "FreezeMoment", OnFreezeMoment, typeof(SFreeze), typeof(Action));
+        Detour(typeof(Silksong::HeroController), "RelinquishControl", OnRelinquishControl);
     }
+
+    #region Sprint + cutscene RelinquishControl
+    
+    // RelinquishControl does nothing if control is already relinquished (e.g. during dash).
+    // This lead to ResetMotion never being called for the abyss exit cutscene -> camera follows hornet into nirvana.
+    private static void OnRelinquishControl(Action<Silksong::HeroController> orig, Silksong::HeroController self) {
+        if (self.cState is { isSprinting: true, dead: false })
+            self.acceptingInput = true;
+        orig(self);
+    }
+    
+    #endregion
 
     private Coroutine OnStartCoroutine(Func<MonoBehaviour, IEnumerator, Coroutine> orig, MonoBehaviour self,
         IEnumerator? routine) {
