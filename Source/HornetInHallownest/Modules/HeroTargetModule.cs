@@ -51,6 +51,21 @@ public sealed class HeroTargetModule : ModuleBase {
 
         var target = HeroSwitch.ActiveHeroGameObject;
         if (target && heroVar.Value != target) heroVar.Value = target;
+
+        // A hero-GO change leaves running HK leaves cached "Hero" variables unchanged, re-sync them
+        if (target && target != lastHeroSwept) {
+            SyncLocalHeroVars(target);
+            lastHeroSwept = target;
+        }
+    }
+
+    private static UnityEngine.GameObject? lastHeroSwept;
+
+    private static void SyncLocalHeroVars(UnityEngine.GameObject hero) {
+        foreach (var fsm in UnityEngine.Object.FindObjectsByType<PlayMakerFSM>(UnityEngine.FindObjectsSortMode.None)) {
+            var v = fsm.FsmVariables?.FindFsmGameObject("Hero");
+            if (v != null && v.Value != hero) v.Value = hero;
+        }
     }
 
     #endregion
