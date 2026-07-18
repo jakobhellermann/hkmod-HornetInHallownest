@@ -13,12 +13,12 @@
 - kings brand cutscene
 - hornet hud is too large, it overlaps with text boxes
 - spike pogo no sound
+- fix control shriek cutscene 
 
 ## Integration
 - XX hardsaves
 - XX game finish animation not shown
 - XX full mask shard -> instant hud update
-- XX shriek trigger
 - OOB on scene transitions immediate walkback
 - elevator/lift transitions: Knight strands at shaft top, Hornet falls to bottom, camera-lock stuck up top (dark)
 - dash into elevator: bump

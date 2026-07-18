@@ -1,15 +1,21 @@
+extern alias Silksong;
+extern alias SilksongPM;
 using System;
+using System.Linq;
 using HornetPlayer.HornetInHallownest.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using SFsm = SilksongPM::HutongGames.PlayMaker.Fsm;
+using SFsmState = SilksongPM::HutongGames.PlayMaker.FsmState;
 
 namespace HornetPlayer.HornetInHallownest.Modules;
-
-extern alias Silksong;
 
 public sealed class SceneFixesModule : ModuleBase {
     public override void Initialize() {
         UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        // TODO: just hook into thread storm
+        Detour(typeof(SFsm), "SwitchState",
+            (Action<Action<SFsm, SFsmState?>, SFsm, SFsmState?>)OnSilksongSwitchState, typeof(SFsmState));
     }
 
     public override string Id => "scene-fixes";
@@ -21,6 +27,7 @@ public sealed class SceneFixesModule : ModuleBase {
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
         if (birthplaceForcedCharm && scene.name != "Abyss_06_Core") RestoreBirthplaceCharm();
+        screamGet = scene.name == "Abyss_12" ? FindScreamGetFsm() : null;
 
         switch (scene.name) {
             case "Deepnest_Spider_Town":
@@ -34,6 +41,33 @@ public sealed class SceneFixesModule : ModuleBase {
                 break;
         }
     }
+
+    #region Abyss shriek (Scream 2)
+
+    private PlayMakerFSM? screamGet;
+
+    private static PlayMakerFSM? FindScreamGetFsm() {
+        var go = GameObject.Find("Scream 2 Get");
+        if (!go) return null;
+        return go.GetComponents<PlayMakerFSM>().FirstOrDefault(fsm => fsm.FsmName == "Scream Get");
+    }
+
+    private void OnSilksongSwitchState(Action<SFsm, SFsmState?> orig, SFsm fsm, SFsmState? to) {
+        try {
+            if (screamGet != null && to is { Name: "Do Sphere" } && fsm.Name == "Silk Specials" &&
+                screamGet.ActiveStateName == "In" &&
+                PlayerData.instance is { screamLevel: < 2 }) {
+                LogInfo("Thread Storm cast in Abyss shriek zone -> broadcasting SCREAM GET");
+                PlayMakerFSM.BroadcastEvent("SCREAM GET");
+            }
+        } catch (Exception e) {
+            LogError($"shriek cutscene: {e.Message}");
+        }
+
+        orig(fsm, to);
+    }
+
+    #endregion
 
     #region Abyss birthplace floor
 
