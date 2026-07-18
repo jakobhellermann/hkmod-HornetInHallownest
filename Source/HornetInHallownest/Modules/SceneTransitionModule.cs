@@ -13,6 +13,9 @@ using Object = UnityEngine.Object;
 using USceneManager = UnityEngine.SceneManagement.SceneManager;
 using SGate = Silksong::GlobalEnums.GatePosition;
 using SHeroTransition = Silksong::GlobalEnums.HeroTransitionState;
+using SCollisionSide = Silksong::GlobalEnums.CollisionSide;
+using SHazardType = Silksong::GlobalEnums.HazardType;
+using SDamageFlags = Silksong::GlobalEnums.DamagePropertyFlags;
 
 namespace HornetPlayer.HornetInHallownest.Modules;
 
@@ -23,6 +26,12 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     private bool pendingSnap, dreamReturnPending, hkEntryFixed, dreamGateEntryPending;
 
+    // A Dream-visualization arrival is in flight (set at BeginSceneTransition, consumed by Tick). HK warps dream entries
+    // in via EnterSceneDreamGate (gravity off, no door walk-out); route Hornet the same way even when HK drove the Knight
+    // through a normal gate instead — RunEntry's door walk-out otherwise walks/falls her off the arena platform.
+    private bool dreamArrivalPending;
+    private bool dreamHeroPlaced;
+    private bool arrivalInvulnerable; // block hazard damage through the dream-arrival window (park + placement settle)
     private bool dreamPending;
     private string? dreamGate;
 
@@ -130,6 +139,19 @@ public sealed class SceneTransitionModule : ModuleBase {
         // Dream entries warp in via a DIRECT hero_ctrl.EnterSceneDreamGate() on the Knight (typed field call, no shim
         // redirects it), so Hornet's never runs. Flag it; Tick positions her and runs hers.
         Detour(typeof(HeroController), "EnterSceneDreamGate", OnEnterSceneDreamGate);
+
+        // Arrival i-frames: block damage through the dream-arrival window (see arrivalInvulnerable). Needed because on a
+        // cross-scene dream warp she briefly sits at the carried-over position, which in Radiance's arena is inside the
+        // Abyss Pit spike; the damage box is HeroBox (a child GO with its own layer) so root-layer tricks don't stop it.
+        Detour(typeof(Silksong::HeroController), "TakeDamage", OnTakeDamage,
+            typeof(GameObject), typeof(SCollisionSide), typeof(int), typeof(SHazardType), typeof(SDamageFlags));
+    }
+
+    private void OnTakeDamage(
+        Action<Silksong::HeroController, GameObject, SCollisionSide, int, SHazardType, SDamageFlags> orig,
+        Silksong::HeroController self, GameObject go, SCollisionSide side, int dmg, SHazardType hazard, SDamageFlags flags) {
+        if (arrivalInvulnerable) return;
+        orig(self, go!, side, dmg, hazard, flags);
     }
 
     private void OnSetHazardRespawn(Action<PlayerData, Vector3, bool> orig, PlayerData self, Vector3 pos, bool facing) {
@@ -157,10 +179,13 @@ public sealed class SceneTransitionModule : ModuleBase {
         CompleteStuckHkVerticalEntry(knight);
         if (!pendingSnap || !knight || !knight.isHeroInPosition) return;
 
-        if (HeroSwitch.HornetActive && dreamGateEntryPending) {
-            // No physical gate (sceneEntryGate==null): position her, run her own EnterSceneDreamGate to finish + clear.
+        if (HeroSwitch.HornetActive && (dreamGateEntryPending || (dreamArrivalPending && !dreamReturnPending))) {
+            // Dream arrival: warp her to the Knight's placed position + EnterSceneDreamGate (gravity off, no_input, no door
+            // walk-out) — HK's dream mechanism. The arrival-layer coroutine (started at scene change) held her non-colliding
+            // until now; dreamHeroPlaced flips it to restore the Player layer so she collides with the platform and stays.
             SnapHornetToKnight(knight);
             HornetSpawner.RealHero?.EnterSceneDreamGate();
+            dreamHeroPlaced = true;
         }
         else if (HeroSwitch.HornetActive && knight.sceneEntryGate) {
             StartCoroutine(dreamReturnPending ? DreamReturnEntry(knight) : RunEntry(knight));
@@ -172,6 +197,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         pendingSnap = false;
         dreamReturnPending = false;
         dreamGateEntryPending = false;
+        dreamArrivalPending = false;
     }
 
     // Arm the entry on a scene change (from = scene we're leaving). Pre-place her at the gate now — HK moved the Knight
@@ -205,6 +231,30 @@ public sealed class SceneTransitionModule : ModuleBase {
         knight.transitionState = HeroTransitionState.WAITING_TO_TRANSITION;
         hkEntryFixed = true;
         LogDebug("completed inert-Knight bottom-gate entry (FinishedEnteringScene + settled WAITING_TO_TRANSITION)");
+    }
+
+    // Manage the hero's collision layer across a cross-scene dream arrival. Two windows, both racy in our setup:
+    //  1. PARK (scene loaded, not yet placed): she sits at the carried-over position, which in Radiance's arena is inside
+    //     the wide Abyss Pit spike -> keep her on Ignore Raycast so she collides with nothing (like HK's warp).
+    //  2. PLACED (dream-gate branch set dreamHeroPlaced): restore Player so she collides with the arena platform and stays
+    //     (HK restores it ~0.7s late, during which she'd otherwise fall through the floor into the pit).
+    private static readonly int PlayerLayer = LayerMask.NameToLayer("Player");
+    private static readonly int IgnoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+
+    private System.Collections.IEnumerator ManageArrivalLayer() {
+        var hero = HornetSpawner.RealHero;
+        if (!hero) yield break;
+        for (var i = 0; i < 120 && !dreamHeroPlaced && hero; i++) { // park: non-colliding until placed (cap ~2.4s)
+            hero.gameObject.layer = IgnoreRaycastLayer;
+            yield return new WaitForFixedUpdate();
+        }
+
+        for (var i = 0; i < 45 && hero; i++) { // placed: hold Player through HK's late restore so there's no gap
+            if (hero.gameObject.layer != PlayerLayer) hero.gameObject.layer = PlayerLayer;
+            yield return new WaitForFixedUpdate();
+        }
+
+        arrivalInvulnerable = false;
     }
 
     private static void SnapHornetToKnight(HeroController knight) {
@@ -248,9 +298,13 @@ public sealed class SceneTransitionModule : ModuleBase {
         hc.StartAnimationControl();
 
         var gateGo = BuildGate(hkGate);
+        entryInProgress = true;
         yield return hc.StartCoroutine(hc.EnterScene(gateGo.GetComponent<Silksong::TransitionPoint>(), 0f));
+        entryInProgress = false;
         Object.Destroy(gateGo);
     }
+
+    internal bool entryInProgress;
 
     // Inactive Silksong TransitionPoint mirroring HK's gate: GetGatePosition parses the NAME for the side, the rest are
     // fields identical in both games. Inactive so its Awake (needs the Silksong scene-setup env) never runs — EnterScene
@@ -295,6 +349,7 @@ public sealed class SceneTransitionModule : ModuleBase {
             vis != GameManager.SceneLoadVisualizations.GrimmDream &&
             vis != GameManager.SceneLoadVisualizations.GodsAndGlory) return;
         dreamPending = true;
+        dreamArrivalPending = true;
         dreamGate = info.EntryGateName;
     }
 
@@ -309,6 +364,11 @@ public sealed class SceneTransitionModule : ModuleBase {
             ArmEntry(from);
             if (!dreamPending) return;
             dreamPending = false;
+            // Keep her non-colliding from now until the dream-gate placement (below): on scene load she sits at the
+            // carried-over position, which in Radiance's arena is inside the Abyss Pit spike.
+            dreamHeroPlaced = false;
+            arrivalInvulnerable = true;
+            StartCoroutine(ManageArrivalLayer());
             // Same-scene re-entry (Dream Fall Catcher caught a fall): place her at the gate now, before the Fall
             // Catcher's per-frame Hero-Y<0 test re-fires into a respawn loop.
             if (from.name == to.name) PlaceHornetAtGate();
@@ -360,15 +420,19 @@ public sealed class SceneTransitionModule : ModuleBase {
     private void CompleteArrival() {
         var hero = HornetSpawner.RealHero;
         if (!hero) return;
-        if (hero.transitionState == SHeroTransition.WAITING_TO_ENTER_LEVEL)
-            hero.transitionState = SHeroTransition.WAITING_TO_TRANSITION;
-        hero.enterWithoutInput = false;
-        hero.RegainControl();
-        hero.AcceptInput();
-        try {
-            hero.StartAnimationControl();
-        } catch (Exception e) {
-            LogError($"StartAnimationControl threw: {e.Message}");
+        // With a real gate, RunEntry (EnterScene -> FinishedEnteringScene) owns the control-return; doing it here mid-entry
+        // breaks its no_input door walk (she gets input+gravity and falls out of the arena, non-deterministically).
+        if (!entryInProgress) {
+            if (hero.transitionState == SHeroTransition.WAITING_TO_ENTER_LEVEL)
+                hero.transitionState = SHeroTransition.WAITING_TO_TRANSITION;
+            hero.enterWithoutInput = false;
+            hero.RegainControl();
+            hero.AcceptInput();
+            try {
+                hero.StartAnimationControl();
+            } catch (Exception e) {
+                LogError($"StartAnimationControl threw: {e.Message}");
+            }
         }
 
         PlayMakerFSM.BroadcastEvent("DREAM WAKE");
