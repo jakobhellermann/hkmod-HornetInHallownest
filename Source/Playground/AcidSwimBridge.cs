@@ -46,14 +46,13 @@ internal static class AcidSwimBridge {
     private static FieldInfo? flowSpeedField;
     private static FieldInfo? useSpaField;
 
-    // Tuning knob: where her transform origin sits relative to the acid surface (top of the HK acid collider).
-    // 0 = origin exactly on the surface line. Adjustable live via POST /acid-offset for fitment.
-    internal static float SurfaceOffset;
+    // Tuning knob: where her transform origin (feet) sits relative to the acid surface (top of the HK acid collider).
+    // 0 = origin exactly on the surface line; +0.9 lifts her so the swim anim's waterline sits right on the acid top.
+    // Adjustable live via POST /acid-offset for fitment.
+    internal static float SurfaceOffset = 0.9f;
 
-    // How far ABOVE her current position the surface may be and still snap her to it (catches fast-fall overshoot where
-    // she's detected just past the surface). Beyond this she's treated as "entered from below" and floats in place — a
-    // large upward teleport is what risked pushing her into a wall near the edge.
-    private const float SnapUpTolerance = 0.5f;
+    // Terrain layer (8) — headroom check before snapping her up to the acid surface (never teleport into a wall/ceiling).
+    private static readonly int TerrainMask = LayerMask.GetMask("Terrain");
 
     private static PlaygroundHost? Host {
         get {
@@ -94,21 +93,24 @@ internal static class AcidSwimBridge {
                 var b = currentAcid.bounds;
                 var surfaceY = b.max.y + SurfaceOffset;
 
-                // Snap to the surface so she floats on top instead of wherever she'd fallen to, then hand off to her real
-                // water controller (it flips gravity off, relinquishes control, IsSwimming(), zeroes velocity and drives
-                // swim/jump-out). A hard Y-teleport ignores collision, so an UPWARD snap could push her into a wall/ceiling
-                // near the edge. She almost always falls in from above, so only snap DOWN to the surface (plus a small
-                // up-tolerance for fast-fall overshoot); if she's genuinely below it (entered from the side), float in
-                // place — she can swim/jump up — rather than risk teleporting her up into terrain.
+                // Snap her onto the surface so she floats on top instead of wherever she fell to, then hand off to her
+                // real water controller (flips gravity off, relinquishes control, IsSwimming(), zeroes velocity, drives
+                // swim/jump-out — it does NOT re-level her vertically, so this one snap is the only thing setting her
+                // swim depth). A hard Y-teleport ignores collision, so snapping UP blindly could shove her into terrain
+                // near an edge. She usually free-falls in and overshoots well below the surface (a long down-transition
+                // drop lands her deep in a single physics step), so gate the up-snap on a clear path: raycast up to the
+                // surface and only snap when no terrain is in the way; otherwise float in place (she can swim/jump up).
                 var p = hero.transform.position;
-                var snapped = surfaceY <= p.y + SnapUpTolerance;
+                var rise = surfaceY - p.y;
+                var blocked = rise > 0f && Physics2D.Raycast(p, Vector2.up, rise, TerrainMask).collider != null;
+                var snapped = !blocked;
                 if (snapped) hero.transform.position = new Vector3(p.x, surfaceY, p.z);
 
                 EnsureCarrier();
                 wc.EnterWaterRegion(carrier);
 
-                Log.Debug($"[AcidSwim] enter '{currentAcid.name}' surfaceY={surfaceY:F2} fromY={p.y:F2} " +
-                          (snapped ? "snapped to surface" : "below surface -> float in place (no up-teleport)"));
+                Log.Debug($"[AcidSwim] enter '{currentAcid.name}' surfaceY={surfaceY:F2} fromY={p.y:F2} rise={rise:F2} " +
+                          (snapped ? "snapped to surface" : "terrain overhead -> float in place"));
             }
 
             floating = true;
