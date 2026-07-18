@@ -12,6 +12,7 @@
 - hollow knight statue cutscene
 - kings brand cutscene
 - hornet hud is too large, it overlaps with text boxes
+- spike pogo no sound
 
 ## Integration
 - XX hardsaves
@@ -26,6 +27,7 @@
 - weaver entry not showing up
 - beastling call
 - abyss water oob
+- saw / spike harpoon
 
 # Balancing
 - soul totem <-> silk
