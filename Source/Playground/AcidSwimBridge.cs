@@ -6,6 +6,7 @@ using UnityEngine;
 using Object = UnityEngine.Object;
 using SWaterController = Silksong::HeroWaterController;
 using SWaterRegion = Silksong::SurfaceWaterRegion;
+using HeroTransitionState = Silksong::GlobalEnums.HeroTransitionState;
 
 namespace HornetPlayer.Playground;
 
@@ -64,6 +65,13 @@ internal static class AcidSwimBridge {
     // Called by ContactDamageBridge for every armoured acid overlap frame (ACID hazard whose damage Isma's Tear zeroed).
     internal static void NotifyInAcid(GameObject acid) {
         if (acid == null || !HeroSwitch.HornetActive) return;
+        // Don't engage mid-transition: entering a scene, her body is dropped in at the gate and can overlap the
+        // destination's acid before she's settled (a down-transition into an acid room fires this from ENTERING_SCENE/
+        // DROPPING_DOWN). EnterWaterRegion would then flip gravity / relinquish control / snap her position while the
+        // transition is still placing her. WAITING_TO_TRANSITION is the normal resting state; the overlap callback keeps
+        // firing, so swim engages the moment she's actually settled and still in the acid.
+        var hero = BundleSpike.RealHero;
+        if (hero == null || hero.transitionState != HeroTransitionState.WAITING_TO_TRANSITION) return;
         inAcidGrace = GracePeriod;
         if (floating) return; // already swimming; ExitWatch handles the rest — no need to re-resolve the collider
         currentAcid = acid.GetComponent<Collider2D>() ?? acid.GetComponentInParent<Collider2D>();
