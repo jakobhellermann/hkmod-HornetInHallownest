@@ -1,44 +1,38 @@
-# Bugs
-
 ## Cosmetic
 - dreamer:
     - needolin on a dreamer fires instantly
     - freeing prompt shows "HOLD A to Focus" instead of HOLD D
     - dreamer walls are climbable
-- camera positioning
-- death animation
-- hornet bench location
-- VS/dive animation shows knight always
-- hollow knight statue cutscene
-- kings brand cutscene
-- hornet hud is too large, it overlaps with text boxes
-- spike pogo no sound
-- fix control shriek cutscene 
+- Camera sometimes snaps abuptly (-> reuse SS camera controller)
+- Use lethal death animation if appropriate
+- Animations showing knight:
+    - VS, dive, kings brand, stag travel
+- Control during animation: shriek cutscene
+- Hornet HUD is too large, it overlaps with text boxes
+- Inventory: no UI hints for key mapping
+- Sound:
+    - No sound on abyss spikes as hornet
 
 ## Integration
 - XX hardsaves
-- XX game finish animation not shown
 - XX full mask shard -> instant hud update
-- elevator/lift transitions: Knight strands at shaft top, Hornet falls to bottom, camera-lock stuck up top (dark)
-- dash into elevator: bump
-- sprint-attack (dash-stab) misses HK trigger-breakables (e.g. Watcher Knights chandelier rope, Ruins2_03)
-- lantern always active
-- weaver entry not showing up
-- beastling call
-- saw / spike harpoon
+- XX Elevator: broken?
+- Sprint into elevator bumps
+- Sprint-attack misses Watcher Knights chandelier rope
+- Weavernest entry doesn't show up
+- Harpoon: doesn't iframe as expected on Sawblades/Spikes
+- Not implemented:
+    - Beastling call
+- Dirtmouth doesn't apply slowdown
+- Hive Knight bees don't get knockback
 
 # Balancing
-- soul totem <-> silk
+- Think about soul totem <-> silk mapping
 
-## Nive to have
-- dirtmouth slowdown
-- hive knight bee knockback
-
-## Intermittent / needs debug
-- cannot bench sometimes
-
-## Double check
-- XX double check descending dark, cdash pickup
+## Double check before release
+- XX descending dark, cdash pickup
 - king soul fragment softlock whitesceen
 - scream control dung defender - fixed?
+- hollow knight statue cutscene
 - acid before ismas
+- Lantern
