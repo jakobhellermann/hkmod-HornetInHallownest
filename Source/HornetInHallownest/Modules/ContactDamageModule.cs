@@ -51,7 +51,7 @@ public sealed class ContactDamageModule : ModuleBase {
             }
 
             // Isma's zeroes damageDealt
-            if (ssHazard == SHazard.ACID && dmg == 0) AcidSwimBridge.NotifyInAcid(other);
+            if (ssHazard == SHazard.ACID && dmg == 0) SwimModule.NotifyInAcid(other);
             if (dmg <= 0) return;
 
             var hc = SHeroController.instance;

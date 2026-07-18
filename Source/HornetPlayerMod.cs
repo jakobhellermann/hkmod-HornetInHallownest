@@ -77,7 +77,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         InputBridge.Cleanup();
         HornetEnvironmentAdapter.Cleanup();
         HeroSwitch.Cleanup();
-        AcidSwimBridge.Cleanup();
         FsmTracer.Cleanup();
         HkFsmTracer.Cleanup();
         HeroControllerProbe.Cleanup();
@@ -210,8 +209,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         DebugServer.MapPost("/hazard",
             req => DeathModule.Hazard(req["type"] ?? "3")); // debug: trigger hazard N (2=spikes,3=acid,4=lava,5=pit)
         DebugServer.MapPost("/acid-offset", req => {
-            if (float.TryParse(req["value"], out var v)) AcidSwimBridge.SurfaceOffset = v;
-            return new { AcidSwimBridge.SurfaceOffset }; // tune where Hornet's origin sits vs the acid surface line
+            if (float.TryParse(req["value"], out var v)) SwimModule.SurfaceOffset = v;
+            return new { SwimModule.SurfaceOffset }; // tune where Hornet's origin sits vs the acid surface line
         });
         DebugServer.MapPost("/validate",
             (req, respond) =>
@@ -317,6 +316,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new HeroBroadcastModule());
         moduleHost.Add(new SceneFixesModule());
         moduleHost.Add(new ContactDamageModule());
+        moduleHost.Add(new SwimModule());
         moduleHost.Add(new ShadowDashModule());
         moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new BenchModule());
