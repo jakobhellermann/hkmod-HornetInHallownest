@@ -1,3 +1,4 @@
+extern alias Silksong;
 extern alias SilksongPM;
 using System;
 using HornetPlayer.HornetInHallownest.Core;
@@ -22,12 +23,18 @@ public sealed class HeroBroadcastModule : ModuleBase {
         try {
             var name = ev?.Name;
             if (string.IsNullOrEmpty(name) || !HeroSwitch.HornetActive) return;
-            
+
             var hero = HornetSpawner.RealHero;
             if (!hero || go != hero.gameObject) return;
 
-            if (name == "ROAR ENTER") SetRoarEmitter(hero.gameObject, self.GameObject); 
-            
+            // The roar's real source is HK's "Roar Object" (a boss body), not the event sender.
+            if (name == "ROAR ENTER") {
+                var source = FsmLookupModule.RoarObject;
+                if (!source) source = self.GameObject;
+                try { SetRoarFacingTarget(hero.gameObject, source); }
+                catch (Exception e) { LogError($"roar facing: {e.Message}"); }
+            }
+
             foreach (var fsm in hero.gameObject.GetComponents<SilksongPM::PlayMakerFSM>())
                 fsm.SendEvent(name);
         } catch (Exception e) {
@@ -37,15 +44,20 @@ public sealed class HeroBroadcastModule : ModuleBase {
 
     #region Roar facing
 
-    // The relay can't carry the roar push direction - HK seeds it on the Knight's "Roar Lock" FSM, which Hornet lacks.
-    // so point her "Roar and Wound States" FSM's "Roar Wave Emitter" at the roaring boss (the sender) before ROAR ENTER.
-    private static void SetRoarEmitter(GameObject heroGo, GameObject? sender) {
-        if (!sender) return;
+    // Hornet faces a roar by comparing her x to a "Roar Wave Emitter" object's x (CheckTargetDirection). HK bosses never
+    // position that object (Silksong bosses do; HK's own facing lives on the Knight-only "Roar Lock" FSM she lacks), and
+    // the emitter isn't a real FsmVariable, so it can't be rebound by name. Feed the roaring boss straight into the
+    // action's target instead, before ROAR ENTER enters the state that reads it.
+    private static void SetRoarFacingTarget(GameObject heroGo, GameObject? boss) {
+        if (!boss) return;
         foreach (var fsm in heroGo.GetComponents<SilksongPM::PlayMakerFSM>()) {
-            if (fsm.FsmName == "Roar and Wound States") {
-                fsm.FsmVariables.GetFsmGameObject("Roar Wave Emitter")?.Value = sender;
-                return;
-            }
+            if (fsm.FsmName != "Roar and Wound States") continue;
+            var state = fsm.Fsm.GetState("Roar Lock Start");
+            if (state == null) return;
+            foreach (var action in state.Actions)
+                if (action is Silksong::HutongGames.PlayMaker.Actions.CheckTargetDirection ctd && ctd.target != null)
+                    ctd.target.Value = boss;
+            return;
         }
     }
 

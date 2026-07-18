@@ -29,6 +29,8 @@ public sealed class FsmLookupModule : ModuleBase {
     protected override void OnDeinitialize() {
         heroDummies.Clear();
         damagesDummy = null;
+        roarLockDummy = null;
+        roarObjectVar = null;
         if (holder) Object.Destroy(holder);
         holder = null;
     }
@@ -39,6 +41,8 @@ public sealed class FsmLookupModule : ModuleBase {
     }
 
     private PlayMakerFSM? TryPatch(GameObject go, string fsmName) {
+        if (fsmName == "Roar Lock" && go.GetComponent<Silksong::HeroController>())
+            return RoarLockDummy();
         if (heroInertNames.Contains(fsmName) && go.GetComponent<Silksong::HeroController>())
             return HeroDummy(fsmName);
         if (fsmName == "damages_enemy") {
@@ -62,6 +66,19 @@ public sealed class FsmLookupModule : ModuleBase {
         return dummy;
     }
     #endregion
+
+    internal static GameObject? RoarObject => roarObjectVar?.Value;
+    private static FsmGameObject? roarObjectVar;
+    private PlayMakerFSM? roarLockDummy;
+
+    private PlayMakerFSM RoarLockDummy() {
+        if (!roarLockDummy) {
+            roarLockDummy = NewDummy("Roar Lock");
+            roarLockDummy.Fsm.Variables.GameObjectVariables = [roarObjectVar = new FsmGameObject("Roar Object")];
+        }
+
+        return roarLockDummy;
+    }
 
     // Hero-owned FSMs the Knight has and Hornet lacks -> an empty dummy (Set/GetFsm* null-check the var, so it's a no-op).
     private static readonly HashSet<string> heroInertNames = ["Dream Return", "ProxyFSM"];
