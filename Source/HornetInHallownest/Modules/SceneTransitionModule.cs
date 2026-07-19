@@ -25,6 +25,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     private GameObject? driverGo;
 
     private bool pendingSnap, dreamReturnPending, hkEntryFixed, dreamGateEntryPending;
+    private bool cameraCaughtUp;
 
     // A Dream-visualization arrival is in flight (set at BeginSceneTransition, consumed by Tick). HK warps dream entries
     // in via EnterSceneDreamGate (gravity off, no door walk-out); route Hornet the same way even when HK drove the Knight
@@ -44,6 +45,7 @@ public sealed class SceneTransitionModule : ModuleBase {
 
         driverGo = new GameObject("HornetPlayer.SceneTransitionDriver");
         driverGo.AddComponent<SceneTransitionDriver>().Module = this;
+        driverGo.AddComponent<SceneEntryCameraGlue>().Module = this;
         Object.DontDestroyOnLoad(driverGo);
     }
 
@@ -209,6 +211,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         // only a real dream exit when the departed scene is still loaded and named. Null -> not a dream.
         dreamReturnPending = from.name?.StartsWith("Dream", StringComparison.Ordinal) ?? false;
         hkEntryFixed = false;
+        cameraCaughtUp = false;
         // Leaving a dream scene leaves a white blanker faded in that HK's Knight-only Dream Return FSM would fade out.
         if (dreamReturnPending) ClearDreamWhiteBlanker();
         var knight = HeroController.UnsafeInstance;
@@ -263,6 +266,27 @@ public sealed class SceneTransitionModule : ModuleBase {
         hornet.transform.position = knight.transform.position;
         var rb = hornet.GetComponent<Rigidbody2D>();
         if (rb && rb.simulated) rb.linearVelocity = Vector2.zero;
+    }
+
+    // Catch the render camera up to the hero on entry. HK's DoPositionToHero should snap it, but races our out-of-band
+    // placement.
+    // TODO: check if this can be removed somehow. Reproducible in transition out of greenpath stag.
+    internal void GlueCameraDuringEntry() {
+        if (cameraCaughtUp || !HeroSwitch.HornetActive) return;
+        var gm = GameManager.UnsafeInstance;
+        if (!gm || gm.gameState != GameState.ENTERING_LEVEL) return;
+        var gameCameras = GameCameras.instance;
+        var cameraController = gameCameras ? gameCameras.cameraController : null;
+        var ct = gameCameras ? gameCameras.cameraTarget : null;
+        if (!cameraController || !ct) return;
+        var cam = cameraController.transform.position;
+        var cty = ct.transform.position.y;
+        // Fix ONLY the stale vertical carry-over (the "camera glides in from below"), and only once per entry. Y-only: HK's
+        // lock-zone X clamp legitimately sits far from camTarget.x (e.g. xLockMin at a room edge), so touching X fights the
+        // clamp -> oscillation. Latch: once the camera Y is on camTarget, hand everything back to HK's follow untouched.
+        if (Mathf.Abs(cam.y - cty) <= 5f) return;
+        cameraController.transform.position = new Vector3(cam.x, cty, cam.z);
+        cameraCaughtUp = true;
     }
 
     // enterWithoutInput entries deliberately skip AcceptInput (expecting an HK arrival FSM to close them); Hornet has none.
@@ -485,5 +509,15 @@ internal sealed class SceneTransitionDriver : MonoBehaviour {
 
     private void Update() {
         Module.Tick();
+    }
+}
+
+// after HK's CameraController.LateUpdate at default 0
+[DefaultExecutionOrder(10000)]
+internal sealed class SceneEntryCameraGlue : MonoBehaviour {
+    internal SceneTransitionModule Module = null!;
+
+    private void LateUpdate() {
+        Module.GlueCameraDuringEntry();
     }
 }
