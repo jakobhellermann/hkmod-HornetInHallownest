@@ -31,7 +31,6 @@
 - soul totem <-> silk
 
 ## Nive to have
-- hud sync? geo on hornet
 - dirtmouth slowdown
 - hive knight bee knockback
 

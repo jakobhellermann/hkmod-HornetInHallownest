@@ -45,6 +45,10 @@ internal static class GameCamerasBootstrap {
 
     internal static bool HornetHudReady => inGame != null;
 
+    // Fires when Hornet's in-game HUD transitions to visible. Consumers re-trigger HUD elements that reset while their
+    // GameObject is deactivated (a hero switch deactivates the whole In-game GO).
+    internal static event Action? HornetHudShown;
+
     // Hot-reload safe: the DDOL rig survives our DLL reload (our `rig` static doesn't) — reuse it, found by its name.
     private static GameObject? FindExistingRig() {
         foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
@@ -277,8 +281,9 @@ internal static class GameCamerasBootstrap {
 
     // Toggle Hornet's HUD content ("In-game") without re-running BringUpHud. Cheap; SetActive only on change.
     internal static void SetHornetHudVisible(bool on) {
-        if (inGame == null) return;
-        if (inGame.gameObject.activeSelf != on) inGame.gameObject.SetActive(on);
+        if (inGame == null || inGame.gameObject.activeSelf == on) return;
+        inGame.gameObject.SetActive(on);
+        if (on) HornetHudShown?.Invoke();
     }
 
     // Park Silksong's neutered main camera transform on HK's live camera: AudioEventManager distance-culls 3D one-shots

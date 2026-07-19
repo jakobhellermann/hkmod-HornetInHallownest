@@ -300,6 +300,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new AnimationRemapModule());
         moduleHost.Add(new MinorFixesModule());
         moduleHost.Add(new PlayerDataSyncModule());
+        moduleHost.Add(new CurrencyModule());
         moduleHost.Add(new FsmLookupModule());
         moduleHost.Add(new HeroSfxModule());
         moduleHost.Add(new DamageEnemiesModule());
