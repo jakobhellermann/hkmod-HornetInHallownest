@@ -25,7 +25,6 @@
 - lantern always active
 - weaver entry not showing up
 - beastling call
-- abyss water oob
 - saw / spike harpoon
 
 # Balancing
@@ -44,4 +43,3 @@
 - king soul fragment softlock whitesceen
 - scream control dung defender - fixed?
 - acid before ismas
-- acid / water swim

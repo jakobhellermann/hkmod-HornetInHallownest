@@ -208,10 +208,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         DebugServer.MapPost("/getup", _ => DeathModule.ForceGetUp()); // debug: unstick from bench/no_input
         DebugServer.MapPost("/hazard",
             req => DeathModule.Hazard(req["type"] ?? "3")); // debug: trigger hazard N (2=spikes,3=acid,4=lava,5=pit)
-        DebugServer.MapPost("/acid-offset", req => {
-            if (float.TryParse(req["value"], out var v)) SwimModule.SurfaceOffset = v;
-            return new { SwimModule.SurfaceOffset }; // tune where Hornet's origin sits vs the acid surface line
-        });
         DebugServer.MapPost("/validate",
             (req, respond) =>
                 validation!.RunRoute(req, respond)); // run a validation scenario (optionally disable=ModuleId,...)
