@@ -19,7 +19,6 @@
 - XX hardsaves
 - XX game finish animation not shown
 - XX full mask shard -> instant hud update
-- OOB on scene transitions immediate walkback
 - elevator/lift transitions: Knight strands at shaft top, Hornet falls to bottom, camera-lock stuck up top (dark)
 - dash into elevator: bump
 - sprint-attack (dash-stab) misses HK trigger-breakables (e.g. Watcher Knights chandelier rope, Ruins2_03)

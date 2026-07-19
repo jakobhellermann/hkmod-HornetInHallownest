@@ -272,6 +272,17 @@ public sealed class SceneTransitionModule : ModuleBase {
         var wasEnterWithoutInput = self.enterWithoutInput;
         var isMoveResume = self.exitedSuperDashing || self.exitedQuake || self.exitedSprinting;
         orig(self, setHazardMarker, preventRunBob);
+
+        // HK's gameState ist driven by the HK EnterScene, which finishes after Hornet.
+        // During that window she has control but gates are disabled during ENTERING_LEVEL, so dashing back through the transition
+        // keeps her in the scene out of bounds.
+        if (HeroSwitch.HornetActive) {
+            var hkGm = GameManager.UnsafeInstance;
+            if (hkGm != null && hkGm.gameState == GameState.ENTERING_LEVEL) {
+                hkGm.SetState(GameState.PLAYING);
+            }
+        }
+
         if (!wasEnterWithoutInput || isMoveResume || !HeroSwitch.HornetActive) return;
         self.RegainControl();
         self.StartAnimationControl();
