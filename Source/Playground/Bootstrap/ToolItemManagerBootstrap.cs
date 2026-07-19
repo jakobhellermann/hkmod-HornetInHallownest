@@ -41,6 +41,22 @@ internal static class ToolItemManagerBootstrap {
         };
     }
 
+    // Like ToolItemManager.UnlockAllTools() but PopupFlags.None instead of Default, so it doesn't spawn a "tool get"
+    // popup per tool.
+    internal static void UnlockAllToolsSilently() {
+        var pd = Silksong::PlayerData.instance;
+        if (pd != null) {
+            pd.SeenToolGetPrompt = true;
+            pd.SeenToolWeaponGetPrompt = true;
+        }
+
+        foreach (var tool in Silksong::ToolItemManager.GetAllTools()) {
+            if (!tool) continue;
+            tool.SetUnlockedTestsComplete();
+            tool.Unlock(null, Silksong::ToolItem.PopupFlags.None);
+        }
+    }
+
     // Unlock every crest + all its tool slots: rebuild each crest's slot list from its config with IsUnlocked=true,
     // preserving equipped tools. Requires ToolItemManager + PlayerData up (post-spawn).
     internal static object UnlockAllCrestSlots() {

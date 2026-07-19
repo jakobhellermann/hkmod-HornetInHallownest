@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
+using ToolItemManager = Silksong::ToolItemManager;
 // A bare `SceneManager` binds to HK's Assembly-CSharp SceneManager (global namespace wins over the using); alias Unity's.
 using USceneManager = UnityEngine.SceneManagement.SceneManager;
 
@@ -75,9 +76,6 @@ public sealed class HornetSpawner : ModuleBase {
             try {
                 Spawn();
                 LogDebug("entered gameplay scene -> spawned Hornet");
-                // Dev convenience (like the ability-kit grant): unlock every crest's tool slots so all tools are
-                // equippable without hunting memory lockets. Runs per spawn (idempotent).
-                ToolItemManagerBootstrap.UnlockAllCrestSlots();
             } catch (Exception e) {
                 LogError(e.ToString());
             }
@@ -156,6 +154,12 @@ public sealed class HornetSpawner : ModuleBase {
         realHero = heroController;
 
         PlayerDataSyncModule.SyncHKToSS();
+
+        // Tools and crests are granted up front; only silk skills are playthrough-gated (via PlayerDataSyncModule).
+        ToolItemManagerBootstrap.UnlockAllToolsSilently();
+        ToolItemManager.UnlockAllCrests();
+        ToolItemManagerBootstrap.UnlockAllCrestSlots();
+
         try {
             GameCamerasBootstrap.BringUpHud(true);
         } catch (Exception e) {
