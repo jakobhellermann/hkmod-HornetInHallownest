@@ -2,6 +2,7 @@ extern alias Silksong;
 using System;
 using HornetPlayer.HornetInHallownest.Core;
 using HornetPlayer.Playground;
+using HutongGames.PlayMaker;
 using Modding;
 
 namespace HornetPlayer.HornetInHallownest.Modules;
@@ -16,6 +17,20 @@ public sealed class BenchModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         ModHooks.SetPlayerBoolHook -= OnSetBool;
+        ResetAtBench();
+    }
+
+    private static void ResetAtBench() {
+        if (!HeroSwitch.HornetActive) return;
+        var pd = PlayerData.instance;
+        if (pd is not { atBench: true }) return;
+        foreach (var fsm in UnityEngine.Object.FindObjectsByType<PlayMakerFSM>(UnityEngine.FindObjectsSortMode.None)) {
+            if (fsm.FsmName != "Bench Control" || fsm.ActiveStateName is "Idle" or "Inert" or "") continue;
+            fsm.enabled = false; // RestartOnEnable -> Init -> Check Start State -> Idle
+            fsm.enabled = true;
+        }
+
+        pd.SetBool("atBench", false);
     }
 
     private bool OnSetBool(string name, bool value) {
