@@ -17,7 +17,12 @@ public abstract class ModuleBase {
 
     private readonly List<IDisposable> disposables = [];
 
+    internal static bool Paused => Time.timeScale == 0f;
+
     public abstract string Id { get; }
+
+    // Whether HornetActiveUpdate should run while the game is paused
+    public virtual bool RunWhilePaused => false;
 
     public abstract void Initialize();
 

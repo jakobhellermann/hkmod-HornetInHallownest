@@ -14,9 +14,10 @@ namespace HornetPlayer.Playground;
 // scene loads). That's a parallel "shadow world" we explicitly don't want.
 //
 // The price is that the per-frame bookkeeping those Awake/Update methods would do never happens. Rather than scatter
-// the fixes, this one component runs exactly the small set the hero code reads each frame. Add new per-frame needs
-// HERE (and one-time setup in SilksongBootstrap) — keep InputDriver to input only.
-[DefaultExecutionOrder(-9000)] // after InputDriver (-10000) commits input, before HeroController.Update (0)
+// the fixes, this one component runs exactly the small set the hero code reads each frame, and pumps the module list
+// (InputModule first — it commits input from HK's bound actions — then the migrated gameplay modules). Add new
+// per-frame needs HERE (and one-time setup in SilksongBootstrap).
+[DefaultExecutionOrder(-9000)] // pump input + modules here, before HeroController.Update (0) reads inputActions
 internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private static GameObject? go;
     private static FieldInfo? isGameplaySceneField;
@@ -29,6 +30,8 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private void Update() {
         try {
             var paused = Time.timeScale <= 0.0001f;
+            var pd = Silksong::PlayerData.instance;
+            var inventoryOpen = pd != null && pd.isInventoryOpen;
 
             // Mirror HK's pause onto Silksong's GameManager so the hero pipeline (LookForInput gates on GameState)
             // freezes with HK instead of running through the pause.
@@ -43,10 +46,6 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                     paused ? Silksong::GlobalEnums.GameState.PAUSED : Silksong::GlobalEnums.GameState.PLAYING);
             }
 
-            if (paused) return;
-
-            // HeroController: Start's non-gameplay path left the component disabled + isGameplayScene=false (our gm
-            // isn't a "gameplay scene"), so Unity never ticks Update / LookForInput early-returns. Re-assert both.
             // Only drive Hornet while SHE is the active character; when Knight is active she stays inert (HeroSwitch
             // disabled her HeroController + Rigidbody) so we must NOT force-enable her here.
             var hero = BundleSpike.RealHero;
@@ -56,23 +55,31 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 HornetPlayerMod.LoadedInstance?.Modules.HornetToggled(active);
             }
 
-            if (hero != null && HeroSwitch.HornetActive) {
-                if (!hero.enabled) hero.enabled = true;
+            // HeroController: Start's non-gameplay path left the component disabled + isGameplayScene=false (our gm
+            // isn't a "gameplay scene"), so Unity never ticks Update / LookForInput early-returns. Re-assert both — but
+            // only during actual gameplay, not while the inventory freezes the world (we don't force-drive her there).
+            if (active && !paused) {
+                if (!hero!.enabled) hero.enabled = true;
                 isGameplaySceneField ??= typeof(Silksong::HeroController)
                     .GetField("isGameplayScene", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                 isGameplaySceneField?.SetValue(hero, true);
-
-                HornetPlayerMod.LoadedInstance?.Modules
-                    .HornetActiveUpdate(hero); // migrated per-frame modules (Needolin, GeoDash, QuakeFloor, …)
             }
+
+            // Also pump while the inventory is open — the world is frozen at timeScale=0 but input must still reach the
+            // inventory. A full pause menu (paused && !inventoryOpen) skips it.
+            if (active && (!paused || inventoryOpen))
+                HornetPlayerMod.LoadedInstance?.Modules.HornetActiveUpdate(hero!);
+
+            if (paused) return;
 
             // --- The bookkeeping half of InputHandler.Update ---
             // InputHandler.Update never ticks (its GO is inactive). Its body splits cleanly in two: per-frame
             // bookkeeping the hero pipeline needs, and environment coupling we deliberately reject (SetCursorVisible
             // touches the OS cursor HK owns; UpdateActiveController -> SetupGamepadUIInputActions rebinds gamepad UI;
             // inputActions.Pause.WasPressed -> gm.PauseGameToggle runs *Silksong's* pause). So we don't run Update();
-            // we run its bookkeeping methods by reflection — after InputDriver (-10000) commits WasPressed, before
-            // HeroController/FSMs read it (this component is -9000). Add further Update-maintained state HERE.
+            // we run its bookkeeping methods by reflection — after the module pump above committed input this frame
+            // (InputModule ran first), before HeroController/FSMs read it (this component is -9000, they are @0).
+            // Add further Update-maintained state HERE.
             var ih = SilksongBootstrap.Handler;
             if (ih != null) {
                 // UpdateButtonQueueing(): maintains buttonQueueTimers[] — the ~0.1s queued-press window read by
@@ -90,17 +97,22 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
                 if (ih.inputActions != null && !ih.inputActions.DreamNail.IsPressed)
                     ih.ForceDreamNailRePress = false;
 
-                // Mark keyboard as the active controller. InputHandler.Update (which we don't run) maintains this from
-                // InControl's device detection (UpdateActiveController, from inputActions.LastInputType); we bypass
-                // InControl, so it stays None -> Platform.WasLastInputKeyboard is false. That silently breaks menus that
-                // special-case keyboard: e.g. Platform.GetMenuAction only maps DreamNail(D)->MenuActions.Super (the
-                // inventory's change-crest shortcut) on the keyboard branch, so D never changed the crest. We ARE keyboard.
-                // Edge-only: set it once when it isn't already keyboard, then fire RefreshActiveControllerEvent (via the
-                // private SendRefreshEvent) so the glyph UIs (UIButtonSkins/ActionButtonIconBase, which cache their icon
-                // and only recompute on that event) switch to keyboard prompts. Skipping the refresh leaves stale glyphs
-                // computed while it was still None. Firing once (not per frame) avoids recomputing every subscriber's icon.
-                if (ih.lastActiveController != Silksong::InControl.BindingSourceType.KeyBindingSource) {
-                    ih.lastActiveController = Silksong::InControl.BindingSourceType.KeyBindingSource;
+                // Mirror HK's active controller (keyboard vs gamepad) onto Silksong's InputHandler. InputHandler.Update
+                // (which we don't run) maintains this from InControl's device detection (UpdateActiveController, from
+                // inputActions.LastInputType); we bypass Silksong's InControl, so its own stays None ->
+                // Platform.WasLastInputKeyboard is false. That silently breaks menus that special-case keyboard: e.g.
+                // Platform.GetMenuAction only maps DreamNail(D)->MenuActions.Super (the inventory change-crest shortcut)
+                // on the keyboard branch. Since InputModule now feeds Hornet from HK's own bound input (keyboard AND
+                // gamepad), take the device from HK's InputHandler.lastActiveController — the BindingSourceType enums are
+                // identical in both games, so cast by value. Edge-only (on change), then fire RefreshActiveControllerEvent
+                // (via the private SendRefreshEvent) so the glyph UIs (UIButtonSkins/ActionButtonIconBase, which cache
+                // their icon and only recompute on that event) switch prompts. Firing per frame would recompute every
+                // subscriber's icon needlessly.
+                var hkController = InputHandler.Instance != null
+                    ? (Silksong::InControl.BindingSourceType)(int)InputHandler.Instance.lastActiveController
+                    : Silksong::InControl.BindingSourceType.KeyBindingSource;
+                if (ih.lastActiveController != hkController) {
+                    ih.lastActiveController = hkController;
                     sendRefreshEventMethod ??= typeof(Silksong::InputHandler)
                         .GetMethod("SendRefreshEvent", BindingFlags.Instance | BindingFlags.NonPublic);
                     sendRefreshEventMethod?.Invoke(ih, null);

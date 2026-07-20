@@ -16,7 +16,7 @@ using Object = UnityEngine.Object;
 
 namespace HornetPlayer;
 
-public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData> {
+public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData>, IGlobalSettings<HornetGlobalSettings> {
     // Distinct from Silksong's DevUtils server (8200) so both games can be debugged at once.
     private const int DebugServerPort = 8201;
 
@@ -28,6 +28,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
     private GameObject? playgroundHost;
     private ValidationRunner? validation;
+    private HornetGlobalSettings globalSettings = new();
 
     public static HornetPlayerMod? LoadedInstance { get; private set; }
 
@@ -39,6 +40,16 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
     public void OnLoadLocal(HornetSaveData s) {
         HornetSaveBridge.Stash(s);
+    }
+
+    public void OnLoadGlobal(HornetGlobalSettings s) {
+        globalSettings = s;
+        InputModule.Settings = s.Controls;
+    }
+
+    public HornetGlobalSettings OnSaveGlobal() {
+        globalSettings.Controls = InputModule.Settings;
+        return globalSettings;
     }
 
     public override string GetVersion() {
@@ -74,7 +85,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         GlobalSettingsBootstrap.Cleanup();
         PlayMakerFix.Cleanup();
         Stub.Cleanup();
-        InputBridge.Cleanup();
+        DebugKeybinds.Cleanup(); // InputModule tears down via moduleHost.DeinitializeAll above
+        InputDebug.Cleanup();
         HornetEnvironmentAdapter.Cleanup();
         HeroSwitch.Cleanup();
         FsmTracer.Cleanup();
@@ -258,10 +270,10 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             // Accept `a` or `action`; reject unknown names instead of silently pressing `right` (a debug footgun: a
             // typo used to drive movement and stick move_input). Bounded by `frames` (default 60 ≈ 1s) — never forever.
             var a = (req["a"] ?? req["action"])?.ToLowerInvariant();
-            if (a == null || !InputBridge.IsKnownAction(a))
-                return new { error = $"unknown action '{a}'; known: {string.Join(",", InputBridge.KnownActions)}" };
+            if (a == null || !InputDebug.IsKnownAction(a))
+                return new { error = $"unknown action '{a}'; known: {string.Join(",", InputDebug.KnownActions)}" };
             if (!int.TryParse(req["frames"], out var f) || f <= 0) f = 60;
-            InputBridge.Press(a, f); // debug-drive an InControl action for f frames (no physical key needed)
+            InputDebug.Press(a, f); // debug-drive an InControl action for f frames (no physical key needed)
             return new { action = a, frames = f };
         });
         DebugServer.MapPost("/log-once", req => {
@@ -279,7 +291,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         ResourcesShim.Install(); // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
         PlayMakerFix.Apply();
         Stub.Install();
-        InputBridge.Install();
+        DebugKeybinds.Install(); // dev-only hotkeys (T/B/Digit8); input itself is InputModule in the module host
+        InputDebug.Install(); // dev-only /press action driver
         HornetEnvironmentAdapter.Install();
         HeroSwitch.Install();
         FsmTracer.Install(); // live FSM state/event tracer (armed via POST /fsm-trace?names=...)
@@ -293,6 +306,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
         // New lifecycle backbone: register migrated modules in order, then init them. Initialize runs forward,
         // Deinitialize reverse — HornetSpawner is last so it despawns Hornet first on teardown.
+        moduleHost.Add(new InputModule()); // FIRST: commit input before any module/HeroController reads inputActions
         moduleHost.Add(new PlayerLoopModule());
         moduleHost.Add(new BreakableFloorModule());
         moduleHost.Add(new DashGeoPickupModule());

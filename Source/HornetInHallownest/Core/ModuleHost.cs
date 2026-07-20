@@ -31,8 +31,10 @@ public sealed class ModuleHost {
     }
 
     public void HornetActiveUpdate(Silksong::HeroController hero) {
+        var paused = ModuleBase.Paused;
         foreach (var m in modules) {
             if (!active.Contains(m.Id)) continue;
+            if (paused && !m.RunWhilePaused) continue;
             try {
                 m.HornetActiveUpdate(hero);
             } catch (Exception e) {
