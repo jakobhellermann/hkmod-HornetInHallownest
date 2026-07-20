@@ -6,7 +6,6 @@ using System.Reflection;
 using HornetPlayer.HornetInHallownest.Core;
 using HornetPlayer.HornetInHallownest.Util;
 using HornetPlayer.Playground;
-using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
 using UnityEngine;
 
@@ -54,6 +53,20 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
 
     public override void Initialize() {
         Detour(typeof(CallMethodProper), "DoCache", DoCacheHook);
+        Detour(typeof(CallMethodProper), "DoMethodCall", DoMethodCallHook);
+    }
+
+    // CallMethodProper caches the resolved behaviour instance on the first call and invokes on it forever, after we
+    // retarget Hero (switch or respawn) that's stale.
+    private static void DoMethodCallHook(Action<CallMethodProper> orig, CallMethodProper self) {
+        if (self.GetFieldValue<MethodInfo>("cachedMethodInfo") != null) {
+            var target = self.Fsm.GetOwnerDefaultTarget(self.gameObject);
+            var cached = self.GetFieldValue<UnityEngine.Object>("cachedBehaviour") as Component;
+            if (target && (!cached || cached.gameObject != target))
+                self.SetFieldValue("cachedMethodInfo", null);
+        }
+
+        orig(self);
     }
 
     private bool DoCacheHook(Func<CallMethodProper, bool> orig, CallMethodProper self) {
