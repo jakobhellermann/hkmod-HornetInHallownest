@@ -165,10 +165,10 @@ public sealed class DeathModule : ModuleBase {
         // HK's respawn woke the inert Knight, so re-assert the active-hero split (who==prev, just re-inerts both).
         HeroSwitch.SetActive(ActiveHero.Hornet);
 
-        // HK's death disabled Hornet's HUD mask renderers; the per-frame visibility sync only SetActive-s "In-game" on
-        // change, so with it already active the FSMs' OnEnable never re-fires (the "HUD gone until Tab Tab" symptom).
-        // Deactivate once here; CameraSwitchDriver re-activates it next frame, re-running to appear.
+        // HK's death disabled the HUD mask renderers; they only re-appear on the "In-game" GO's OnEnable, and SetActive
+        // above already showed the HUD. Toggle it off->on to force that OnEnable to re-fire.
         GameCamerasBootstrap.SetHornetHudVisible(false);
+        GameCamerasBootstrap.SetHornetHudVisible(true);
     }
 
     private static IEnumerator Empty() {

@@ -301,8 +301,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             .Install(); // DIAGNOSTIC: log which HK HeroController methods are called on the Knight while Hornet active
         PlayMakerWarningContext
             .Install(); // add GO+scene context to "Could not find FSM" / dedup "Fsm not initialized" burst
-        // NOTE: HeroTargetModule.SyncGlobal (PlayMaker global "Hero") is driven per-frame from CameraSwitchDriver.Update.
-        // BundleSpike.Run();
 
         // New lifecycle backbone: register migrated modules in order, then init them. Initialize runs forward,
         // Deinitialize reverse — HornetSpawner is last so it despawns Hornet first on teardown.

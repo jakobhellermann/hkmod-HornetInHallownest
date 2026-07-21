@@ -2,9 +2,11 @@ extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using HornetPlayer.HornetInHallownest.Util;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
+using HornetPlayer.HornetInHallownest.Modules;
 
 namespace HornetPlayer.Playground;
 
@@ -26,9 +28,6 @@ internal static class GameCamerasBootstrap {
         { 59515797, "Inventory" }, { 1017658613, "Scene Border" }
     };
 
-    // HK's GameCameras._instance field (not the `instance` getter — it logs "Couldn't find GameCameras" when null,
-    // and this runs per-frame via HeroSwitch -> spam). global::GameCameras is HK's (unprefixed).
-    private static FieldInfo? hkGcInstanceField;
     private static Vector3 hkHudScale = Vector3.one; // HK hudCanvas' real scale, cached so we can restore after hiding
     private static HashSet<PlayMakerFSM>? disabledHudFsms; // HK HUD FSMs we disabled when Knight is inert
 
@@ -286,9 +285,52 @@ internal static class GameCamerasBootstrap {
         if (on) HornetHudShown?.Invoke();
     }
 
+    // Re-point everything HK owns at the active hero. HK re-grabs all of this to its Knight on scene entry (CameraTarget
+    // in SceneInit, vignette re-parent, hudCanvas re-enable), so this is called on both triggers that need it: a hero
+    // switch (HeroSwitch.SetActive) and scene entry (HornetSpawner, after the hero is placed). No per-frame polling.
+    internal static void SyncToActiveHero() {
+        RetargetCamera(HeroSwitch.TransformOf(HeroSwitch.ActiveHeroGameObject));
+        EnsureVignetteOnCamera();
+        SyncAudioCamera();
+        if (HornetHudReady) {
+            SetHornetHudVisible(HeroSwitch.HornetActive);
+            SetHkHudVisible(!HeroSwitch.HornetActive);
+        }
+        else {
+            SetHkHudVisible(true); // no Hornet HUD yet -> always show HK's
+        }
+    }
+
+    // Point HK's CameraTarget at `t` so HK's native camera chain (damping, lock zones, scene bounds) follows it for free.
+    internal static void RetargetCamera(Transform? t) {
+        if (!t) return;
+        var gc = GameCameras.instance;
+        var camTarget = gc ? gc.cameraTarget : null;
+        if (!camTarget) return;
+        camTarget.SetFieldValue("heroTransform", t);
+    }
+
+    // Reparent the Knight's screen vignette (the scene's real per-scene darkening, driven by its Darkness Control FSM) to
+    // the render camera so it stays screen-centred for both heroes, and keep it live. Off the Knight's subtree also spares
+    // it from KnightPresence's inert FSM sweep. Idempotent (parent compare returns early).
+    internal static void EnsureVignetteOnCamera() {
+        var knight = HeroController.UnsafeInstance;
+        if (!knight || !knight.vignette) return;
+        var gc = GameCameras.instance;
+        var cam = gc ? gc.mainCamera : null;
+        if (!cam) return;
+        var vt = knight.vignette.transform;
+        if (vt.parent == cam.transform) return;
+        vt.SetParent(cam.transform, true); // keep world scale/rotation
+        var lp = vt.localPosition;
+        vt.localPosition = new Vector3(0f, 0f, lp.z); // centre on the optical axis, keep depth
+        if (!knight.vignette.gameObject.activeSelf) knight.vignette.gameObject.SetActive(true);
+        if (knight.vignetteFSM && !knight.vignetteFSM.enabled) knight.vignetteFSM.enabled = true;
+    }
+
     // Park Silksong's neutered main camera transform on HK's live camera: AudioEventManager distance-culls 3D one-shots
     // by distance from GameCameras.mainCamera, so a rig camera parked at origin culls every hero SFX. HK's
-    // AudioListener still does the mix. Cheap (one transform copy/frame); call from CameraSwitchDriver.
+    // AudioListener still does the mix.
     internal static void SyncAudioCamera() {
         try {
             if (ssMainCamT == null) {
@@ -297,9 +339,8 @@ internal static class GameCamerasBootstrap {
                 ssMainCamT = ssGc.mainCamera.transform;
             }
 
-            hkGcInstanceField ??=
-                typeof(GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
-            if (hkGcInstanceField?.GetValue(null) is not GameCameras hk || hk.mainCamera == null) return;
+            // The _instance field, not the `instance` getter (the getter logs "Couldn't find GameCameras" when null).
+            if (typeof(GameCameras).GetFieldValue<GameCameras>("_instance") is not { } hk || !hk.mainCamera) return;
             ssMainCamT.position = hk.mainCamera.transform.position;
         } catch (Exception e) {
             Log.Error($"[HUD] SyncAudioCamera: {e.Message}");
@@ -308,9 +349,7 @@ internal static class GameCamerasBootstrap {
 
     internal static void SetHkHudVisible(bool on) {
         try {
-            hkGcInstanceField ??=
-                typeof(GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
-            if (hkGcInstanceField?.GetValue(null) is not GameCameras hk || hk.hudCanvas == null) return;
+            if (typeof(GameCameras).GetFieldValue<GameCameras>("_instance") is not { } hk || !hk.hudCanvas) return;
 
             // Hide via localScale, not SetActive: re-activating hudCanvas re-fires OnEnable -> HK's ~1s HUD slide-in
             // (the switch lag). Scaling to zero hides it instantly (tk2d mesh-based, so CanvasGroup alpha wouldn't work)

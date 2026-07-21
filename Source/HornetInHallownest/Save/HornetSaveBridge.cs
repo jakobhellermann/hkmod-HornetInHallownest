@@ -3,6 +3,7 @@ using System;
 using HornetPlayer.Playground;
 using Newtonsoft.Json;
 using Newtonsoft.Json.UnityConverters;
+using HornetPlayer.HornetInHallownest.Modules;
 
 namespace HornetPlayer.HornetInHallownest.Save;
 

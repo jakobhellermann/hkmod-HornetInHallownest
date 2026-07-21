@@ -5,6 +5,7 @@ using HutongGames.PlayMaker;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using SExecStack = SilksongPM::HutongGames.PlayMaker.FsmExecutionStack;
+using HornetPlayer.HornetInHallownest.Modules;
 
 namespace HornetPlayer.Playground;
 

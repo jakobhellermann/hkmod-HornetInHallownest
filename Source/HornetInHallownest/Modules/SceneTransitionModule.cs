@@ -501,8 +501,7 @@ public sealed class SceneTransitionModule : ModuleBase {
 }
 
 // Thin per-frame ticker for SceneTransitionModule — own MonoBehaviour (not ModuleBase.HornetActiveUpdate) so it runs
-// Knight-active too. Order -8001: one step before HeroSwitch's CameraSwitchDriver (-8000) so a scene-change snap lands
-// before that driver retargets the camera the same frame.
+// Knight-active too. Early order so a scene-change snap lands before HeroController/CameraTarget (order 0) read position.
 [DefaultExecutionOrder(-8001)]
 internal sealed class SceneTransitionDriver : MonoBehaviour {
     internal SceneTransitionModule Module = null!;

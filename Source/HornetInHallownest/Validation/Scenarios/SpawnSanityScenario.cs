@@ -17,7 +17,7 @@ public sealed class SpawnSanityScenario : IScenario {
         HornetSpawner.Spawn();
 
         var hero = HornetSpawner.Hornet;
-        ctx.Assert(hero, "RealHero is null after spawn");
+        ctx.Assert(hero, "Hornet is null after spawn");
         if (!hero) yield break;
 
         ctx.Assert(!hero.cState.dead, "Hornet spawned dead");

@@ -37,8 +37,7 @@ public sealed class HeroTargetModule : ModuleBase {
 
     private static FsmGameObject? heroVar;
 
-    // Point HK's PlayMaker global "Hero" at the active hero. Driven per-frame from CameraSwitchDriver (HK re-binds it on
-    // scene entry, so we re-assert). Cheap: cached var + write only on change.
+    // Point HK's PlayMaker global "Hero" at the active hero. HK re-binds it to its Knight on scene entry.
     public static void SyncGlobal() {
         if (heroVar == null) {
             var globals = PlayMakerGlobals.Instance;

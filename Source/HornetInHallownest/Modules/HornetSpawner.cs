@@ -17,7 +17,6 @@ namespace HornetPlayer.HornetInHallownest.Modules;
 
 // Instantiate Hero_Hornet via Addressables and fix up everything required for Hollow Knight interop.
 public sealed class HornetSpawner : ModuleBase {
-    private static GameObject? heroPrefab;
     private static Silksong::HeroController? hornet;
 
     // The live spawned HeroController, cached at spawn — read hot (per-frame, across modules), so avoid a
@@ -32,11 +31,11 @@ public sealed class HornetSpawner : ModuleBase {
     // -> "GlobalPool", etc.); the monoscripts redirect in SilksongCatalog binds all m_Script PPtrs to Silksong.*.
     private static GameObject? HeroPrefab {
         get {
-            if (heroPrefab) return heroPrefab;
+            if (field) return field;
             SilksongCatalog.EnsureMounted();
-            heroPrefab = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
-            if (heroPrefab) Log.Debug("[HornetSpawner] Hero_Hornet loaded via Addressables");
-            return heroPrefab;
+            field = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
+            if (field) Log.Debug("[HornetSpawner] Hero_Hornet loaded via Addressables");
+            return field;
         }
     }
 
@@ -82,6 +81,10 @@ public sealed class HornetSpawner : ModuleBase {
 
         // Apply a save stashed earlier this LoadGame (once PlayerData.instance exists). Self-clearing no-op otherwise.
         HornetSaveBridge.ApplyPending();
+
+        // HK re-grabbed the camera/vignette/HUD/"Hero" var to its Knight during scene setup; re-point them at the active
+        // hero now that she's placed.
+        HeroSwitch.ReassertEnvironment();
     }
 
     private IEnumerator OnReturnToMainMenu(

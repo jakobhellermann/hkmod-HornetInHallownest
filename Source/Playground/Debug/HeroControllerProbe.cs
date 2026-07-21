@@ -5,6 +5,7 @@ using System.Reflection;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 using Cecil = Mono.Cecil.Cil;
+using HornetPlayer.HornetInHallownest.Modules;
 
 namespace HornetPlayer.Playground;
 
@@ -37,7 +38,7 @@ internal static class HeroControllerProbe {
 
     // Methods that are fine / already handled / not interesting — don't log (still hooked, just early-out).
     private static readonly HashSet<string> Denylist = new() {
-        // Already hand-redirected to RealHero in HeroSwitch:
+        // Already hand-redirected to Hornet in HeroSwitch:
         "CanInteract", "CanInput", "GetState"
     };
 
