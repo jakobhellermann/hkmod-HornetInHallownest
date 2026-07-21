@@ -60,7 +60,7 @@ internal static class HeroSwitch {
     // consumer, resolve the hero through this (don't re-derive HornetActive ? RealHero : Knight). Null only before the
     // Knight exists. See [[hero-fsm-real-hornet-strategy]].
     internal static GameObject? ActiveHeroGameObject =>
-        HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.gameObject :
+        HornetActive && BundleSpike.Hornet != null ? BundleSpike.Hornet.gameObject :
         HeroController.UnsafeInstance != null ? HeroController.UnsafeInstance.gameObject : null;
 
     private static void SetAllKnightFsms(GameObject knightGo, bool enabled) {
@@ -102,15 +102,15 @@ internal static class HeroSwitch {
         canInteractHook = new Hook(
             typeof(HeroController).GetMethod(nameof(HeroController.CanInteract)),
             (Func<Func<HeroController, bool>, HeroController, bool>)((orig, self) =>
-                HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.CanInteract() : orig(self)));
+                HornetActive && BundleSpike.Hornet != null ? BundleSpike.Hornet.CanInteract() : orig(self)));
         canInputHook = new Hook(
             typeof(HeroController).GetMethod(nameof(HeroController.CanInput)),
             (Func<Func<HeroController, bool>, HeroController, bool>)((orig, self) =>
-                HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.CanInput() : orig(self)));
+                HornetActive && BundleSpike.Hornet != null ? BundleSpike.Hornet.CanInput() : orig(self)));
         getStateHook = new Hook(
             typeof(HeroController).GetMethod(nameof(HeroController.GetState)),
             (Func<Func<HeroController, string, bool>, HeroController, string, bool>)((orig, self, s) =>
-                HornetActive && BundleSpike.RealHero != null ? BundleSpike.RealHero.GetState(s) : orig(self, s)));
+                HornetActive && BundleSpike.Hornet != null ? BundleSpike.Hornet.GetState(s) : orig(self, s)));
 
         Log.Debug("[HeroSwitch] installed (Tab toggles Knight<->Hornet; /switch route)");
     }
@@ -151,7 +151,7 @@ internal static class HeroSwitch {
     }
 
     internal static object SetActive(ActiveHero who) {
-        var hornet = BundleSpike.RealHero;
+        var hornet = BundleSpike.Hornet;
         if (who == ActiveHero.Hornet && hornet == null)
             return new { error = "Hornet not spawned (POST /spawn-real first)", active = Active.ToString() };
 
@@ -435,7 +435,7 @@ internal sealed class CameraSwitchDriver : MonoBehaviour {
         }
 
         if (!tracing) return;
-        var hc = BundleSpike.RealHero;
+        var hc = BundleSpike.Hornet;
         if (hc == null) return;
         var p = hc.transform.position;
         var rb = hc.GetComponent<Rigidbody2D>();

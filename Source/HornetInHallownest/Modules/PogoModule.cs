@@ -30,7 +30,7 @@ public sealed class PogoModule : ModuleBase {
 
     private void OnContinueBounce(Action<Silksong::HeroDownAttack, GameObject?> orig, Silksong::HeroDownAttack self,
         GameObject otherObj) {
-        var hero = HeroSwitch.HornetActive ? HornetSpawner.RealHero : null;
+        var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
         if (hero && otherObj) {
             // Do the dedicated launch instead of orig's normal downspike QueueBounce (which would override the bigger
             // SHROOM_BOUNCE_VELOCITY back down). A shroom/bouncer carries no DamageHero, so no damage handling is lost.

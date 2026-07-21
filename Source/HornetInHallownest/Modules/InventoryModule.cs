@@ -47,7 +47,7 @@ public sealed class InventoryModule : ModuleBase {
                 Time.timeScale = prevTimeScale;
             }
 
-            var hero = HornetSpawner.RealHero;
+            var hero = HornetSpawner.Hornet;
             if (hero) {
                 inputBlocker ??= new object();
                 if (value) hero.AddInputBlocker(inputBlocker);

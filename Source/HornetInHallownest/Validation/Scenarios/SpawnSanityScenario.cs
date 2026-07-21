@@ -16,7 +16,7 @@ public sealed class SpawnSanityScenario : IScenario {
         yield return ctx.WaitFrames(1);
         HornetSpawner.Spawn();
 
-        var hero = HornetSpawner.RealHero;
+        var hero = HornetSpawner.Hornet;
         ctx.Assert(hero, "RealHero is null after spawn");
         if (!hero) yield break;
 
@@ -24,6 +24,6 @@ public sealed class SpawnSanityScenario : IScenario {
 
         // Let the per-frame loop settle so latent errors surface, then confirm she's still there.
         yield return ctx.WaitSeconds(1f);
-        ctx.Assert(HornetSpawner.RealHero, "Hornet vanished after spawn");
+        ctx.Assert(HornetSpawner.Hornet, "Hornet vanished after spawn");
     }
 }

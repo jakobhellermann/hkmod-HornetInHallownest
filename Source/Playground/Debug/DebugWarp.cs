@@ -57,7 +57,7 @@ internal static class DebugWarp {
         // The empty-gate entry finished but never faded in -> lift the black overlay ourselves.
         GameManager.instance?.FadeSceneIn();
 
-        var hero = BundleSpike.RealHero;
+        var hero = BundleSpike.Hornet;
         if (hero != null) {
             hero.RegainControl();
             hero.AcceptInput();

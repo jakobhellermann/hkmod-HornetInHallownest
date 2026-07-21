@@ -106,7 +106,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     // EnterScene reads to carry the move across. Directional gate exits only — null-gate loads have their own paths.
     private void RelayLeaveScene(GameManager.SceneLoadInfo info) {
         if (!HeroSwitch.HornetActive || !info.HeroLeaveDirection.HasValue) return;
-        var hero = HornetSpawner.RealHero;
+        var hero = HornetSpawner.Hornet;
         if (!hero) return;
         hero.LeaveScene((SGate)(int)info.HeroLeaveDirection.Value);
         hero.RecordLeaveSceneCState();
@@ -116,7 +116,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     // Mirror Silksong's OnLevelUnload -> SetHeroParent(null) -> DontDestroyOnLoad, but keyed on scene not parent:
     // SetHeroParent(null) skips DDOL when transform.parent is already null even if the GO is still in a scene.
     private void DeparentHero(string reason) {
-        var hero = HornetSpawner.RealHero;
+        var hero = HornetSpawner.Hornet;
         if (!hero || hero.gameObject.scene.name == "DontDestroyOnLoad") return;
         LogDebug($"deparenting hero before {reason} (was in scene={hero.gameObject.scene.name})");
         hero.SetHeroParent(null);
@@ -186,7 +186,7 @@ public sealed class SceneTransitionModule : ModuleBase {
             // walk-out) — HK's dream mechanism. The arrival-layer coroutine (started at scene change) held her non-colliding
             // until now; dreamHeroPlaced flips it to restore the Player layer so she collides with the platform and stays.
             SnapHornetToKnight(knight);
-            HornetSpawner.RealHero?.EnterSceneDreamGate();
+            HornetSpawner.Hornet?.EnterSceneDreamGate();
             dreamHeroPlaced = true;
         }
         else if (HeroSwitch.HornetActive && knight.sceneEntryGate) {
@@ -245,7 +245,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     private static readonly int IgnoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
 
     private System.Collections.IEnumerator ManageArrivalLayer() {
-        var hero = HornetSpawner.RealHero;
+        var hero = HornetSpawner.Hornet;
         if (!hero) yield break;
         for (var i = 0; i < 120 && !dreamHeroPlaced && hero; i++) { // park: non-colliding until placed (cap ~2.4s)
             hero.gameObject.layer = IgnoreRaycastLayer;
@@ -324,7 +324,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     // without the RegainControl a door up-interact's earlier RelinquishControl sticks across the transition and gates
     // CanSprint/mantle. SuppressRegainControl honored as OnNextLevelReady does.
     private IEnumerator RunEntry(HeroController knight) {
-        var hc = HornetSpawner.RealHero;
+        var hc = HornetSpawner.Hornet;
         var hkGate = knight.sceneEntryGate;
         if (!hc || !hkGate) yield break;
 
@@ -364,7 +364,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     // no real door, leaving her animator on the warp clip. HK's Dream Return get-up would do this.
     private IEnumerator DreamReturnEntry(HeroController knight) {
         yield return RunEntry(knight);
-        var hero = HornetSpawner.RealHero;
+        var hero = HornetSpawner.Hornet;
         if (!hero) yield break;
         for (var i = 0; i < 60 && (hero.cState == null || !hero.cState.onGround); i++) yield return null;
         hero.StartAnimationControlToIdle();
@@ -453,7 +453,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     // control, resume idle, broadcast DREAM WAKE (dream-scene directors wait on it — else she's on the bare dais and the
     // Fall Catcher loops her).
     private void CompleteArrival() {
-        var hero = HornetSpawner.RealHero;
+        var hero = HornetSpawner.Hornet;
         if (!hero) return;
         // With a real gate, RunEntry (EnterScene -> FinishedEnteringScene) owns the control-return; doing it here mid-entry
         // breaks its no_input door walk (she gets input+gravity and falls out of the arena, non-deterministically).

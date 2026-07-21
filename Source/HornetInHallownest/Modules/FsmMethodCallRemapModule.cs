@@ -27,7 +27,7 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
         typeof(FsmMethodCallRemapModule).GetMethod(nameof(HkOnlyNoOp), BindingFlags.NonPublic | BindingFlags.Static);
     
     private static bool SpaChargeSilk() {
-        if (HornetSpawner.RealHero is { } hero) hero.AddSilk(1, true);
+        if (HornetSpawner.Hornet is { } hero) hero.AddSilk(1, true);
         return true;
     }
 

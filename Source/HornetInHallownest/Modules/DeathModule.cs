@@ -128,7 +128,7 @@ public sealed class DeathModule : ModuleBase {
     // owned by BenchModule (it sits her + handles get-up), so don't RegainControl there or the two fight; a ground
     // respawn we idle ourselves.
     private void Revive(HeroController? knight) {
-        var hero = HornetSpawner.RealHero;
+        var hero = HornetSpawner.Hornet;
         if (!hero) {
             LogError("revive: no Hornet to revive");
             return;
@@ -208,7 +208,7 @@ public sealed class DeathModule : ModuleBase {
 
     // POST /getup - force Hornet out of any stuck bench/no_input/dead state.
     internal static object ForceGetUp() {
-        var hero = HornetSpawner.RealHero;
+        var hero = HornetSpawner.Hornet;
         if (!hero) return new { error = "no Hornet spawned" };
         if (PlayerData.instance != null) PlayerData.instance.atBench = false;
         var spd = Silksong::PlayerData.instance;
@@ -228,7 +228,7 @@ public sealed class DeathModule : ModuleBase {
 
     // POST /kill - kill Hornet via the real damage path (NonLethal, like ContactDamageBridge).
     internal static object Kill() {
-        var hc = HornetSpawner.RealHero;
+        var hc = HornetSpawner.Hornet;
         if (!hc) return new { error = "no Hornet spawned" };
         var pd = Silksong::PlayerData.instance;
         if (pd != null) {
@@ -243,7 +243,7 @@ public sealed class DeathModule : ModuleBase {
 
     // POST /hazard?type=N - trigger a specific hazard (2=spikes,3=acid,4=lava,5=pit), same mapping as ContactDamageBridge.
     internal static object Hazard(string typeStr) {
-        var hc = HornetSpawner.RealHero;
+        var hc = HornetSpawner.Hornet;
         if (!hc) return new { error = "no Hornet spawned" };
         if (!int.TryParse(typeStr, out var hk)) return new { error = $"bad type '{typeStr}'" };
         var ss = hk switch {

@@ -24,7 +24,7 @@ public sealed class HeroBroadcastModule : ModuleBase {
             var name = ev?.Name;
             if (string.IsNullOrEmpty(name) || !HeroSwitch.HornetActive) return;
 
-            var hero = HornetSpawner.RealHero;
+            var hero = HornetSpawner.Hornet;
             if (!hero || go != hero.gameObject) return;
 
             // The roar's real source is HK's "Roar Object" (a boss body), not the event sender.

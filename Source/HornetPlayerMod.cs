@@ -133,7 +133,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         DebugServer.MapPost("/unlock-crest-slots", _ => ToolItemManagerBootstrap.UnlockAllCrestSlots());
         DebugServer.MapPost("/dbg-recoil", req => {
             // validate recoil/bounce mechanics directly (kind=bounce|dash)
-            var hero = HornetSpawner.RealHero;
+            var hero = HornetSpawner.Hornet;
             if (hero == null) return new { error = "no hero" };
             var kind = req["kind"] ?? "bounce";
             if (kind == "dash") hero.sprintFSM?.SendEvent("DASH RECOIL");
@@ -145,7 +145,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             var id = req["id"] ?? "";
             Silksong::ToolItemManager.SetEquippedCrest(id);
             Silksong::ToolItemManager.SendEquippedChangedEvent(true);
-            var hero = HornetSpawner.RealHero;
+            var hero = HornetSpawner.Hornet;
             hero?.ResetAllCrestState();
             return new {
                 equipped = Silksong::PlayerData.instance != null ? Silksong::PlayerData.instance.CurrentCrestID : null,

@@ -18,11 +18,11 @@ namespace HornetPlayer.HornetInHallownest.Modules;
 // Instantiate Hero_Hornet via Addressables and fix up everything required for Hollow Knight interop.
 public sealed class HornetSpawner : ModuleBase {
     private static GameObject? heroPrefab;
-    private static Silksong::HeroController? realHero;
+    private static Silksong::HeroController? hornet;
 
     // The live spawned HeroController, cached at spawn — read hot (per-frame, across modules), so avoid a
     // GetComponentInChildren per access. Normalized through Unity's null check so a destroyed hero reads as null.
-    internal static Silksong::HeroController? RealHero => realHero ? realHero : null;
+    internal static Silksong::HeroController? Hornet => hornet ? hornet : null;
 
     // Root of the spawned Hornet subtree
     internal static GameObject? HornetRoot { get; private set; }
@@ -151,7 +151,7 @@ public sealed class HornetSpawner : ModuleBase {
         Object.DestroyImmediate(staging);
 
         HornetRoot = hornetInstance;
-        realHero = heroController;
+        hornet = heroController;
 
         PlayerDataSyncModule.SyncHKToSS();
 
@@ -245,7 +245,7 @@ public sealed class HornetSpawner : ModuleBase {
         if (!HornetRoot) return false;
         Object.DestroyImmediate(HornetRoot);
         HornetRoot = null;
-        realHero = null;
+        hornet = null;
         return true;
     }
 }

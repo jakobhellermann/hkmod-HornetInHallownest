@@ -90,7 +90,7 @@ public sealed class DamageEnemiesModule : ModuleBase {
     }
 
     private static void OnSoulGain(Action<HeroController> orig, HeroController self) {
-        if (HeroSwitch.HornetActive && HornetSpawner.RealHero is { } hero) hero.SilkGain();
+        if (HeroSwitch.HornetActive && HornetSpawner.Hornet is { } hero) hero.SilkGain();
         else orig(self);
     }
 }

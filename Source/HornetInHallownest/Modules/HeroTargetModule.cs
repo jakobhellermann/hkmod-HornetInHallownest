@@ -80,7 +80,7 @@ public sealed class HeroTargetModule : ModuleBase {
 
     private void OnLosUpdate(Action<LineOfSightDetector> orig, LineOfSightDetector self) {
         var knight = HeroController.UnsafeInstance;
-        var hornet = HornetSpawner.RealHero;
+        var hornet = HornetSpawner.Hornet;
         if (!HeroSwitch.HornetActive || !knight || !hornet) {
             orig(self);
             return;
@@ -102,12 +102,12 @@ public sealed class HeroTargetModule : ModuleBase {
 
     private void OnSoulOrbActivate(Action<SoulOrb> orig, SoulOrb self) {
         orig(self);
-        if (HeroSwitch.HornetActive && HornetSpawner.RealHero is { } hero)
+        if (HeroSwitch.HornetActive && HornetSpawner.Hornet is { } hero)
             self.SetFieldValue("target", hero.transform);
     }
 
     private void OnAddMpCharge(Action<HeroController, int> orig, HeroController self, int amount) {
-        if (HeroSwitch.HornetActive && HornetSpawner.RealHero is { } hero) {
+        if (HeroSwitch.HornetActive && HornetSpawner.Hornet is { } hero) {
             hero.AddSilk(1, true); // 1 silk per orb; skip the Knight's soul add
             return;
         }
