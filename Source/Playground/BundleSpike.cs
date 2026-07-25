@@ -15,11 +15,6 @@ namespace HornetPlayer.Playground;
 // `dotnet build` hot-reload (Unload → Initialize) doesn't leak a still-loaded bundle (which would make the next
 // LoadFromFile fail with "another AssetBundle with the same files is already loaded").
 internal static class BundleSpike {
-    // Minimal binding test: load a hand-built bundle with one GameObject+MonoBehaviour per test script (m_Script ->
-    // CAB-283454ff monoscripts, base fields only). Isolates pure script binding from scene/closure complexity. Needs
-    // only the remapped monoscripts bundle resident.
-    private static string MinimalBundlePath => Paths.ModFile("minimal-binding-test.silksong.bundle");
-
     // Spawn moved to HornetInHallownest/Core/HornetSpawner (the first migrated module). These forwarders keep the
     // existing Playground callers (DeathModule/BenchModule/HeroSwitch/…) and the diagnostics below reading the live
     // spawn state without churn; they get repointed to HornetSpawner when each of those systems migrates in turn.

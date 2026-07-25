@@ -45,7 +45,7 @@ internal static class PlayMakerFix {
                      "Silksong.ConditionalExpression"
                  })
             try {
-                AddTypes(map, Assembly.LoadFrom($"{Paths.ManagedDir}/{name}.dll"));
+                AddTypes(map, Assembly.LoadFrom($"{Paths.HkManagedDir}/{name}.dll"));
             } catch (Exception e) {
                 Log.Error($"[PlayMakerFix] load {name}: {e.Message}");
             }

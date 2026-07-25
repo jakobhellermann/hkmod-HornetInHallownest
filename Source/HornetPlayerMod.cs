@@ -107,9 +107,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         Playground.Log.SinkDebug = LogDebug;
         Playground.Log.SinkError = LogError;
 
-        // Where our DLL + shipped data files live. From the Modding API's Mod.ModDirectory (correct even on hot-reload,
-        // where Assembly.Location is empty). Must precede anything reading Paths.ModFile (e.g. ResourcesShim.Install).
-        Paths.ModDir = ModDirectory;
+        Paths.SilksongInstall = globalSettings.SilksongPath;
 
         // Must run before any MonoMod Hook is created (it locks MonoMod's platform detection).
         RosettaPlatformFix.Apply();

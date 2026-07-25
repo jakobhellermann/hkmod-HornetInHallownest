@@ -17,7 +17,7 @@ internal static class SilksongCatalog {
     // Idempotent, throws on unrecoverable failure. The source of truth for "already mounted" is the ResourceManager's
     // locator list (survives our DLL hot-reload — a static flag would reset and re-register a duplicate).
     internal static void EnsureMounted() {
-        var aa = Paths.SilksongAa();
+        var aa = Paths.SilksongAa;
         var catalogId = $"{aa}/catalog.bin";
         if (IsRegistered(catalogId)) return;
 

@@ -1,30 +1,42 @@
-# Examples
-This directory contains many example mods to show the common uses of the modding api.
-These mods are intended to give beginners a look at how to start to develop mods using this api,
-although proficient knowlege of C# is fairly required.  
+# Hornet in Hallownest
 
-## Setup
-These projects can be built without any additional configuration.
-The modding api project defines a build setting to copy the files into a `HollowKnightManaged` folder
-to set up the references.
-See the [README](../README.md) for setup of the general modding API.
-* To build the project with an IDE, set the `SetupExamples` build property to `true`.  
-* To build the project with the `dotnet` cli, add the `-p:SetupExamples=true` flag to the build command.  
+Hollow Knight Mod, bringing Hornet as a playable character to the base game.
 
-Alternatively, if you have the latest version of the modding API installed already, you can just create
-the `HollowKnightManaged` folder in this directory and then copy the contents of the `Managed` folder in your
-Hollow Knight install into the `HollowKnightManaged` folder.
+## Config
 
-## Example Mods
-The following table of contents is listed in order of complexity, with each example usually building
-on concepts from the previous.
+The config file can be found as `HornetPlayerMod.GlobalSettings.json` in
+- **Windows:** `%USERPROFILE%/AppData/LocalLow/Team Cherry/Hollow Knight`
+- **macOS:** `~/Library/Application Support/unity.Team-Cherry.Hollow Knight`
+- **Linux:** `~/.config/unity3d/Team Cherry/Hollow Knight` 
 
-1. [Simple Hooks](./SimpleHooks/SimpleHooks.cs) - A mod that demostrates the basics of creating a mod.  
-    The [`.csproj`](./SimpleHooks/SimpleHooks.csproj) file is a good baseline for the general config file you will
-    find in almost every mod. It defines the reference to the games assemblies in the `HollowKnightManaged` folder
-    (which gets populated using the [Setup](#Setup) step), or a user defined folder by changing the `HollowKnightRefs` tag.
-2. [Custom Save Data](./CustomSaveData/CustomSaveData.cs) - This mod shows how the mod loader can save global
-    and savegame specific data.  
-    This is the main way mods will save persistent data. The relevant save files will be `ModName.GlobalSettings.json` for global data and all save data is stored to
-    `user1.modded.json` for save slot 1, `user2.modded.json` for save slot 2, etc.
+**Default config:**
+```json
+{
+  "SilksongPath": null,
+  "Controls": {
+    "Jump": null,
+    "Attack": null,
+    "Dash": null,
+    "Harpoon": null,
+    "Bind": null,
+    "Tool": null,
+    "Needolin": null,
+    "OpenInventory": null,
+    // without HK equivalents
+    "Taunt": "V",
+    "OpenTools": "L",
+    "SwitchHero": "Tab"
+  }
+}
+```
 
+Keybindings can be set to letters (`A`–`Z`), digits (`Key0`–`Key9`), function keys (`F1`–`F15`)
+and mouse buttons (`LeftButton`, `RightButton`, `Button5`, …), or `null`. 
+
+For the bindings with HK equivalents, `null` means reusing the existing keybinding.
+
+The full list of available keybinds can be found in the [InControl `Key` and `Mouse` enums](https://www.gallantgames.com/incontrol-api/html/namespace_in_control.html).
+
+## Requirements
+
+## Development
