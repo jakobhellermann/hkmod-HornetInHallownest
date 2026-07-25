@@ -30,26 +30,27 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
     private ValidationRunner? validation;
     private HornetGlobalSettings globalSettings = new();
 
+    private bool initialized;
+
     public static HornetPlayerMod? LoadedInstance { get; private set; }
 
     // Persist Hornet's PlayerData inside HK's save file (per slot). The modding API invokes these at HK's native
     // save/load points (GameManager.SaveGame on bench/autosave; LoadGame on load) — see HornetSaveBridge.
+    // Don't overwrite save data when the mod failed to initialize (null return -> API skips writing this slot).
     public HornetSaveData OnSaveLocal() {
-        return HornetSaveBridge.Snapshot();
+        return (initialized ? HornetSaveBridge.Snapshot() : null)!;
     }
 
     public void OnLoadLocal(HornetSaveData s) {
-        HornetSaveBridge.Stash(s);
+        if (initialized) HornetSaveBridge.Stash(s);
     }
 
     public void OnLoadGlobal(HornetGlobalSettings s) {
         globalSettings = s;
-        InputModule.Settings = s.Controls;
     }
 
     public HornetGlobalSettings OnSaveGlobal() {
-        globalSettings.Controls = InputModule.Settings;
-        return globalSettings;
+        return globalSettings; // Controls stay in sync: InputModule.Settings is the same object we set in Bootstrap.
     }
 
     public override string GetVersion() {
@@ -109,6 +110,19 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
         Paths.SilksongInstallOverride = globalSettings.SilksongPath;
 
+        // False means it changed startup-bound state this session already ran without; bail with a restart notice
+        // instead of half-initializing.
+        if (!SilksongSetup.EnsureInstalled()) {
+            throw new Exception("Installed missing Silksong support files. Please restart Hollow Knight to finish loading HornetPlayer.");
+        }
+
+        Bootstrap();
+    }
+
+    // The Silksong-referencing setup, split out so the install branch above never JITs a Silksong type: on the run that
+    // installs the support files they aren't in Managed yet, so touching one would TypeLoad-fail before the copy runs.
+    // Reached only once EnsureInstalled confirms they're present. Keep Initialize (and OnLoadGlobal) Silksong-free.
+    private void Bootstrap() {
         // Must run before any MonoMod Hook is created (it locks MonoMod's platform detection).
         RosettaPlatformFix.Apply();
 
@@ -302,6 +316,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
         // New lifecycle backbone: register migrated modules in order, then init them. Initialize runs forward,
         // Deinitialize reverse — HornetSpawner is last so it despawns Hornet first on teardown.
+        InputModule.Settings = globalSettings.Controls; // apply the loaded key bindings before the module reads them
         moduleHost.Add(new InputModule()); // FIRST: commit input before any module/HeroController reads inputActions
         moduleHost.Add(new PlayerLoopModule());
         moduleHost.Add(new BreakableFloorModule());
@@ -330,5 +345,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         moduleHost.Add(new SceneTransitionModule());
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
+
+        initialized = true;
     }
 }

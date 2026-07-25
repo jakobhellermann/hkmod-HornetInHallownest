@@ -39,4 +39,12 @@ The full list of available keybinds can be found in the [InControl `Key` and `Mo
 
 ## Requirements
 
+## Uninstall
+
+Right now, Hornet in Hallownest copies some files into the HK `Managed/` dir.
+I'm gonna try to get rid of this before release, but for now in order to fully uninstall the mod, you have to
+1. Replace `ScriptingAssemblies.json` with `ScriptingAssemblies.json.hornetbak` (in `hollow_knight_Data`)
+2. Remove all assemblies prefixed with `Silksong.` from `Managed/`
+2. Remove the following additional assemblies from `Managed/`: `Unity.Addressables.dll`, `Unity.ResourceManager.dll`, `Unity.Profiling.Core.dll`, `Unity.Mathematics.dll`, `Unity.Burst.dll`, `Newtonsoft.Json.UnityConverters.dll`, `TeamCherry.Splines.dll`, `Coffee.SoftMaskForUGUI.dll`.
+
 ## Development

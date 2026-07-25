@@ -20,7 +20,7 @@ internal static class ToolItemManagerBootstrap {
         var sceneInit = mgr.GetType().GetMethod("SceneInit", BindingFlags.NonPublic | BindingFlags.Instance);
         if (sceneInit != null) sceneInit.Invoke(mgr, null);
 
-        return Diag();
+        return new { ok = true };
     }
 
     // Diagnostic: confirm the singleton + serialized lists resolve, and that GetCrestByName works.

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using UnityEngine;
 
 namespace HornetPlayer.HornetInHallownest.Core;
@@ -8,8 +9,15 @@ internal static class Paths {
     private const string SilksongName = "Hollow Knight Silksong";
 
     // Directory holding HornetPlayer.dll and the data files shipped beside it.
-    private static readonly string modDir = HornetPlayerMod.LoadedInstance?.ModDirectory
-                                            ?? throw new InvalidOperationException("ModDirectory not set");
+    internal static readonly string ModDir = ResolveModDir();
+
+    private static string ResolveModDir() {
+        // Under a hot-reload the assembly is loaded from an in-memory byte[] so Location is empty; fall back then.
+        var location = Assembly.GetExecutingAssembly().Location;
+        return string.IsNullOrEmpty(location)
+            ? $"{Application.dataPath}/Managed/Mods/HornetPlayer"
+            : Path.GetDirectoryName(location)!.Replace('\\', '/');
+    }
 
     internal static string HkManagedDir => $"{Application.dataPath}/Managed";
 
@@ -20,12 +28,14 @@ internal static class Paths {
     }
 
     internal static string SilksongAddressables => $"{SilksongDataDir}/StreamingAssets/aa";
-    
+
     internal static string SilksongAddressablesBundle(string name) => $"{SilksongAddressables}/{AaTarget}/{name}";
+
+    internal static string SilksongManagedDir => $"{SilksongDataDir}/Managed";
 
 
     internal static string ModFile(string name) {
-        var path = $"{modDir}/{name}";
+        var path = $"{ModDir}/{name}";
         if (!File.Exists(path))
             throw new FileNotFoundException($"HornetPlayer is missing a required file ({name}).", path);
         return path;

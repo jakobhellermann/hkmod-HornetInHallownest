@@ -20,6 +20,10 @@
         <HollowKnightRefs Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(GamePath)/hollow_knight.app/Contents/Resources/Data/Managed</HollowKnightRefs>
         <HollowKnightRefs Condition="'$(HollowKnightRefs)' == ''">$(GamePath)/hollow_knight_Data/Managed</HollowKnightRefs>
 
+        <SilksongGamePath Condition="'$(SilksongGamePath)' == ''">$([MSBuild]::NormalizePath('$(GamePath)', '..', 'Hollow Knight Silksong'))</SilksongGamePath>
+        <SilksongManaged Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(SilksongGamePath)/Hollow Knight Silksong.app/Contents/Resources/Data/Managed</SilksongManaged>
+        <SilksongManaged Condition="'$(SilksongManaged)' == ''">$(SilksongGamePath)/Hollow Knight Silksong_Data/Managed</SilksongManaged>
+
         <CopyDir Condition="'$(CopyDir)' == ''">$(HollowKnightRefs)/Mods/HornetPlayer</CopyDir>
     </PropertyGroup>
 
@@ -85,10 +89,10 @@
             <HintPath>$(HollowKnightRefs)/UnityEngine.UI.dll</HintPath>
         </Reference>
         <Reference Include="Unity.Addressables" Private="false">
-            <HintPath>$(HollowKnightRefs)/Unity.Addressables.dll</HintPath>
+            <HintPath>$(SilksongManaged)/Unity.Addressables.dll</HintPath>
         </Reference>
         <Reference Include="Unity.ResourceManager" Private="false">
-            <HintPath>$(HollowKnightRefs)/Unity.ResourceManager.dll</HintPath>
+            <HintPath>$(SilksongManaged)/Unity.ResourceManager.dll</HintPath>
         </Reference>
         <Reference Include="TeamCherry.Localization" Private="false">
             <HintPath>$(HollowKnightRefs)/TeamCherry.Localization.dll</HintPath>
@@ -130,7 +134,7 @@
         <!-- Team Cherry's Unity JsonConverters (Vector2/3/Color/…) — the same set Silksong's SaveDataUtility uses to
              serialize PlayerData cleanly (as {x,y}, not via computed properties like Vector2.normalized). -->
         <Reference Include="Newtonsoft.Json.UnityConverters" Private="false">
-            <HintPath>$(HollowKnightRefs)/Newtonsoft.Json.UnityConverters.dll</HintPath>
+            <HintPath>$(SilksongManaged)/Newtonsoft.Json.UnityConverters.dll</HintPath>
         </Reference>
     </ItemGroup>
 
@@ -140,20 +144,11 @@
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <!-- ALL B2 libs go to Managed/ ROOT, not Mods/:
-             - The two PREFIXED Silksong assemblies (Silksong.AssemblyCSharp + firstpass) MUST be there because Unity
-               only resolves nested custom-[Serializable] types from assemblies registered in ScriptingAssemblies.json,
-               which it loads from Managed root at startup (in Mods/, even registered, the fields come out null —
-               verified). One-time setup adds them to ScriptingAssemblies.json — see docs/experiment-scriptingassemblies.md.
-             - The remaining deps (Unity.Addressables, TeamCherry.Splines, …) MUST sit next to them: the Managed-root
-               assembly resolves its dependencies from Managed root, not from Mods/ (a Modding-API probe path). With the
-               deps left in Mods/, loading e.g. Silksong.PlayerData throws TypeLoadException (Unity.Addressables not
-               found) and the whole bootstrap fails.
-             Only HornetPlayer.dll itself stays in Mods/ (the Modding API loads mods from there); it binds to the
-             Managed-root copies at runtime. No double-load (the libs are not in Mods/). -->
+        <!-- Ship the prefixed Silksong assemblies into the mod folder as payload; SilksongSetup installs them into
+             Managed at runtime. The .dll.managed suffix hides them from the mod loader's *.dll scan and file watcher. -->
         <ItemGroup>
             <B2Lib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
         </ItemGroup>
-        <Copy SourceFiles="@(B2Lib)" DestinationFolder="$(HollowKnightRefs)" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="@(B2Lib)" DestinationFiles="@(B2Lib->'$(CopyDir)/%(Filename)%(Extension).managed')" SkipUnchangedFiles="true"/>
     </Target>
 </Project>

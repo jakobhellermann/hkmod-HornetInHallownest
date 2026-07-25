@@ -16,8 +16,8 @@ internal static class HornetSaveBridge {
     internal static bool? SaveActiveOverride;
 
     // Mirror Silksong's own PlayerData serializer: the Unity converters emit clean {x,y,…} for Vector/Color and skip
-    // computed struct properties (the self-referencing-loop cause). Copied into fresh settings, not the shared default.
-    private static readonly JsonSerializerSettings saveSettings = BuildSettings();
+    // computed struct properties (the self-referencing-loop cause). Lazy so type-init stays free of the UnityConverters dep.
+    private static JsonSerializerSettings SaveSettings => field ??= BuildSettings();
 
     private static string? pendingPlayerData;
     private static bool? pendingHornetActive;
@@ -33,11 +33,11 @@ internal static class HornetSaveBridge {
         return s;
     }
 
-    internal static HornetSaveData Snapshot() {
+    internal static HornetSaveData? Snapshot() {
         var spd = Silksong::PlayerData.instance;
         return new HornetSaveData {
             Version = 1,
-            PlayerData = spd != null ? JsonConvert.SerializeObject(spd, saveSettings) : null,
+            PlayerData = JsonConvert.SerializeObject(spd, SaveSettings),
             HornetActive = SaveActiveOverride ?? HeroSwitch.HornetActive
         };
     }
@@ -61,7 +61,7 @@ internal static class HornetSaveBridge {
 
         if (pendingPlayerData != null)
             try {
-                JsonConvert.PopulateObject(pendingPlayerData, spd, saveSettings);
+                JsonConvert.PopulateObject(pendingPlayerData, spd, SaveSettings);
             } catch (Exception e) {
                 Log.Error($"[HornetSave] PopulateObject failed: {e.Message}");
             } finally {
