@@ -1,4 +1,5 @@
 using System;
+using HornetPlayer.HornetInHallownest.Core;
 
 namespace HornetPlayer.HornetInHallownest;
 

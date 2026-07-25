@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using HornetPlayer.HornetInHallownest.Core;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -17,7 +18,7 @@ internal static class SilksongCatalog {
     // Idempotent, throws on unrecoverable failure. The source of truth for "already mounted" is the ResourceManager's
     // locator list (survives our DLL hot-reload — a static flag would reset and re-register a duplicate).
     internal static void EnsureMounted() {
-        var aa = Paths.SilksongAa;
+        var aa = Paths.SilksongAddressables;
         var catalogId = $"{aa}/catalog.bin";
         if (IsRegistered(catalogId)) return;
 

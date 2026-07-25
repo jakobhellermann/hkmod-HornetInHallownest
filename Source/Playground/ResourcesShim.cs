@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using HornetPlayer.HornetInHallownest;
+using HornetPlayer.HornetInHallownest.Core;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;

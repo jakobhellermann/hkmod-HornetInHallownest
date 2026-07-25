@@ -107,7 +107,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         Playground.Log.SinkDebug = LogDebug;
         Playground.Log.SinkError = LogError;
 
-        Paths.SilksongInstall = globalSettings.SilksongPath;
+        Paths.SilksongInstallOverride = globalSettings.SilksongPath;
 
         // Must run before any MonoMod Hook is created (it locks MonoMod's platform detection).
         RosettaPlatformFix.Apply();

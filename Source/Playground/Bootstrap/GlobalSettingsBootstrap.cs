@@ -1,4 +1,5 @@
 using System.Reflection;
+using HornetPlayer.HornetInHallownest.Core;
 using UnityEngine;
 
 namespace HornetPlayer.Playground;
@@ -12,7 +13,7 @@ internal static class GlobalSettingsBootstrap {
     // True only when we loaded the bundle via LoadFromFile (so Cleanup may Unload it). False when we reused a bundle
     // Addressables already mounted — Addressables owns it; unloading it would break the live catalog.
     private static bool ownsBundle;
-    private static string BundlePath => Paths.SilksongAaBundle("globalsettings_assets_all.bundle");
+    private static string BundlePath => Paths.SilksongAddressablesBundle("globalsettings_assets_all.bundle");
 
     internal static int Apply() {
         if (bundle == null) {
