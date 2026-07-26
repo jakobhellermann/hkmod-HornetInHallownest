@@ -291,7 +291,7 @@ internal static class GameCamerasBootstrap {
     internal static void SyncToActiveHero() {
         RetargetCamera(HeroSwitch.TransformOf(HeroSwitch.ActiveHeroGameObject));
         EnsureVignetteOnCamera();
-        SyncAudioCamera();
+        SyncMainCameraToHk();
         if (HornetHudReady) {
             SetHornetHudVisible(HeroSwitch.HornetActive);
             SetHkHudVisible(!HeroSwitch.HornetActive);
@@ -328,10 +328,13 @@ internal static class GameCamerasBootstrap {
         if (knight.vignetteFSM && !knight.vignetteFSM.enabled) knight.vignetteFSM.enabled = true;
     }
 
-    // Park Silksong's neutered main camera transform on HK's live camera: AudioEventManager distance-culls 3D one-shots
-    // by distance from GameCameras.mainCamera, so a rig camera parked at origin culls every hero SFX. HK's
-    // AudioListener still does the mix.
-    internal static void SyncAudioCamera() {
+    // Keep Silksong's neutered main camera on HK's live camera. Both AudioEventManager (distance-culls 3D one-shots) and
+    // LowPassDistance (muffles hero SFX by distance) read GameCameras.mainCamera.position every frame; a one-time
+    // set-on-scene-entry copy drifts as HK's camera pans -> hero SFX get muffled (and eventually culled). We must NOT
+    // reparent the rig camera under HK's camera: HK rebuilds its camera on scene/save-load and Unity destroys children
+    // with the parent, so the reparented rig camera dies -> GameCameras.mainCamera dangles null -> the audio derefs NPE.
+    // Instead a follower tracks HK's camera each frame while the camera stays in its own DDOL rig.
+    internal static void SyncMainCameraToHk() {
         try {
             if (ssMainCamT == null) {
                 var ssGc = Silksong::GameCameras.SilentInstance;
@@ -339,11 +342,28 @@ internal static class GameCamerasBootstrap {
                 ssMainCamT = ssGc.mainCamera.transform;
             }
 
-            // The _instance field, not the `instance` getter (the getter logs "Couldn't find GameCameras" when null).
-            if (typeof(GameCameras).GetFieldValue<GameCameras>("_instance") is not { } hk || !hk.mainCamera) return;
-            ssMainCamT.position = hk.mainCamera.transform.position;
+            if (!ssMainCamT.GetComponent<MainCamAudioFollow>())
+                ssMainCamT.gameObject.AddComponent<MainCamAudioFollow>();
         } catch (Exception e) {
-            Log.Error($"[HUD] SyncAudioCamera: {e.Message}");
+            Log.Error($"[HUD] SyncMainCameraToHk: {e.Message}");
+        }
+    }
+
+    // Parks the rig's main camera on HK's live main camera each frame so GameCameras.mainCamera.position (read by
+    // AudioEventManager distance-cull + LowPassDistance) sits at the listener. Re-resolves when HK rebuilds its camera.
+    private sealed class MainCamAudioFollow : MonoBehaviour {
+        private static FieldInfo? hkInstanceField;
+        private Transform? hkCamT;
+
+        private void LateUpdate() {
+            if (!hkCamT) {
+                hkInstanceField ??= typeof(GameCameras)
+                    .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
+                if (hkInstanceField?.GetValue(null) is not GameCameras hk || !hk.mainCamera) return;
+                hkCamT = hk.mainCamera.transform;
+            }
+
+            transform.position = hkCamT.position;
         }
     }
 
