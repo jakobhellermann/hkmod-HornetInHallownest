@@ -28,6 +28,9 @@ internal static class GameCamerasBootstrap {
         { 59515797, "Inventory" }, { 1017658613, "Scene Border" }
     };
 
+    private const float HudScale = 0.75f; // roughly HK footprint
+    private static Transform? hudOffsetTransform;
+    private static Vector3 hudOffsetPos;
     private static Vector3 hkHudScale = Vector3.one; // HK hudCanvas' real scale, cached so we can restore after hiding
     private static HashSet<PlayMakerFSM>? disabledHudFsms; // HK HUD FSMs we disabled when Knight is inert
 
@@ -239,6 +242,18 @@ internal static class GameCamerasBootstrap {
         hudCam.gameObject.SetActive(true);
         inGame?.gameObject.SetActive(true); // the in-game HUD container (Anchor TL + Inventory)
         FindByName(hudCam, "Hud Canvas")?.gameObject.SetActive(true);
+
+        // Shrink the oversized Silksong HUD via "Hud Canvas Offset". Not "Hud Canvas" (its slide FSM owns that scale) nor
+        // "Anchor TL" (ForceCameraAspect owns its position on resolution change). But Hud Canvas Offset carries a
+        // HudGlobalHide that resets it to scale 1 / pos 0 in OnEnable on every HUD show, so ApplyHudScale re-applies on
+        // each show too (SetHornetHudVisible). The localPosition offset pins Hud Canvas' origin, so it looks the same as
+        // scaling Hud Canvas directly (shrink about the content's top-left, not toward the screen corner).
+        if (FindByName(hudCam, "Hud Canvas Offset") is { } hudOffset
+            && FindByName(hudOffset, "Hud Canvas") is { } hudCanvas) {
+            hudOffsetTransform = hudOffset;
+            hudOffsetPos = hudCanvas.localPosition * (1f - HudScale);
+            ApplyHudScale();
+        }
         var layerFixes = RemapSortingLayers(hudCam);
 
         // Cross-game tag-index collision: some Silksong HUD GOs carry a tag index that resolves to HK's "Boss" tag, so
@@ -283,11 +298,22 @@ internal static class GameCamerasBootstrap {
         };
     }
 
+    // Re-apply our HUD shrink onto Hud Canvas Offset. HudGlobalHide resets it to scale 1 / pos 0 in its OnEnable, so this
+    // must run after each HUD show, not just once at bring-up.
+    private static void ApplyHudScale() {
+        if (!hudOffsetTransform) return;
+        hudOffsetTransform.localScale = Vector3.one * HudScale;
+        hudOffsetTransform.localPosition = hudOffsetPos;
+    }
+
     // Toggle Hornet's HUD content ("In-game") without re-running BringUpHud. Cheap; SetActive only on change.
     internal static void SetHornetHudVisible(bool on) {
         if (inGame == null || inGame.gameObject.activeSelf == on) return;
         inGame.gameObject.SetActive(on);
-        if (on) HornetHudShown?.Invoke();
+        if (on) {
+            ApplyHudScale(); // HudGlobalHide.OnEnable just reset Hud Canvas Offset; re-assert the shrink
+            HornetHudShown?.Invoke();
+        }
     }
 
     // Re-point everything HK owns at the active hero. HK re-grabs all of this to its Knight on scene entry (CameraTarget

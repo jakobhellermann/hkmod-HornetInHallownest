@@ -17,6 +17,7 @@
 ## Integration
 - Knight HUD sometimes vanishes
 - XX full mask shard -> instant hud update
+- Lifeblood masks
 - Sprint into elevator bumps
 - Sprint-attack misses Watcher Knights chandelier rope
 - Weavernest entry doesn't show up
