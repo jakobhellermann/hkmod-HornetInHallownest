@@ -83,7 +83,7 @@
     <ItemGroup Condition="Exists('$(ManagedDir)')">
         <LocalReferences Include="Assembly-CSharp;PlayMaker;Mono.Cecil;MonoMod.RuntimeDetour;MonoMod.Utils;Newtonsoft.Json"/>
         <LocalReferences Include="TeamCherry.Localization;TeamCherry.NestedFadeGroup;TeamCherry.SharedUtils;TeamCherry.TK2D;System.ValueTuple"/>
-        <LocalReferences Include="UnityEngine;UnityEngine.AnimationModule;UnityEngine.AssetBundleModule;UnityEngine.AudioModule;UnityEngine.CoreModule;UnityEngine.InputLegacyModule;UnityEngine.Physics2DModule"/>
+        <LocalReferences Include="UnityEngine;UnityEngine.AnimationModule;UnityEngine.AssetBundleModule;UnityEngine.AudioModule;UnityEngine.CoreModule;UnityEngine.ImageConversionModule;UnityEngine.InputLegacyModule;UnityEngine.ParticleSystemModule;UnityEngine.Physics2DModule;UnityEngine.ScreenCaptureModule"/>
         <Reference Include="@(LocalReferences->'$(ManagedDir)/%(Identity).dll')" Private="false"/>
     </ItemGroup>
 
