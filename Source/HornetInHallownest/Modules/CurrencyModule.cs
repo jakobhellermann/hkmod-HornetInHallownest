@@ -22,6 +22,14 @@ public sealed class CurrencyModule : ModuleBase {
         Silksong::CheatManager.ForceCurrencyCountersAppear = true;
         ModHooks.SetPlayerIntHook += OnSetInt;
         GameCamerasBootstrap.HornetHudShown += OnHudShown;
+
+        // HK's geo is the single source of truth.
+        Detour(typeof(Silksong::HeroController), "TakeGeo",
+            (System.Action<System.Action<Silksong::HeroController, int>, Silksong::HeroController, int>)
+            ((_, _, amount) => PlayerData.instance.TakeGeo(amount)), typeof(int));
+        Detour(typeof(Silksong::HeroController), "AddGeo",
+            (System.Action<System.Action<Silksong::HeroController, int>, Silksong::HeroController, int>)
+            ((_, _, amount) => PlayerData.instance.AddGeo(amount)), typeof(int));
     }
 
     protected override void OnDeinitialize() {
