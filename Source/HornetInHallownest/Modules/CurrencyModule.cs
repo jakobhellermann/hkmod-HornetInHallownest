@@ -68,8 +68,8 @@ public sealed class CurrencyModule : ModuleBase {
         var delta = value - ss.geo;
         ss.geo = value;
         if (!HeroSwitch.HornetActive || delta == 0) return value;
-        
-        OnGeoModified(value);
+
+        OnGeoModified(delta);
 
         return value;
     }
