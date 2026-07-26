@@ -14,6 +14,15 @@ namespace HornetInHallownest.Core;
 // which locks PlatformHelper.Current. Only fires when actually translated by Rosetta.
 internal static class RosettaPlatformFix {
     internal static void Apply() {
+        if (IsAppleSilicon() && !IsTranslatedByRosetta()) {
+            throw new Exception(
+                """
+                HornetInHallownest requires Hollow Knight to run under Rosetta on Apple Silicon Macs.
+                If running through Steam, set the game's launch options to: /bin/sh -c 'exec /usr/bin/arch -x86_64 "$0/Contents/MacOS/Hollow Knight" "$@"' %command%
+                If you are running it manually, enable 'Open using Rosetta' in Finder (right-click Hollow Knight.app -> Get Info).
+                """);
+        }
+
         if (!IsTranslatedByRosetta()) return;
         try {
             PlatformHelper.Current = MonoMod.Utils.Platform.MacOS | MonoMod.Utils.Platform.Bits64;
@@ -21,6 +30,16 @@ internal static class RosettaPlatformFix {
                 $"[RosettaFix] under Rosetta, forced MonoMod platform to {PlatformHelper.Current} (x86 detour backend)");
         } catch (Exception e) {
             Log.Error($"[RosettaFix] could not override PlatformHelper.Current (already locked): {e.Message}");
+        }
+    }
+
+    private static bool IsAppleSilicon() {
+        try {
+            var size = (IntPtr)sizeof(int);
+            return sysctlbyname("hw.optional.arm64", out var isArm, ref size, IntPtr.Zero, IntPtr.Zero) == 0
+                   && isArm == 1;
+        } catch {
+            return false;
         }
     }
 
