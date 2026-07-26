@@ -1,4 +1,5 @@
 using HornetInHallownest.Bootstrap;
+using HornetInHallownest.Modules;
 using HornetInHallownest.Modules.Hero;
 using HornetInHallownest.Util;
 using Modding;

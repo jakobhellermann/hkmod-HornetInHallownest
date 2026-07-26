@@ -1,6 +1,7 @@
 extern alias Silksong;
 using System;
 using UnityEngine;
+using HornetInHallownest.DevServer;
 using HornetInHallownest.Modules;
 using HornetInHallownest.Util;
 
@@ -12,6 +13,13 @@ public sealed class HornetRuntime : MonoBehaviour {
     private bool wasHornetActive;
 
     private void Update() {
+        // Drain the debug server queue every frame, independent of hero-active state below (must serve at the menu too).
+        try {
+            DebugServer.Update();
+        } catch (Exception e) {
+            Log.Error($"[Runtime] debug pump: {e}");
+        }
+
         try {
             var paused = ModuleBase.Paused;
             var hero = HornetSpawner.Hornet;
