@@ -50,7 +50,7 @@ internal sealed class DebugKeybindsBehaviour : MonoBehaviour {
 
         if (infiniteSilk) {
             var spd = Silksong::PlayerData.instance;
-            if (spd != null && spd.silk < spd.silkMax) spd.silk = spd.silkMax;
+            if (spd.silk < spd.silkMax) spd.silk = spd.silkMax;
         }
 
         TraceTick();

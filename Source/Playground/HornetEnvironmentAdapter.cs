@@ -31,8 +31,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
     private void Update() {
         try {
             var paused = Time.timeScale <= 0.0001f;
-            var pd = Silksong::PlayerData.instance;
-            var inventoryOpen = pd != null && pd.isInventoryOpen;
+            var inventoryOpen = Silksong::PlayerData.instance.isInventoryOpen;
 
             // Mirror HK's pause onto Silksong's GameManager so the hero pipeline (LookForInput gates on GameState)
             // freezes with HK instead of running through the pause.

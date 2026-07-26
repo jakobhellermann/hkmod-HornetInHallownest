@@ -61,7 +61,6 @@ public sealed class PlayerDataSyncModule : ModuleBase {
     internal static void SyncHKToSS() {
         var hk = PlayerData.instance;
         var ss = SPlayerData.instance;
-        if (hk == null || ss == null) return;
         foreach (var kv in bools) kv.Value(ss, hk.GetBool(kv.Key));
         foreach (var kv in ints) kv.Value(ss, hk.GetInt(kv.Key));
         ss.hasBrolly = true; // no HK equivalent
@@ -73,7 +72,6 @@ public sealed class PlayerDataSyncModule : ModuleBase {
     private static void RecomputeArts(SPlayerData ss, bool? cyclone = null, bool? dashSlash = null,
         bool? greatSlash = null, bool? shadeCloak = null) {
         var hk = PlayerData.instance;
-        if (hk == null) return;
         var arts = ((cyclone ?? hk.hasCyclone) ? 1 : 0)
                    + ((dashSlash ?? hk.hasDashSlash) ? 1 : 0)
                    + ((greatSlash ?? hk.hasUpwardSlash) ? 1 : 0);
@@ -83,13 +81,13 @@ public sealed class PlayerDataSyncModule : ModuleBase {
 
     private static bool OnSetBool(string name, bool orig) {
         var ss = SPlayerData.instance;
-        if (ss != null && bools.TryGetValue(name, out var apply)) apply(ss, orig);
+        if (bools.TryGetValue(name, out var apply)) apply(ss, orig);
         return orig;
     }
 
     private static int OnSetInt(string name, int orig) {
         var ss = SPlayerData.instance;
-        if (ss == null || !ints.TryGetValue(name, out var apply)) return orig;
+        if (!ints.TryGetValue(name, out var apply)) return orig;
         apply(ss, orig);
         // A mask gained mid-play bumps maxHealth silently (AddToMaxHealth sends no HUD event); appear the new mask.
         if (name == "maxHealthBase") BundleSpike.RefreshMaxHealthHud();
@@ -99,7 +97,6 @@ public sealed class PlayerDataSyncModule : ModuleBase {
     // POST /grant-kit — full kit regardless of HK progression (playground testing).
     internal static object GrantFullKit() {
         var ss = SPlayerData.instance;
-        if (ss == null) return new { error = "no Silksong PlayerData" };
         ss.hasDash = ss.hasWalljump = ss.hasDoubleJump = ss.hasBrolly = ss.hasSuperJump = ss.hasHarpoonDash = true;
         ss.hasChargeSlash = ss.hasQuill = ss.hasParry = ss.hasNeedolin = ss.hasNeedleThrow = true;
         ss.hasThreadSphere = ss.hasSilkSpecial = ss.hasSilkCharge = ss.hasSilkBomb = ss.hasSilkBossNeedle = true;

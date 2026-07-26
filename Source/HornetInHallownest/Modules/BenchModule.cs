@@ -23,7 +23,7 @@ public sealed class BenchModule : ModuleBase {
     private static void ResetAtBench() {
         if (!HeroSwitch.HornetActive) return;
         var pd = PlayerData.instance;
-        if (pd is not { atBench: true }) return;
+        if (!pd.atBench) return;
         foreach (var fsm in UnityEngine.Object.FindObjectsByType<PlayMakerFSM>(UnityEngine.FindObjectsSortMode.None)) {
             if (fsm.FsmName != "Bench Control" || fsm.ActiveStateName is "Idle" or "Inert" or "") continue;
             fsm.enabled = false; // RestartOnEnable -> Init -> Check Start State -> Idle
@@ -36,7 +36,7 @@ public sealed class BenchModule : ModuleBase {
     private bool OnSetBool(string name, bool value) {
         if (name != "atBench" || !HeroSwitch.HornetActive) return value;
         var spd = Silksong::PlayerData.instance;
-        if (spd == null || spd.atBench == value) return value;
+        if (spd.atBench == value) return value;
 
         spd.atBench = value;
         if (value) RefillTools();
@@ -52,7 +52,7 @@ public sealed class BenchModule : ModuleBase {
     // TODO: implement shell shards?
     private void RefillTools() {
         try {
-            var tools = Silksong::PlayerData.instance?.Tools;
+            var tools = Silksong::PlayerData.instance.Tools;
             if (tools == null) return;
             foreach (var tool in Silksong::ToolItemManager.GetUnlockedTools()) {
                 if (!tool) continue;

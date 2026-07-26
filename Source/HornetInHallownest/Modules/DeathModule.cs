@@ -210,9 +210,8 @@ public sealed class DeathModule : ModuleBase {
     internal static object ForceGetUp() {
         var hero = HornetSpawner.Hornet;
         if (!hero) return new { error = "no Hornet spawned" };
-        if (PlayerData.instance != null) PlayerData.instance.atBench = false;
-        var spd = Silksong::PlayerData.instance;
-        if (spd != null) spd.isInventoryOpen = false;
+        PlayerData.instance.atBench = false;
+        Silksong::PlayerData.instance.isInventoryOpen = false;
         if (Time.timeScale == 0f) Time.timeScale = 1f;
         hero.cState.dead = false;
         SHeroBox.Inactive = false;
@@ -231,14 +230,12 @@ public sealed class DeathModule : ModuleBase {
         var hc = HornetSpawner.Hornet;
         if (!hc) return new { error = "no Hornet spawned" };
         var pd = Silksong::PlayerData.instance;
-        if (pd != null) {
-            pd.isInvincible = false;
-            pd.health = 1;
-        }
+        pd.isInvincible = false;
+        pd.health = 1;
 
         hc.TakeDamage(hc.gameObject, Silksong::GlobalEnums.CollisionSide.left, 1,
             Silksong::GlobalEnums.HazardType.ENEMY, Silksong::GlobalEnums.DamagePropertyFlags.NonLethal);
-        return new { ok = true, health = pd?.health ?? -1 };
+        return new { ok = true, health = pd.health };
     }
 
     // POST /hazard?type=N - trigger a specific hazard (2=spikes,3=acid,4=lava,5=pit), same mapping as ContactDamageBridge.
@@ -254,10 +251,10 @@ public sealed class DeathModule : ModuleBase {
             _ => Silksong::GlobalEnums.HazardType.ENEMY
         };
         var pd = Silksong::PlayerData.instance;
-        if (pd != null) pd.isInvincible = false;
+        pd.isInvincible = false;
         hc.TakeDamage(hc.gameObject, Silksong::GlobalEnums.CollisionSide.left, 1, ss,
             Silksong::GlobalEnums.DamagePropertyFlags.NonLethal);
-        return new { ok = true, hkType = hk, ssHazard = ss.ToString(), health = pd?.health ?? -1 };
+        return new { ok = true, hkType = hk, ssHazard = ss.ToString(), health = pd.health };
     }
 
     #endregion

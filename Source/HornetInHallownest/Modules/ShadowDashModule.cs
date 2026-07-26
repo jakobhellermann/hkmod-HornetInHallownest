@@ -22,7 +22,7 @@ public sealed class ShadowDashModule : ModuleBase {
         Detour(typeof(ShadowGateColliderControl), "FixedUpdate", OnGateFixedUpdate);
     }
 
-    private static bool HasShadowDash => PlayerData.instance is { hasShadowDash: true };
+    private static bool HasShadowDash => PlayerData.instance.hasShadowDash;
 
     public override void HornetActiveUpdate(SHeroController hero) {
         var dashing = hero.cState is { dashing: true };

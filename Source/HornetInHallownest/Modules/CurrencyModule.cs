@@ -65,8 +65,6 @@ public sealed class CurrencyModule : ModuleBase {
         if (name != "geo") return value;
         
         var ss = SPlayerData.instance;
-        if (ss == null) return value;
-
         var delta = value - ss.geo;
         ss.geo = value;
         if (!HeroSwitch.HornetActive || delta == 0) return value;

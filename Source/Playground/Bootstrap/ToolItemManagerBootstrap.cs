@@ -29,7 +29,7 @@ internal static class ToolItemManagerBootstrap {
         if (mgr == null) return new { error = "ToolItemManager singleton null (Ensure not run / spawn first)" };
         var crests = Silksong::ToolItemManager.GetAllCrests();
         var tools = Silksong::ToolItemManager.GetUnlockedTools().ToList();
-        var crestId = Silksong::PlayerData.instance?.CurrentCrestID;
+        var crestId = Silksong::PlayerData.instance.CurrentCrestID;
         var byName = string.IsNullOrEmpty(crestId) ? null : Silksong::ToolItemManager.GetCrestByName(crestId);
         return new {
             instanceSet = true,
@@ -45,10 +45,8 @@ internal static class ToolItemManagerBootstrap {
     // popup per tool.
     internal static void UnlockAllToolsSilently() {
         var pd = Silksong::PlayerData.instance;
-        if (pd != null) {
-            pd.SeenToolGetPrompt = true;
-            pd.SeenToolWeaponGetPrompt = true;
-        }
+        pd.SeenToolGetPrompt = true;
+        pd.SeenToolWeaponGetPrompt = true;
 
         foreach (var tool in Silksong::ToolItemManager.GetAllTools()) {
             if (!tool) continue;
@@ -61,7 +59,6 @@ internal static class ToolItemManagerBootstrap {
     // preserving equipped tools. Requires ToolItemManager + PlayerData up (post-spawn).
     internal static object UnlockAllCrestSlots() {
         var pd = Silksong::PlayerData.instance;
-        if (pd == null) return new { error = "PlayerData not ready" };
         var crests = Silksong::ToolItemManager.GetAllCrests();
         if (crests == null || crests.Count == 0) return new { error = "no crests (ToolItemManager not up?)" };
         var equips = pd.ToolEquips;

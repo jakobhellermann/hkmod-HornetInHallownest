@@ -24,8 +24,7 @@ public sealed class InventoryModule : ModuleBase {
         // and isInventoryOpen stuck (-> IsPaused -> CanInput false -> hero stuck). Undo all three.
         if (Time.timeScale == 0f) Time.timeScale = prevTimeScale;
 
-        var pd = Silksong::PlayerData.instance;
-        pd?.isInventoryOpen = false;
+        Silksong::PlayerData.instance.isInventoryOpen = false;
 
         var gameCameras = GameCameras.instance; // HK
         if (gameCameras && gameCameras.mainCamera && !gameCameras.mainCamera.enabled) gameCameras.mainCamera.enabled = true;
@@ -36,8 +35,7 @@ public sealed class InventoryModule : ModuleBase {
     private void OnSetInventoryOpen(Action<Silksong::GameManager, bool> orig, Silksong::GameManager self, bool value) {
         // Skip orig
         try {
-            var pd = Silksong::PlayerData.instance;
-            pd?.isInventoryOpen = value;
+            Silksong::PlayerData.instance.isInventoryOpen = value;
 
             if (value) {
                 // Never remember a frozen scale as "previous", or closing would leave the world stuck.

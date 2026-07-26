@@ -56,7 +56,7 @@ public sealed class SceneFixesModule : ModuleBase {
         try {
             if (screamGet != null && to is { Name: "Do Sphere" } && fsm.Name == "Silk Specials" &&
                 screamGet.ActiveStateName == "In" &&
-                PlayerData.instance is { screamLevel: < 2 }) {
+                PlayerData.instance.screamLevel < 2) {
                 LogInfo("Thread Storm cast in Abyss shriek zone -> broadcasting SCREAM GET");
                 PlayMakerFSM.BroadcastEvent("SCREAM GET");
             }

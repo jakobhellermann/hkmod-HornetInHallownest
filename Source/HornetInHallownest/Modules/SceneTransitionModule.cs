@@ -158,15 +158,13 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     private void OnSetHazardRespawn(Action<PlayerData, Vector3, bool> orig, PlayerData self, Vector3 pos, bool facing) {
         orig(self, pos, facing);
-        var pd = Silksong::PlayerData.instance;
-        if (pd != null) pd.SetHazardRespawn(pos, facing);
+        Silksong::PlayerData.instance.SetHazardRespawn(pos, facing);
     }
 
     private void OnSetHazardRespawnMarker(Action<PlayerData, HazardRespawnMarker> orig, PlayerData self,
         HazardRespawnMarker marker) {
         orig(self, marker);
-        var pd = Silksong::PlayerData.instance;
-        if (pd != null && marker) pd.SetHazardRespawn(marker.transform.position, marker.respawnFacingRight);
+        if (marker) Silksong::PlayerData.instance.SetHazardRespawn(marker.transform.position, marker.respawnFacingRight);
     }
 
     private void OnEnterSceneDreamGate(Action<HeroController> orig, HeroController self) {

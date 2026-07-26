@@ -160,7 +160,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
             var hero = HornetSpawner.Hornet;
             hero?.ResetAllCrestState();
             return new {
-                equipped = Silksong::PlayerData.instance != null ? Silksong::PlayerData.instance.CurrentCrestID : null,
+                equipped = Silksong::PlayerData.instance.CurrentCrestID,
                 crestConfigSet = hero != null && hero.GetFieldValue<object>("crestConfig") != null,
                 recoilHorVelocity = hero != null ? hero.RECOIL_HOR_VELOCITY : -1f
             };
@@ -168,7 +168,6 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         DebugServer.MapPost("/set-pd", req => {
             // debug: set a Silksong PlayerData field (bool/int/float/string) by name
             var pd = Silksong::PlayerData.instance;
-            if (pd == null) return new { error = "no PlayerData" };
             var name = req["field"] ?? "";
             var fi = typeof(Silksong::PlayerData).GetField(name);
             if (fi == null) return new { error = $"field '{name}' not found" };
@@ -239,7 +238,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         DebugServer.MapGet("/respawn-state", _ => {
             // compare HK vs Silksong PlayerData respawn (hard-save split)
             var hk = GameManager.instance.playerData;
-            var ss = Silksong::PlayerData.instance;
+            var ss = Silksong::PlayerData.HasInstance ? Silksong::PlayerData.instance : null; // don't auto-create just to probe
             return new {
                 scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,
                 hk = new { hk.respawnScene, hk.respawnMarkerName, hk.respawnType, hk.atBench },
@@ -248,7 +247,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         });
         DebugServer.MapPost("/mirror-respawn", _ => {
             // copy Silksong PD respawn -> HK PD (un-poison a pre-bridge save)
-            var ss = Silksong::PlayerData.instance;
+            var ss = Silksong::PlayerData.HasInstance ? Silksong::PlayerData.instance : null; // don't auto-create just to probe
             var knight = HeroController.UnsafeInstance;
             if (ss == null || knight == null) return new { error = "no Silksong PD / HK hero" };
             knight.SetBenchRespawn(ss.respawnMarkerName, ss.respawnScene, ss.respawnType, false);

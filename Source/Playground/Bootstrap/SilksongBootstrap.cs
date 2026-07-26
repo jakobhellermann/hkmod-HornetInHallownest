@@ -154,7 +154,7 @@ internal static class SilksongBootstrap {
             // gm.GameState is maintained per-frame by HornetEnvironmentAdapter (mirrors HK's pause), not set here.
 
             Log.Debug($"[Bootstrap] GameManager.instance={(Silksong::GameManager.instance != null)}, " +
-                     $"playerData={pd != null}, inputHandler={(gm.GetComponent<Silksong::InputHandler>() != null)}");
+                     $"inputHandler={(gm.GetComponent<Silksong::InputHandler>() != null)}");
         } catch (Exception e) {
             Log.Error($"[Bootstrap] FAILED: {e}");
         }

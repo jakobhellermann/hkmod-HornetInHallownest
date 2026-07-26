@@ -33,7 +33,7 @@ internal static class HornetSaveBridge {
         return s;
     }
 
-    internal static HornetSaveData? Snapshot() {
+    internal static HornetSaveData Snapshot() {
         var spd = Silksong::PlayerData.instance;
         return new HornetSaveData {
             Version = 1,
@@ -55,7 +55,6 @@ internal static class HornetSaveBridge {
         var hero = BundleSpike.Hornet;
         if (hero == null) return; // hero not spawned yet — the post-spawn hook will call us again
         var spd = Silksong::PlayerData.instance;
-        if (spd == null) return;
 
         SaveActiveOverride = null; // back in gameplay: live HeroSwitch state is authoritative for future saves again
 
