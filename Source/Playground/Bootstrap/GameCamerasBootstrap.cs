@@ -208,6 +208,11 @@ internal static class GameCamerasBootstrap {
                 c.gameObject.SetActive(false);
             }
 
+        // The deactivation above hides Silksong's "Area Title", but AreaTitleInitialiser (on In-game) re-activates it
+        // each frame until AreaTitle.Initialised, so on the first bring-up its FSM flashes "The fading town" for a frame.
+        if (inGame != null && inGame.GetComponent<Silksong::AreaTitleInitialiser>() is { } areaTitleInit)
+            areaTitleInit.enabled = false;
+
         // Inside Inventory, drop the Map/Quests/Journal panes (need GameMap/QuestManager, out of scope) before it
         // activates, then activate Inventory so its tools/crests/items panes run their setup.
         if (inv != null) {
