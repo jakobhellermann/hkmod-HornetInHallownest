@@ -2,7 +2,8 @@ extern alias Silksong;
 using System;
 using System.Reflection;
 using UnityEngine;
-using HornetInHallownest.HornetInHallownest.Modules;
+using HornetInHallownest.Modules;
+using HornetInHallownest.Util;
 
 namespace HornetInHallownest.Playground;
 

@@ -1,9 +1,9 @@
 ﻿extern alias Silksong;
 using System;
 using System.Reflection;
-using HornetInHallownest.HornetInHallownest.Core;
-using HornetInHallownest.HornetInHallownest.Modules;
-using HornetInHallownest.HornetInHallownest.Save;
+using HornetInHallownest.Core;
+using HornetInHallownest.Modules;
+using HornetInHallownest.Save;
 using HornetInHallownest.Playground;
 using Modding;
 using UnityEngine;
@@ -61,7 +61,7 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
         try {
             HeroSwitch.TpKnightToActiveHornet();
         } catch (Exception e) {
-            Playground.Log.Error($"[Unload] Knight TP: {e.Message}");
+            Util.Log.Error($"[Unload] Knight TP: {e.Message}");
         }
 
         // New lifecycle backbone: tear migrated modules down in reverse registration order, before the legacy systems.
@@ -89,9 +89,9 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
         if (LoadedInstance != null) return;
         LoadedInstance = this;
 
-        Playground.Log.SinkInfo = Log;
-        Playground.Log.SinkDebug = LogDebug;
-        Playground.Log.SinkError = LogError;
+        Util.Log.SinkInfo = Log;
+        Util.Log.SinkDebug = LogDebug;
+        Util.Log.SinkError = LogError;
 
         Paths.SilksongInstallOverride = globalSettings.SilksongPath;
 
