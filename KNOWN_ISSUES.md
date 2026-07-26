@@ -16,7 +16,6 @@
 ## Integration
 - XX hardsaves
 - XX full mask shard -> instant hud update
-- XX Elevator: broken?
 - Sprint into elevator bumps
 - Sprint-attack misses Watcher Knights chandelier rope
 - Weavernest entry doesn't show up

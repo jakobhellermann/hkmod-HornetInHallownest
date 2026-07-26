@@ -27,6 +27,10 @@ public sealed class SceneTransitionModule : ModuleBase {
     private bool pendingSnap, dreamReturnPending, hkEntryFixed, dreamGateEntryPending;
     private bool cameraCaughtUp;
 
+    // Big-lift arrival (PlayerData.liftArrival): the "Lift Move" FSM carries the hero by parenting her to the moving
+    // elev_main, so our normal gate entry must not run (it deparents her mid-ride and strands her in the shaft).
+    private bool liftArrivalPending;
+
     // A dream-visualization arrival is in flight. HK warps dream entries in via EnterSceneDreamGate (gravity off, no door
     // walk-out); route Hornet the same way even when HK drove the Knight through a normal gate, else RunEntry's door
     // walk-out walks/falls her off the arena platform.
@@ -175,6 +179,8 @@ public sealed class SceneTransitionModule : ModuleBase {
     // Per-frame from the driver: the two deferred waits with no clean event, HK placing the Knight (isHeroInPosition) and
     // the inert-Knight bottom-gate entry. Scene-change detection is event-driven (OnActiveSceneChanged -> ArmEntry).
     internal void Tick() {
+        if (liftArrivalPending) return; // the lift owns the hero for this arrival
+
         var knight = HeroController.UnsafeInstance;
         CompleteStuckHkVerticalEntry(knight);
         if (!pendingSnap || !knight || !knight.isHeroInPosition) return;
@@ -214,6 +220,58 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (dreamReturnPending) ClearDreamWhiteBlanker();
         var knight = HeroController.UnsafeInstance;
         if (knight) SnapHornetToKnight(knight);
+    }
+
+    // Relinquish control and let the "Lift Move" FSM carry the hero: it parents the global "Hero" var to elev_main
+    // (Parent Hero -> ... -> Arrive deparents), so running our own gate entry would fight it. Returns false when it's
+    // not a lift arrival.
+    private bool TryArmLiftArrival() {
+        var gm = GameManager.UnsafeInstance;
+        if (!HeroSwitch.HornetActive || !gm || gm.playerData == null || !gm.playerData.liftArrival) return false;
+        var hero = HornetSpawner.Hornet;
+        if (!hero) return false;
+
+        hero.RelinquishControl();
+        liftArrivalPending = true;
+        StartCoroutine(CompleteLiftArrival());
+        LogDebug("lift arrival: relinquished control, letting the lift carry Hornet");
+        return true;
+    }
+
+    private IEnumerator CompleteLiftArrival() {
+        var hero = HornetSpawner.Hornet;
+        if (!hero) {
+            liftArrivalPending = false;
+            yield break;
+        }
+
+        var grabbed = false;
+        for (var i = 0; i < 600 && hero; i++) {
+            var parent = hero.transform.parent;
+            if (parent && parent.name == "elev_main") {
+                if (!grabbed) {
+                    // The lift parented her at her stale position (huge frozen offset) and its own SetPosition(Hero) is
+                    // disabled, so seat her ourselves: elev_entrance is a child of elev_main marking the on-platform
+                    // stand point, so its localPosition rides her correctly. Read off her actual parent, not a global
+                    // Find that would race the departing scene's copy.
+                    var entrance = parent.Find("elev_entrance");
+                    if (entrance) hero.transform.localPosition = entrance.localPosition;
+                    grabbed = true;
+                }
+            }
+            else if (grabbed && !parent) break; // lift finished the ride and released her at the top
+            yield return null;
+        }
+
+        if (hero) {
+            hero.RegainControl();
+            hero.AcceptInput();
+            var gm = GameManager.UnsafeInstance;
+            if (gm && gm.gameState == GameState.ENTERING_LEVEL) gm.SetState(GameState.PLAYING);
+        }
+
+        liftArrivalPending = false;
+        LogDebug($"lift arrival complete: lift released hero, control returned (grabbed={grabbed})");
     }
 
     // HK's EnterScene ends by calling gm.FinishedEnteringScene() (ENTERING_LEVEL -> PLAYING). A bottom gate ("up"
@@ -393,6 +451,8 @@ public sealed class SceneTransitionModule : ModuleBase {
     private void OnActiveSceneChanged(Scene from, Scene to) {
         try {
             RecycleSilksongPooledObjects();
+            if (TryArmLiftArrival()) return; // the lift owns the hero this arrival; skip our gate entry entirely
+
             ArmEntry(from);
             if (!dreamPending) return;
             dreamPending = false;
