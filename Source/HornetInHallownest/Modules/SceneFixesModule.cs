@@ -1,8 +1,10 @@
 extern alias Silksong;
 extern alias SilksongPM;
 using System;
+using System.Collections;
 using System.Linq;
 using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using SFsm = SilksongPM::HutongGames.PlayMaker.Fsm;
@@ -28,6 +30,7 @@ public sealed class SceneFixesModule : ModuleBase {
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
         if (birthplaceForcedCharm && scene.name != "Abyss_06_Core") RestoreBirthplaceCharm();
         screamGet = scene.name == "Abyss_12" ? FindScreamGetFsm() : null;
+        inShamanTemple = scene.name == "Crossroads_ShamanTemple";
 
         switch (scene.name) {
             case "Deepnest_Spider_Town":
@@ -39,8 +42,34 @@ public sealed class SceneFixesModule : ModuleBase {
             case "Abyss_06_Core":
                 OpenBirthplaceForKingsoulOwner();
                 break;
+            case "Crossroads_ShamanTemple":
+                EnsureVengefulSpiritEquipped();
+                break;
         }
     }
+
+    #region Vengeful Spirit -> Silk Spear equip
+
+    private bool inShamanTemple;
+
+    // VS in Hollow knight is always active, silkspear needs to be equipped to prevent softlock.
+    private void EnsureVengefulSpiritEquipped() {
+        if (PlayerData.instance.fireballLevel >= 1) {
+            EquipSilkSpear();
+            return;
+        }
+
+        StartCoroutine(WatchForVengefulSpiritGet());
+    }
+
+    private IEnumerator WatchForVengefulSpiritGet() {
+        while (inShamanTemple && PlayerData.instance != null && PlayerData.instance.fireballLevel < 1) yield return null;
+        if (inShamanTemple && PlayerData.instance != null && PlayerData.instance.fireballLevel >= 1) EquipSilkSpear();
+    }
+
+    private static void EquipSilkSpear() => ToolItemManagerBootstrap.EquipToolByName("Silk Spear");
+
+    #endregion
 
     #region Abyss shriek (Scream 2)
 

@@ -55,6 +55,22 @@ internal static class ToolItemManagerBootstrap {
         }
     }
 
+    // Unlock + equip a tool by name without a bench (Silksong gates the equip UI to benches). Idempotent.
+    internal static void EquipToolByName(string name) {
+        var tool = Silksong::ToolItemManager.GetToolByName(name);
+        if (tool == null) {
+            Log.Error($"[ToolItemManager] can't equip '{name}': not found (manager down or wrong name)");
+            return;
+        }
+
+        if (Silksong::ToolItemManager.IsToolEquipped(tool.name)) return;
+
+        tool.SetUnlockedTestsComplete();
+        tool.Unlock(null, Silksong::ToolItem.PopupFlags.None);
+        Silksong::ToolItemManager.AutoEquip(tool);
+        Silksong::ToolItemManager.SendEquippedChangedEvent(true);
+    }
+
     // Unlock every crest + all its tool slots: rebuild each crest's slot list from its config with IsUnlocked=true,
     // preserving equipped tools. Requires ToolItemManager + PlayerData up (post-spawn).
     internal static object UnlockAllCrestSlots() {
