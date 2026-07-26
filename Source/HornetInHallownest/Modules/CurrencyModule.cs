@@ -46,10 +46,13 @@ public sealed class CurrencyModule : ModuleBase {
         var hk = PlayerData.instance;
         ss.geo = hk.geo;
 
+        // setStackVisible reparents the stack under Hud Canvas + enables its positioner; ForceCurrencyCountersAppear only
+        // pins render visibility, so without it the counter can stay in its out-parent (HudCamera) over the health HUD.
+        SCurrencyCounter.Show(SCurrencyType.Money, setStackVisible: true);
+
         foreach (var c in Object.FindObjectsByType<SCurrencyCounter>(FindObjectsInactive.Exclude,
                      FindObjectsSortMode.None)) {
             if (c.GetFieldValue<SCurrencyType>("currencyType") != SCurrencyType.Money) continue;
-            if (!c.GetFieldValue<bool>("isVisible")) SCurrencyCounter.Show(SCurrencyType.Money);
 
             // The icon is a separate FSM (RestartOnEnable) that hides in its Init state until APPEAR, so it vanishes on
             // every HUD/scene reactivation. Setting "No Disappear" var makes Init go visible.
