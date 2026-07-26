@@ -76,7 +76,7 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
         ManagerSingletonBootstrap.Destroy("Silksong_InteractManager");
         ManagerSingletonBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();
-        PlayMakerFix.Cleanup();
+        SilksongPlayMaker.Cleanup();
         Stub.Cleanup();
         HornetEnvironmentAdapter.Cleanup();
         HeroSwitch.Cleanup();
@@ -122,7 +122,7 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
         // our DLL won't undo a poisoned Addressables runtime (Addressables lives in the engine DLL, one per process).
         SilksongAddressables.EnsureMounted();
         SilksongResources.Install(); // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
-        PlayMakerFix.Apply();
+        SilksongPlayMaker.Apply();
         Stub.Install();
         HornetEnvironmentAdapter.Install();
         HeroSwitch.Install();
