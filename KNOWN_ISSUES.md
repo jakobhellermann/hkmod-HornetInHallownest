@@ -1,40 +1,39 @@
+## Integration
+- When you get a full mask shard, the HUD doesn't update instantly
+- Lifeblood masks don't work
+- Knight HUD sometimes vanishes
+- Sprint-attack doesn't work on Watcher Knights chandelier rope
+- Weavernest entry doesn't show up
+- Harpoon doesn't iframe as expected on Sawblades/Spikes
+- Sprinting into an elevator bumps against it
+- Dirtmouth doesn't apply slowdown
+- Hive Knight bees don't get knockback
+- Not implemented:
+    - Cocoons on death
+    - Beastling call
+
 ## Cosmetic
-- dreamer:
-    - needolin on a dreamer fires instantly
+- Dreamers:
     - freeing prompt shows "HOLD A to Focus" instead of HOLD D
     - dreamer walls are climbable
-- Camera sometimes snaps abuptly (-> reuse SS camera controller)
-- Use lethal death animation if appropriate
+- Camera sometimes snaps abruptly on ledge grabs
+- Zote room: camera is tinted differently
+- Death animation is always non-lethal
 - Animations showing knight:
     - VS, dive, kings brand, stag travel
-- Control during animation: shriek cutscene
-- Hornet HUD is too large, it overlaps with text boxes
+- Control during animation on shriek cutscene
 - Inventory: no UI hints for key mapping
 - Sound:
     - No sound on abyss spikes as hornet
-- Zote room: camera is tinted
-
-## Integration
-- Knight HUD sometimes vanishes
-- XX full mask shard -> instant hud update
-- Lifeblood masks
-- Sprint into elevator bumps
-- Sprint-attack misses Watcher Knights chandelier rope
-- Weavernest entry doesn't show up
-- Harpoon: doesn't iframe as expected on Sawblades/Spikes
-- Not implemented:
-    - Beastling call
-- Dirtmouth doesn't apply slowdown
-- Hive Knight bees don't get knockback
 
 # Balancing
-- Think about soul totem <-> silk mapping
+- How much silk should soul totems give?
 
 ## Double check before release
-- XX descending dark, cdash pickup
+- descending dark, cdash pickup
 - king soul fragment softlock whitesceen
 - scream control dung defender - fixed?
 - hollow knight statue cutscene
 - Lantern
-- possible softlocks waiting for fall-land due to height difference:
+- possible softlocks waiting for fall landing, due to height difference:
     `Crystal Shaman Mines_35, Super Dash Get Mines_31, Shiny Item DJ Abyss_21, Mines Lift Crossroads_45, Dreamer Scene 2 RestingGrounds_04, beasts den`
