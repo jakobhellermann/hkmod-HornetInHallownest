@@ -13,7 +13,7 @@ public abstract class ModuleBase {
     private const BindingFlags AllMethods =
         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
-    internal static MonoBehaviour CoroutineHost = null!;
+    internal static MonoBehaviour Runtime = null!;
 
     private readonly List<IDisposable> disposables = [];
 
@@ -55,7 +55,7 @@ public abstract class ModuleBase {
     }
 
     protected Coroutine StartCoroutine(IEnumerator routine) {
-        return CoroutineHost.StartCoroutine(routine);
+        return Runtime.StartCoroutine(routine);
     }
 
     protected void LogInfo(object? msg) => Log.Info($"[{Id}] {msg}");

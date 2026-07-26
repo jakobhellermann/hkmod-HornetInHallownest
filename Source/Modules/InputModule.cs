@@ -111,9 +111,37 @@ public sealed class InputModule : ModuleBase {
         var esc = Input.GetKey(KeyCode.Escape);
         inputActions.MenuCancel.CommitWithState((hk != null && hk.menuCancel.IsPressed) || esc, tick, dt);
 
-        // Recompute the composite two-axis actions from the just committed axes 
+        // Recompute the composite two-axis actions from the just committed axes
         inputActions.MoveVector.InvokeMethod("Update", tick, dt);
         inputActions.RightStick.InvokeMethod("Update", tick, dt);
+
+        if (!Paused) MaintainInputHandler();
+    }
+
+    // The per-frame bookkeeping half of the un-run InputHandler.Update (its other half is environment coupling we
+    // reject: OS cursor, gamepad-UI rebind, Silksong's own pause toggle). Runs after input is committed above.
+    private static void MaintainInputHandler() {
+        var ih = SilksongBootstrap.Handler;
+        if (!ih) return;
+
+        // buttonQueueTimers[] is the ~0.1s queued-press window GetWasButtonPressedQueued reads; frozen, every queued
+        // input gate silently stalls (e.g. the Sprint FSM's jump/attack-out-of-sprint).
+        ih.InvokeMethod("UpdateButtonQueueing");
+
+        // Clear ForceDreamNailRePress once DreamNail is released (RegainControl sets it, only Update clears it, else
+        // ListenForDreamNail skips forever). Inlined to skip PlayingInput's CheatManager.IsOpen read.
+        if (ih.inputActions != null && !ih.inputActions.DreamNail.IsPressed)
+            ih.ForceDreamNailRePress = false;
+
+        // Mirror HK's active controller onto Silksong's InputHandler (its own InControl never runs); keyboard-only menu
+        // shortcuts and the glyph UIs read it. Edge-only, then fire RefreshActiveControllerEvent so glyphs recompute.
+        var hkController = InputHandler.Instance
+            ? (Silksong::InControl.BindingSourceType)(int)InputHandler.Instance.lastActiveController
+            : Silksong::InControl.BindingSourceType.KeyBindingSource;
+        if (ih.lastActiveController != hkController) {
+            ih.lastActiveController = hkController;
+            ih.InvokeMethod("SendRefreshEvent");
+        }
     }
 
     public override void HornetToggled(bool active) {

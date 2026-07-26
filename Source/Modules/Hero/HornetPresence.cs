@@ -10,7 +10,7 @@ internal sealed class HornetPresence : HeroPresence {
     protected override Behaviour? AnimCtrl(GameObject go) => go.GetComponent<Silksong::HeroAnimationController>();
 
     protected override void OnDeactivate(GameObject go) {
-        // enabled is owned per-frame by HornetEnvironmentAdapter while she's active; turn it off so she goes inert.
+        // enabled is owned per-frame by HornetRuntime while she's active; turn it off so she goes inert.
         if (go.TryGetComponent<Silksong::HeroController>(out var hc)) hc.enabled = false;
     }
 

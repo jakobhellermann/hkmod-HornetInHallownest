@@ -152,7 +152,7 @@ internal static class SilksongBootstrap {
             } catch (Exception e) {
                 Log.Error($"[Bootstrap] PlayMaker global GameManager: {e.Message}");
             }
-            // gm.GameState is maintained per-frame by HornetEnvironmentAdapter (mirrors HK's pause), not set here.
+            // gm.GameState is maintained per-frame by HornetRuntime (mirrors HK's pause), not set here.
 
             Log.Debug($"[Bootstrap] GameManager.instance={(Silksong::GameManager.instance != null)}, " +
                      $"inputHandler={(gm.GetComponent<Silksong::InputHandler>() != null)}");

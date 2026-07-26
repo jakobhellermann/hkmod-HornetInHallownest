@@ -11,7 +11,7 @@ namespace HornetInHallownest.Modules;
 // Small fixes for the intentionally inactive Silksong GameManager GO (the seam), whose StartCoroutine calls misfire:
 //   - StartCoroutine: on an inactive GO Unity silently drops the coroutine (no log), breaking hazard respawn / death
 //     sequences (GameManager.HazardRespawn -> StartCoroutine(hero.HazardRespawn())). Redirect those to our always-active
-//     CoroutineHost; the coroutine captures its own `this`, so it runs correctly (the host just pumps it per frame).
+//     HornetRuntime; the coroutine captures its own `this`, so it runs correctly (the host just pumps it per frame).
 //   - FreezeMoment: the GM's hit-stop coroutine can't start on the inactive GM ("Coroutine couldn't be started" per hit).
 //     Pure juice (a brief global timeScale dip), so no-op it, but still invoke onFinish so death-sequence chains don't hang.
 public sealed class MinorFixesModule : ModuleBase {
@@ -20,7 +20,7 @@ public sealed class MinorFixesModule : ModuleBase {
     public override string Id => "minor-fixes";
 
     public override void Initialize() {
-        host = Object.FindAnyObjectByType<CoroutineHost>();
+        host = Object.FindAnyObjectByType<HornetRuntime>();
         Detour(typeof(MonoBehaviour), "StartCoroutine", OnStartCoroutine, typeof(IEnumerator));
         Detour(typeof(Silksong::GameManager), "FreezeMoment", OnFreezeMoment, typeof(SFreeze), typeof(Action));
         Detour(typeof(Silksong::HeroController), "RelinquishControl", OnRelinquishControl);

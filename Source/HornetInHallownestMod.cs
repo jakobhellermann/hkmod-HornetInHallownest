@@ -78,7 +78,6 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
         GlobalSettingsBootstrap.Cleanup();
         SilksongPlayMaker.Cleanup();
         Stub.Cleanup();
-        HornetEnvironmentAdapter.Cleanup();
         HeroSwitch.Cleanup();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
@@ -113,8 +112,8 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
 
         playgroundHost = new GameObject("HornetInHallownest.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
-        var host = playgroundHost.AddComponent<CoroutineHost>();
-        ModuleBase.CoroutineHost = host;
+        var host = playgroundHost.AddComponent<HornetRuntime>();
+        ModuleBase.Runtime = host;
 
         // FIRST: register Silksong's Addressables catalog into HK's empty runtime, BEFORE any Silksong code triggers a
         // (failing) addressables access. Once init fails in a process it stays poisoned (hasStartedInitialization=true,
@@ -124,7 +123,6 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
         SilksongResources.Install(); // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
         SilksongPlayMaker.Apply();
         Stub.Install();
-        HornetEnvironmentAdapter.Install();
         HeroSwitch.Install();
 
         // New lifecycle backbone: register migrated modules in order, then init them. Initialize runs forward,
