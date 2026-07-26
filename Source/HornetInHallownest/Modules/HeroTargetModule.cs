@@ -60,10 +60,17 @@ public sealed class HeroTargetModule : ModuleBase {
 
     private static UnityEngine.GameObject? lastHeroSwept;
 
+    // Variables that get set to the hero game object.
+    private static readonly string[] heroVarNames = { "Hero", "Hero Obj", "Hero Object" };
+
     private static void SyncLocalHeroVars(UnityEngine.GameObject hero) {
         foreach (var fsm in UnityEngine.Object.FindObjectsByType<PlayMakerFSM>(UnityEngine.FindObjectsSortMode.None)) {
-            var v = fsm.FsmVariables?.FindFsmGameObject("Hero");
-            if (v != null && v.Value != hero) v.Value = hero;
+            var vars = fsm.FsmVariables;
+            if (vars == null) continue;
+            foreach (var name in heroVarNames) {
+                var v = vars.FindFsmGameObject(name);
+                if (v != null && v.Value != hero) v.Value = hero;
+            }
         }
     }
 
