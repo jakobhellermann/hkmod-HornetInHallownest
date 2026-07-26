@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace HornetInHallownest.Modules;
 
-// Mapping for unity lookups (tag, GetComponent, Find variants)
+// Mapping for unity lookups (tag, GetComponent, Tag matching)
 public sealed class GameObjectLookupModule : ModuleBase {
     private const string RecoilerTag = "Recoiler";
 
@@ -14,7 +14,6 @@ public sealed class GameObjectLookupModule : ModuleBase {
     public override void Initialize() {
         Detour(typeof(GameObject), "CompareTag", OnCompareTag, typeof(string));
         Detour(typeof(GameObject), "GetComponent", OnGetComponent, typeof(string));
-        Detour(typeof(GameObject), "Find", OnFind, typeof(string));
         Detour(typeof(GameObject), "FindGameObjectWithTag", OnFindWithTag, typeof(string));
     }
 
@@ -42,13 +41,6 @@ public sealed class GameObjectLookupModule : ModuleBase {
         return null;
     }
 
-    private GameObject? OnFind(Func<string, GameObject> orig, string name) {
-        if (SilksongContext.Active) return Intercept("Find", name, ResolveName(name));
-        var r = orig(name);
-        LogDebugOnce($"find|Find|{name}", $"Find('{name}') -> {(r ? "'" + r.name + "'" : "null")}");
-        return r;
-    }
-
     private GameObject? OnFindWithTag(Func<string, GameObject> orig, string tag) {
         // Both Knight and Hornet carry "Player"
         if (tag == "Player" && HeroSwitch.HornetActive && HeroSwitch.ActiveHeroGameObject is { } hero) return hero;
@@ -68,7 +60,7 @@ public sealed class GameObjectLookupModule : ModuleBase {
 
     private GameObject? Intercept(string method, string key, GameObject? redirect) {
         LogDebug(redirect
-            ? $"{method}('{key}') -> REDIRECT '{redirect!.name}' (silksong-context)"
+            ? $"{method}('{key}') -> REDIRECT '{redirect.name}' (silksong-context)"
             : $"{method}('{key}') -> null (silksong-context, no mapping, blocked)");
         return redirect;
     }
@@ -79,9 +71,5 @@ public sealed class GameObjectLookupModule : ModuleBase {
             "CameraTarget" => GameCamerasBootstrap.CameraTargetGo, // Sprint FSM needs Silksong's CameraTarget (SetSprint)
             _ => null
         };
-    }
-
-    private static GameObject? ResolveName(string name) {
-        return null; // no name mappings needed yet
     }
 }
