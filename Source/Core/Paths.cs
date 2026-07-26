@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using HornetInHallownest.Util;
 using UnityEngine;
 
 namespace HornetInHallownest.Core;
@@ -51,6 +52,11 @@ internal static class Paths {
     private static string ResolveSilksongDataDir() {
         var install = (SilksongInstallOverride ?? AutoDetectedInstall).Replace('\\', '/');
         var dataDir = install.EndsWith(DataFolder) ? install : $"{install}/{DataFolder}";
+
+        Log.Info(SilksongInstallOverride != null
+            ? $"Using custom silksong path: {install}"
+            : $"Using auto detected silksong path: {install}");
+
         if (Directory.Exists(dataDir)) return dataDir;
 
         throw new DirectoryNotFoundException(SilksongInstallOverride != null
