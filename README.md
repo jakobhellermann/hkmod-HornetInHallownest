@@ -63,7 +63,7 @@ The config file can be found as `HornetInHallownestMod.GlobalSettings.json` in
     // without HK equivalents
     "Taunt": "V",
     "OpenTools": "L",
-    "SwitchHero": "Tab"
+    "SwitchHero": "F5"
   }
 }
 ```
