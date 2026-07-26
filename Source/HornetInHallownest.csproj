@@ -117,6 +117,17 @@
             <HintPath>$(HollowKnightManaged)/System.ValueTuple.dll</HintPath>
         </Reference>
 
+        <!-- Debug branch -->
+        <Reference Include="UnityEngine.ImageConversionModule" Private="false">
+            <HintPath>$(HollowKnightManaged)/UnityEngine.ImageConversionModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ParticleSystemModule" Private="false">
+            <HintPath>$(HollowKnightManaged)/UnityEngine.ParticleSystemModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ScreenCaptureModule" Private="false">
+            <HintPath>$(HollowKnightManaged)/UnityEngine.ScreenCaptureModule.dll</HintPath>
+        </Reference>
+
         <!-- Referenced directly from the silksong Managed dir, so that dotnet build works without relying on mod setup -->
         <Reference Include="Newtonsoft.Json.UnityConverters" Private="false">
             <HintPath>$(SilksongManaged)/Newtonsoft.Json.UnityConverters.dll</HintPath>
