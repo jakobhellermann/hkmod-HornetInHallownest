@@ -4,6 +4,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
+using HornetInHallownest.HornetInHallownest.Core;
 
 namespace HornetInHallownest.Playground;
 
@@ -17,7 +18,7 @@ internal static class ManagerSingletonBootstrap {
 
     private static GameObject? Prefab() {
         if (prefab != null) return prefab;
-        SilksongCatalog.EnsureMounted();
+        SilksongAddressables.EnsureMounted();
         // Deps mount the bundles carrying the managers' ScriptableObjects; Addressables caches, so repeated calls cheap.
         prefab = Addressables.LoadAssetAsync<GameObject>("_GameManager").WaitForCompletion();
         return prefab;

@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
 using HornetInHallownest.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Core;
 
 namespace HornetInHallownest.Playground;
 
@@ -73,7 +74,7 @@ internal static class GameCamerasBootstrap {
                 };
             }
 
-            SilksongCatalog.EnsureMounted();
+            SilksongAddressables.EnsureMounted();
             var prefab = Addressables.LoadAssetAsync<GameObject>("_GameCameras").WaitForCompletion();
             if (prefab == null) return new { error = "_GameCameras load returned null" };
 

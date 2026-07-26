@@ -67,8 +67,7 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
         // New lifecycle backbone: tear migrated modules down in reverse registration order, before the legacy systems.
         moduleHost.DeinitializeAll();
 
-        ResourcesShim.Cleanup();
-        SilksongCatalog.Cleanup();
+        SilksongResources.Cleanup();
         GameCamerasBootstrap.Cleanup();
         UIManagerBootstrap.Cleanup();
         SilksongBootstrap.Cleanup();
@@ -121,8 +120,8 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
         // (failing) addressables access. Once init fails in a process it stays poisoned (hasStartedInitialization=true,
         // empty locators) and can't be re-init'd, so this must run at Initialize on a fresh process — a hot-reload of
         // our DLL won't undo a poisoned Addressables runtime (Addressables lives in the engine DLL, one per process).
-        SilksongCatalog.EnsureMounted();
-        ResourcesShim.Install(); // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
+        SilksongAddressables.EnsureMounted();
+        SilksongResources.Install(); // serve Silksong's Resources.Load from silksong-resources.bundle; log unserved misses
         PlayMakerFix.Apply();
         Stub.Install();
         HornetEnvironmentAdapter.Install();

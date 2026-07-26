@@ -38,7 +38,7 @@ internal static class Stub {
         // broadcast BEFORE our detour is wired -> exactly ONE MissingMethodException at startup, unavoidably (we proved
         // hooking the .cctor itself also self-triggers it). Accepted as a single, understood startup error.
         //
-        // We also use this controlled cctor trigger as a SilksongContext window (see SilksongContext / ResourcesShim):
+        // We also use this controlled cctor trigger as a SilksongContext window (see SilksongContext / SilksongResources):
         // Silksong's Languages/*_General sheets exist in BOTH HK's Resources and our bundle, and by default HK wins ->
         // Silksong would read HK's strings. The window makes the cctor's sheet loads come from the Silksong bundle;
         // HK's localization already initialized at HK boot (outside this window) and is unaffected.

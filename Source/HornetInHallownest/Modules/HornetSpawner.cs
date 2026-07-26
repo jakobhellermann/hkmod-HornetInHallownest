@@ -28,7 +28,7 @@ public sealed class HornetSpawner : ModuleBase {
     private static GameObject? HeroPrefab {
         get {
             if (field) return field;
-            SilksongCatalog.EnsureMounted();
+            SilksongAddressables.EnsureMounted();
             field = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
             if (field) Log.Debug("[HornetSpawner] Hero_Hornet loaded via Addressables");
             return field;

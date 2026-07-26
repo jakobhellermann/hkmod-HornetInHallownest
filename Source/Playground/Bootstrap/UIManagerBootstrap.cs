@@ -4,6 +4,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
+using HornetInHallownest.HornetInHallownest.Core;
 
 namespace HornetInHallownest.Playground;
 
@@ -30,7 +31,7 @@ internal static class UIManagerBootstrap {
                 return new { ok = true, note = "reused", instanceSet = InstanceSet() };
             }
 
-            SilksongCatalog.EnsureMounted();
+            SilksongAddressables.EnsureMounted();
             var prefab = Addressables.LoadAssetAsync<GameObject>("_UIManager").WaitForCompletion();
             if (prefab == null) return new { error = "_UIManager load returned null" };
 
