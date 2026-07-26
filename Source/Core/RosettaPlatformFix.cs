@@ -3,9 +3,10 @@ using System.Runtime.InteropServices;
 using HornetInHallownest.Util;
 using MonoMod.Utils;
 
-namespace HornetInHallownest.Playground;
+namespace HornetInHallownest.Core;
 
-// On Apple Silicon we run the x86_64 slice under Rosetta (native arm64 can't get MonoMod's RWX mprotect — EACCES).
+// TODO: validate that this is correct and necessary, and maybe upstream it to API (if it stays on this monomod version)
+// On Apple Silicon we run the x86_64 slice under Rosetta (native arm64 can't get MonoMod's RWX mprotect (EACCES)).
 // But MonoMod's DeterminePlatform() shells out to `uname -m`, which reports "arm64" (the child process runs native
 // even though we're translated), so it picks DetourNativeARMPlatform whose instruction-cache flush emits ARM ops that
 // are illegal under Rosetta -> SIGILL. Forcing PlatformHelper.Current to the non-ARM x86 platform selects
@@ -17,7 +18,7 @@ internal static class RosettaPlatformFix {
         try {
             PlatformHelper.Current = MonoMod.Utils.Platform.MacOS | MonoMod.Utils.Platform.Bits64;
             Log.Debug(
-                $"[RosettaFix] under Rosetta — forced MonoMod platform to {PlatformHelper.Current} (x86 detour backend)");
+                $"[RosettaFix] under Rosetta, forced MonoMod platform to {PlatformHelper.Current} (x86 detour backend)");
         } catch (Exception e) {
             Log.Error($"[RosettaFix] could not override PlatformHelper.Current (already locked): {e.Message}");
         }
