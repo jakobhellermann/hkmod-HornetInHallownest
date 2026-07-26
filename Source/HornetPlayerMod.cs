@@ -194,6 +194,8 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         DebugServer.MapGet("/fsm-list", req => BundleSpike.FsmList(req["path"] ?? "Hud Canvas"));
         DebugServer.MapPost("/hud-health",
             (req, respond) => BundleSpike.DriveHealthHud(respond)); // drive the health-mask appear chain over frames
+        DebugServer.MapGet("/perf", PerfProbe.Measure); // A/B fps: /perf?disable=fsm,animator,tk2d,render,hero,go,...
+        DebugServer.MapPost("/eval-cs", req => EvalCs.Run(req.Body)); // runtime C# via UnityExplorer's evaluator
         DebugServer.MapGet("/find-event-senders", req => BundleSpike.FindEventSenders(req["event"] ?? "SHOW HP"));
         DebugServer.MapGet("/fsm-state-actions",
             req => BundleSpike.DumpStateActions(req["name"] ?? "health_display", req["state"] ?? "First Pause",
