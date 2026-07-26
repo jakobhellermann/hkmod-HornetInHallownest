@@ -26,7 +26,7 @@ public sealed class HornetRuntime : MonoBehaviour {
 
             if (active != wasHornetActive) {
                 wasHornetActive = active;
-                HornetInHallownestMod.LoadedInstance?.Modules.HornetToggled(active);
+                HornetInHallownest.LoadedInstance?.Modules.HornetToggled(active);
             }
 
             if (!active) return;
@@ -41,7 +41,7 @@ public sealed class HornetRuntime : MonoBehaviour {
             // Pump the modules. Also while the inventory is open (world frozen, but input must still reach it); a full
             // pause menu (paused && !inventoryOpen) skips it.
             if (!paused || Silksong::PlayerData.instance.isInventoryOpen) {
-                HornetInHallownestMod.LoadedInstance?.Modules.HornetActiveUpdate(hero!);
+                HornetInHallownest.LoadedInstance?.Modules.HornetActiveUpdate(hero!);
             }
         } catch (Exception e) {
             Log.Error($"[Runtime] {e}");

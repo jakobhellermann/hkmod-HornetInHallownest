@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 
 namespace HornetInHallownest;
 
-public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod, ILocalSettings<HornetSaveData>,
+public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, ILocalSettings<HornetSaveData>,
     IGlobalSettings<HornetGlobalSettings> {
     // The new lifecycle backbone (HornetInHallownest). Modules migrate into this ordered list one at a time; until a
     // system is migrated it keeps its old Install/Cleanup below. Initialize forward, Deinitialize reverse.
@@ -24,7 +24,7 @@ public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod,
 
     private bool initialized;
 
-    public static HornetInHallownestMod? LoadedInstance { get; private set; }
+    public static HornetInHallownest? LoadedInstance { get; private set; }
 
     // Persist Hornet's PlayerData inside HK's save file (per slot). The modding API invokes these at HK's native
     // save/load points (GameManager.SaveGame on bench/autosave; LoadGame on load) — see HornetSaveBridge.

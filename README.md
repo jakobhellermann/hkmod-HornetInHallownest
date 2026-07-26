@@ -40,7 +40,7 @@ In order to avoid redistributing assets from Silksong, the mod requires an insta
 
 ## Config
 
-The config file can be found as `HornetInHallownestMod.GlobalSettings.json` in
+The config file can be found as `HornetInHallownest.GlobalSettings.json` in
 
 - **Windows:** `%USERPROFILE%/AppData/LocalLow/Team Cherry/Hollow Knight`
 - **macOS:** `~/Library/Application Support/unity.Team-Cherry.Hollow Knight`
