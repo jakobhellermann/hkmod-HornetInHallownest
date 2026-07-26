@@ -2,14 +2,52 @@
 
 Hollow Knight Mod, bringing Hornet as a playable character to the base game.
 
+![demo image](./docs/demo.png)
+
+## Status
+
+Playable with some bugs, currently ready for playtesting.
+
+Right now the mod is only playable on the latest Hollow Knight version (1.5.12620, released 2026) with this branch of the modding API: https://github.com/hk-modding/api/pull/164.
+Supporting older hollow knight versions might be possible, but that's not the focus right  now.
+
+A list of known issues can be found at [KNOWN_ISSUES.md](./KNOWN_ISSUES.md), but feel free to open issues at https://github.com/jakobhellermann/HornetPlayer/issues.
+
+> [!IMPORTANT]
+> After installing the mod, you have to start the game *twice*.
+> The first run will say `HornetInHallownest: Failed to initialize! Check ModLog.txt` in the mod menu.
+
+## Ability Sync
+
+Most abilities from Hollow Knight are automatically granted, e.g. `Vengeful Spirit` -> `Silkspear`, `Dreamnail` -> `Needolin`.
+The full list of mapping can be in [this google sheet](https://docs.google.com/spreadsheets/d/1V3tq-4Mp1XaV8E_Dwz7N1Tk0cHRW7SyeBtjGcvBrrHg).
+
+Currently, all crests and tools are automatically granted.
+
+## Requirements
+
+In order to avoid redistributing assets from Silksong, the mod requires an installation of Silksong next to the Hollow Knight installation. Alternatively you can specify the path in the configuration, see below.
+
+**TODO**: currently some assemblies are redistributed still, they should be reused from silksong as well.
+
+| Hollow Knight  | Silksong version    |
+| -------------- | ------------------- |
+| 1.5.12620      | 1.0.30000           |
+
+**Older versions of Hollow Knight:** Currently unsupported
+
+**Older versions of Silksong:** Currently untested, but I'd like to support all of them
+
 ## Config
 
 The config file can be found as `HornetInHallownestMod.GlobalSettings.json` in
+
 - **Windows:** `%USERPROFILE%/AppData/LocalLow/Team Cherry/Hollow Knight`
 - **macOS:** `~/Library/Application Support/unity.Team-Cherry.Hollow Knight`
-- **Linux:** `~/.config/unity3d/Team Cherry/Hollow Knight` 
+- **Linux:** `~/.config/unity3d/Team Cherry/Hollow Knight`
 
 **Default config:**
+
 ```json
 {
   "SilksongPath": null,
@@ -31,20 +69,20 @@ The config file can be found as `HornetInHallownestMod.GlobalSettings.json` in
 ```
 
 Keybindings can be set to letters (`A`–`Z`), digits (`Key0`–`Key9`), function keys (`F1`–`F15`)
-and mouse buttons (`LeftButton`, `RightButton`, `Button5`, …), or `null`. 
+and mouse buttons (`LeftButton`, `RightButton`, `Button5`, …), or `null`.
 
 For the bindings with HK equivalents, `null` means reusing the existing keybinding.
 
 The full list of available keybinds can be found in the [InControl `Key` and `Mouse` enums](https://www.gallantgames.com/incontrol-api/html/namespace_in_control.html).
 
-## Requirements
-
 ## Uninstall
 
-Right now, Hornet in Hallownest copies some files into the HK `Managed/` dir.
-I'm gonna try to get rid of this before release, but for now in order to fully uninstall the mod, you have to
+Right now, Hornet in Hallownest has to copy some files into the HK `Managed/` dir.
+After removing the mod from the `Managed/Mods` folder these don't do anything, but to fully uninstall you have to do these steps manually:
+
 1. Replace `ScriptingAssemblies.json` with `ScriptingAssemblies.json.hornetbak` (in `hollow_knight_Data`)
 2. Remove all assemblies prefixed with `Silksong.` from `Managed/`
-2. Remove the following additional assemblies from `Managed/`: `Unity.Addressables.dll`, `Unity.ResourceManager.dll`, `Unity.Profiling.Core.dll`, `Unity.Mathematics.dll`, `Unity.Burst.dll`, `Newtonsoft.Json.UnityConverters.dll`, `TeamCherry.Splines.dll`, `Coffee.SoftMaskForUGUI.dll`.
+3. Remove the following additional assemblies from `Managed/`: `Unity.Addressables.dll`, `Unity.ResourceManager.dll`, `Unity.Profiling.Core.dll`, `Unity.Mathematics.dll`, `Unity.Burst.dll`, `Newtonsoft.Json.UnityConverters.dll`, `TeamCherry.Splines.dll`, `Coffee.SoftMaskForUGUI.dll`.
+
 
 ## Development
