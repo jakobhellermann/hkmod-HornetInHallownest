@@ -12,6 +12,7 @@
 - Inventory: no UI hints for key mapping
 - Sound:
     - No sound on abyss spikes as hornet
+- Zote room: camera is tinted
 
 ## Integration
 - Knight HUD sometimes vanishes
