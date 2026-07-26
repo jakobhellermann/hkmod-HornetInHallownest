@@ -136,4 +136,19 @@
         </ItemGroup>
         <Copy SourceFiles="@(B2Lib)" DestinationFiles="@(B2Lib->'$(CopyDir)/%(Filename)%(Extension).managed')" SkipUnchangedFiles="true"/>
     </Target>
+
+    <!-- Allowlist files for `dotnet publish` -->
+    <Target Name="CurateModPublish" AfterTargets="Publish">
+        <ItemGroup>
+            <PublishJunk Include="$(PublishDir)**/*"/>
+            <ModLib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
+        </ItemGroup>
+        <Delete Files="@(PublishJunk)"/>
+        <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PublishDir)"/>
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/monoscripts.silksong.bundle;$(MSBuildProjectDirectory)/lib/silksong-resources.bundle" DestinationFolder="$(PublishDir)"/>
+        <Copy SourceFiles="@(ModLib)" DestinationFiles="@(ModLib->'$(PublishDir)%(Filename)%(Extension).managed')"/>
+
+        <!-- create zip for distribution -->
+        <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(MSBuildProjectDirectory)/bin/$(Configuration)/HornetInHallownest.zip" Overwrite="true"/>
+    </Target>
 </Project>
