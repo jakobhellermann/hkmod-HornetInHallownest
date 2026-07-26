@@ -74,6 +74,23 @@ internal static class ManagerSingletonBootstrap {
         return mgr;
     }
 
+    // Register a bare singleton without copying serialized data (unlike BringUp) or running Awake: just enough so
+    // ManagerSingleton<T>.Instance stops FindAnyObjectByType-scanning the whole scene on every access while it is null.
+    internal static Component RegisterBare(Type managerType, string goName) {
+        var existing = FindExisting(goName)?.GetComponent(managerType);
+        if (existing != null) {
+            if (SilentInstance(managerType) == null) SetSingleton(managerType, existing);
+            return existing;
+        }
+
+        var go = new GameObject(goName);
+        Object.DontDestroyOnLoad(go);
+        go.SetActive(false);
+        var mgr = go.AddComponent(managerType);
+        SetSingleton(managerType, mgr);
+        return mgr;
+    }
+
     // Walk up the type chain so a [SerializeField] declared on a base class still resolves.
     private static FieldInfo? GetField(Type t, string name) {
         for (var cur = t; cur != null; cur = cur.BaseType) {

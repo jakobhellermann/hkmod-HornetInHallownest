@@ -119,6 +119,9 @@ public sealed class HornetSpawner : ModuleBase {
         var prefab = HeroPrefab;
         if (!prefab) return false;
         GlobalsBootstrap.Ensure();
+        // Minimal instance so ManagerSingleton<InteractManager>.Instance stops FindAnyObjectByType-scanning the whole scene
+        // on every access. HeroController.CanNailCharge reads it 3x/frame, which tanks performance.
+        ManagerSingletonBootstrap.RegisterBare(typeof(Silksong::InteractManager), "Silksong_InteractManager");
         Despawn(); // tear down any previous spawn
 
         // Instantiate inactive so we can patch null fields before Awake runs, then activate.

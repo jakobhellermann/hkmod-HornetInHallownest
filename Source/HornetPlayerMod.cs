@@ -82,6 +82,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         SilksongBootstrap.Cleanup();
         ToolItemManagerBootstrap.Cleanup();
         CollectableItemManagerBootstrap.Cleanup();
+        ManagerSingletonBootstrap.Destroy("Silksong_InteractManager");
         ManagerSingletonBootstrap.Cleanup();
         GlobalSettingsBootstrap.Cleanup();
         PlayMakerFix.Cleanup();
