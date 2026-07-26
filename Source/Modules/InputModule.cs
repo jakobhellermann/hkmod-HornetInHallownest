@@ -1,7 +1,9 @@
 extern alias Silksong;
 using System;
 using HornetInHallownest.Bootstrap;
+using System.Reflection;
 using HornetInHallownest.Core;
+using HornetInHallownest.Modules;
 using HornetInHallownest.Save;
 using HornetInHallownest.Util;
 using InControl;
@@ -50,7 +52,10 @@ public sealed class InputModule : ModuleBase {
             PrimaryOnly: true)
     ];
 
-    // Global-persisted binds
+    // If set, forces an action to read as held
+    internal static Func<SsAction, bool>? DebugHold;
+
+    // Global-persisted binds 
     internal static InputSettings Settings = new();
 
     private HornetInputActions? overrideSet;
@@ -199,7 +204,7 @@ public sealed class InputModule : ModuleBase {
 
         foreach (var (hkGet, ssGet) in mirror) {
             var act = ssGet(inputActions);
-            act.CommitWithState((hk != null && hkGet(hk).IsPressed), tick, dt);
+            act.CommitWithState((hk != null && hkGet(hk).IsPressed) || Held(act), tick, dt);
         }
 
         if (menuButtons != null) {
@@ -222,13 +227,13 @@ public sealed class InputModule : ModuleBase {
             if (def.PrimaryOnly && (!primary || hkInventoryOpen)) pressed = false;
             if (!pressed) heldOverMenu[i] = false;
             else if (leftMenu && !def.Axis) heldOverMenu[i] = true;
-            act.CommitWithState(pressed && !heldOverMenu[i], tick, dt);
+            act.CommitWithState(pressed || Held(act) && !heldOverMenu[i], tick, dt);
         }
 
         // ESC only reaches HK's InputHandler, manually route it to the inventory MenuCancel - but only for the primary
         // (co-drive: the non-primary Hornet must not react to the Knight's pause/cancel).
         var esc = primary && Input.GetKey(KeyCode.Escape);
-        inputActions.MenuCancel.CommitWithState((primary && hk != null && hk.menuCancel.IsPressed) || esc, tick, dt);
+        inputActions.MenuCancel.CommitWithState((primary && hk != null && hk.menuCancel.IsPressed) || esc || Held(inputActions.MenuCancel), tick, dt);
 
         // Recompute the composite two-axis actions from the just committed axes
         inputActions.MoveVector.InvokeMethod("Update", tick, dt);
@@ -269,6 +274,10 @@ public sealed class InputModule : ModuleBase {
 
     public override void HornetToggled(bool active) {
         if (!active) SetHkInventoryEnabled(HkActions, true);
+    }
+
+    private static bool Held(SsAction action) {
+        return DebugHold != null && DebugHold(action);
     }
 
     private static void SetHkInventoryEnabled(HeroActions? hk, bool enabled) {
