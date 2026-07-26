@@ -70,7 +70,7 @@ internal static class HeroSwitch {
     }
 
     internal static object SetActive(ActiveHero who) {
-        if (who == ActiveHero.Hornet && !BundleSpike.Hornet)
+        if (who == ActiveHero.Hornet && !HornetSpawner.Hornet)
             return new { error = "Hornet not spawned (POST /spawn-real first)", active = Active.ToString() };
 
         var prev = Active;

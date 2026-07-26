@@ -44,9 +44,6 @@ public sealed class InputModule : ModuleBase {
         new(s => s.OpenTools, null, a => a.OpenInventoryTools)
     ];
 
-    // If set, forces an action to read as held
-    internal static Func<SsAction, bool>? DebugHold;
-
     // Global-persisted binds 
     internal static InputSettings Settings = new();
 
@@ -99,7 +96,7 @@ public sealed class InputModule : ModuleBase {
 
         foreach (var (hkGet, ssGet) in mirror) {
             var act = ssGet(inputActions);
-            act.CommitWithState((hk != null && hkGet(hk).IsPressed) || Held(act), tick, dt);
+            act.CommitWithState((hk != null && hkGet(hk).IsPressed), tick, dt);
         }
 
         for (var i = 0; i < overridable.Length; i++) {
@@ -107,12 +104,12 @@ public sealed class InputModule : ModuleBase {
             var act = def.Ss(inputActions);
             var ov = overrideActions[i];
             var pressed = ov?.IsPressed ?? def.Hk != null && hk != null && def.Hk(hk).IsPressed;
-            act.CommitWithState(pressed || Held(act), tick, dt);
+            act.CommitWithState(pressed, tick, dt);
         }
 
         // ESC only reaches HK's InputHandler, manually route it to the inventory MenuCancel
         var esc = Input.GetKey(KeyCode.Escape);
-        inputActions.MenuCancel.CommitWithState((hk != null && hk.menuCancel.IsPressed) || esc || Held(inputActions.MenuCancel), tick, dt);
+        inputActions.MenuCancel.CommitWithState((hk != null && hk.menuCancel.IsPressed) || esc, tick, dt);
 
         // Recompute the composite two-axis actions from the just committed axes 
         inputActions.MoveVector.InvokeMethod("Update", tick, dt);
@@ -121,10 +118,6 @@ public sealed class InputModule : ModuleBase {
 
     public override void HornetToggled(bool active) {
         if (!active) SetHkInventoryEnabled(HkActions, true);
-    }
-
-    private static bool Held(SsAction action) {
-        return DebugHold != null && DebugHold(action);
     }
 
     private static void SetHkInventoryEnabled(HeroActions? hk, bool enabled) {

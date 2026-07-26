@@ -110,49 +110,4 @@ internal static class ResourcesShim {
             bundle = null;
         }
     }
-
-    // Debug: reload silksong-resources.bundle from disk WITHOUT touching the hook, so we can iterate on the bundle
-    // (rebuild via repack_resources) and re-test in-game without a hot-reload or game restart. Pair with DumpLocalization.
-    internal static void Reload() {
-        if (bundle != null) {
-            bundle.Unload(true);
-            bundle = null;
-        }
-
-        bundle = AssetBundle.LoadFromFile(BundlePath);
-        Log.Debug(bundle != null
-            ? $"[ResShim] reloaded bundle ({bundle.GetAllAssetNames().Length} assets)"
-            : $"[ResShim] reload FAILED: {BundlePath}");
-    }
-
-    // Debug: load any Resources path through the shim and report what came back (or the exception). Used to isolate
-    // whether a repacked asset deserializes — e.g. a plain TextAsset (no MonoScript/typetree) vs a MonoBehaviour.
-    internal static object LoadRes(string path) {
-        try {
-            var o = Resources.Load(path);
-            if (o == null) return new { path, result = "null" };
-            var ta = o as TextAsset;
-            return new {
-                path, type = o.GetType().FullName, o.name, textLen = ta != null ? ta.bytes.Length : (int?)null
-            };
-        } catch (Exception e) {
-            return new { path, error = e.Message };
-        }
-    }
-
-    // Debug: load the served Silksong LocalizationSettings and read sheetTitles directly — the ground-truth readout for
-    // whether the baked typetree deserializes correctly ("General","Map Zones",…) or garbage. Bypasses the Language cctor.
-    internal static object DumpLocalization() {
-        var t = Type.GetType("TeamCherry.Localization.LocalizationSettings, Silksong.TeamCherryLocalization");
-        if (t == null)
-            return new {
-                error = "type TeamCherry.Localization.LocalizationSettings (Silksong.TeamCherryLocalization) not found"
-            };
-        // ReSharper disable once Unity.UnknownResource
-        var so = Resources.Load("Languages/LocalizationSettings", t);
-        if (so == null) return new { error = "Resources.Load returned null", bundleLoaded = bundle != null };
-        var f = t.GetField("sheetTitles", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        var titles = f?.GetValue(so) as string[];
-        return new { so.name, type = so.GetType().FullName, count = titles?.Length, sheetTitles = titles };
-    }
 }

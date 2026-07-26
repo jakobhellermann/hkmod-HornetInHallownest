@@ -70,21 +70,6 @@ internal static class SilksongCatalog {
         return op.Result?.LocatorId;
     }
 
-    // Debug route (GET /addr-load?key=…): load a key and report what came back.
-    internal static object Load(string key) {
-        try {
-            EnsureMounted();
-            var h = Addressables.LoadAssetAsync<GameObject>(key);
-            var obj = h.WaitForCompletion();
-            return new {
-                key, status = h.Status.ToString(), loaded = obj != null, name = obj != null ? obj.name : null
-            };
-        } catch (Exception e) {
-            var ex = e.InnerException ?? e;
-            return new { key, error = $"{ex.GetType().Name}: {ex.Message}" };
-        }
-    }
-
     // Process-lifetime state; nothing safe to tear down per hot-reload (clearing the transform / locator mid-session
     // would break in-flight Silksong loads).
     internal static void Cleanup() {

@@ -48,7 +48,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
 
             // Only drive Hornet while SHE is the active character; when Knight is active she stays inert (HeroSwitch
             // disabled her HeroController + Rigidbody) so we must NOT force-enable her here.
-            var hero = BundleSpike.Hornet;
+            var hero = HornetSpawner.Hornet;
             var active = hero != null && HeroSwitch.HornetActive;
             if (active != wasHornetActive) {
                 wasHornetActive = active;

@@ -102,7 +102,7 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         if (!ints.TryGetValue(name, out var apply)) return orig;
         apply(ss, orig);
         // A mask gained mid-play bumps maxHealth silently (AddToMaxHealth sends no HUD event); appear the new mask.
-        if (name == "maxHealthBase") BundleSpike.RefreshMaxHealthHud();
+        if (name == "maxHealthBase") HealthHud.RefreshMaxHealthHud();
         return orig;
     }
 

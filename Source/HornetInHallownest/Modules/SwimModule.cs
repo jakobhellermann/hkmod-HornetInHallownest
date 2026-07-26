@@ -48,7 +48,7 @@ public sealed class SwimModule : ModuleBase {
 
     private void OnOverlap(Collider2D? region, float offset, bool water) {
         if (!region) return;
-        var hero = BundleSpike.Hornet;
+        var hero = HornetSpawner.Hornet;
         if (!hero || hero.transitionState != HeroTransitionState.WAITING_TO_TRANSITION) return;
         graceTimer = GracePeriod;
         if (floatingInWater) return;

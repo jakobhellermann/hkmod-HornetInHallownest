@@ -52,7 +52,7 @@ internal static class HornetSaveBridge {
     internal static void ApplyPending() {
         // Gate on the spawned hero, not PlayerData.instance (a singleton that survives despawn): during a menu->game
         // load it's non-null before the hero exists, so restoring then would consume the pending state with no hero.
-        var hero = BundleSpike.Hornet;
+        var hero = HornetSpawner.Hornet;
         if (hero == null) return; // hero not spawned yet, the post-spawn hook will call us again
         var spd = Silksong::PlayerData.instance;
 

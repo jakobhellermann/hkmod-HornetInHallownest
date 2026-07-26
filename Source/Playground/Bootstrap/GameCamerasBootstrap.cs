@@ -289,7 +289,7 @@ internal static class GameCamerasBootstrap {
 
         // Re-sync masks from PlayerData: on a reused (DDOL) rig the mask FSMs still show the previous life's count/fill,
         // so force them back through Init to re-read maxHealth/health. Only runs on spawn, so no repeated appear anim.
-        BundleSpike.ResetHealthHud();
+        HealthHud.ResetHealthHud();
 
         var uiSet = Silksong::UIManager.instance != null;
         return new {
