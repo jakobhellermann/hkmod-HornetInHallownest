@@ -19,7 +19,11 @@ internal static class Paths {
             : Path.GetDirectoryName(location)!.Replace('\\', '/');
     }
 
-    internal static string HkManagedDir => $"{Application.dataPath}/Managed";
+    internal static string HkDataDir => Application.platform == RuntimePlatform.OSXPlayer
+        ? $"{Application.dataPath}/Resources/Data"
+        : Application.dataPath;
+
+    internal static string HkManagedDir => $"{HkDataDir}/Managed";
 
     // Config override for the Silksong install, can point to data or installation folder
     internal static string? SilksongInstallOverride {
@@ -58,7 +62,11 @@ internal static class Paths {
     // Steam installs the two games as siblings in the same library: ".../common/Hollow Knight" and its sibling here.
     private static string AutoDetectedInstall {
         get {
-            var library = Directory.GetParent(Application.dataPath)?.Parent?.FullName;
+            // Win/Linux: dataPath is <install>/<game>_Data.
+            // macOS: dataPath is <install>/<game>.app/Contents
+            var library = Application.platform == RuntimePlatform.OSXPlayer
+                ? Directory.GetParent(Application.dataPath)?.Parent?.Parent?.FullName
+                : Directory.GetParent(Application.dataPath)?.Parent?.FullName;
             return $"{library}/{SilksongName}";
         }
     }

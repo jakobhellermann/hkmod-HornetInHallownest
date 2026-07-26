@@ -2,7 +2,6 @@ using System.IO;
 using System.Linq;
 using HornetInHallownest.Util;
 using Newtonsoft.Json.Linq;
-using UnityEngine;
 
 namespace HornetInHallownest.Core;
 
@@ -51,7 +50,7 @@ internal static class SilksongSetup {
             changed |= CopyIfMissing($"{Paths.ModDir}/{name}.dll.managed", $"{managed}/{name}.dll");
 
         // ScriptingAssemblies.json lives in the data root (next to Managed/), not inside Managed.
-        changed |= RegisterForSerialization($"{Application.dataPath}/ScriptingAssemblies.json");
+        changed |= RegisterForSerialization($"{Paths.HkDataDir}/ScriptingAssemblies.json");
         return !changed;
     }
 
