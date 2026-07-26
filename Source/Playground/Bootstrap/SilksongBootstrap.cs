@@ -35,6 +35,7 @@ internal static class SilksongBootstrap {
             var pd = Silksong::PlayerData.instance;
             pd.silkMax = 9; // silk resource so silk-cost abilities can fire
             pd.silk = 9;
+            pd.IsSilkSpoolBroken = false;
             pd.silkSpecialLevel = 1;
             // The HUD Health FSM enables one mask renderer per health; 0 default -> no masks shown. Grant a full bar.
             pd.maxHealth = 5;

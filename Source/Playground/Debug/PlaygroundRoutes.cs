@@ -214,7 +214,14 @@ public static class PlaygroundRoutes {
         var (_, comp, error) = ResolveComponent(rawPath);
         if (error != null) return error;
 
-        var method = comp!.GetType().GetMethod(methodName, MemberFlags);
+        MethodInfo? method;
+        try {
+            method = comp!.GetType().GetMethod(methodName, MemberFlags);
+        } catch (AmbiguousMatchException) {
+            // Overloaded: pick the parameterless one (the usual debug-poke target, e.g. SilkSpool.DrawSpool()).
+            method = comp!.GetType().GetMethod(methodName, MemberFlags, null, Type.EmptyTypes, null);
+        }
+
         if (method == null) return DevResponse.Json(new { error = $"Method not found: {methodName}" }, 404);
 
         var parms = method.GetParameters();

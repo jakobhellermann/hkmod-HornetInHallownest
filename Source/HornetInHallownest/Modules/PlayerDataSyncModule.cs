@@ -43,7 +43,9 @@ public sealed class PlayerDataSyncModule : ModuleBase {
             if (v >= 2) ss.hasSilkBossNeedle = true; // Pale Nails
         },
         ["maxHealthBase"] = (ss, v) => { ss.maxHealthBase = v; ss.maxHealth = v; }, // mask capacity (not current HP)
-        ["MPReserveMax"] = (ss, v) => ss.silkMax = 9 + v / 33 * 3 // soul vessels -> silk capacity (base 9, +3/vessel)
+        // Soul Vessel progression -> silk spools (9 -> 18)
+        ["MPReserveMax"] = (ss, v) => RecomputeSilk(ss, mpReserveMax: v),
+        ["vesselFragments"] = (ss, v) => RecomputeSilk(ss, vesselFragments: v)
     };
 
     public override string Id => "playerdata-sync";
@@ -77,6 +79,16 @@ public sealed class PlayerDataSyncModule : ModuleBase {
                    + ((greatSlash ?? hk.hasUpwardSlash) ? 1 : 0);
         ss.hasChargeSlash = arts >= 1; // Needle Strike (charge attack)
         ss.silkRegenMax = (arts >= 2 ? 1 : 0) + (arts >= 3 ? 1 : 0) + ((shadeCloak ?? hk.hasShadowDash) ? 1 : 0);
+    }
+
+    // Soul vessel -> silk spools. Both full vessels (MPReserveMax, +33 each) and loose fragments
+    // (vesselFragments 0-2) count: 9 HK fragments map to Silksong's 18 spool parts (2 parts = +1 silk), so each HK
+    // fragment is +1 silkMax (base 9 -> 18 at 9 fragments). Params override HK PD for the field being set right now (the
+    // SetInt hook fires before the write); null => read HK.
+    private static void RecomputeSilk(SPlayerData ss, int? mpReserveMax = null, int? vesselFragments = null) {
+        var hk = PlayerData.instance;
+        int fragments = (mpReserveMax ?? hk.MPReserveMax) / 33 * 3 + (vesselFragments ?? hk.vesselFragments);
+        ss.silkMax = 9 + fragments;
     }
 
     private static bool OnSetBool(string name, bool orig) {
