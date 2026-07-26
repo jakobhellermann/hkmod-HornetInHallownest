@@ -45,6 +45,9 @@ public sealed class SceneFixesModule : ModuleBase {
             case "Crossroads_ShamanTemple":
                 EnsureVengefulSpiritEquipped();
                 break;
+            case "Fungus1_04_boss":
+                FixDreamerFallGate("Dreamer Scene 1");
+                break;
         }
     }
 
@@ -142,27 +145,25 @@ public sealed class SceneFixesModule : ModuleBase {
 
     #endregion
 
-    #region Deepnest_Spider_Town trap bench
+    #region Knight-calibrated fall-land gates
 
-    // The trap bench's `Fade` FSM falls the hero and waits for `Hero Y <= Hero Land Y` (baked 19.5, calibrated to the
-    // Knight) to fire LAND -> return control. Hornet rests ~0.16 higher (deeper collider feet), so her Y never reaches
-    // the Knight-frame land-Y -> the FSM hangs, no-input, on the floor. Raise the baked land-Y into her frame by the
-    // live collider feet-delta; the FSM then runs Fall -> Land -> Relinquish Control (incl. SetBenchRespawn, SaveGame).
-    // TODO(unverified): numbers confirmed live, but the softlock -> fixed round-trip isn't verified end-to-end (the trap
-    // is a one-time spiderCapture and the test save is past it). Re-verify on a fresh save reaching this bench.
-    private void FixSpiderTrapBench() {
+    // A class of HK cutscene FSM: relinquish control, drop the hero, then gate the landing on a FloatCompare of the
+    // hero's Y against a baked target Y (equal/lessThan -> FINISHED, greaterThan has no transition). The target is
+    // calibrated to where the Knight's origin rests on that floor. Hornet rests ~0.16 higher (deeper collider feet),
+    // so her Y never reaches it -> the compare never fires -> the FSM hangs no-input and control is never returned.
+    // Raise the baked target into Hornet's frame by the live collider feet-delta; the gate then fires as she lands.
+    private void RaiseHeroLandGate(GameObject? go, string fsmName, string varName) {
         try {
-            var bench = GameObject.Find("RestBench Spider");
-            if (bench == null) return;
+            if (go == null) return;
 
-            PlayMakerFSM? fade = null;
-            foreach (var f in bench.GetComponents<PlayMakerFSM>())
-                if (f.FsmName == "Fade") {
-                    fade = f;
+            PlayMakerFSM? fsm = null;
+            foreach (var f in go.GetComponents<PlayMakerFSM>())
+                if (f.FsmName == fsmName) {
+                    fsm = f;
                     break;
                 }
 
-            var landY = fade?.FsmVariables.FindFsmFloat("Hero Land Y");
+            var landY = fsm?.FsmVariables.FindFsmFloat(varName);
             if (landY == null) return;
 
             var delta = FeetDelta();
@@ -170,11 +171,21 @@ public sealed class SceneFixesModule : ModuleBase {
 
             var before = landY.Value;
             landY.Value = before + delta;
-            LogDebug($"raised 'Hero Land Y' {before} -> {landY.Value} (+{delta} collider feet-delta)");
+            LogDebug($"raised '{varName}' {before} -> {landY.Value} (+{delta} feet-delta) on {go.name}/{fsmName}");
         } catch (Exception e) {
             LogError(e.Message);
         }
     }
+
+    // Trap bench `Fade` FSM: Fall -> gate `Hero Y <= Hero Land Y` -> Land -> Relinquish Control (SetBenchRespawn,
+    // SaveGame). TODO(unverified): numbers confirmed live, but the softlock -> fixed round-trip isn't verified
+    // end-to-end (the trap is a one-time spiderCapture and the test save is past it). Re-verify on a fresh save.
+    private void FixSpiderTrapBench() => RaiseHeroLandGate(GameObject.Find("RestBench Spider"), "Fade", "Hero Land Y");
+
+    // Dreamer cutscene `Control` FSM: Blast -> gate `Hero Y <= Knight Scene Y` (Hero Fall) -> Land -> ... -> End
+    // (RegainControl). Without the raise, Hero Fall hangs no-input (verified: raising the gate live runs it to End).
+    private void FixDreamerFallGate(string sceneObjectName) =>
+        RaiseHeroLandGate(GameObject.Find(sceneObjectName), "Control", "Knight Scene Y");
 
     // How much higher Hornet's origin rests on a floor than the Knight's, from the live colliders (collider bottom =
     // offset.y - size.y/2). Returns 0 if either collider is missing (fail-safe: no patch).
