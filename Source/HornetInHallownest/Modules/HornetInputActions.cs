@@ -3,8 +3,7 @@ using InControl;
 namespace HornetPlayer.HornetInHallownest.Modules;
 
 // InControl action set holding hornets actions.
-// Automatically updated by HK's InputManager.UpdatePlayerActionSets since constructor attaches it. 
-// InputModule binds only the actions whose settings carry an override; the rest stay unbound.
+// Automatically updated by HK's InputManager.UpdatePlayerActionSets since constructor attaches it.
 public sealed class HornetInputActions : PlayerActionSet {
     public readonly PlayerAction[] Slots;
 

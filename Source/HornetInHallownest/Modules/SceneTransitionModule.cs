@@ -27,9 +27,9 @@ public sealed class SceneTransitionModule : ModuleBase {
     private bool pendingSnap, dreamReturnPending, hkEntryFixed, dreamGateEntryPending;
     private bool cameraCaughtUp;
 
-    // A Dream-visualization arrival is in flight (set at BeginSceneTransition, consumed by Tick). HK warps dream entries
-    // in via EnterSceneDreamGate (gravity off, no door walk-out); route Hornet the same way even when HK drove the Knight
-    // through a normal gate instead — RunEntry's door walk-out otherwise walks/falls her off the arena platform.
+    // A dream-visualization arrival is in flight. HK warps dream entries in via EnterSceneDreamGate (gravity off, no door
+    // walk-out); route Hornet the same way even when HK drove the Knight through a normal gate, else RunEntry's door
+    // walk-out walks/falls her off the arena platform.
     private bool dreamArrivalPending;
     private bool dreamHeroPlaced;
     private bool arrivalInvulnerable; // block hazard damage through the dream-arrival window (park + placement settle)
@@ -101,9 +101,9 @@ public sealed class SceneTransitionModule : ModuleBase {
     }
 
     // HK drives the transition on its Knight (LeaveScene then LeavingScene); Hornet's HeroController gets neither.
-    // LeaveScene sets no_input + NO_DAMAGE + a scripted walk-out (else she runs/falls out the gate with gravity on and can
-    // take hazard damage during the fade); RecordLeaveSceneCState captures exitedSprinting/-SuperDashing/-Quake that
-    // EnterScene reads to carry the move across. Directional gate exits only — null-gate loads have their own paths.
+    // LeaveScene sets no_input + no-damage + a scripted walk-out (else she runs/falls out the gate with gravity on and
+    // takes hazard damage during the fade); RecordLeaveSceneCState captures exitedSprinting/-SuperDashing/-Quake that
+    // EnterScene reads to carry the move across. Directional gate exits only; null-gate loads have their own paths.
     private void RelayLeaveScene(GameManager.SceneLoadInfo info) {
         if (!HeroSwitch.HornetActive || !info.HeroLeaveDirection.HasValue) return;
         var hero = HornetSpawner.Hornet;
@@ -128,17 +128,17 @@ public sealed class SceneTransitionModule : ModuleBase {
     #region enter
 
     private void InstallEnterHooks() {
-        // HK calls SetHazardRespawn from FinishedEnteringScene AND from HazardRespawnTrigger (any Layer-9 collider, incl.
+        // HK calls SetHazardRespawn from FinishedEnteringScene and from HazardRespawnTrigger (any Layer-9 collider, incl.
         // Hornet). Mirror onto Silksong's PlayerData so her HazardRespawn lands at the right spot.
         Detour(typeof(PlayerData), "SetHazardRespawn", OnSetHazardRespawn, typeof(Vector3), typeof(bool));
         Detour(typeof(PlayerData), "SetHazardRespawn", OnSetHazardRespawnMarker, typeof(HazardRespawnMarker));
 
-        // enterWithoutInput entries rely on an HK arrival FSM to RegainControl/AcceptInput; Hornet has none, so
-        // FinishedEnteringScene leaves her frozen — do the close.
+        // enterWithoutInput entries rely on an HK arrival FSM to RegainControl/AcceptInput; Hornet has none, leaving her
+        // frozen after FinishedEnteringScene, so do the close.
         Detour(typeof(Silksong::HeroController), "FinishedEnteringScene", OnFinishedEnteringScene,
             typeof(bool), typeof(bool));
 
-        // Dream entries warp in via a DIRECT hero_ctrl.EnterSceneDreamGate() on the Knight (typed field call, no shim
+        // Dream entries warp in via a direct hero_ctrl.EnterSceneDreamGate() on the Knight (typed field call, no shim
         // redirects it), so Hornet's never runs. Flag it; Tick positions her and runs hers.
         Detour(typeof(HeroController), "EnterSceneDreamGate", OnEnterSceneDreamGate);
 
@@ -172,7 +172,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (HeroSwitch.HornetActive) dreamGateEntryPending = true;
     }
 
-    // Per-frame from the driver: the two deferred waits with no clean event — HK placing the Knight (isHeroInPosition) and
+    // Per-frame from the driver: the two deferred waits with no clean event, HK placing the Knight (isHeroInPosition) and
     // the inert-Knight bottom-gate entry. Scene-change detection is event-driven (OnActiveSceneChanged -> ArmEntry).
     internal void Tick() {
         var knight = HeroController.UnsafeInstance;
@@ -180,9 +180,9 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (!pendingSnap || !knight || !knight.isHeroInPosition) return;
 
         if (HeroSwitch.HornetActive && (dreamGateEntryPending || (dreamArrivalPending && !dreamReturnPending))) {
-            // Dream arrival: warp her to the Knight's placed position + EnterSceneDreamGate (gravity off, no_input, no door
-            // walk-out) — HK's dream mechanism. The arrival-layer coroutine (started at scene change) held her non-colliding
-            // until now; dreamHeroPlaced flips it to restore the Player layer so she collides with the platform and stays.
+            // Dream arrival: warp her to the Knight's placed position + EnterSceneDreamGate (gravity off, no_input, no
+            // door walk-out), HK's dream mechanism. The arrival-layer coroutine held her non-colliding until now;
+            // dreamHeroPlaced flips it to restore the Player layer so she collides with the platform and stays.
             SnapHornetToKnight(knight);
             HornetSpawner.Hornet?.EnterSceneDreamGate();
             dreamHeroPlaced = true;
@@ -200,7 +200,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         dreamArrivalPending = false;
     }
 
-    // Arm the entry on a scene change (from = scene we're leaving). Pre-place her at the gate now — HK moved the Knight
+    // Arm the entry on a scene change (from = scene we're leaving). Pre-place her at the gate now: HK moved the Knight
     // there but Hornet still holds old coords, and enemy FSMs sampling the entry position fire before Tick's
     // isHeroInPosition walk-in moves her. The definitive walk-in runs from Tick.
     private void ArmEntry(Scene from) {
@@ -217,12 +217,12 @@ public sealed class SceneTransitionModule : ModuleBase {
     }
 
     // HK's EnterScene ends by calling gm.FinishedEnteringScene() (ENTERING_LEVEL -> PLAYING). A bottom gate ("up"
-    // transition) ends at DROPPING_DOWN and only completes once the Knight physically LANDS — which the inert Knight
-    // (physics off) never does, so gameState sticks at ENTERING_LEVEL and every later gate's TryDoTransition bails. Having
-    // taken the hero role, we finish HK's half and settle transitionState (HK camera reads the Knight's as the proxy; a
-    // stuck DROPPING_DOWN makes CameraTarget.ExitLockZone drop to FREE). Once per scene.
+    // transition) ends at DROPPING_DOWN and only completes once the Knight physically lands, which the inert Knight
+    // (physics off) never does, so gameState sticks at ENTERING_LEVEL and every later gate's TryDoTransition bails. We
+    // finish HK's half and settle transitionState (HK camera reads the Knight's as the proxy; a stuck DROPPING_DOWN makes
+    // CameraTarget.ExitLockZone drop to FREE). Once per scene.
     private void CompleteStuckHkVerticalEntry(HeroController? knight) {
-        if (hkEntryFixed || !HeroSwitch.HornetActive || !knight || knight.enabled) return; // only the INERT Knight
+        if (hkEntryFixed || !HeroSwitch.HornetActive || !knight || knight.enabled) return; // only the inert Knight
         var gm = GameManager.UnsafeInstance;
         if (!gm || gm.gameState != GameState.ENTERING_LEVEL) return;
         if (knight.transitionState != HeroTransitionState.DROPPING_DOWN) return;
@@ -235,9 +235,9 @@ public sealed class SceneTransitionModule : ModuleBase {
     }
 
     // Manage the hero's collision layer across a cross-scene dream arrival. Two windows, both racy in our setup:
-    //  1. PARK (scene loaded, not yet placed): she sits at the carried-over position, which in Radiance's arena is inside
+    //  1. park (scene loaded, not yet placed): she sits at the carried-over position, which in Radiance's arena is inside
     //     the wide Abyss Pit spike -> keep her on Ignore Raycast so she collides with nothing (like HK's warp).
-    //  2. PLACED (dream-gate branch set dreamHeroPlaced): restore Player so she collides with the arena platform and stays
+    //  2. placed (dream-gate branch set dreamHeroPlaced): restore Player so she collides with the arena platform and stays
     //     (HK restores it ~0.7s late, during which she'd otherwise fall through the floor into the pit).
     private static readonly int PlayerLayer = LayerMask.NameToLayer("Player");
     private static readonly int IgnoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
@@ -279,25 +279,24 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (!cameraController || !ct) return;
         var cam = cameraController.transform.position;
         var cty = ct.transform.position.y;
-        // Fix ONLY the stale vertical carry-over (the "camera glides in from below"), and only once per entry. Y-only: HK's
-        // lock-zone X clamp legitimately sits far from camTarget.x (e.g. xLockMin at a room edge), so touching X fights the
-        // clamp -> oscillation. Latch: once the camera Y is on camTarget, hand everything back to HK's follow untouched.
+        // Fix only the stale vertical carry-over (the "camera glides in from below"), once per entry. Y-only: HK's
+        // lock-zone X clamp legitimately sits far from camTarget.x (e.g. xLockMin at a room edge), so touching X fights
+        // the clamp -> oscillation. Latch: once the camera Y is on camTarget, hand everything back to HK's follow.
         if (Mathf.Abs(cam.y - cty) <= 5f) return;
         cameraController.transform.position = new Vector3(cam.x, cty, cam.z);
         cameraCaughtUp = true;
     }
 
-    // enterWithoutInput entries deliberately skip AcceptInput (expecting an HK arrival FSM to close them); Hornet has none.
-    // Do just the Regain-Control close, at the skip point. Skip move-resumes (dash/sprint/quake) — they resume on their own.
+    // enterWithoutInput entries deliberately skip AcceptInput (expecting an HK arrival FSM to close them); Hornet has
+    // none. Do just the Regain-Control close. Skip move-resumes (dash/sprint/quake), they resume on their own.
     private void OnFinishedEnteringScene(Action<Silksong::HeroController, bool, bool> orig, Silksong::HeroController self,
         bool setHazardMarker, bool preventRunBob) {
         var wasEnterWithoutInput = self.enterWithoutInput;
         var isMoveResume = self.exitedSuperDashing || self.exitedQuake || self.exitedSprinting;
         orig(self, setHazardMarker, preventRunBob);
 
-        // HK's gameState ist driven by the HK EnterScene, which finishes after Hornet.
-        // During that window she has control but gates are disabled during ENTERING_LEVEL, so dashing back through the transition
-        // keeps her in the scene out of bounds.
+        // HK's gameState is driven by the HK EnterScene, which finishes after Hornet. During that window she has control
+        // but gates are disabled during ENTERING_LEVEL, so dashing back through the transition keeps her out of bounds.
         if (HeroSwitch.HornetActive) {
             var hkGm = GameManager.UnsafeInstance;
             if (hkGm != null && hkGm.gameState == GameState.ENTERING_LEVEL) {
@@ -317,7 +316,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         LogDebug("closed enterWithoutInput entry (RegainControl+AcceptInput+FADE OUT white; Hornet has no arrival FSM)");
     }
 
-    // Run Hornet's REAL EnterScene from a Silksong TransitionPoint fabricated to mirror HK's gate, so she walks/drops in
+    // Run Hornet's real EnterScene from a Silksong TransitionPoint fabricated to mirror HK's gate, so she walks/drops in
     // with her own entry FSMs. Mirrors GameManager.OnNextLevelReady's regain-then-enter (our GM is inactive, never fires):
     // without the RegainControl a door up-interact's earlier RelinquishControl sticks across the transition and gates
     // CanSprint/mantle. SuppressRegainControl honored as OnNextLevelReady does.
@@ -339,8 +338,8 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     internal bool entryInProgress;
 
-    // Inactive Silksong TransitionPoint mirroring HK's gate: GetGatePosition parses the NAME for the side, the rest are
-    // fields identical in both games. Inactive so its Awake (needs the Silksong scene-setup env) never runs — EnterScene
+    // Inactive Silksong TransitionPoint mirroring HK's gate: GetGatePosition parses the name for the side, the rest are
+    // fields identical in both games. Inactive so its Awake (needs the Silksong scene-setup env) never runs; EnterScene
     // only reads fields + GetGatePosition. customEntryFSM stays null (entry hooks no-op).
     private static GameObject BuildGate(TransitionPoint hk) {
         var go = new GameObject(hk.name);
@@ -358,8 +357,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         return go;
     }
 
-    // Dream-return arrival: normal entry, then force the idle clip once grounded — "door_dreamReturn" is a door path with
-    // no real door, leaving her animator on the warp clip. HK's Dream Return get-up would do this.
+    // Dream-return arrival: normal entry, then force the idle clip once grounded ("door_dreamReturn" is a door path with
+    // no real door, leaving her animator on the warp clip; HK's Dream Return get-up would do this).
     private IEnumerator DreamReturnEntry(HeroController knight) {
         yield return RunEntry(knight);
         var hero = HornetSpawner.Hornet;
@@ -372,8 +371,8 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     #region dream white-blanker
 
-    // Dream / GrimmDream / GodsAndGlory entries fade a white blanker IN and rely on the Knight-only Dream Return FSM to
-    // fade it OUT + return control on arrival. Hornet lacks it; arm the fade-out (and capture the gate for a same-scene
+    // Dream / GrimmDream / GodsAndGlory entries fade a white blanker in and rely on the Knight-only Dream Return FSM to
+    // fade it out + return control on arrival. Hornet lacks it; arm the fade-out (and capture the gate for a same-scene
     // re-entry HeroSwitch's name-change snap misses).
     private void ArmDreamArrival(GameManager.SceneLoadInfo info) {
         if (!HeroSwitch.HornetActive) return;
@@ -389,8 +388,8 @@ public sealed class SceneTransitionModule : ModuleBase {
     // Silksong's SetupGameRefs subscribes the pooled-object recyclers to NextSceneWillActivate; our GM is inactive and
     // never raises it, so thrown tools / one-shot audio linger across HK transitions (a tool ticking against a destroyed
     // camera -> per-frame NullRef). Mirror that single firing here (one per real room change).
-    // Subscriber on the shared SceneManager.activeSceneChanged multicast: must NEVER throw, or it aborts the remaining
-    // subscribers — including HK's own LevelActivated/scene-setup that populates e.g. the menu. Guard the whole body.
+    // Subscriber on the shared SceneManager.activeSceneChanged multicast: must never throw, or it aborts the remaining
+    // subscribers, including HK's own LevelActivated/scene-setup that populates e.g. the menu. Guard the whole body.
     private void OnActiveSceneChanged(Scene from, Scene to) {
         try {
             RecycleSilksongPooledObjects();
@@ -448,7 +447,7 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     // The cutscene RelinquishControl'd + StopAnimationControl'd her and enters via "door_dreamReturn" (door path, no door)
     // -> stuck in WAITING_TO_ENTER_LEVEL with a frozen animator. Apply HK's Dream Return get-up: finish the entry, return
-    // control, resume idle, broadcast DREAM WAKE (dream-scene directors wait on it — else she's on the bare dais and the
+    // control, resume idle, broadcast DREAM WAKE (dream-scene directors wait on it, else she's on the bare dais and the
     // Fall Catcher loops her).
     private void CompleteArrival() {
         var hero = HornetSpawner.Hornet;
@@ -498,7 +497,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     #endregion
 }
 
-// Thin per-frame ticker for SceneTransitionModule — own MonoBehaviour (not ModuleBase.HornetActiveUpdate) so it runs
+// Thin per-frame ticker for SceneTransitionModule: own MonoBehaviour (not ModuleBase.HornetActiveUpdate) so it runs
 // Knight-active too. Early order so a scene-change snap lands before HeroController/CameraTarget (order 0) read position.
 [DefaultExecutionOrder(-8001)]
 internal sealed class SceneTransitionDriver : MonoBehaviour {

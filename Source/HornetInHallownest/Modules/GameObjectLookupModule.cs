@@ -27,8 +27,8 @@ public sealed class GameObjectLookupModule : ModuleBase {
         return orig(self, tag);
     }
 
-    // A string name resolves to an HK type, doesn't find it and return null.
-    // Fall back to searching by-name for the silksong type, if present.
+    // A string GetComponent resolves to the HK type only, so it misses Hornet's Silksong component. Fall back to a
+    // by-name scan of the object's own components.
     private static Component? OnGetComponent(Func<GameObject, string, Component> orig, GameObject self, string name) {
         var c = orig(self, name);
         if (c != null || string.IsNullOrEmpty(name)) return c;
@@ -69,7 +69,7 @@ public sealed class GameObjectLookupModule : ModuleBase {
     private GameObject? Intercept(string method, string key, GameObject? redirect) {
         LogDebug(redirect
             ? $"{method}('{key}') -> REDIRECT '{redirect!.name}' (silksong-context)"
-            : $"{method}('{key}') -> null (silksong-context, no mapping — BLOCKED)");
+            : $"{method}('{key}') -> null (silksong-context, no mapping, blocked)");
         return redirect;
     }
 

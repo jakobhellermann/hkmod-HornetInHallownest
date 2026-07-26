@@ -9,12 +9,12 @@ using Log = HornetPlayer.Playground.Log; // TEMP: shared infra, see ModuleHost.
 
 namespace HornetPlayer.HornetInHallownest.Validation;
 
-// In-mod validation engine — the fast loop for the validation-gated migration. Runs registered scenarios against the
-// LIVE game (one instance, no clean-reload):
+// In-mod validation engine: the fast loop for the validation-gated migration. Runs registered scenarios against the
+// live game (one instance, no clean-reload):
 //
 //   POST /validate?scenario=<name>&disable=<moduleId,...>
 //
-// `disable` deactivates modules by Id (via ModuleHost) for the scenario's duration, then restores them — this is how
+// `disable` deactivates modules by Id (via ModuleHost) for the scenario's duration, then restores them. This is how
 // we validate "is this shim still needed?" / "does more bring-up carry without it?" without a restart. During Run we
 // subscribe to Application.logMessageReceived and treat any Exception/Error as a failure: the in-process zero-error
 // verdict (catches engine-level NullRefs etc. that never reach our Log sinks), no Player.log parsing.
@@ -54,7 +54,7 @@ public sealed class ValidationRunner {
             if (type is LogType.Exception or LogType.Error) engineErrors.Add($"{type}: {msg}");
         };
 
-        // The mod's own Log.Error goes to the modding API (ModLog), NOT Application.logMessageReceived — so tap the Log
+        // The mod's own Log.Error goes to the modding API (ModLog), not Application.logMessageReceived, so tap the Log
         // sink too, else scenarios miss every shim/bridge error (e.g. ResourcesShim "missing SilksongContext").
         var modErrors = new List<string>();
         var origSink = Log.SinkError;

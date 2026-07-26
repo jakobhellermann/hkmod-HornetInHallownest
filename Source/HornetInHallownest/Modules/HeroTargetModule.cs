@@ -14,13 +14,13 @@ public sealed class HeroTargetModule : ModuleBase {
     public override string Id => "hero-target";
 
     public override void Initialize() {
-        // Enemy targeting: LoS reads HeroController.instance (positional) — place the inert Knight at Hornet's spot for
-        // the call, restore after. GetHero caches instance into a per-FSM local var — rewrite its result.
+        // Enemy targeting: LoS reads HeroController.instance (positional), so place the inert Knight at Hornet's spot for
+        // the call, restore after. GetHero caches instance into a per-FSM local var, so rewrite its result.
         Detour(typeof(LineOfSightDetector), "Update", OnLosUpdate);
         Detour(typeof(GetHero), "OnEnter", OnGetHero);
 
         // SoulOrb (pooled) homes to HeroController.instance: Start caches it once at pool warmup (before Hornet exists),
-        // OnEnable fires per fling — retarget on both. AddMPCharge converts the soul grant to silk.
+        // OnEnable fires per fling, so retarget on both. AddMPCharge converts the soul grant to silk.
         Detour(typeof(SoulOrb), "Start", OnSoulOrbActivate);
         Detour(typeof(SoulOrb), "OnEnable", OnSoulOrbActivate);
         Detour(typeof(HeroController), "AddMPCharge", OnAddMpCharge, typeof(int));
@@ -51,7 +51,7 @@ public sealed class HeroTargetModule : ModuleBase {
         var target = HeroSwitch.ActiveHeroGameObject;
         if (target && heroVar.Value != target) heroVar.Value = target;
 
-        // A hero-GO change leaves running HK leaves cached "Hero" variables unchanged, re-sync them
+        // A hero-GO change leaves HK's cached local "Hero" vars pointing at the old GO; re-sync them.
         if (target && target != lastHeroSwept) {
             SyncLocalHeroVars(target);
             lastHeroSwept = target;

@@ -40,7 +40,7 @@ public sealed class DashGeoPickupModule : ModuleBase {
         var b = heroBox.bounds;
         var cur = (Vector2)b.center;
         var half = (Vector2)b.extents;
-        // Sweep last frame's HeroBox to this frame's — the dash moves ~1 box-width/frame, so a point-in-time box tunnels.
+        // Sweep last frame's HeroBox to this frame's: the dash moves ~1 box-width/frame, so a point-in-time box tunnels.
         var min = (hadPrev ? Vector2.Min(prevCenter, cur) : cur) - half;
         var max = (hadPrev ? Vector2.Max(prevCenter, cur) : cur) + half;
         prevCenter = cur;

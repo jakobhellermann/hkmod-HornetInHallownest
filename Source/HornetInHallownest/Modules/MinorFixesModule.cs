@@ -10,11 +10,11 @@ using SFreeze = Silksong::GlobalEnums.FreezeMomentTypes;
 namespace HornetPlayer.HornetInHallownest.Modules;
 
 // Small fixes for the intentionally inactive Silksong GameManager GO (the seam), whose StartCoroutine calls misfire:
-//   - StartCoroutine: on an inactive GO Unity silently drops the coroutine (no log) — this breaks hazard respawn / death
+//   - StartCoroutine: on an inactive GO Unity silently drops the coroutine (no log), breaking hazard respawn / death
 //     sequences (GameManager.HazardRespawn -> StartCoroutine(hero.HazardRespawn())). Redirect those to our always-active
-//     PlaygroundHost; the coroutine captures its own `this`, so it runs correctly — the host just pumps it per frame.
+//     PlaygroundHost; the coroutine captures its own `this`, so it runs correctly (the host just pumps it per frame).
 //   - FreezeMoment: the GM's hit-stop coroutine can't start on the inactive GM ("Coroutine couldn't be started" per hit).
-//     Pure juice (a brief global timeScale dip), so no-op it — but still invoke onFinish so death-sequence chains don't hang.
+//     Pure juice (a brief global timeScale dip), so no-op it, but still invoke onFinish so death-sequence chains don't hang.
 public sealed class MinorFixesModule : ModuleBase {
     private MonoBehaviour? host;
 
@@ -29,8 +29,8 @@ public sealed class MinorFixesModule : ModuleBase {
 
     #region Sprint + cutscene RelinquishControl
     
-    // RelinquishControl does nothing if control is already relinquished (e.g. during dash).
-    // This lead to ResetMotion never being called for the abyss exit cutscene -> camera follows hornet into nirvana.
+    // RelinquishControl does nothing if control is already relinquished (e.g. during dash), so ResetMotion never ran
+    // for the abyss exit cutscene -> camera follows Hornet into nirvana.
     private static void OnRelinquishControl(Action<Silksong::HeroController> orig, Silksong::HeroController self) {
         if (self.cState is { isSprinting: true, dead: false })
             self.acceptingInput = true;

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace HornetPlayer.HornetInHallownest.Validation;
 
 // Handed to a scenario's Run: assertion helpers + the failure list. Assertions accumulate (a scenario keeps running
-// after a failed assert so we report ALL failures, not just the first). The runner appends any captured Unity
+// after a failed assert so we report all failures, not just the first). The runner appends any captured Unity
 // Exceptions/Errors to the same list before computing the verdict, so Passed reflects both explicit assertions and
 // the in-process zero-error check.
 public sealed class ScenarioContext {

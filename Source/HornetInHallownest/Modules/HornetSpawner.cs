@@ -19,16 +19,12 @@ namespace HornetPlayer.HornetInHallownest.Modules;
 public sealed class HornetSpawner : ModuleBase {
     private static Silksong::HeroController? hornet;
 
-    // The live spawned HeroController, cached at spawn — read hot (per-frame, across modules), so avoid a
-    // GetComponentInChildren per access. Normalized through Unity's null check so a destroyed hero reads as null.
     internal static Silksong::HeroController? Hornet => hornet ? hornet : null;
 
-    // Root of the spawned Hornet subtree
     internal static GameObject? HornetRoot { get; private set; }
 
-    // Hero_Hornet, loaded on first access via Addressables. Addressables pulls the full dependency closure and owns
-    // every bundle, so there's no double-load conflict with the game's own runtime loads (GameManager.EnsureGlobalPool
-    // -> "GlobalPool", etc.); the monoscripts redirect in SilksongCatalog binds all m_Script PPtrs to Silksong.*.
+    // Load via Addressables (not manual LoadFromFile): it owns the full dependency closure, so the game's own runtime
+    // loads (GameManager.EnsureGlobalPool -> "GlobalPool") reuse those bundles instead of double-loading.
     private static GameObject? HeroPrefab {
         get {
             if (field) return field;
@@ -45,21 +41,18 @@ public sealed class HornetSpawner : ModuleBase {
 
     public override string Id => "spawn";
 
-    // Hornet's presence tracks HK's scene state, trigger-based (no polling) via two hooks on HK's GameManager:
-    // FinishedEnteringScene spawns her once a gameplay scene has placed the Knight; ReturnToMainMenu despawns her on
-    // quit-to-menu. The Knight is HK's to manage; Hornet is a separate DontDestroyOnLoad body HK's teardown doesn't know
-    // about, so without the despawn she'd linger (visible/active) on the menu. Spawn itself stays lazy — the actual
-    // instantiation is Spawn(), also reachable via /spawn-real.
+    // ReturnToMainMenu despawns her: she's a separate DontDestroyOnLoad body HK's teardown doesn't know about, so
+    // without this she'd linger active on the menu.
     public override void Initialize() {
         Detour(typeof(GameManager), "FinishedEnteringScene", OnEnteredScene);
         Detour(typeof(GameManager), "ReturnToMainMenu", OnReturnToMainMenu,
             typeof(GameManager.ReturnToMainMenuSaveModes), typeof(Action<bool>));
 
-        // Like HK's own hero, Hornet has no place in non-gameplay scenes (End_Credits, cinematics). Despawn her there so
-        // HK owns the camera/scene — else the camera keeps following her and the credits render off-screen (blackscreen).
+        // Hornet has no place in non-gameplay scenes (End_Credits, cinematics). Despawn her there so HK owns the
+        // camera/scene, else it keeps following her and the credits render off-screen (blackscreen).
         USceneManager.sceneLoaded += DespawnOutsideGameplay;
 
-        // Hot-reload mid-game: FinishedEnteringScene already fired this scene, so spawn now if we're already placed.
+        // Hot-reload mid-game: the scene-entry hook won't fire again, so spawn now if the Knight is already placed.
         var knight = HeroController.UnsafeInstance;
         if (knight && knight.isHeroInPosition && !HornetRoot) Spawn();
     }
@@ -79,11 +72,9 @@ public sealed class HornetSpawner : ModuleBase {
                 LogError(e.ToString());
             }
 
-        // Apply a save stashed earlier this LoadGame (once PlayerData.instance exists). Self-clearing no-op otherwise.
         HornetSaveBridge.ApplyPending();
 
-        // HK re-grabbed the camera/vignette/HUD/"Hero" var to its Knight during scene setup; re-point them at the active
-        // hero now that she's placed.
+        // Scene setup re-grabbed camera/vignette/HUD/"Hero" var to HK's Knight; re-point them at the active hero.
         HeroSwitch.ReassertEnvironment();
     }
 
@@ -91,12 +82,11 @@ public sealed class HornetSpawner : ModuleBase {
         Func<GameManager, GameManager.ReturnToMainMenuSaveModes, Action<bool>, IEnumerator> orig, GameManager self,
         GameManager.ReturnToMainMenuSaveModes mode, Action<bool> cb) {
         if (HornetRoot) {
-            // Record the hero the player was actually on: ReturnToMainMenu autosaves, but we force the Knight active
-            // below (camera handback), which would otherwise make that save record Knight and clobber the "was playing
-            // Hornet" state. Consumed by the next Snapshot.
+            // ReturnToMainMenu autosaves, but we force the Knight active below (camera handback), which would otherwise
+            // record Knight and clobber the "was playing Hornet" state. Capture the real hero first.
             HornetSaveBridge.SaveActiveOverride = HeroSwitch.HornetActive;
-            // Hand the camera back to the Knight first: despawning while Hornet is active would leave CameraTarget.Update
-            // dereferencing a destroyed transform every frame through the menu fade.
+            // Hand the camera back to the Knight before despawn, else CameraTarget.Update derefs a destroyed transform
+            // every frame through the menu fade.
             HeroSwitch.SetActive(ActiveHero.Knight);
             Despawn();
             LogDebug("quit to menu -> despawned Hornet");
@@ -108,29 +98,23 @@ public sealed class HornetSpawner : ModuleBase {
     private void DespawnOutsideGameplay(Scene scene, LoadSceneMode mode) {
         var gm = GameManager.UnsafeInstance;
         if (!HornetRoot || !gm) return;
-        // sceneLoaded also fires for HK's additive gameplay transitions (room-to-room + Pantheon boss loads go through
-        // GameManager.LoadSceneAsync(..., Additive)), which load the new scene while the PREVIOUS scene is still active.
-        // gm.IsGameplayScene() reads the ACTIVE scene, so on an additive load it classifies the stale previous scene, not
-        // the one that just loaded — so entering the first Pantheon boss (GG_Ghost_Xero, a gameplay scene) from the
-        // non-gameplay GG_Boss_Door_Entrance misreads as non-gameplay and wrongly despawns Hornet. The non-gameplay scenes
-        // this handler targets (credits/cinematics/menu) are loaded SINGLE-mode, so the loaded scene is already active.
-        // Only act when the loaded scene is the active one; skip additive loads (Hornet stays — correct for gameplay).
+        // sceneLoaded also fires for HK's additive gameplay loads (room-to-room, Pantheon bosses), which load the new
+        // scene while the previous one stays active. gm.IsGameplayScene() reads the active scene, so an additive load
+        // misclassifies the stale previous scene (e.g. entering a Pantheon boss from a non-gameplay door -> wrong
+        // despawn). Non-gameplay scenes we target (credits/cinematics/menu) load single-mode, so guard on loaded == active.
         if (scene.name != USceneManager.GetActiveScene().name) return;
         if (gm.IsGameplayScene()) return;
-        // EXCEPTION: stag travel (Cinematic_Stag_travel) is a HK "Cinematic" (non-gameplay) scene, but the hero RIDES
-        // THROUGH it — HK's Knight is DontDestroyOnLoad and is never deactivated there; StagTravel.Start just plays the
-        // full-screen cinematic then BeginSceneTransition's onward to the destination (gate "door_stagExit"). Despawning
-        // Hornet here forced a full respawn on arrival (fresh HeroController/FSMs -> sprint & other carry-through state
-        // reset). Mirror HK: let her ride through (she's already deparented to DDOL) and enter the destination normally.
+        // Stag travel (Cinematic_Stag_travel) is a non-gameplay scene the hero rides through: HK's Knight isn't
+        // deactivated there, StagTravel.Start plays the cinematic then transitions onward. Despawning here forced a full
+        // respawn on arrival (fresh HeroController/FSMs reset sprint + carry-through state); let her ride through instead.
         if (gm.IsStagTravelScene()) return;
         HeroSwitch.SetActive(ActiveHero.Knight); // hand camera back before despawn (CameraTarget would deref her)
         Despawn();
         LogDebug($"non-gameplay scene '{scene.name}' -> despawned Hornet");
     }
 
-    // Instantiate the FULL prefab ACTIVE (no stripping) so every component's Awake/Start runs against our prefixed
-    // Silksong.* types. Unity swallows per-component Awake exceptions into Player.log — that log is the "what's
-    // missing" list (e.g. GameManager.instance null, input/camera singletons absent).
+    // Instantiate the full prefab active so every component's Awake/Start runs against our prefixed Silksong.* types.
+    // Unity swallows per-component Awake exceptions into Player.log (the "what's missing" list).
     internal static bool Spawn() {
         var prefab = HeroPrefab;
         if (!prefab) return false;
@@ -181,19 +165,19 @@ public sealed class HornetSpawner : ModuleBase {
             vignette.gameObject.tag = "Untagged";
         }
 
-        // Re-arm the global hero-box gate. HeroBox.Inactive is a STATIC bool that Die() sets true (no damage during the
-        // death sequence) and DeathModule.Revive clears. A death that didn't complete the revive (e.g. one before this
-        // code existed, or a mid-death hot-reload) leaves it stuck true across reloads — the Silksong assembly's statics
-        // aren't reset by the mod hot-reload — so CheckForDamage skips forever and Hornet takes no damage. Reset on spawn.
+        // Re-arm the global hero-box gate. HeroBox.Inactive is a static bool Die() sets true (no damage during death)
+        // and DeathModule.Revive clears. An incomplete revive (mid-death hot-reload) leaves it stuck true across reloads
+        // (the Silksong assembly's statics survive a mod hot-reload), so CheckForDamage skips forever and Hornet takes no
+        // damage. Reset on spawn.
         Silksong::HeroBox.Inactive = false;
 
-        // NOTE: do NOT auto-activate Hornet here — the spawn coincides with HK's scene entry, and inerting the Knight
-        // mid-entry breaks HK's entry handshake (it never finishes -> Hornet ends in nirvana). A "reload stays on Hornet"
-        // feature must DEFER the switch until the Knight's entry has completed (isHeroInPosition + grounded).
+        // Do not auto-activate Hornet here: the spawn coincides with HK's scene entry, and inerting the Knight mid-entry
+        // breaks HK's entry handshake (never finishes -> Hornet ends in nirvana). A "reload stays on Hornet" feature
+        // must defer the switch until the Knight's entry completed (isHeroInPosition + grounded).
         HeroSwitch.SetActive(HeroSwitch.Active);
 
         // Wire gm.hero_ctrl + bare CameraController.camTarget so Silksong's hazard respawn flow
-        // (PlayerDeadFromHazard → HazardRespawn) runs without NullRefs.
+        // (PlayerDeadFromHazard -> HazardRespawn) runs without NullRefs.
         SilksongBootstrap.SetHeroCtrl(heroController!);
 
         ApplyColliderHeight();
@@ -202,33 +186,31 @@ public sealed class HornetSpawner : ModuleBase {
         return true;
     }
 
-    // Collider-height toggle (dev knob, Digit8 via InputDriver). HK's level geometry is built for the Knight's collider
-    // (0.50 × 1.28); Hornet's Silksong collider is 0.50 × 2.08 — same width but 0.80 taller (almost all upward) — so low
-    // passages the Knight clears block her. When true we match the Knight's height so she fits the same corridors. This
-    // is the terrain collider (col2d): HeroController never resizes it at runtime and it's separate from the HeroBox
-    // hurtbox (combat untouched), so a one-time set is safe. Default ON (the traversal fix). Cost is cosmetic — her tall
-    // sprite clips through genuinely low ceilings. (Scuttle can't help: it only resizes the hurtbox.)
+    // HK geometry is built for the Knight's collider (0.50 x 1.28); Hornet's is 0.50 x 2.08 (0.80 taller), so low
+    // passages the Knight clears block her. When true, shrink her terrain collider (col2d) to the Knight's height.
+    // Safe as a one-time set: HeroController never resizes col2d at runtime and it's separate from the HeroBox hurtbox
+    // (combat untouched). Cost is cosmetic (tall sprite clips low ceilings).
     internal static bool KnightHeightCollider = true;
 
     // The two terrain-collider configs, feet-anchored. Width and feet-bottom are shared; only the height differs, and
-    // the offset is COMPUTED from them (feetBottom + height/2) so there's no second hardcoded offset to keep in sync.
+    // the offset is computed from them (feetBottom + height/2) so there's no second hardcoded offset to keep in sync.
     private const float ColliderWidth = 0.50f; // both games' hero terrain collider width (identical, so gaps match)
-    private const float KnightHeight = 1.28f; // HK Knight terrain-collider height — she fits the same corridors
+    private const float KnightHeight = 1.28f; // HK Knight terrain-collider height
     private const float HornetHeight = 2.08f; // Hornet's native Silksong terrain-collider height
     private const float FeetBottomLocalY = -1.55f; // collider bottom in hero-local Y (her sprite feet); both anchor here
 
-    // Hornet's terrain collider (col2d), cached at spawn. Single source of truth for her body height — ContactDamageBridge
-    // reads its live bounds to make hazards respect the current height (no duplicated magic number).
+    // Hornet's terrain collider (col2d), cached at spawn. Single source of truth for her body height (read live so
+    // hazard checks respect the current height instead of duplicating the magic number).
     internal static BoxCollider2D? TerrainCollider { get; private set; }
 
-    // Apply the current KnightHeightCollider setting to the live hero's terrain collider, FEET-ANCHORED: keep the collider
-    // bottom at her feet (FeetBottomLocalY) and only change the height — so ground-snap (feet-anchored) stays correct.
+    // Feet-anchored: keep the collider bottom at her feet (FeetBottomLocalY) and only change the height, so ground-snap
+    // stays correct.
     internal static void ApplyColliderHeight() {
         var root = HornetRoot;
         if (!root) return;
         TerrainCollider = root.GetComponent<BoxCollider2D>();
         if (!TerrainCollider) {
-            Log.Error("[HornetSpawner] no terrain BoxCollider2D on Hornet_Real — collider height not applied");
+            Log.Error("[HornetSpawner] no terrain BoxCollider2D on Hornet_Real - collider height not applied");
             return;
         }
 
@@ -237,7 +219,6 @@ public sealed class HornetSpawner : ModuleBase {
         TerrainCollider.offset = new Vector2(0f, FeetBottomLocalY + height / 2f);
     }
 
-    // Flip the collider-height setting and re-apply to the live hero. Returns the new state.
     internal static bool ToggleColliderHeight() {
         KnightHeightCollider = !KnightHeightCollider;
         ApplyColliderHeight();

@@ -14,7 +14,7 @@ using HeroTransitionState = Silksong::GlobalEnums.HeroTransitionState;
 namespace HornetPlayer.HornetInHallownest.Modules;
 
 // Two swim sources feed the same machinery (snap to surface + real HeroWaterController), both overlap-driven with a
-// grace timeout for exit (no "left" callback to trust — and our surface snap teleports her, which makes a single
+// grace timeout for exit (no "left" callback to trust, and our surface snap teleports her, which makes a single
 // OnTriggerExit2D fire spuriously; a stay+grace model is immune to that):
 //   - HK acid: ContactDamageModule resolves ACID + dmg==0 (Isma's Tear zeroed it) -> NotifyInAcid.
 //   - Neutral water (e.g. Abyss "Surface Water Region"): a trigger sensor on Hornet -> NotifyInWater. Always allowed
@@ -171,7 +171,7 @@ public sealed class SwimModule : ModuleBase {
 }
 
 // Lives on Hornet: her colliders overlapping a neutral-water region's trigger keep the swim engaged (stay-driven, so a
-// teleport-snap's spurious OnTriggerExit2D can't end it — exit is the grace timeout instead).
+// teleport-snap's spurious OnTriggerExit2D can't end it; exit is the grace timeout instead).
 internal sealed class WaterSensor : MonoBehaviour {
     private void OnTriggerStay2D(Collider2D other) {
         if (SwimModule.IsNeutralWater(other)) SwimModule.NotifyInWater(other);

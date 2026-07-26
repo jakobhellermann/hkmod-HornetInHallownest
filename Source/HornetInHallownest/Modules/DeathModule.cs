@@ -124,7 +124,7 @@ public sealed class DeathModule : ModuleBase {
     }
 
     // Un-die Hornet at the respawn point. Always restores the physical death-state Die set (renderer/layer/physics/
-    // HeroBox) so she can't be left invisible-and-dead. Control+anim depend on where she landed: a BENCH respawn is
+    // HeroBox) so she can't be left invisible-and-dead. Control+anim depend on where she landed: a bench respawn is
     // owned by BenchModule (it sits her + handles get-up), so don't RegainControl there or the two fight; a ground
     // respawn we idle ourselves.
     private void Revive(HeroController? knight) {

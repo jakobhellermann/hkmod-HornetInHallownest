@@ -4,8 +4,8 @@ using HornetPlayer.HornetInHallownest.Modules;
 
 namespace HornetPlayer.HornetInHallownest.Validation.Scenarios;
 
-// Drives a fresh despawn -> respawn so the whole spawn (HUD/TMP/Resources.Load + per-frame settle) runs INSIDE the
-// watched window — the runner fails the scenario on any engine error (Application.logMessageReceived) or mod error
+// Drives a fresh despawn -> respawn so the whole spawn (HUD/TMP/Resources.Load + per-frame settle) runs inside the
+// watched window; the runner fails the scenario on any engine error (Application.logMessageReceived) or mod error
 // (Log.Error), so spawn-time issues like a Resources.Load outside a SilksongContext surface here. Template for the
 // rest: richer scenarios (drive movement/dash/attack, hazard death -> bench) build on this shape.
 public sealed class SpawnSanityScenario : IScenario {

@@ -53,7 +53,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         }
 
         // Frees an already-wounded HK dreamer (drains on "DREAM FOCUS START"). Vanilla broadcasts this while Focus is
-        // held; Needolin is Hornet's sustained-focus equivalent. Global like vanilla — only a wounded dreamer reacts.
+        // held; Needolin is Hornet's sustained-focus equivalent. Global like vanilla, only a wounded dreamer reacts.
         PlayMakerFSM.BroadcastEvent("DREAM FOCUS START");
     }
 

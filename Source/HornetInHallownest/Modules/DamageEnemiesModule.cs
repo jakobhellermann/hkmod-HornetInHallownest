@@ -13,13 +13,10 @@ using SDamageEnemies = Silksong::DamageEnemies;
 
 namespace HornetPlayer.HornetInHallownest.Modules;
 
-// Bridge Hornet nail damage to HK.
-// How it works:
-// - DamageEnemies DoDamage collects targets via HitTaker.GetHitResponders and calls .Hit()
-// - but only if the type is known silksong ReceivedDamageProxy / HitResponse / CurrencyObjectBase
-// Solution:
-// - inject a ReceivedDamageProxy component  that forwards the Silksong HitInstance to HK's IHitResponder.Hit.
-// Breakables go through damages_enemy (see FsmLookpPModule)
+// Bridge Hornet's nail damage to HK. DamageEnemies.DoDamage collects targets via HitTaker.GetHitResponders and calls
+// .Hit(), but only on known Silksong types (ReceivedDamageProxy / HitResponse / CurrencyObjectBase). So inject a
+// ReceivedDamageProxy that forwards the Silksong HitInstance to HK's IHitResponder.Hit. (Breakables go through
+// damages_enemy, see FsmLookupModule.)
 public sealed class DamageEnemiesModule : ModuleBase {
     // Stand-in HealthManager for the WillDamageEnemyOptions notification (see OnDoDamage). Inactive GO so its Awake never
     // runs; the relevant subscriber (DashStabNailAttack.OnWillDamageEnemy) only reads GetComponent<NonBouncer>() (null).
@@ -65,7 +62,6 @@ public sealed class DamageEnemiesModule : ModuleBase {
         if (!blackList.Contains(bridge)) store.Add(bridge);
     }
 
-    // Mirror HK's DamageEnemies.DoDamage
     private bool OnDoDamage(Func<SDamageEnemies, GameObject, bool, bool> orig, SDamageEnemies self, GameObject target,
         bool isFirstHit) {
         var hit = orig(self, target, isFirstHit);

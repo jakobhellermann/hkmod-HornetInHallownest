@@ -116,7 +116,7 @@ public sealed class SceneFixesModule : ModuleBase {
     #region Deepnest_Spider_Town trap bench
 
     // The trap bench's `Fade` FSM falls the hero and waits for `Hero Y <= Hero Land Y` (baked 19.5, calibrated to the
-    // KNIGHT) to fire LAND -> return control. Hornet rests ~0.16 higher (deeper collider feet), so her Y never reaches
+    // Knight) to fire LAND -> return control. Hornet rests ~0.16 higher (deeper collider feet), so her Y never reaches
     // the Knight-frame land-Y -> the FSM hangs, no-input, on the floor. Raise the baked land-Y into her frame by the
     // live collider feet-delta; the FSM then runs Fall -> Land -> Relinquish Control (incl. SetBenchRespawn, SaveGame).
     // TODO(unverified): numbers confirmed live, but the softlock -> fixed round-trip isn't verified end-to-end (the trap

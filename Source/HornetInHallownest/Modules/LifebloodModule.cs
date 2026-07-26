@@ -52,7 +52,7 @@ public sealed class LifebloodModule : ModuleBase {
         return HeroSwitch.HornetActive ? HornetHeal(self) : orig(self);
     }
 
-    // ScuttlerControl.Heal deactivates itself if the Knight is >40 away before granting — but the Knight parks at the
+    // ScuttlerControl.Heal deactivates itself if the Knight is >40 away before granting, but the Knight parks at the
     // switch point while the scuttler homed to Hornet, so the immediate grant is lost and blue only appears on scene
     // exit. Drop the Knight-distance gate: wait, fire "ADD BLUE HEALTH" (relayed above), deactivate.
     private IEnumerator HornetHeal(ScuttlerControl self) {

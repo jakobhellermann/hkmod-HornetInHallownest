@@ -94,7 +94,7 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         return orig;
     }
 
-    // POST /grant-kit — full kit regardless of HK progression (playground testing).
+    // POST /grant-kit: full kit regardless of HK progression (playground testing).
     internal static object GrantFullKit() {
         var ss = SPlayerData.instance;
         ss.hasDash = ss.hasWalljump = ss.hasDoubleJump = ss.hasBrolly = ss.hasSuperJump = ss.hasHarpoonDash = true;

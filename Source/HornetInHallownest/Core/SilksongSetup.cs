@@ -25,7 +25,7 @@ internal static class SilksongSetup {
         "Coffee.SoftMaskForUGUI"
     ];
 
-    // Our IL-prefixed assemblies. Must be in Managed root AND registered (type flag 16) so Unity resolves their nested
+    // Our IL-prefixed assemblies. Must be in Managed root and registered (type flag 16) so Unity resolves their nested
     // [Serializable]/MonoBehaviour types when deserializing Silksong assets (else those fields come out null).
     private static readonly string[] prefixed = [
         "Silksong.AssemblyCSharp",

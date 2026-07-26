@@ -41,7 +41,7 @@ public sealed class PogoModule : ModuleBase {
 
             var shroom = otherObj.GetComponentInParent<BounceShroom>();
             if (shroom && shroom.active) {
-                // End the downspike first (else the stab keeps driving her velocity down) — mirror DownspikeBounce's exit
+                // End the downspike first (else the stab keeps driving her velocity down): mirror DownspikeBounce's exit
                 // (FinishDownspike + BecomeAirborne) without its velocity-capping jump_steps bounce, then ShroomBounce.
                 hero.FinishDownspike(true);
                 hero.InvokeMethod("BecomeAirborne");
@@ -55,7 +55,7 @@ public sealed class PogoModule : ModuleBase {
     }
 
     // Shroom squish anim + particles. Guarded: BounceLarge touches GameCameras.instance.cameraShakeFSM, which may be
-    // null on our neutered camera rig — the bounce itself must not depend on it.
+    // null on our neutered camera rig, and the bounce itself must not depend on it.
     private void DoShroomEffects(BounceShroom shroom, Silksong::HeroController hero) {
         try {
             shroom.BounceLarge();

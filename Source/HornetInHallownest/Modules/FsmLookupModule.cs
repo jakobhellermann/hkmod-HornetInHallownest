@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 namespace HornetPlayer.HornetInHallownest.Modules;
 
 // Three HK FSM lookups (ActionHelpers.GetGameObjectFsm / PlayMakerFSM.FindFsmOnGameObject / FSMUtility.LocateFSM) find a
-// named PlayMakerFSM via go.GetComponents<HK PlayMakerFSM>() — but the FSMs they expect aren't on Hornet's objects:
+// named PlayMakerFSM via go.GetComponents<HK PlayMakerFSM>(), but the FSMs they expect aren't on Hornet's objects:
 // Knight-only ones (Dream Return), ones only present as the isolated Silksong type (ProxyFSM), or ones she implements
 // differently (her slash uses a Silksong DamageEnemies component, not a "damages_enemy" FSM). So we synthesize a dummy:
 // inert for the hero-owned names; one carrying direction/damageDealt for the slash, which HK geo rocks / stag bells read.
@@ -89,8 +89,8 @@ public sealed class FsmLookupModule : ModuleBase {
         return d;
     }
 
-    #region damages_enemy — Hornet's slash uses a DamageEnemies component, not an FSM; hand HK's readers a stand-in
-    // Some FSMs like stag bell read vars off of the shasl "damages_enemy" fsm.
+    #region damages_enemy: Hornet's slash uses a DamageEnemies component, not an FSM; hand HK's readers a stand-in
+    // Some FSMs (e.g. stag bell) read vars off the slash "damages_enemy" FSM.
     private PlayMakerFSM? damagesDummy;
     private FsmInt? damageDealt;
     private FsmInt? attackType;
