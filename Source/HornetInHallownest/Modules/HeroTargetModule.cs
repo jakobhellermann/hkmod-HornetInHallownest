@@ -1,10 +1,10 @@
 using System;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.Playground;
 using HutongGames.PlayMaker;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Redirect HK's "where/who is the hero" to the active hero.
 //   - PlayMaker global "Hero" var (most enemy/cutscene/UI FSMs)

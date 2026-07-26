@@ -1,10 +1,10 @@
 using System.IO;
 using System.Linq;
-using HornetPlayer.Playground;
+using HornetInHallownest.Playground;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Core;
+namespace HornetInHallownest.HornetInHallownest.Core;
 
 // Puts the game install into the state the mod needs and that only takes effect at Unity startup: the Silksong support
 // assemblies on Mono's default probe path (Managed root), and our prefixed assemblies registered for Unity's

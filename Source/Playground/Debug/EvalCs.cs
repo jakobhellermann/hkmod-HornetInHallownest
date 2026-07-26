@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // POST /eval-cs: compile + run a C# snippet on UnityExplorer's Mono.CSharp evaluator (reflection, no compile-time dep).
 // Body = C# source; end with a trailing expression (REPL-style, no `return`) to get it back as `result`. Debug-only.

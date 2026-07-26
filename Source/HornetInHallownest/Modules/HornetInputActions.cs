@@ -1,6 +1,6 @@
 using InControl;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // InControl action set holding hornets actions.
 // Automatically updated by HK's InputManager.UpdatePlayerActionSets since constructor attaches it.

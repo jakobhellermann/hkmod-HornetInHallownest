@@ -1,9 +1,9 @@
 extern alias Silksong;
 using System;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Silksong's "Inventory Control" FSM opens the inventory via CallMethodProper(GameManager.SetIsInventoryOpen). The call
 // reaches our bootstrap GameManager but its real body -> SetPausedState derefs inactive singletons

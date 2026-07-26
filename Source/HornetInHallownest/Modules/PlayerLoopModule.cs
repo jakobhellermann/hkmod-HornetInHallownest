@@ -2,10 +2,10 @@ extern alias Silksong;
 using System;
 using System.Linq;
 using System.Reflection;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 using UnityEngine.LowLevel;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Install Silksong's CustomPlayerLoop "LateFixedUpdate" phase into HK's PlayerLoop.
 // Silksong ticks every ILateFixedUpdate there (DamageEnemies runs its queued EvaluateDamage -> DoDamage) and increments

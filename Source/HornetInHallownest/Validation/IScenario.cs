@@ -1,6 +1,6 @@
 using System.Collections;
 
-namespace HornetPlayer.HornetInHallownest.Validation;
+namespace HornetInHallownest.HornetInHallownest.Validation;
 
 // A runtime validation scenario: setup -> act -> assert, expressed as a coroutine so it can span frames (wait for a
 // spawn, drive input over time, let physics settle). The runner captures Unity Exceptions/Errors for the whole

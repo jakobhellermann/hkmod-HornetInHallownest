@@ -2,21 +2,22 @@
 using System;
 using System.Globalization;
 using System.Reflection;
-using HornetPlayer.DevServer;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Modules;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.HornetInHallownest.Save;
-using HornetPlayer.HornetInHallownest.Validation;
-using HornetPlayer.HornetInHallownest.Validation.Scenarios;
-using HornetPlayer.Playground;
+using HornetInHallownest.DevServer;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.HornetInHallownest.Save;
+using HornetInHallownest.HornetInHallownest.Validation;
+using HornetInHallownest.HornetInHallownest.Validation.Scenarios;
+using HornetInHallownest.Playground;
 using Modding;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer;
+namespace HornetInHallownest;
 
-public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData>, IGlobalSettings<HornetGlobalSettings> {
+public class HornetInHallownestMod() : Mod("HornetInHallownest"), ITogglableMod, ILocalSettings<HornetSaveData>,
+    IGlobalSettings<HornetGlobalSettings> {
     // Distinct from Silksong's DevUtils server (8200) so both games can be debugged at once.
     private const int DebugServerPort = 8201;
 
@@ -32,7 +33,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
 
     private bool initialized;
 
-    public static HornetPlayerMod? LoadedInstance { get; private set; }
+    public static HornetInHallownestMod? LoadedInstance { get; private set; }
 
     // Persist Hornet's PlayerData inside HK's save file (per slot). The modding API invokes these at HK's native
     // save/load points (GameManager.SaveGame on bench/autosave; LoadGame on load) — see HornetSaveBridge.
@@ -114,7 +115,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // False means it changed startup-bound state this session already ran without; bail with a restart notice
         // instead of half-initializing.
         if (!SilksongSetup.EnsureInstalled()) {
-            throw new Exception("Installed missing Silksong support files. Please restart Hollow Knight to finish loading HornetPlayer.");
+            throw new Exception("Installed missing Silksong support files. Please restart Hollow Knight to finish loading HornetInHallownest.");
         }
 
         Bootstrap();
@@ -127,7 +128,7 @@ public class HornetPlayerMod : Mod, ITogglableMod, ILocalSettings<HornetSaveData
         // Must run before any MonoMod Hook is created (it locks MonoMod's platform detection).
         RosettaPlatformFix.Apply();
 
-        playgroundHost = new GameObject("HornetPlayer.Playground");
+        playgroundHost = new GameObject("HornetInHallownest.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
         var host = playgroundHost.AddComponent<PlaygroundHost>();
         ModuleBase.CoroutineHost = host;

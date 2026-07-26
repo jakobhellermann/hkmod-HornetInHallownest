@@ -1,10 +1,10 @@
-using HornetPlayer.HornetInHallownest.Modules.Hero;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Modules.Hero;
+using HornetInHallownest.Playground;
 using Modding;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 internal enum ActiveHero {
     Knight,
@@ -37,7 +37,7 @@ internal static class HeroSwitch {
 
     internal static void Install() {
         if (go) return;
-        go = new GameObject("HornetPlayer.HeroSwitch");
+        go = new GameObject("HornetInHallownest.HeroSwitch");
         go.AddComponent<InputPoller>();
         Object.DontDestroyOnLoad(go);
     }

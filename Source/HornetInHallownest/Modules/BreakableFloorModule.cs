@@ -1,13 +1,13 @@
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using SHeroController = Silksong::HeroController;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Hornet's down-dash breaks HK breakable floors (vanilla only the Knight's Desolate Dive does; Hornet has no equivalent).
 // HK quake floors idle in "Solid"; "QUAKE FALL START" flips them to "Transient" (collider -> trigger), "QUAKE FALL END"

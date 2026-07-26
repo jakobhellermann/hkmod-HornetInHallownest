@@ -1,4 +1,4 @@
-namespace HornetPlayer.HornetInHallownest.Save;
+namespace HornetInHallownest.HornetInHallownest.Save;
 
 // Per-save-slot data persisted for Hornet via the modding API. 
 public class HornetSaveData {

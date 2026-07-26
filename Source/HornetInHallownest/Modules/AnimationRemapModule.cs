@@ -1,9 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // HK FSMs animate the hero via tk2dSpriteAnimator.Play(clipName) with HK Knight clip names.
 // Map them to equivalent hornet clips.

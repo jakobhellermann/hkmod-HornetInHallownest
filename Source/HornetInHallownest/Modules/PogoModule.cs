@@ -1,11 +1,11 @@
 extern alias Silksong;
 using System;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.Playground;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Hornet's down-attack pogo vs HK objects. Two cross-game gaps, both on HeroDownAttack:
 //   - IsNonBounce: don't pogo off HK objects HK marks non-pogoable (they carry HK's NonBouncer, a different type than

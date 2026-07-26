@@ -5,11 +5,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using HornetPlayer.DevServer;
+using HornetInHallownest.DevServer;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Game-agnostic debug routes: scene inspection, field/method poking, screenshots. A port of DevUtils' DevRoutes,
 // trimmed to the Unity-only routes (the Silksong-specific GameManager/BepInEx ones are dropped). Register from the mod.

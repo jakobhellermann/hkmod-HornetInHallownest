@@ -1,8 +1,8 @@
 using System.Reflection;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 using UnityEngine;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // HeroController + FSMs deref GlobalSettings singletons (Gameplay/UI/Effects/Camera/…). Each GlobalSettingsBase<T>.Get()
 // loads via an addressables key HK's catalog lacks, so it falls back to an empty SO -> NullRefs (e.g. GetMaxFallVelocity).

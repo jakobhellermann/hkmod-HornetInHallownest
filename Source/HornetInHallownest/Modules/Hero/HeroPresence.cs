@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules.Hero;
+namespace HornetInHallownest.HornetInHallownest.Modules.Hero;
 
 // Shared logic for hero activate/deactivate.
 internal abstract class HeroPresence {

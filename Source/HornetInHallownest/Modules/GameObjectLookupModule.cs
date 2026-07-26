@@ -1,9 +1,9 @@
 using System;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Mapping for unity lookups (tag, GetComponent, Find variants)
 public sealed class GameObjectLookupModule : ModuleBase {

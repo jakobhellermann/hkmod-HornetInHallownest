@@ -13,7 +13,7 @@
     <option name="EXECUTE_SCRIPT_FILE" value="true" />
     <envs />
     <method v="2">
-      <option name="Build" default="false" projectName="HornetPlayer" projectPath="$PROJECT_DIR$/Source/HornetPlayer.csproj" />
+      <option name="Build" default="false" projectName="HornetInHallownest" projectPath="$PROJECT_DIR$/Source/HornetInHallownest.csproj" />
     </method>
   </configuration>
 </component>

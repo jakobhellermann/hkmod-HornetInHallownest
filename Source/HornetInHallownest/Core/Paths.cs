@@ -3,19 +3,19 @@ using System.IO;
 using System.Reflection;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Core;
+namespace HornetInHallownest.HornetInHallownest.Core;
 
 internal static class Paths {
     private const string SilksongName = "Hollow Knight Silksong";
 
-    // Directory holding HornetPlayer.dll and the data files shipped beside it.
+    // Directory holding HornetInHallownest.dll and the data files shipped beside it.
     internal static readonly string ModDir = ResolveModDir();
 
     private static string ResolveModDir() {
         // Under a hot-reload the assembly is loaded from an in-memory byte[] so Location is empty; fall back then.
         var location = Assembly.GetExecutingAssembly().Location;
         return string.IsNullOrEmpty(location)
-            ? $"{Application.dataPath}/Managed/Mods/HornetPlayer"
+            ? $"{Application.dataPath}/Managed/Mods/HornetInHallownest"
             : Path.GetDirectoryName(location)!.Replace('\\', '/');
     }
 
@@ -37,7 +37,7 @@ internal static class Paths {
     internal static string ModFile(string name) {
         var path = $"{ModDir}/{name}";
         if (!File.Exists(path))
-            throw new FileNotFoundException($"HornetPlayer is missing a required file ({name}).", path);
+            throw new FileNotFoundException($"HornetInHallownest is missing a required file ({name}).", path);
         return path;
     }
 
@@ -52,7 +52,7 @@ internal static class Paths {
         throw new DirectoryNotFoundException(SilksongInstallOverride != null
             ? "Couldn't find Silksong at the configured SilksongPath. Point it at your Hollow Knight Silksong folder."
             : "Couldn't find Hollow Knight Silksong. Install it next to Hollow Knight, or set SilksongPath in "
-              + "HornetPlayerMod.GlobalSettings.json to your Silksong install.");
+              + "HornetInHallownestMod.GlobalSettings.json to your Silksong install.");
     }
 
     // Steam installs the two games as siblings in the same library: ".../common/Hollow Knight" and its sibling here.

@@ -1,4 +1,4 @@
-# HornetPlayer asset pipeline — regenerates the Source/lib/ artifacts the mod loads:
+# HornetInHallownest asset pipeline — regenerates the Source/lib/ artifacts the mod loads:
 # the prefixed Silksong assemblies + remapped/repacked bundles. See CLAUDE.md "Build pipeline".
 # Run `make all` after a fresh checkout / `git clean`, or a single target as needed.
 # Outputs are gitignored except monoscripts.silksong.bundle (tracked in git).
@@ -9,7 +9,7 @@ LIB      := $(CURDIR)/Source/lib
 .PHONY: all setup-libs remap-monoscripts repack-resources help
 
 help:
-	@echo "HornetPlayer asset pipeline (regenerates Source/lib/):"
+	@echo "HornetInHallownest asset pipeline (regenerates Source/lib/):"
 	@echo "  make setup-libs        prefix Silksong Assembly-CSharp/firstpass/PlayMaker/TeamCherry -> Silksong.*.dll"
 	@echo "  make remap-monoscripts rebuild monoscripts.silksong.bundle (m_AssemblyName -> Silksong.*)"
 	@echo "  make repack-resources  repack Silksong resources.assets -> silksong-resources.bundle"

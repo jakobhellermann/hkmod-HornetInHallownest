@@ -4,9 +4,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // HK and Silksong used to share ONE PlayMaker.dll -> one global action-type lookup serving both games -> name
 // collisions broke each other's FSMs (HK benches/stag/scene-transitions vs Hornet's). Now PlayMaker is PREFIXED to

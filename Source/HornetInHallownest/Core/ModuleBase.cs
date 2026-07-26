@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
-using Log = HornetPlayer.Playground.Log;
+using Log = HornetInHallownest.Playground.Log;
 
-namespace HornetPlayer.HornetInHallownest.Core;
+namespace HornetInHallownest.HornetInHallownest.Core;
 
 public abstract class ModuleBase {
     private const BindingFlags AllMethods =

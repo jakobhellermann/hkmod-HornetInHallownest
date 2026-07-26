@@ -1,16 +1,16 @@
 extern alias Silksong;
 using System;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Save;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Save;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.Playground;
 using InControl;
 using Modding;
 using UnityEngine;
 using SsActions = Silksong::HeroActions;
 using SsAction = Silksong::InControl.PlayerAction;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Feeds Hornet's (Silksong) HeroActions each frame so her unmodified hero pipeline reads move/jump/attack/... as usual.
 // HK's own HeroActions (bound to the player's keyboard+gamepad, updated by HK's InputManager) drive the same-named

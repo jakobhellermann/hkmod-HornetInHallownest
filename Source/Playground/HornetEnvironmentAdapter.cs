@@ -2,9 +2,9 @@ extern alias Silksong;
 using System;
 using System.Reflection;
 using UnityEngine;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Modules;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // THE seam between Silksong's Hornet and HK's environment.
 //
@@ -52,7 +52,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
             var active = hero != null && HeroSwitch.HornetActive;
             if (active != wasHornetActive) {
                 wasHornetActive = active;
-                HornetPlayerMod.LoadedInstance?.Modules.HornetToggled(active);
+                HornetInHallownestMod.LoadedInstance?.Modules.HornetToggled(active);
             }
 
             // HeroController: Start's non-gameplay path left the component disabled + isGameplayScene=false (our gm
@@ -68,7 +68,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
             // Also pump while the inventory is open — the world is frozen at timeScale=0 but input must still reach the
             // inventory. A full pause menu (paused && !inventoryOpen) skips it.
             if (active && (!paused || inventoryOpen))
-                HornetPlayerMod.LoadedInstance?.Modules.HornetActiveUpdate(hero!);
+                HornetInHallownestMod.LoadedInstance?.Modules.HornetActiveUpdate(hero!);
 
             if (paused) return;
 
@@ -125,7 +125,7 @@ internal sealed class HornetEnvironmentAdapter : MonoBehaviour {
 
     internal static void Install() {
         if (go != null) return;
-        go = new GameObject("HornetPlayer.EnvironmentAdapter");
+        go = new GameObject("HornetInHallownest.EnvironmentAdapter");
         go.AddComponent<HornetEnvironmentAdapter>();
         DontDestroyOnLoad(go);
     }

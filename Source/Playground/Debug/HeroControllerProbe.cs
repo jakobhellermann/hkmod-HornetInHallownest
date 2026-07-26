@@ -5,9 +5,9 @@ using System.Reflection;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 using Cecil = Mono.Cecil.Cil;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Modules;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // DIAGNOSTIC (log-only): which HK HeroController methods are still called on the KNIGHT while Hornet is the active hero?
 //

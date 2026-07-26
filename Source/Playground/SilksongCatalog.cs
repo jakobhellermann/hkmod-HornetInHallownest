@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Mounts Silksong's Addressables catalog into HK's runtime so Silksong code (GameManager.EnsureGlobalPool ->
 // LoadAssetAsync("GlobalPool"), the hero, …) loads normally. HK ships no addressables, so its runtime is empty and

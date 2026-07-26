@@ -5,13 +5,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Modules;
 using UnityEngine;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Feasibility spike: can HK's Unity (6000.0.61) load a Silksong-authored AssetBundle (6000.0.50)?
-// Everything loaded here is tracked and torn down in Cleanup(), called from HornetPlayerMod.Unload — so a
+// Everything loaded here is tracked and torn down in Cleanup(), called from HornetInHallownestMod.Unload — so a
 // `dotnet build` hot-reload (Unload → Initialize) doesn't leak a still-loaded bundle (which would make the next
 // LoadFromFile fail with "another AssetBundle with the same files is already loaded").
 internal static class BundleSpike {

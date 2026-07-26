@@ -23,7 +23,7 @@ using System.Text;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 /// A name plus an optional index disambiguating among equal-named matches.
 public sealed class Field(string name, int? index = null) {

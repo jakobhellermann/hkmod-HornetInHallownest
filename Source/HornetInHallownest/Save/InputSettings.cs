@@ -1,7 +1,7 @@
 // ReSharper disable UnassignedField.Global
 // ReSharper disable FieldCanBeMadeReadOnly.Global
 // ReSharper disable ConvertToConstant.Global
-namespace HornetPlayer.HornetInHallownest.Save;
+namespace HornetInHallownest.HornetInHallownest.Save;
 
 // Global bindings for hornets actions. Null means use HK equivalent.
 public sealed class InputSettings {

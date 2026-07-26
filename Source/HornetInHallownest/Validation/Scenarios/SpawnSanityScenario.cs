@@ -1,8 +1,8 @@
 extern alias Silksong;
 using System.Collections;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Modules;
 
-namespace HornetPlayer.HornetInHallownest.Validation.Scenarios;
+namespace HornetInHallownest.HornetInHallownest.Validation.Scenarios;
 
 // Drives a fresh despawn -> respawn so the whole spawn (HUD/TMP/Resources.Load + per-frame settle) runs inside the
 // watched window; the runner fails the scenario on any engine error (Application.logMessageReceived) or mod error

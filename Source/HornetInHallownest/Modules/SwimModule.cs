@@ -1,8 +1,8 @@
 extern alias Silksong;
 using System;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.Playground;
 using HutongGames.PlayMaker;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -11,7 +11,7 @@ using SWaterController = Silksong::HeroWaterController;
 using SWaterRegion = Silksong::SurfaceWaterRegion;
 using HeroTransitionState = Silksong::GlobalEnums.HeroTransitionState;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Two swim sources feed the same machinery (snap to surface + real HeroWaterController), both overlap-driven with a
 // grace timeout for exit (no "left" callback to trust, and our surface snap teleports her, which makes a single

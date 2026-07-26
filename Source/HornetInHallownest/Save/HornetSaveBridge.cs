@@ -1,13 +1,13 @@
 extern alias Silksong;
 using System;
-using HornetPlayer.Playground;
+using HornetInHallownest.Playground;
 using Newtonsoft.Json;
 using Newtonsoft.Json.UnityConverters;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Modules;
 
-namespace HornetPlayer.HornetInHallownest.Save;
+namespace HornetInHallownest.HornetInHallownest.Save;
 
-// Persists Hornet's Silksong PlayerData across HK's save/load (HornetPlayerMod delegates its ILocalSettings here).
+// Persists Hornet's Silksong PlayerData across HK's save/load (HornetInHallownestMod delegates its ILocalSettings here).
 // Snapshot() <- OnSaveLocal (SaveGame); Stash() <- OnLoadLocal (LoadGame). Load runs before the hero is spawned, so
 // Stash keeps the JSON and ApplyPending() applies it post-spawn, once (pending clears on apply).
 internal static class HornetSaveBridge {

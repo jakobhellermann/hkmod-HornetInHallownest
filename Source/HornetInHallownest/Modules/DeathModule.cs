@@ -1,16 +1,16 @@
 extern alias Silksong;
 using System.Collections;
 using GlobalEnums;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.Playground;
 using UnityEngine;
 using SHeroController = Silksong::HeroController;
 using SHeroBox = Silksong::HeroBox;
 using SGameManager = Silksong::GameManager;
 using SActorStates = Silksong::GlobalEnums.ActorStates;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Silksong's HeroController.Die is invoked, but the gm.PlayerDead is skipped, HK owns the respawn.
 // TODO: currently all deaths are nonlethal, fix lethal pathway and cocoon spawns

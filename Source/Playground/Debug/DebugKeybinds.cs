@@ -3,11 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Modules;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // B  - toggle infinite silk
 // 8  - toggle collider height
@@ -17,7 +17,7 @@ internal static class DebugKeybinds {
 
     internal static void Install() {
         if (go != null) return;
-        go = new GameObject("HornetPlayer.DebugKeybinds");
+        go = new GameObject("HornetInHallownest.DebugKeybinds");
         go.AddComponent<DebugKeybindsBehaviour>();
         Object.DontDestroyOnLoad(go);
     }

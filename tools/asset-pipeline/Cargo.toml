@@ -1,4 +1,4 @@
-# Self-contained asset pipeline for HornetPlayer: regenerates the Silksong-derived bundles the mod loads.
+# Self-contained asset pipeline for HornetInHallownest: regenerates the Silksong-derived bundles the mod loads.
 # Two binaries (see src/bin/), pulling rabex + rabex-env straight from git so a fresh checkout builds them
 # without a local rabex-env clone. See ../../CLAUDE.md "Build pipeline" and ../../Makefile.
 [package]

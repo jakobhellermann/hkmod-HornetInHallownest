@@ -4,7 +4,7 @@ Hollow Knight Mod, bringing Hornet as a playable character to the base game.
 
 ## Config
 
-The config file can be found as `HornetPlayerMod.GlobalSettings.json` in
+The config file can be found as `HornetInHallownestMod.GlobalSettings.json` in
 - **Windows:** `%USERPROFILE%/AppData/LocalLow/Team Cherry/Hollow Knight`
 - **macOS:** `~/Library/Application Support/unity.Team-Cherry.Hollow Knight`
 - **Linux:** `~/.config/unity3d/Team Cherry/Hollow Knight` 

@@ -6,14 +6,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using HornetPlayer.HornetInHallownest;
+using HornetInHallownest.HornetInHallownest;
 using HutongGames.PlayMaker;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Stub out Silksong methods we don't want to run yet (environment managers, FSM actions that NullRef because the full
 // game runtime isn't set up). We stub the CALLEE (the leaf method that crashes), not its callers — minimal surface,

@@ -1,13 +1,13 @@
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Util;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Util;
 using HutongGames.PlayMaker;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Three HK FSM lookups (ActionHelpers.GetGameObjectFsm / PlayMakerFSM.FindFsmOnGameObject / FSMUtility.LocateFSM) find a
 // named PlayMakerFSM via go.GetComponents<HK PlayMakerFSM>(), but the FSMs they expect aren't on Hornet's objects:

@@ -1,9 +1,9 @@
 extern alias Silksong;
 using System.Reflection;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // HK geo is collected on contact with a "HeroBox"-tagged collider (GeoControl.OnTriggerEnter2D -> AddGeo). During a dash
 // Hornet's kinematic HeroBox sweeps past ground geo between physics steps without firing OnTriggerEnter2D, so geo isn't

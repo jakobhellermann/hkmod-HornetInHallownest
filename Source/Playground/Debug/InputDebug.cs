@@ -2,11 +2,11 @@ extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Modules;
 using SsActions = Silksong::HeroActions;
 using SsAction = Silksong::InControl.PlayerAction;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Debug-only: drives Silksong actions for a few frames without a physical key (POST /press), by name. Attaches to
 // InputModule's DebugHold overlay while installed; detaching (or dropping this file at release) leaves input untouched.

@@ -3,13 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.Playground;
 using HutongGames.PlayMaker.Actions;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // HeroProxy repoints the playmaker "Hero" global to Hornet, and many `CallMethodProper` already work transparently.
 // Remap those methods that don't match 1:1, and ignore those that aren't supported for now.

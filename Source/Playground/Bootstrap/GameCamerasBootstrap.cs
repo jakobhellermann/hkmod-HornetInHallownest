@@ -2,13 +2,13 @@ extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using HornetPlayer.HornetInHallownest.Util;
+using HornetInHallownest.HornetInHallownest.Util;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Modules;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Bring up Silksong's `_GameCameras` rig (via Addressables) enough for GameCameras.instance + a live CameraTarget, so
 // the "Couldn't find GameCameras" / "Failed to find camera target" / SetSprint errors stop. HK renders the world, so we

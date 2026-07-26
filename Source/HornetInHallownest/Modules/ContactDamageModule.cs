@@ -1,7 +1,7 @@
 extern alias Silksong;
 using System;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using UnityEngine;
 using HeroBouncer = Silksong::HeroBouncer;
 using SHeroBox = Silksong::HeroBox;
@@ -10,7 +10,7 @@ using SHazard = Silksong::GlobalEnums.HazardType;
 using SSide = Silksong::GlobalEnums.CollisionSide;
 using SDmgFlags = Silksong::GlobalEnums.DamagePropertyFlags;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // TODO: check if this can be simplified
 

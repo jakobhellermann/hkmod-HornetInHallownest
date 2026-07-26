@@ -1,7 +1,7 @@
 using System;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 
-namespace HornetPlayer.HornetInHallownest;
+namespace HornetInHallownest.HornetInHallownest;
 
 // A time-scoped flag: Currently executing code inside the silksong assembly.
 // Used in shims that can't differentiate between hk/hkss context without a full stacktrace.

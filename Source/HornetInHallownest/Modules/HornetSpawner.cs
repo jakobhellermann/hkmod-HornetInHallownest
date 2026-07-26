@@ -1,10 +1,10 @@
 extern alias Silksong;
 using System;
 using System.Collections;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Save;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Save;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.Playground;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.SceneManagement;
@@ -13,7 +13,7 @@ using ToolItemManager = Silksong::ToolItemManager;
 // A bare `SceneManager` binds to HK's Assembly-CSharp SceneManager (global namespace wins over the using); alias Unity's.
 using USceneManager = UnityEngine.SceneManagement.SceneManager;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Instantiate Hero_Hornet via Addressables and fix up everything required for Hollow Knight interop.
 public sealed class HornetSpawner : ModuleBase {

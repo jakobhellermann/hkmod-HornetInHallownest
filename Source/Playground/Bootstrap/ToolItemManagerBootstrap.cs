@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Bring up Silksong's `ToolItemManager` (tools/crests/nail-arts deref it). Copies its `toolItems` + `crestList`
 // serialized assets onto a single-manager GO (see ManagerSingletonBootstrap); `cursedCrest` is derived by its Awake.

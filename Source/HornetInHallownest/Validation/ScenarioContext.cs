@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Validation;
+namespace HornetInHallownest.HornetInHallownest.Validation;
 
 // Handed to a scenario's Run: assertion helpers + the failure list. Assertions accumulate (a scenario keeps running
 // after a failed assert so we report all failures, not just the first). The runner appends any captured Unity

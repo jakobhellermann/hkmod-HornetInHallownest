@@ -7,7 +7,7 @@ using Fsm = HutongGames.PlayMaker.Fsm;
 using FsmState = HutongGames.PlayMaker.FsmState;
 using FsmEvent = HutongGames.PlayMaker.FsmEvent;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // HK-side twin of FsmTracer. FsmTracer hooks the ISOLATED Silksong.PlayMaker runtime (Hornet's FSMs); this hooks HK's
 // SHARED PlayMaker (unaliased HutongGames.PlayMaker.Fsm) — the runtime that HK's SCENE FSMs run on (npc_control,

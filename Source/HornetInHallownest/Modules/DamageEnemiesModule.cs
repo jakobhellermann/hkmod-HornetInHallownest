@@ -1,9 +1,9 @@
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.Playground;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using SIHit = Silksong::IHitResponder;
@@ -11,7 +11,7 @@ using SHitInstance = Silksong::HitInstance;
 using SHealthManager = Silksong::HealthManager;
 using SDamageEnemies = Silksong::DamageEnemies;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Bridge Hornet's nail damage to HK. DamageEnemies.DoDamage collects targets via HitTaker.GetHitResponders and calls
 // .Hit(), but only on known Silksong types (ReceivedDamageProxy / HitResponse / CurrencyObjectBase). So inject a

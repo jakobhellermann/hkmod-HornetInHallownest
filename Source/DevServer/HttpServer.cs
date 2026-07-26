@@ -5,12 +5,12 @@ using System.IO;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using HornetPlayer.Playground;
+using HornetInHallownest.Playground;
 using UnityEngine;
 
 // Log
 
-namespace HornetPlayer.DevServer;
+namespace HornetInHallownest.DevServer;
 
 // Requests arrive on a background thread; handlers must run on the Unity main thread. Each request is queued and the
 // listener thread blocks on a TaskCompletionSource until Update() (main thread) runs the handler.
@@ -28,7 +28,7 @@ internal class HttpServer : IDisposable {
         listener.Prefixes.Add($"http://localhost:{port}/");
         listener.Start();
         running = true;
-        var thread = new Thread(Serve) { IsBackground = true, Name = "HornetPlayerDebugServer" };
+        var thread = new Thread(Serve) { IsBackground = true, Name = "HornetInHallownestDebugServer" };
         thread.Start();
     }
 

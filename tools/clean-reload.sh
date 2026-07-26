@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Clean startup + staged log snapshots for HornetPlayer debugging.
+# Clean startup + staged log snapshots for HornetInHallownest debugging.
 #
 # Launches Hollow Knight (with the mod) via .run/run-hollow-knight.sh (which handles the OS/Rosetta launch),
 # then checkpoints the logs with logsnap at three stages:

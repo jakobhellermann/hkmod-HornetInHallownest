@@ -1,9 +1,9 @@
 extern alias Silksong;
 extern alias SilksongPM;
 using System.Collections;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Util;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Util;
+using HornetInHallownest.Playground;
 using Modding;
 using UnityEngine;
 using SCurrencyCounter = Silksong::CurrencyCounter;
@@ -11,7 +11,7 @@ using SCurrencyCounterIcon = Silksong::CurrencyCounterIcon;
 using SCurrencyType = Silksong::CurrencyType;
 using SPlayerData = Silksong::PlayerData;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // HK's geo shown as Hornet's Rosary counter (Silksong's Money currency reads Silksong.PlayerData.geo). The counter is a
 // transient popup that's invisible until shown; ForceCurrencyCountersAppear pins it up like HK's always-on counter.

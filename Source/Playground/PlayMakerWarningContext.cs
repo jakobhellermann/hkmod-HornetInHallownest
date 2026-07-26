@@ -5,9 +5,9 @@ using HutongGames.PlayMaker;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using SExecStack = SilksongPM::HutongGames.PlayMaker.FsmExecutionStack;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.HornetInHallownest.Modules;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Add context to PlayMaker warnings that fire with zero context:
 //

@@ -1,12 +1,12 @@
 extern alias Silksong;
 extern alias SilksongPM;
 using System;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using HutongGames.PlayMaker;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // General HK -> Hornet PlayMaker broadcast event relay.
 public sealed class HeroBroadcastModule : ModuleBase {

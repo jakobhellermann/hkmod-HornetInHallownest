@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Bring up Silksong's UIManager singleton so the HUD stops NullRef-ing on UIManager.instance. Load the `_UIManager`
 // addressable prefab and set the private static _instance. Kept dormant (inactive holder) — serialized fields are live

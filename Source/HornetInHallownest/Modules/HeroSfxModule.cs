@@ -1,12 +1,12 @@
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 using UnityEngine;
 using UnityEngine.Audio;
 using SAudio = Silksong::GlobalSettings.Audio;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Map hornets sound to HK's mixer, respecting the volume settings.
 public sealed class HeroSfxModule : ModuleBase {

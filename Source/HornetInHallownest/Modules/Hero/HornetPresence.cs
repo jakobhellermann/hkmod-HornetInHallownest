@@ -1,7 +1,7 @@
 extern alias Silksong;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules.Hero;
+namespace HornetInHallownest.HornetInHallownest.Modules.Hero;
 
 internal sealed class HornetPresence : HeroPresence {
     public override GameObject? Root =>

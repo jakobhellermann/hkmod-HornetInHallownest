@@ -1,10 +1,10 @@
 extern alias Silksong;
 using System;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // HK conveyor belts gate on GetComponent<HK.HeroController>, which Hornet lacks.
 // Manually set her state on conveyor enter/exit.

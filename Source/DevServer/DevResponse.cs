@@ -1,7 +1,7 @@
 using System.Text;
 using Newtonsoft.Json;
 
-namespace HornetPlayer.DevServer;
+namespace HornetInHallownest.DevServer;
 
 public class DevResponse(byte[] body, string contentType, int statusCode = 200) {
     private static readonly JsonSerializerSettings jsonSettings = new() {

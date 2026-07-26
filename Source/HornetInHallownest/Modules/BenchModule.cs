@@ -1,11 +1,11 @@
 extern alias Silksong;
 using System;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using HutongGames.PlayMaker;
 using Modding;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Sync hornets onBench state, refill tools on bench.
 public sealed class BenchModule : ModuleBase {

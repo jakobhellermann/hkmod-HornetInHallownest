@@ -3,7 +3,7 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
-        <AssemblyTitle>HornetPlayer</AssemblyTitle>
+        <AssemblyTitle>HornetInHallownest</AssemblyTitle>
         <AssemblyVersion>1.0.0.0</AssemblyVersion>
         <DebugType>portable</DebugType>
         <LangVersion>latest</LangVersion>
@@ -24,32 +24,23 @@
         <SilksongManaged Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(SilksongGamePath)/Hollow Knight Silksong.app/Contents/Resources/Data/Managed</SilksongManaged>
         <SilksongManaged Condition="'$(SilksongManaged)' == ''">$(SilksongGamePath)/Hollow Knight Silksong_Data/Managed</SilksongManaged>
 
-        <CopyDir Condition="'$(CopyDir)' == ''">$(HollowKnightRefs)/Mods/HornetPlayer</CopyDir>
+        <CopyDir Condition="'$(CopyDir)' == ''">$(HollowKnightRefs)/Mods/HornetInHallownest</CopyDir>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.26.0" PrivateAssets="all"/>
     </ItemGroup>
 
-    <!-- B2: Silksong's Assembly-CSharp + firstpass, IL-prefixed to Silksong.* with cross-refs rewritten. -->
     <ItemGroup>
-        <!-- Assembly-only rename: types keep their original (global) names, colliding with HK's Assembly-CSharp.
-             The `Silksong` extern alias disambiguates them in our code (Silksong::HeroController vs HK's HeroController). -->
         <Reference Include="Silksong.AssemblyCSharp" Private="true" Aliases="Silksong">
             <HintPath>lib/Silksong.AssemblyCSharp.dll</HintPath>
         </Reference>
         <Reference Include="Silksong.AssemblyCSharpfirstpass" Private="true" Aliases="Silksong">
             <HintPath>lib/Silksong.AssemblyCSharpfirstpass.dll</HintPath>
         </Reference>
-        <!-- Silksong's PlayMaker, prefixed so it doesn't collide with HK's shared PlayMaker. Its HutongGames.PlayMaker.*
-             types share full names with HK's, so the `SilksongPM` extern alias disambiguates (SilksongPM::...ActionData
-             vs HK's ActionData). PlayMakerFix seeds its isolated type caches so Hornet's FSMs resolve to Silksong. -->
         <Reference Include="Silksong.PlayMaker" Private="true" Aliases="SilksongPM">
             <HintPath>lib/Silksong.PlayMaker.dll</HintPath>
         </Reference>
-        <!-- Silksong's TeamCherry.Localization, prefixed. Its TeamCherry.Localization.Language is a SEPARATE type from
-             HK's shared TeamCherry.Localization.Language, so the `SilksongLoc` extern alias disambiguates. Needed so
-             Stub can no-op Silksong's Language.SendMonoMessage (see Stub.Install). -->
         <Reference Include="Silksong.TeamCherryLocalization" Private="true" Aliases="SilksongLoc">
             <HintPath>lib/Silksong.TeamCherryLocalization.dll</HintPath>
         </Reference>
@@ -57,7 +48,6 @@
 
 
     <ItemGroup>
-        <!-- Game/engine assemblies are provided at runtime, so don't copy them into the Mods folder (Private=false). -->
         <Reference Include="Assembly-CSharp" Private="false">
             <HintPath>$(HollowKnightRefs)/Assembly-CSharp.dll</HintPath>
         </Reference>
@@ -109,7 +99,6 @@
         <Reference Include="UnityEngine.InputLegacyModule" Private="false">
             <HintPath>$(HollowKnightRefs)/UnityEngine.InputLegacyModule.dll</HintPath>
         </Reference>
-        <!-- MonoMod RuntimeDetour (+ Cecil) for runtime method stubbing via ILHook (no HookGen, no Harmony). -->
         <Reference Include="MonoMod.RuntimeDetour" Private="false">
             <HintPath>$(HollowKnightRefs)/MonoMod.RuntimeDetour.dll</HintPath>
         </Reference>
@@ -131,8 +120,6 @@
         <Reference Include="Newtonsoft.Json" Private="false">
             <HintPath>$(HollowKnightRefs)/Newtonsoft.Json.dll</HintPath>
         </Reference>
-        <!-- Team Cherry's Unity JsonConverters (Vector2/3/Color/…) — the same set Silksong's SaveDataUtility uses to
-             serialize PlayerData cleanly (as {x,y}, not via computed properties like Vector2.normalized). -->
         <Reference Include="Newtonsoft.Json.UnityConverters" Private="false">
             <HintPath>$(SilksongManaged)/Newtonsoft.Json.UnityConverters.dll</HintPath>
         </Reference>
@@ -144,8 +131,6 @@
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <!-- Ship the prefixed Silksong assemblies into the mod folder as payload; SilksongSetup installs them into
-             Managed at runtime. The .dll.managed suffix hides them from the mod loader's *.dll scan and file watcher. -->
         <ItemGroup>
             <B2Lib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
         </ItemGroup>

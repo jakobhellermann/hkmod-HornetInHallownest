@@ -2,11 +2,11 @@ extern alias Silksong;
 extern alias SilksongPM;
 using System;
 using System.Collections;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using UnityEngine;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Bring HK's lifeblood grant into Hornet's real Silksong blue-health FSM ("Blue Health Control") 
 public sealed class LifebloodModule : ModuleBase {

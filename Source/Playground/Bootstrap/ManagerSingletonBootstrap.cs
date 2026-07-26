@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Shared mechanism for the surgical manager bring-ups. Silksong's `_GameManager` prefab carries ~17 ManagerSingletons
 // on one root GO, so we can't activate just one (Unity Awakes every component), and the whole prefab was tried +

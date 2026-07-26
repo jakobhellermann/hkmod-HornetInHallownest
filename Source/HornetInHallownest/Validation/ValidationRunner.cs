@@ -2,12 +2,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using HornetPlayer.DevServer;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.DevServer;
+using HornetInHallownest.HornetInHallownest.Core;
 using UnityEngine;
-using Log = HornetPlayer.Playground.Log; // TEMP: shared infra, see ModuleHost.
+using Log = HornetInHallownest.Playground.Log; // TEMP: shared infra, see ModuleHost.
 
-namespace HornetPlayer.HornetInHallownest.Validation;
+namespace HornetInHallownest.HornetInHallownest.Validation;
 
 // In-mod validation engine: the fast loop for the validation-gated migration. Runs registered scenarios against the
 // live game (one instance, no clean-reload):

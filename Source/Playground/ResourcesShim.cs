@@ -1,12 +1,12 @@
 using System;
 using System.Reflection;
-using HornetPlayer.HornetInHallownest;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest;
+using HornetInHallownest.HornetInHallownest.Core;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Resources.Load shim. Silksong code loads assets via Resources.Load("languages/…", "playmakerglobals", …) that live in
 // Silksong's resources.assets — absent in HK, so they return null and surface as NullRefs / cctor throws far from the

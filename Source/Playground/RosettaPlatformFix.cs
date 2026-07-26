@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using MonoMod.Utils;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // On Apple Silicon we run the x86_64 slice under Rosetta (native arm64 can't get MonoMod's RWX mprotect — EACCES).
 // But MonoMod's DeterminePlatform() shells out to `uname -m`, which reports "arm64" (the child process runs native

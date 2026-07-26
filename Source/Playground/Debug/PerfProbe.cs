@@ -4,11 +4,11 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using HornetPlayer.DevServer;
-using HornetPlayer.HornetInHallownest.Modules;
+using HornetInHallownest.DevServer;
+using HornetInHallownest.HornetInHallownest.Modules;
 using UnityEngine;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // GET /perf?ms=1500&disable=fsm,animator,tk2d,particles,physics
 // Samples fps over the window with the named component groups on Hornet held disabled (re-applied every frame so the

@@ -4,7 +4,7 @@ using System;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Silksong's PlayMaker 2D integration needs a global "PlayMaker Unity 2D" manager, else PlayMakerUnity2DProxy.Start
 // disables itself and Hornet's collision/trigger-driven FSM logic (landing, wall bumps, hazards) silently never fires.

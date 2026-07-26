@@ -3,11 +3,11 @@ extern alias SilksongPM;
 using System;
 using System.Reflection;
 using System.Runtime.Serialization;
-using HornetPlayer.HornetInHallownest;
+using HornetInHallownest.HornetInHallownest;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Minimal bootstrap of the Silksong singletons HeroController derefs, without their heavy Awake: the GameManager GO
 // stays inactive (no Awake fires), and we set _instance + the specific fields/singletons the hero + FSMs read. Each

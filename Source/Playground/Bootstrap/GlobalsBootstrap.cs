@@ -1,4 +1,4 @@
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Aggregates the Silksong singleton/manager bring-ups the hero needs before its prefab activates. Order matters
 // (GameCameras before the hero's FSMs Awake; GlobalSettings before anything reads it); each Ensure/Apply is idempotent.

@@ -4,7 +4,7 @@ using System.Globalization;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Dev convenience: warp to a scene (+ optional position) so we don't have to run back to a test spot. `GameManager`,
 // `HeroController.UnsafeInstance` are HK's (unprefixed); Hornet is the Silksong hero. See the dreamer-test-spot memory

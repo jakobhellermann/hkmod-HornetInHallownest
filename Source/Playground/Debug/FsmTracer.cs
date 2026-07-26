@@ -8,7 +8,7 @@ using Fsm = SilksongPM::HutongGames.PlayMaker.Fsm;
 using FsmState = SilksongPM::HutongGames.PlayMaker.FsmState;
 using FsmEvent = SilksongPM::HutongGames.PlayMaker.FsmEvent;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 extern alias Silksong;
 

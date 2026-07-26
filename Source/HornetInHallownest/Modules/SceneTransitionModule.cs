@@ -3,8 +3,8 @@ using System;
 using System.Collections;
 using System.Reflection;
 using GlobalEnums;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,7 +17,7 @@ using SCollisionSide = Silksong::GlobalEnums.CollisionSide;
 using SHazardType = Silksong::GlobalEnums.HazardType;
 using SDamageFlags = Silksong::GlobalEnums.DamagePropertyFlags;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Move hornet in HK-driven scene transition.
 // Defer to real silksong LeaveScene / EnterScene / FinishedEnteringScene.
@@ -43,7 +43,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         InstallEnterHooks();
         USceneManager.activeSceneChanged += OnActiveSceneChanged;
 
-        driverGo = new GameObject("HornetPlayer.SceneTransitionDriver");
+        driverGo = new GameObject("HornetInHallownest.SceneTransitionDriver");
         driverGo.AddComponent<SceneTransitionDriver>().Module = this;
         driverGo.AddComponent<SceneEntryCameraGlue>().Module = this;
         Object.DontDestroyOnLoad(driverGo);

@@ -2,13 +2,13 @@ extern alias Silksong;
 extern alias SilksongPM;
 using System;
 using System.Linq;
-using HornetPlayer.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Core;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using SFsm = SilksongPM::HutongGames.PlayMaker.Fsm;
 using SFsmState = SilksongPM::HutongGames.PlayMaker.FsmState;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 public sealed class SceneFixesModule : ModuleBase {
     public override void Initialize() {

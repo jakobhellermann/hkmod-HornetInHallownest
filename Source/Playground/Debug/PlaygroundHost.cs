@@ -1,8 +1,8 @@
 using System;
-using HornetPlayer.DevServer;
+using HornetInHallownest.DevServer;
 using UnityEngine;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // MonoBehaviour that lives on a DontDestroyOnLoad GameObject. It pumps the debug server's request queue each frame on
 // the Unity main thread and is the coroutine host for async (multi-frame) route handlers.

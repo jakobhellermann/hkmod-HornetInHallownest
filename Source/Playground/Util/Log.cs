@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace HornetPlayer.Playground;
+namespace HornetInHallownest.Playground;
 
 // Tiny logging shim so the framework-agnostic server code has no hard dependency on the mod loader. The mod points
 // `Sink` at its own logger in Initialize; until then (and in unit-style contexts) it falls back to Debug.Log.

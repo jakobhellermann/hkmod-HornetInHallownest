@@ -3,9 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Log =
-    HornetPlayer.Playground.Log; // TEMP: Log is shared infra slated to move into Core; not a Playground-diagnostics dep.
+    HornetInHallownest.Playground.Log; // TEMP: Log is shared infra slated to move into Core; not a Playground-diagnostics dep.
 
-namespace HornetPlayer.HornetInHallownest.Core;
+namespace HornetInHallownest.HornetInHallownest.Core;
 
 // Ordered list of lifecycle modules 
 public sealed class ModuleHost {

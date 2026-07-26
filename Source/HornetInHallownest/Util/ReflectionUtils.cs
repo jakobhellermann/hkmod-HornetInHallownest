@@ -3,9 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Log = HornetPlayer.Playground.Log; // TEMP: shared infra, slated to move into HornetInHallownest.
+using Log = HornetInHallownest.Playground.Log; // TEMP: shared infra, slated to move into HornetInHallownest.
 
-namespace HornetPlayer.HornetInHallownest.Util;
+namespace HornetInHallownest.HornetInHallownest.Util;
 
 // https://github.com/EverestAPI/CelesteTAS-EverestInterop/blob/6425dc23e7a091bdea731f3ae60f319ea841a1b9/CelesteTAS-EverestInterop/Source/Utils/Extensions.cs#L97
 public static class ReflectionExtension {

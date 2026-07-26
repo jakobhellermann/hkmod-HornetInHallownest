@@ -1,11 +1,11 @@
 extern alias Silksong;
 extern alias SilksongPM;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.HornetInHallownest.Util;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.HornetInHallownest.Util;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // Hornet's Needolin acts as a Dream Nail on nearby HK dream-reactive objects.
 public sealed class NeedolinDreamNailModule : ModuleBase {

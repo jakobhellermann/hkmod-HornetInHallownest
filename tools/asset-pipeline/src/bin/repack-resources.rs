@@ -1,5 +1,5 @@
 //! Repack Silksong's `resources.assets` (everything in the global `ResourceManager` container) into ONE AssetBundle
-//! whose objects bind to the IL-prefixed `Silksong.*` assemblies, so the HornetPlayer runtime `ResourcesShim` can serve
+//! whose objects bind to the IL-prefixed `Silksong.*` assemblies, so the HornetInHallownest runtime `ResourcesShim` can serve
 //! `Resources.Load("languages/…", "playmakerglobals", …)` by (lowercase) name — Resources.Load only reads the built-in
 //! resources system, never bundles, so this is the only way to get Silksong's localization/PlayMaker globals into HK.
 //!

@@ -1,12 +1,12 @@
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
-using HornetPlayer.HornetInHallownest.Core;
-using HornetPlayer.Playground;
+using HornetInHallownest.HornetInHallownest.Core;
+using HornetInHallownest.Playground;
 using Modding;
 using SPlayerData = Silksong::PlayerData;
 
-namespace HornetPlayer.HornetInHallownest.Modules;
+namespace HornetInHallownest.HornetInHallownest.Modules;
 
 // HK (Knight) progression -> Hornet's Silksong PlayerData. SyncHKToSS() at spawn is the full authoritative sync; the
 // ModHooks mirror live pickups. Grant-only, and the Silksong writes are direct/unhooked, so there's no feedback loop.
