@@ -14,7 +14,7 @@
     - No sound on abyss spikes as hornet
 
 ## Integration
-- XX hardsaves
+- Knight HUD sometimes vanishes
 - XX full mask shard -> instant hud update
 - Sprint into elevator bumps
 - Sprint-attack misses Watcher Knights chandelier rope
@@ -33,5 +33,4 @@
 - king soul fragment softlock whitesceen
 - scream control dung defender - fixed?
 - hollow knight statue cutscene
-- acid before ismas
 - Lantern
