@@ -6,6 +6,7 @@ using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
 using HornetInHallownest.Core.SilksongSetup;
 using HornetInHallownest.Modules;
+using HornetInHallownest.Playground;
 #if HK1578
 using HornetInHallownest.Modules.Hk1578;
 #endif
@@ -108,6 +109,7 @@ public class HornetInHallownest() : Mod("HornetInHallownest"),
         SilksongPlayMaker.Cleanup();
         Stub.Cleanup();
         HeroSwitch.Cleanup();
+        DebugHost.Cleanup();
         if (playgroundHost != null) Object.Destroy(playgroundHost);
         playgroundHost = null;
         LoadedInstance = null;
@@ -139,6 +141,7 @@ public class HornetInHallownest() : Mod("HornetInHallownest"),
         var host = playgroundHost.AddComponent<HornetRuntime>();
         ModuleBase.Runtime = host;
 
+        DebugHost.Install();
 
         // must run before any silksong code attempts to access addressables, since one failure permanently poisons the addressables somehow
         SilksongAddressables.EnsureMounted();

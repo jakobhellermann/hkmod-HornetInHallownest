@@ -85,9 +85,11 @@ launch_game
 #    settling briefly to catch any straggler init lines.
 echo -n "waiting for debug server"
 relaunched=false
+up=false
 for _ in $(seq 1 90); do
 	if curl -sf --max-time 1 "$DEV/routes" >/dev/null 2>&1; then
 		echo " up"
+		up=true
 		break
 	fi
 	if ! $relaunched && grep -q "Please restart Hollow Knight" "$MODLOG" 2>/dev/null; then
@@ -99,6 +101,10 @@ for _ in $(seq 1 90); do
 	echo -n "."
 	sleep 1
 done
+if ! $up; then
+	echo " debug server didn't come up (game pids: $(game_pids || echo none))" >&2
+	exit 1
+fi
 logsnap commit -m "loadgame" --settle 200ms
 
 # 3. Load the save.
