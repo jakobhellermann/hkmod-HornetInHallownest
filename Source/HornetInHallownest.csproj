@@ -91,7 +91,7 @@
         <LocalReferences Include="Assembly-CSharp;PlayMaker;Mono.Cecil;MonoMod.RuntimeDetour;MonoMod.Utils;Newtonsoft.Json"/>
         <!-- Only shipped from 1.5.12620 on; 1.5.78 compiles tk2d into Assembly-CSharp. -->
         <LocalReferences Include="TeamCherry.Localization;TeamCherry.NestedFadeGroup;TeamCherry.SharedUtils;TeamCherry.TK2D;System.ValueTuple" Condition="'$(TargetFramework)' == 'hk1512620'"/>
-        <LocalReferences Include="UnityEngine;UnityEngine.AnimationModule;UnityEngine.AssetBundleModule;UnityEngine.AudioModule;UnityEngine.CoreModule;UnityEngine.InputLegacyModule;UnityEngine.Physics2DModule;UnityEngine.ParticleSystemModule"/>
+        <LocalReferences Include="UnityEngine;UnityEngine.AnimationModule;UnityEngine.AssetBundleModule;UnityEngine.AudioModule;UnityEngine.CoreModule;UnityEngine.ImageConversionModule;UnityEngine.InputLegacyModule;UnityEngine.ParticleSystemModule;UnityEngine.Physics2DModule;UnityEngine.ScreenCaptureModule"/>
         <Reference Include="@(LocalReferences->'$(ManagedDir)/%(Identity).dll')" Private="false"/>
     </ItemGroup>
 
