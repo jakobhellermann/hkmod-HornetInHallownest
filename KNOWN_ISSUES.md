@@ -7,6 +7,7 @@
 - Harpoon doesn't iframe as expected on Sawblades/Spikes
 - Sprinting into an elevator bumps against it
 - Dirtmouth doesn't apply slowdown
+- pressed Escape going through a transition and now I have menu storage (might jsut be an HK thing?)
 - Hive Knight bees don't get knockback
 - Not implemented:
     - Cocoons on death
