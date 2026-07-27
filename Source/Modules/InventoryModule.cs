@@ -21,13 +21,21 @@ public sealed class InventoryModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         // A hot-reload with the inventory open leaves the world frozen, HK's main camera off (DisplayFrozenCamera.Freeze)
-        // and isInventoryOpen stuck (-> IsPaused -> CanInput false -> hero stuck). Undo all three.
+        // and isInventoryOpen stuck (-> IsPaused -> CanInput false -> hero stuck).
         if (Time.timeScale == 0f) Time.timeScale = prevTimeScale;
 
         Silksong::PlayerData.instance.isInventoryOpen = false;
 
         var gameCameras = GameCameras.instance; // HK
         if (gameCameras && gameCameras.mainCamera && !gameCameras.mainCamera.enabled) gameCameras.mainCamera.enabled = true;
+
+        // prevent knight being softlocked after hot reload in hornet inventory
+        var hkGm = GameManager.instance;
+        if (hkGm) {
+            hkGm.isPaused = false;
+            var hkIh = hkGm.GetComponent<InputHandler>();
+            if (hkIh) hkIh.StartUIInput();
+        }
 
         inputBlocker = null;
     }
