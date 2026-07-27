@@ -7,6 +7,7 @@
 - Harpoon doesn't iframe as expected on Sawblades/Spikes
 - Sprinting into an elevator bumps against it
 - Dirtmouth doesn't apply slowdown
+- 2 fast attacks like the one after sprint attack with hunter or pogo dash only deal damage once
 - pressed Escape going through a transition and now I have menu storage (might jsut be an HK thing?)
 - Hive Knight bees don't get knockback
 - Not implemented:
