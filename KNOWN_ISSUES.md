@@ -1,6 +1,5 @@
 ## Integration
 - XX Damage (double damage) sometimes is very loud
-- XX Some tools deadlock hornet (flintslate, ...)
 - XX Needolin can be performed without dreamnail
 - XX Magnet doesn't work
 - XX Some spikes and acid don't work?

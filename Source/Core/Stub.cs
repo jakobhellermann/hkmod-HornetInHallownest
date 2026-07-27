@@ -39,7 +39,6 @@ internal static class Stub {
         Skip(typeof(Silksong::ControlReminder.SingleConfig), "Appear", true);
         Skip(typeof(Silksong::ControlReminder.DoubleConfig), "Appear", true);
 
-        Skip(typeof(Silksong::HeroNailImbuement), "Awake");
         Skip(typeof(Silksong::FollowTransform), "OnEnable");
         Skip(typeof(Silksong::MappableControllerButton), "ShowCurrentBinding"); // SetupRef NullRef
 
