@@ -7,6 +7,15 @@
 - Lifeblood masks don't work
 - Knight HUD sometimes vanishes
 - Sprint-attack doesn't work on Watcher Knights chandelier rope
+- Cornifer bench area in City of Tears stays dark
+- Need to re-equip some tools/skills to use after save and quit
+- Red Tools overlapping in HUD
+- Most spikes at Grub Crystal Peaks Spikes don't have an effect on Hornet
+- Hornet is invisble in Dreamnail Pickup Realm
+- Breakable Wall in City of Tears Cornifer Bench isn't breakable
+- Can enter Dream Realm without having Dreamnail / Needolin
+- Camera freezes after entering long room (Toll Bench) before Wings from the left side sometimes
+- Small jumps out of water pushes you left
 - Weavernest entry doesn't show up
 - breakable walls don't break
 - Harpoon doesn't iframe as expected on Sawblades/Spikes
