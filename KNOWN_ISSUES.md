@@ -8,6 +8,7 @@
 - Knight HUD sometimes vanishes
 - Sprint-attack doesn't work on Watcher Knights chandelier rope
 - Weavernest entry doesn't show up
+- breakable walls don't break
 - Harpoon doesn't iframe as expected on Sawblades/Spikes
 - Sprinting into an elevator bumps against it
 - unbalanced volume / magnetite dice activation is extraordniary loud
