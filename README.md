@@ -95,3 +95,21 @@ After removing the mod from the `Managed/Mods` folder these don't do anything, b
 
 
 ## Development
+
+[Source/HornetInHallownest.csproj](Source/HornetInHallownest.csproj) attempts to configure the
+`GamePath`, `HollowKnightRefs` and `SilksongGamePath` variables automatically.
+If they don't work for your setup, change them in the `.csproj`, or in a `LocalConfig.props`.
+
+On build, the mod will automatically be copied to the game's `Mods/HornetInHallownest` directory:
+```sh
+dotnet build
+```
+triggering hot reload if enabled in the modding API (if using [hk-modding/api#160](https://github.com/hk-modding/api/pull/160)).
+
+To create a zip for distribution, run
+```sh
+dotnet publish
+# Source/bin/Release/HornetInHallownest.zip
+```
+
+
