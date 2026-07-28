@@ -61,6 +61,10 @@ The config file can be found as `HornetInHallownest.GlobalSettings.json` in
 {
   "SilksongPath": null,
   "Controls": {
+    "MoveLeft": null,
+    "MoveRight": null,
+    "MoveUp": null,
+    "MoveDown": null,
     "Jump": null,
     "Attack": null,
     "Dash": null,
@@ -73,7 +77,8 @@ The config file can be found as `HornetInHallownest.GlobalSettings.json` in
     "Taunt": "V",
     "OpenTools": "L",
     "SwitchHero": "F5"
-  }
+  },
+  "BothActive": false # experimental
 }
 ```
 

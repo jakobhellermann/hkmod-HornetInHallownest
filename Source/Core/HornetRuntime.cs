@@ -15,7 +15,7 @@ public sealed class HornetRuntime : MonoBehaviour {
         try {
             var paused = ModuleBase.Paused;
             var hero = HornetSpawner.Hornet;
-            var active = hero && HeroSwitch.HornetActive;
+            var active = hero && (HeroSwitch.HornetActive || HeroSwitch.BothActive);
 
             // Mirror HK's pause onto Silksong's GM so her input pipeline freezes with it
             var gm = Silksong::GameManager._instance;

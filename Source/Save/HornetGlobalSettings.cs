@@ -8,4 +8,8 @@ public sealed class HornetGlobalSettings {
     public string? SilksongPath;
 
     public InputSettings Controls = new();
+
+    // When true, switching will keep both the Knight and Hornet active and controllable, however only the "primary"
+    // target will be able to interact, get targeted by enemies, show HUD, etc.
+    public bool BothActive;
 }

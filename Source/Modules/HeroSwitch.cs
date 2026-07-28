@@ -26,6 +26,8 @@ internal static class HeroSwitch {
     internal static ActiveHero Active { get; private set; } = ActiveHero.Knight;
     internal static bool HornetActive => Active == ActiveHero.Hornet;
 
+    internal static bool BothActive => HornetInHallownest.LoadedInstance?.GlobalSettings.BothActive ?? false;
+
     private static HeroPresence ActivePresence => HornetActive ? hornet : knight;
     private static HeroPresence InactivePresence => HornetActive ? knight : hornet;
 
@@ -83,7 +85,12 @@ internal static class HeroSwitch {
         // doesn't disable its Darkness Control FSM along with his other FSMs.
         GameCamerasBootstrap.EnsureVignetteOnCamera();
 
-        if (who == ActiveHero.Hornet) {
+        if (BothActive) {
+            // Both heros stay active, switch only applies to camera/HUD/fsm targetting.
+            knight.Activate();
+            hornet.Activate();
+        }
+        else if (who == ActiveHero.Hornet) {
             knight.Deactivate();
             hornet.Activate();
         }
@@ -93,8 +100,8 @@ internal static class HeroSwitch {
         }
 
         // Hand off in place: move the newly-active hero to where the previously-active one stood, so control + camera
-        // stay on the same spot (only the character changes). Skip when re-applying the same hero (e.g. at spawn).
-        if (who != prev) {
+        // stay on the same spot (only the character changes), if not both active
+        if (who != prev && !BothActive) {
             var newT = who == ActiveHero.Hornet ? hornetTransform : knightTransform;
             var oldT = prev == ActiveHero.Hornet ? hornetTransform : knightTransform;
             if (newT && oldT && newT != oldT) {
@@ -113,7 +120,7 @@ internal static class HeroSwitch {
     internal static void ReassertEnvironment() {
         GameCamerasBootstrap.SyncToActiveHero();
         HeroTargetModule.SyncGlobal();
-        InactivePresence.ReassertHidden();
+        if (!BothActive) InactivePresence.ReassertHidden();
     }
 
     // The one always-on part: polls the SwitchHero bind (via HK's InputManager, so it works in both hero states and on

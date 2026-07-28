@@ -22,6 +22,8 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
     private GameObject? playgroundHost;
     private HornetGlobalSettings globalSettings = new();
 
+    internal HornetGlobalSettings GlobalSettings => globalSettings;
+
     private bool initialized;
 
     public static HornetInHallownest? LoadedInstance { get; private set; }

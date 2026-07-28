@@ -5,6 +5,11 @@ namespace HornetInHallownest.Save;
 
 // Global bindings for hornets actions. Null means use HK equivalent.
 public sealed class InputSettings {
+    public string? MoveLeft;
+    public string? MoveRight;
+    public string? MoveUp;
+    public string? MoveDown;
+
     public string? Jump;
     public string? Attack;
     public string? Dash;

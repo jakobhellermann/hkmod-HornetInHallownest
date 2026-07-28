@@ -22,7 +22,6 @@ public sealed class InputModule : ModuleBase {
     // Actions mirrored from HK, not rebindable (UI, movement).
     // MenuCancel is handled separately (ESC).
     private static readonly (Func<HeroActions, PlayerAction> hk, Func<SsActions, SsAction> ss)[] mirror = [
-        (h => h.left, s => s.Left), (h => h.right, s => s.Right), (h => h.up, s => s.Up), (h => h.down, s => s.Down),
         (h => h.paneLeft, s => s.PaneLeft), (h => h.paneRight, s => s.PaneRight), (h => h.menuSubmit, s => s.MenuSubmit),
         (h => h.rs_up, s => s.RsUp), (h => h.rs_down, s => s.RsDown), (h => h.rs_left, s => s.RsLeft),
         (h => h.rs_right, s => s.RsRight)
@@ -30,6 +29,10 @@ public sealed class InputModule : ModuleBase {
 
     // Overridable actions. Null in config means use the HK equivalent binding.
     private static readonly Overridable[] overridable = [
+        new(s => s.MoveLeft, h => h.left, a => a.Left),
+        new(s => s.MoveRight, h => h.right, a => a.Right),
+        new(s => s.MoveUp, h => h.up, a => a.Up),
+        new(s => s.MoveDown, h => h.down, a => a.Down),
         new(s => s.Jump, h => h.jump, a => a.Jump),
         new(s => s.Attack, h => h.attack, a => a.Attack),
         new(s => s.Dash, h => h.dash, a => a.Dash),
@@ -37,7 +40,7 @@ public sealed class InputModule : ModuleBase {
         new(s => s.Bind, h => h.cast, a => a.Cast),
         new(s => s.Tool, h => h.quickCast, a => a.QuickCast),
         new(s => s.Needolin, h => h.dreamNail, a => a.DreamNail),
-        // inventory sets default from HK, but is separate since HK is disabled when hornet is active
+        // inventory sets default from HK, but is separate since HK is disabled when hornet is active.
         new(s => s.OpenInventory, null, a => a.OpenInventory, h => h.openInventory),
         // without HK equivalent
         new(s => s.Taunt, null, a => a.Taunt),
@@ -90,7 +93,9 @@ public sealed class InputModule : ModuleBase {
         if (inputActions == null) return;
         
         var hk = HkActions;
-        SetHkInventoryEnabled(hk, false);
+        // Only the primary owns the inventory: while co-driven but not primary the Knight owns it, so leave HK's key on.
+        var primary = HeroSwitch.HornetActive;
+        SetHkInventoryEnabled(hk, !primary);
         tick++;
         var dt = Time.deltaTime;
 
@@ -104,12 +109,14 @@ public sealed class InputModule : ModuleBase {
             var act = def.Ss(inputActions);
             var ov = overrideActions[i];
             var pressed = ov?.IsPressed ?? def.Hk != null && hk != null && def.Hk(hk).IsPressed;
+            if (def.PrimaryOnly && !primary) pressed = false;
             act.CommitWithState(pressed, tick, dt);
         }
 
-        // ESC only reaches HK's InputHandler, manually route it to the inventory MenuCancel
-        var esc = Input.GetKey(KeyCode.Escape);
-        inputActions.MenuCancel.CommitWithState((hk != null && hk.menuCancel.IsPressed) || esc, tick, dt);
+        // ESC only reaches HK's InputHandler, manually route it to the inventory MenuCancel - but only for the primary
+        // (co-drive: the non-primary Hornet must not react to the Knight's pause/cancel).
+        var esc = primary && Input.GetKey(KeyCode.Escape);
+        inputActions.MenuCancel.CommitWithState((primary && hk != null && hk.menuCancel.IsPressed) || esc, tick, dt);
 
         // Recompute the composite two-axis actions from the just committed axes
         inputActions.MoveVector.InvokeMethod("Update", tick, dt);
@@ -156,5 +163,6 @@ public sealed class InputModule : ModuleBase {
         Func<InputSettings, string?> Setting, // global settings key
         Func<HeroActions, PlayerAction>? Hk, // hk action
         Func<SsActions, SsAction> Ss, // silksong action
-        Func<HeroActions, PlayerAction>? DefaultFrom = null); // snapshot HK binding as default
+        Func<HeroActions, PlayerAction>? DefaultFrom = null, // snapshot HK binding as default
+        bool PrimaryOnly = false); // suppressed while Hornet is active but not primary
 }
