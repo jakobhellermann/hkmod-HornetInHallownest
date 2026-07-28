@@ -50,19 +50,40 @@ internal static class Paths {
     private static string SilksongDataDir => field ??= ResolveSilksongDataDir();
 
     private static string ResolveSilksongDataDir() {
+        var overridden = SilksongInstallOverride != null;
         var install = (SilksongInstallOverride ?? AutoDetectedInstall).Replace('\\', '/');
         var dataDir = install.EndsWith(DataFolder) ? install : $"{install}/{DataFolder}";
 
-        Log.Info(SilksongInstallOverride != null
+        Log.Info(overridden
             ? $"Using custom silksong path: {install}"
             : $"Using auto detected silksong path: {install}");
 
         if (Directory.Exists(dataDir)) return dataDir;
 
-        throw new DirectoryNotFoundException(SilksongInstallOverride != null
-            ? "Couldn't find Silksong at the configured SilksongPath. Point it at your Hollow Knight Silksong folder."
-            : "Couldn't find Hollow Knight Silksong. Install it next to Hollow Knight, or set SilksongPath in "
-              + "HornetInHallownestMod.GlobalSettings.json to your Silksong install.");
+        throw new DirectoryNotFoundException(overridden
+            ? $"""
+              Couldn't find Hollow Knight Silksong at the configured SilksongPath.
+                Looked in: {install}
+                To fix: close the game, open {ConfigFile}
+                and set SilksongPath to your Hollow Knight Silksong install folder.
+              """
+            : $"""
+              Couldn't find Hollow Knight Silksong.
+                Tried to auto-detect it next to Hollow Knight at: {install}
+                Install it next to Hollow Knight, or specify the path manually:
+                close the game, open {ConfigFile}
+                and set SilksongPath to your Hollow Knight Silksong install folder.
+              """);
+    }
+
+    // Where the modding API serializes our global settings (see Modding.Mod.GetGlobalSettingsPath): beside the mod
+    // DLL if the file already exists there, else persistentDataPath.
+    private static string ConfigFile {
+        get {
+            const string name = "HornetInHallownest.GlobalSettings.json";
+            var beside = $"{ModDir}/{name}";
+            return File.Exists(beside) ? beside : $"{Application.persistentDataPath}/{name}";
+        }
     }
 
     // Steam installs the two games as siblings in the same library: ".../common/Hollow Knight" and its sibling here.
