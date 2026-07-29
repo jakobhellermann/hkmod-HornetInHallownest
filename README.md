@@ -1,6 +1,6 @@
 # Hornet in Hallownest
 
-Hollow Knight Mod, bringing Hornet as a playable character to the base game.
+A Hollow Knight Mod, bringing Hornet as a playable character to the base game.
 
 ![demo image](./docs/demo.png)
 
