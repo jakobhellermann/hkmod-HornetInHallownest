@@ -1,10 +1,6 @@
-//! b2 validation: rewrite the Silksong monoscripts bundle so its MonoScripts point at the IL-prefixed Silksong.*
-//! assemblies. Then the original Hero_Hornet prefab's components bind to our prefixed types (with their serialized
-//! field values intact) instead of HK's same-named classes.
-//!
-//! Rebuilds the (externals-free) monoscripts CAB: re-adds the AssetBundle manifest + all 1262 MonoScripts, rewriting
-//! m_AssemblyName/m_Namespace for the Assembly-CSharp / Assembly-CSharp-firstpass ones to match SilksongPrefixer's
-//! naming. Writes Source/lib/monoscripts.silksong.bundle.
+//! Rewrite the Silksong monoscripts CAB so its MonoScripts' m_AssemblyName points at the IL-prefixed Silksong.*
+//! assemblies, so the Hero_Hornet prefab's components bind to our prefixed types (serialized values intact) instead of
+//! HK's same-named classes. Re-adds the AssetBundle manifest + all MonoScripts; writes Source/lib/monoscripts.silksong.bundle.
 
 use std::io::Cursor;
 
@@ -26,14 +22,7 @@ fn remap_assembly(a: &str) -> Option<&'static str> {
     match a {
         "Assembly-CSharp" => Some("Silksong.AssemblyCSharp"),
         "Assembly-CSharp-firstpass" => Some("Silksong.AssemblyCSharpfirstpass"),
-        // PlayMaker is prefixed too (SilksongPrefixer): the bundle's PlayMakerFSM components must bind to
-        // Silksong.PlayMaker so Hornet's FSMs use Silksong's isolated PlayMaker runtime, not HK's shared one.
-        // NOTE: PlayMaker MonoScripts store m_AssemblyName as "PlayMaker.dll" (WITH the .dll suffix), unlike the
-        // Assembly-CSharp ones — match that exact string or they're silently skipped.
         "PlayMaker" | "PlayMaker.dll" => Some("Silksong.PlayMaker"),
-        // Shared TeamCherry assemblies that define PlayMaker actions (FadeNestedFadeGroup, GetLocalisedString,
-        // ConditionalExpression) — prefixed too, so their actions derive from Silksong.PlayMaker AND their components
-        // bind to the same prefixed assembly the actions reference (else action field type vs real component mismatch).
         "TeamCherry.NestedFadeGroup" => Some("Silksong.TeamCherryNestedFadeGroup"),
         "TeamCherry.Localization" => Some("Silksong.TeamCherryLocalization"),
         "ConditionalExpression" => Some("Silksong.ConditionalExpression"),
@@ -68,9 +57,8 @@ fn main() -> Result<()> {
                 total += 1;
                 let mut ms = obj.cast::<MonoScript>().read()?;
                 if let Some(new_asm) = remap_assembly(&ms.m_AssemblyName) {
-                    // ASSEMBLY-ONLY rename: change only m_AssemblyName so the bundle's components bind to our renamed
-                    // copy. m_Namespace / m_ClassName stay intact (the prefixer no longer prefixes namespaces), so
-                    // name-based resolution (PlayMaker actions, Unity nested [Serializable] classes) keeps working.
+                    // Assembly-only rename (matches SilksongPrefixer): m_Namespace/m_ClassName stay intact so name-based
+                    // resolution keeps working.
                     ms.m_AssemblyName = new_asm.to_string();
                     remapped += 1;
                 }
