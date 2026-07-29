@@ -2,13 +2,15 @@
 - XX Some audio sources (e.g. double damage, dice) are not scaled by audio volume
 - XX Needolin can be performed without dreamnail
 - XX Some spikes and acid don't work?
+- 2 fast attacks only deal damage once. Possible HK iframes.
+- Harpoon doesn't iframe (?) as expected on Sawblades/Spikes
+- Red Tools overlapping in HUD
 - When you get a full mask shard, the HUD doesn't update instantly
 - Lifeblood masks don't work
 - Knight HUD sometimes vanishes
 - Sprint-attack doesn't work on Watcher Knights chandelier rope
 - Cornifer bench area in City of Tears stays dark
 - Need to re-equip some tools/skills to use after save and quit
-- Red Tools overlapping in HUD
 - Most spikes at Grub Crystal Peaks Spikes don't have an effect on Hornet
 - Hornet is invisble in Dreamnail Pickup Realm
 - Can enter Dream Realm without having Dreamnail / Needolin
@@ -16,10 +18,8 @@
 - Small jumps out of water pushes you left
 - Weavernest entry doesn't show up
 - breakable walls don't break (check City of Tears cornifer bench)
-- Harpoon doesn't iframe as expected on Sawblades/Spikes
 - Sprinting into an elevator bumps against it
 - Dirtmouth doesn't apply slowdown
-- 2 fast attacks like the one after sprint attack with hunter or pogo dash only deal damage once
 - pressed Escape going through a transition and now I have menu storage (might jsut be an HK thing?)
 - Hive Knight bees don't get knockback
 - Not implemented:
@@ -47,7 +47,6 @@
 ## Double check before release
 - descending dark, cdash pickup
 - king soul fragment softlock whitesceen
-- scream control dung defender - fixed?
 - hollow knight statue cutscene
 - Lantern
 - possible softlocks waiting for fall landing, due to height difference:
