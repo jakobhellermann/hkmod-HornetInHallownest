@@ -12,12 +12,9 @@ using SsAction = Silksong::InControl.PlayerAction;
 
 namespace HornetInHallownest.Modules;
 
-// Feeds Hornet's (Silksong) HeroActions each frame so her unmodified hero pipeline reads move/jump/attack/... as usual.
-// HK's own HeroActions (bound to the player's keyboard+gamepad, updated by HK's InputManager) drive the same-named
-// Silksong action. Two twists: an action carrying a settings override reads our own bound InControl action instead of
-// HK's; the two actions with no HK equivalent (Taunt, tools-pane) only exist as overrides. Silksong's InControl
-// InputManager never runs, so we push each PlayerAction with CommitWithState (which computes WasPressed/IsPressed) and
-// recompute the composite two-axis actions.
+// Feed Silksong's HeroActions.
+// If possible (and not overridden), reuse HK keybinds for the equivalent silksong actinos.
+// Silksong's InControl InputManager is inactive, and manually Committed.
 public sealed class InputModule : ModuleBase {
     // Actions mirrored from HK, not rebindable (UI, movement).
     // MenuCancel is handled separately (ESC).
@@ -47,7 +44,7 @@ public sealed class InputModule : ModuleBase {
         new(s => s.OpenTools, null, a => a.OpenInventoryTools)
     ];
 
-    // Global-persisted binds 
+    // Global-persisted binds
     internal static InputSettings Settings = new();
 
     private HornetInputActions? overrideSet;
@@ -91,7 +88,7 @@ public sealed class InputModule : ModuleBase {
     public override void HornetActiveUpdate(Silksong::HeroController hero) {
         var inputActions = SilksongBootstrap.InputActions;
         if (inputActions == null) return;
-        
+
         var hk = HkActions;
         // Only the primary owns the inventory: while co-driven but not primary the Knight owns it, so leave HK's key on.
         var primary = HeroSwitch.HornetActive;
@@ -125,14 +122,12 @@ public sealed class InputModule : ModuleBase {
         if (!Paused) MaintainInputHandler();
     }
 
-    // The per-frame bookkeeping half of the un-run InputHandler.Update (its other half is environment coupling we
-    // reject: OS cursor, gamepad-UI rebind, Silksong's own pause toggle). Runs after input is committed above.
+    // The necessary parts from InputHandler.Update.
+    // Not used entirely, because it also handles cursor, silksong pause toggle etc.
     private static void MaintainInputHandler() {
         var ih = SilksongBootstrap.Handler;
         if (!ih) return;
 
-        // buttonQueueTimers[] is the ~0.1s queued-press window GetWasButtonPressedQueued reads; frozen, every queued
-        // input gate silently stalls (e.g. the Sprint FSM's jump/attack-out-of-sprint).
         ih.InvokeMethod("UpdateButtonQueueing");
 
         // Clear ForceDreamNailRePress once DreamNail is released (RegainControl sets it, only Update clears it, else

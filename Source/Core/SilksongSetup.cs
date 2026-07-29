@@ -36,8 +36,7 @@ internal static class SilksongSetup {
         "Silksong.ConditionalExpression"
     ];
 
-    // True when everything was already in place (safe to run this session); false when something had to change (Unity
-    // read the old state at startup, so a restart is required).
+    // True if already installed, false if actions were taken and a restart is needed.
     internal static bool EnsureInstalled() {
         var managed = Paths.HkManagedDir;
         var changed = false;
@@ -49,7 +48,6 @@ internal static class SilksongSetup {
         foreach (var name in prefixed)
             changed |= CopyIfMissing($"{Paths.ModDir}/{name}.dll.managed", $"{managed}/{name}.dll");
 
-        // ScriptingAssemblies.json lives in the data root (next to Managed/), not inside Managed.
         changed |= RegisterForSerialization($"{Paths.HkDataDir}/ScriptingAssemblies.json");
         return !changed;
     }
