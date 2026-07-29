@@ -1,7 +1,6 @@
 ## Integration
-- XX Damage (double damage) sometimes is very loud
+- XX Some audio sources (e.g. double damage, dice) are not scaled by audio volume
 - XX Needolin can be performed without dreamnail
-- XX Magnet doesn't work
 - XX Some spikes and acid don't work?
 - When you get a full mask shard, the HUD doesn't update instantly
 - Lifeblood masks don't work
@@ -12,15 +11,13 @@
 - Red Tools overlapping in HUD
 - Most spikes at Grub Crystal Peaks Spikes don't have an effect on Hornet
 - Hornet is invisble in Dreamnail Pickup Realm
-- Breakable Wall in City of Tears Cornifer Bench isn't breakable
 - Can enter Dream Realm without having Dreamnail / Needolin
 - Camera freezes after entering long room (Toll Bench) before Wings from the left side sometimes
 - Small jumps out of water pushes you left
 - Weavernest entry doesn't show up
-- breakable walls don't break
+- breakable walls don't break (check City of Tears cornifer bench)
 - Harpoon doesn't iframe as expected on Sawblades/Spikes
 - Sprinting into an elevator bumps against it
-- unbalanced volume / magnetite dice activation is extraordniary loud
 - Dirtmouth doesn't apply slowdown
 - 2 fast attacks like the one after sprint attack with hunter or pogo dash only deal damage once
 - pressed Escape going through a transition and now I have menu storage (might jsut be an HK thing?)
@@ -28,6 +25,7 @@
 - Not implemented:
     - Cocoons on death
     - Beastling call
+    - Magnet 
 
 ## Cosmetic
 - Dreamers:
