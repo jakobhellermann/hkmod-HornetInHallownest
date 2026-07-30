@@ -1,5 +1,4 @@
 ## Integration
-- XX Some audio sources (e.g. double damage, dice) are not scaled by audio volume
 - XX Needolin can be performed without dreamnail
 - XX Some spikes and acid don't work?
 - 2 fast attacks only deal damage once. Possible HK iframes.

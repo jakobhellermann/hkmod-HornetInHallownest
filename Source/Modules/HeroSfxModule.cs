@@ -12,6 +12,7 @@ namespace HornetInHallownest.Modules;
 public sealed class HeroSfxModule : ModuleBase {
     private readonly HashSet<AudioMixer> ssMixers = [];
     private readonly HashSet<AudioSource> claimed = [];
+    private readonly HashSet<GameObject> reroutedPrefabs = [];
     private AudioMixerGroup? hkSfxGroup;
     private bool ready;
 
@@ -20,13 +21,40 @@ public sealed class HeroSfxModule : ModuleBase {
     public override void Initialize() {
         Detour(typeof(AudioSource), "PlayHelper", OnPlay, typeof(AudioSource), typeof(ulong));
         Detour(typeof(AudioSource), "PlayOneShotHelper", OnPlayOneShot, typeof(AudioSource), typeof(AudioClip), typeof(float));
+        // Some pool objects like double damage audio don't go through PlayActive but set playOnAwake.
+        Detour(typeof(Silksong::ObjectPool), "Spawn", OnSpawn,
+            typeof(GameObject), typeof(Transform), typeof(Vector3), typeof(Quaternion), typeof(bool));
     }
 
     protected override void OnDeinitialize() {
         ssMixers.Clear();
         claimed.Clear();
+        reroutedPrefabs.Clear();
         hkSfxGroup = null;
         ready = false;
+    }
+
+    // Reroute audio mixer of the prefab template to HK's audio sfx group.
+    private GameObject OnSpawn(Func<GameObject, Transform, Vector3, Quaternion, bool, GameObject> orig,
+        GameObject prefab, Transform parent, Vector3 position, Quaternion rotation, bool stealActiveSpawned) {
+        ReroutePrefabAudio(prefab);
+        return orig(prefab, parent, position, rotation, stealActiveSpawned);
+    }
+
+    private void ReroutePrefabAudio(GameObject? prefab) {
+        if (!prefab || !reroutedPrefabs.Add(prefab!)) return;
+        if (!ready && !EnsureReady()) {
+            reroutedPrefabs.Remove(prefab!); // not ready yet, retry on a later spawn
+            return;
+        }
+
+        foreach (var src in prefab!.GetComponentsInChildren<AudioSource>(true)) {
+            if (!src) continue;
+            var group = src.outputAudioMixerGroup;
+            if (ReferenceEquals(group, null) || !ssMixers.Contains(group.audioMixer)) continue;
+            src.spatialBlend = 0f;
+            src.outputAudioMixerGroup = hkSfxGroup;
+        }
     }
 
     private void OnPlay(Action<AudioSource, ulong> orig, AudioSource source, ulong delay) {
@@ -56,7 +84,7 @@ public sealed class HeroSfxModule : ModuleBase {
     // Resolve HK's live SFX group (off the Knight) and the set of Silksong mixers.
     // Both become available only after Hornet spawns.
     private bool EnsureReady() {
-        var knight = HeroController.instance; 
+        var knight = HeroController.instance;
         if (!knight) return false;
         foreach (var src in knight.GetComponentsInChildren<AudioSource>(true))
             if (src && src.outputAudioMixerGroup) {
