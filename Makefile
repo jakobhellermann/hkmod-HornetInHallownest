@@ -1,7 +1,5 @@
-# HornetInHallownest asset pipeline — regenerates the Source/lib/ artifacts the mod loads:
-# the prefixed Silksong assemblies + remapped/repacked bundles. See CLAUDE.md "Build pipeline".
-# Run `make all` after a fresh checkout / `git clean`, or a single target as needed.
-# Outputs are gitignored except monoscripts.silksong.bundle (tracked in git).
+# Generate Silksong.*.dll libs in Source/lib
+# Generate modified monoscript/resources.assets
 
 PIPELINE := $(CURDIR)/tools/asset-pipeline
 LIB      := $(CURDIR)/Source/lib
@@ -17,16 +15,14 @@ help:
 
 all: setup-libs remap-monoscripts repack-resources
 
-# Prefix Silksong's Assembly-CSharp/firstpass/PlayMaker (+ the PlayMaker-action TeamCherry asms) -> Silksong.* into
-# Source/lib/, and copy the Unity-package deps HK lacks. Re-run after a Silksong update.
+# Prefix Silksong's required libs into Source/libs
 setup-libs:
-	bash $(CURDIR)/tools/setup-silksong-libs.sh
+	dotnet msbuild $(CURDIR)/Source/HornetInHallownest.csproj -t:SetupSilksongLibs
 
-# Rebuild the hero MonoScripts bundle, rewriting m_AssemblyName -> Silksong.* (incl. PlayMaker.dll -> Silksong.PlayMaker).
+# Rebuild monoscripts bundle, rewriting m_AssemblyName -> Silksong.*
 remap-monoscripts:
 	cd $(PIPELINE) && cargo run --release --bin remap-monoscripts
 
-# Repack Silksong's resources.assets (the whole ResourceManager container) -> silksong-resources.bundle, which
-# ResourcesShim serves Silksong's Resources.Load from.
+# Repack Silksong's resources.assets -> silksong-resources.bundle assetbundle
 repack-resources:
 	cd $(PIPELINE) && cargo run --release --bin repack-resources

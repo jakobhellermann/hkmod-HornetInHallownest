@@ -125,6 +125,17 @@
         </Reference>
     </ItemGroup>
 
+    <!-- Generate lib/Silksong.*.dll from the Silksong install -->
+    <Target Name="SetupSilksongLibs">
+        <Error Condition="!Exists('$(SilksongManaged)')" Text="Silksong not found at $(SilksongManaged)"/>
+        <ItemGroup>
+            <PrefixInput Include="Assembly-CSharp;Assembly-CSharp-firstpass;PlayMaker;ConditionalExpression;TeamCherry.NestedFadeGroup;TeamCherry.Localization;TeamCherry.SharedUtils"/>
+            <StaleLib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
+        </ItemGroup>
+        <Delete Files="@(StaleLib)"/>
+        <Exec Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongPrefixer&quot; -- Silksong &quot;$(MSBuildProjectDirectory)/lib&quot; --managed &quot;$(SilksongManaged)&quot; @(PrefixInput->'&quot;$(SilksongManaged)/%(Identity).dll&quot;', ' ')"/>
+    </Target>
+
     <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(CopyDir)' != ''">
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>

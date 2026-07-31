@@ -107,6 +107,12 @@ After removing the mod from the `Managed/Mods` folder these don't do anything, b
 `GamePath`, `HollowKnightRefs` and `SilksongGamePath` variables automatically.
 If they don't work for your setup, change them in the `.csproj`, or in a `LocalConfig.props`.
 
+Before building, you'll have to run
+```sh
+dotnet msbuild -t SetupSilksongLibs
+```
+once in order to generate the `Source/lib/Silksong.*.dll` libs from the silksong install.
+
 On build, the mod will automatically be copied to the game's `Mods/HornetInHallownest` directory:
 ```sh
 dotnet build
