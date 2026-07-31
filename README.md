@@ -4,7 +4,7 @@ A Hollow Knight Mod, bringing Hornet as a playable character to the base game.
 
 ![demo image](./docs/demo.png)
 
-By Jakob Hellerman and Planet_Xplorer
+By Jakob Hellermann (`@dubi steinkek`) and Planet_Xplorer
 
 ## Status
 
