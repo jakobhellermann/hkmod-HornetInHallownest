@@ -22,13 +22,14 @@
 - pressed Escape going through a transition and now I have menu storage (might jsut be an HK thing?)
 - Hive Knight bees don't get knockback
 - Crests:
-    - Reaper: pogos on enemies don't work, silk orbs don't work
+    - Reaper: doesn't pogo spikes, silk orbs don't work
     - Architects: "up bind doesn't work"
     - Beasts: doesn't heal when you hit
-- Not implemented:
+- Not implemented yet:
     - Cocoons on death
     - Beastling call
     - Magnet 
+    - Nail imbuements (flintslate, ...) 
 
 ## Cosmetic
 - Dreamers:
