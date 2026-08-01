@@ -2,7 +2,6 @@
 - XX Needolin can be performed without dreamnail
 - XX Some spikes and acid don't work?
 - 2 fast attacks only deal damage once. Possible HK iframes.
-- Clawline doesn't iframe (?) as expected on Sawblades/Spikes
 - Red Tools overlapping in HUD
 - When you get a full mask shard, the HUD doesn't update instantly
 - Lifeblood masks don't work
@@ -22,7 +21,7 @@
 - pressed Escape going through a transition and now I have menu storage (might jsut be an HK thing?)
 - Hive Knight bees don't get knockback
 - Crests:
-    - Reaper: doesn't pogo spikes, silk orbs don't work
+    - Reaper: silk orbs don't work
     - Architects: "up bind doesn't work"
     - Beasts: doesn't heal when you hit
 - Not implemented yet:
