@@ -1,0 +1,48 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.x"
+
+      - name: Build zip
+        run: dotnet publish Source/HornetInHallownest.csproj -c Release
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: HornetInHallownest
+          path: Source/bin/Release/netstandard2.1/publish/
+
+      - name: Nightly release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view nightly >/dev/null 2>&1 || \
+            gh release create nightly --prerelease --title Nightly --notes "Latest main build."
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/nightly" -f sha="$GITHUB_SHA" -F force=true
+          gh release upload nightly Source/bin/Release/HornetInHallownest.zip --clobber
+
+      - name: Versioned release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(dotnet build Source/HornetInHallownest.csproj -getProperty:Version)
+          if ! gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release create "v$VERSION" Source/bin/Release/HornetInHallownest.zip \
+              --title "v$VERSION" --generate-notes
+          fi
