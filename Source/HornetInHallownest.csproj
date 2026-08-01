@@ -124,6 +124,9 @@
         <Reference Include="Unity.ResourceManager" Private="false">
             <HintPath>$(SilksongManaged)/Unity.ResourceManager.dll</HintPath>
         </Reference>
+        <Reference Include="System.ValueTuple" Private="false">
+            <HintPath>$(HollowKnightRefs)/System.ValueTuple.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
     <!-- Generate full local-refs/Silksong.*.dll from the Silksong install for local referencing -->
