@@ -1,27 +1,23 @@
 extern alias Silksong;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using HornetInHallownest.Util;
 
-namespace HornetInHallownest.Playground;
+namespace HornetInHallownest.Bootstrap;
 
 // Bring up Silksong's `ToolItemManager` (tools/crests/nail-arts deref it). Copies its `toolItems` + `crestList`
 // serialized assets onto a single-manager GO (see ManagerSingletonBootstrap); `cursedCrest` is derived by its Awake.
 internal static class ToolItemManagerBootstrap {
     private const string GoName = "Silksong_ToolItemManager";
 
-    internal static object Ensure() {
+    internal static void Ensure() {
         var mgr = ManagerSingletonBootstrap.BringUp(typeof(Silksong::ToolItemManager), GoName, "toolItems",
             "crestList");
-        if (mgr == null) return new { error = "ToolItemManager bring-up failed (see log)" };
+        if (mgr == null) return; // BringUp logged the failure
 
         // Our bootstrap GM never fires GameManager.SceneInit, so ToolItemManager.SceneInit (the only place that inits
         // the equipChangedTool*Reminder fields) never runs -> ReportBoundAttackToolUsed NullRefs. Call it directly.
-        var sceneInit = mgr.GetType().GetMethod("SceneInit", BindingFlags.NonPublic | BindingFlags.Instance);
-        if (sceneInit != null) sceneInit.Invoke(mgr, null);
-
-        return new { ok = true };
+        mgr.InvokeMethod("SceneInit");
     }
 
     // Diagnostic: confirm the singleton + serialized lists resolve, and that GetCrestByName works.
@@ -83,7 +79,7 @@ internal static class ToolItemManagerBootstrap {
         foreach (var crest in crests) {
             if (crest == null) continue;
             var data = equips.GetData(crest.name);
-            var config = crest.Slots; // SlotInfo[] from the crest config — the authoritative slot count/layout
+            var config = crest.Slots; // authoritative slot count/layout, preferred over the saved data.Slots
             var count = config?.Length ?? data.Slots?.Count ?? 0;
             var slots = new List<Silksong::ToolCrestsData.SlotData>(count);
             for (var i = 0; i < count; i++) {
@@ -105,9 +101,7 @@ internal static class ToolItemManagerBootstrap {
     internal static void RefreshBoundAttackTools() {
         var mgr = Silksong::ToolItemManager.SilentInstance;
         if (mgr == null) return;
-        typeof(Silksong::ToolItemManager)
-            .GetField("queueAttackToolsChanged", BindingFlags.NonPublic | BindingFlags.Instance)
-            ?.SetValue(mgr, true);
+        mgr.SetFieldValue("queueAttackToolsChanged", true);
         Silksong::ToolItemManager.ReportAllBoundAttackToolsUpdated();
         Silksong::ToolItemManager.SendEquippedChangedEvent(true);
     }

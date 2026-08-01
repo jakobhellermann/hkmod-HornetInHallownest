@@ -2,7 +2,7 @@ extern alias SilksongPM;
 using System;
 using UnityEngine;
 
-namespace HornetInHallownest.Playground;
+namespace HornetInHallownest.Bootstrap;
 
 // Silksong's health-mask HUD, driven through the isolated Silksong PlayMaker via the per-mask health_display FSMs.
 internal static class HealthHud {

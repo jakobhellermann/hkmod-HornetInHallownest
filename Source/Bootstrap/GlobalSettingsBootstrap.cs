@@ -1,9 +1,8 @@
-using System.Reflection;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
 using UnityEngine;
 
-namespace HornetInHallownest.Playground;
+namespace HornetInHallownest.Bootstrap;
 
 // HeroController + FSMs deref GlobalSettings singletons (Gameplay/UI/Effects/Camera/…). Each GlobalSettingsBase<T>.Get()
 // loads via an addressables key HK's catalog lacks, so it falls back to an empty SO -> NullRefs (e.g. GetMaxFallVelocity).
@@ -61,12 +60,12 @@ internal static class GlobalSettingsBootstrap {
             // A GlobalSettings SO's runtime type derives from GlobalSettingsBase<ThatType>, which holds the private
             // static _instance that the Get() accessor returns.
             var baseT = so.GetType().BaseType;
-            var f = baseT?.GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
+            var f = baseT?.GetFieldInfo("_instance", ReflectionExtension.StaticAnyVisibility, logFailure: false);
             if (f == null) continue;
             f.SetValue(null, so);
             // critical: Get() gates on _foundInstance; without setting it, our _instance is ignored on the first Get()
             // and an empty SO is cached instead. Set it so Get() returns our populated SO.
-            baseT?.GetField("_foundInstance", BindingFlags.NonPublic | BindingFlags.Static)?.SetValue(null, true);
+            baseT?.SetFieldValue("_foundInstance", true);
             Log.Debug($"[GlobalSettings] {so.GetType().Name}._instance <- '{so.name}'");
             n++;
         }

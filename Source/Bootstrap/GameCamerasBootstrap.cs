@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 using HornetInHallownest.Modules;
 using HornetInHallownest.Core;
 
-namespace HornetInHallownest.Playground;
+namespace HornetInHallownest.Bootstrap;
 
 // Bring up Silksong's `_GameCameras` rig (via Addressables) enough for GameCameras.instance + a live CameraTarget, so
 // the "Couldn't find GameCameras" / "Failed to find camera target" / SetSprint errors stop. HK renders the world, so we
@@ -67,8 +67,7 @@ internal static class GameCamerasBootstrap {
                 // Re-point GameCameras._instance in case it dangled across the reload (Silksong-assembly static).
                 var existing = rig.GetComponentInChildren<Silksong::GameCameras>(true);
                 if (existing != null && Silksong::GameCameras.SilentInstance == null)
-                    typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
-                        ?.SetValue(null, existing);
+                    typeof(Silksong::GameCameras).SetFieldValue("_instance", existing);
                 return new {
                     ok = true, note = "reused existing rig", instanceSet = Silksong::GameCameras.SilentInstance != null
                 };
@@ -123,8 +122,7 @@ internal static class GameCamerasBootstrap {
             // (GameCameras.Awake is skipped in Stub; we DDOL the holder ourselves below.)
             var gc = inst.GetComponentInChildren<Silksong::GameCameras>(true);
             if (gc != null) {
-                typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
-                    ?.SetValue(null, gc);
+                typeof(Silksong::GameCameras).SetFieldValue("_instance", gc);
                 // gm.gameCams (set by the skipped SetupGameRefs) -> derefed by inventory pause (StopCameraShake), HUD, etc.
                 if (Silksong::GameManager.instance != null) Silksong::GameManager.instance.gameCams = gc;
             }
@@ -230,11 +228,9 @@ internal static class GameCamerasBootstrap {
         // Awakes log "...button skins before the Input Handler is ready". Call SetupRefs directly on the inactive rig's
         // instances (gm.inputHandler is already wired; SetupRefs only sets ih + subscribes an event).
         try {
-            var setupRefs = typeof(Silksong::UIButtonSkins)
-                .GetMethod("SetupRefs", BindingFlags.Instance | BindingFlags.NonPublic);
             var skins = Object.FindObjectsByType<Silksong::UIButtonSkins>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (var s in skins) setupRefs?.Invoke(s, null);
+            foreach (var s in skins) s.InvokeMethod("SetupRefs");
             Log.Debug($"[HUD] wired UIButtonSkins.ih on {skins.Length} instance(s) before HUD activation");
         } catch (Exception e) {
             Log.Error($"[HUD] UIButtonSkins.SetupRefs: {e.Message}");
@@ -272,8 +268,7 @@ internal static class GameCamerasBootstrap {
         // (with the visual refs) Awoke early-return and never drew. Re-point Instance to it + DrawSpool now.
         var realSpool = hudCam.GetComponentInChildren<Silksong::SilkSpool>(true);
         if (realSpool != null) {
-            typeof(Silksong::SilkSpool).GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)
-                ?.GetSetMethod(true)?.Invoke(null, [realSpool]);
+            typeof(Silksong::SilkSpool).SetPropertyValue("Instance", realSpool);
             try {
                 realSpool.DrawSpool();
             } catch (Exception e) {
@@ -449,7 +444,6 @@ internal static class GameCamerasBootstrap {
             rig = null;
         }
 
-        typeof(Silksong::GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static)
-            ?.SetValue(null, null);
+        typeof(Silksong::GameCameras).SetFieldValue("_instance", null);
     }
 }

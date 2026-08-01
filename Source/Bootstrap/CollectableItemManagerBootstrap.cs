@@ -1,6 +1,6 @@
 extern alias Silksong;
 
-namespace HornetInHallownest.Playground;
+namespace HornetInHallownest.Bootstrap;
 
 // Bring up Silksong's `CollectableItemManager` (inventory item panes deref it). Copies its two serialized assets off
 // the _GameManager prefab onto a single-manager GO — see ManagerSingletonBootstrap.

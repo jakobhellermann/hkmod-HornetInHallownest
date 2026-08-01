@@ -1,5 +1,6 @@
 extern alias Silksong;
 using System;
+using HornetInHallownest.Bootstrap;
 using Newtonsoft.Json;
 using Newtonsoft.Json.UnityConverters;
 using HornetInHallownest.Modules;
@@ -62,7 +63,7 @@ internal static class HornetSaveBridge {
             try {
                 JsonConvert.PopulateObject(pendingPlayerData, spd, SaveSettings);
                 // The restore bypasses SetEquippedTools, so refresh them manually.
-                Playground.ToolItemManagerBootstrap.RefreshBoundAttackTools();
+                ToolItemManagerBootstrap.RefreshBoundAttackTools();
             } catch (Exception e) {
                 Log.Error($"[HornetSave] PopulateObject failed: {e.Message}");
             } finally {

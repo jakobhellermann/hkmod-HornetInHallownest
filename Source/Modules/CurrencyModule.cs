@@ -1,9 +1,9 @@
 extern alias Silksong;
 extern alias SilksongPM;
 using System.Collections;
+using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
-using HornetInHallownest.Playground;
 using Modding;
 using UnityEngine;
 using SCurrencyCounter = Silksong::CurrencyCounter;

@@ -1,8 +1,8 @@
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
+using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
-using HornetInHallownest.Playground;
 using Modding;
 using SPlayerData = Silksong::PlayerData;
 

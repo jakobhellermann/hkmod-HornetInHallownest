@@ -1,13 +1,12 @@
 extern alias Silksong;
 extern alias SilksongPM;
 using System;
-using System.Reflection;
 using System.Runtime.Serialization;
 using HornetInHallownest.Util;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace HornetInHallownest.Playground;
+namespace HornetInHallownest.Bootstrap;
 
 // Minimal bootstrap of the Silksong singletons HeroController derefs, without their heavy Awake: the GameManager GO
 // stays inactive (no Awake fires), and we set _instance + the specific fields/singletons the hero + FSMs read. Each
@@ -58,29 +57,22 @@ internal static class SilksongBootstrap {
             var habType = typeof(Silksong::GlobalEnums.HeroActionButton);
             var habLen = 0;
             foreach (int v in Enum.GetValues(habType)) habLen = Math.Max(habLen, v + 1);
-            typeof(Silksong::InputHandler).GetField("buttonQueueTimers", BindingFlags.NonPublic | BindingFlags.Instance)
-                ?.SetValue(ih, new float[habLen]);
+            ih.SetFieldValue("buttonQueueTimers", new float[habLen]);
 
             // FSM input actions reach the InputHandler via ManagerSingleton<InputHandler>.Instance, whose
             // FindAnyObjectByType fallback excludes inactive objects -> never finds our ih. Register it as the singleton.
             // (HeroController reaches ih directly via gm.GetComponent, which is why basic input worked but FSM actions didn't.)
-            typeof(Silksong::ManagerSingleton<Silksong::InputHandler>)
-                .GetProperty("UnsafeInstance", BindingFlags.Public | BindingFlags.Static)
-                ?.GetSetMethod(true)?.Invoke(null, [ih]);
+            typeof(Silksong::ManagerSingleton<Silksong::InputHandler>).SetPropertyValue("UnsafeInstance", ih);
 
             // gm.inputHandler (set in the skipped SetupGameRefs) -> null makes UIButtonSkins log "...before the Input
             // Handler is ready" (inventory prompts). Assign the backing field to our bootstrap ih.
-            typeof(Silksong::GameManager).GetField("<inputHandler>k__BackingField",
-                    BindingFlags.NonPublic | BindingFlags.Instance)
-                ?.SetValue(gm, ih);
+            gm.SetFieldValue("<inputHandler>k__BackingField", ih);
 
             // gm.cameraCtrl null -> SendHeroInPosition's ResetStartTimer() NullRefs. Bare CameraController (inactive GO,
             // no heavy Awake). Its camTarget is wired later (SetHeroCtrl, after the rig is up) since FreezeInPlace /
             // HazardRespawn deref it.
             var camCtrl = gmGo.AddComponent<Silksong::CameraController>();
-            typeof(Silksong::GameManager)
-                .GetField("<cameraCtrl>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
-                ?.SetValue(gm, camCtrl);
+            gm.SetFieldValue("<cameraCtrl>k__BackingField", camCtrl);
 
             // gm.hero_ctrl (SetupGameRefs, skipped) -> PlayerDeadFromHazard's hero_ctrl.cState.dead NullRefs. Hero isn't
             // spawned yet, so SetHeroCtrl (from SpawnReal) wires it. camCtrl stored for its later camTarget wiring too.
@@ -88,15 +80,12 @@ internal static class SilksongBootstrap {
 
             // gm.sm null -> GetTotalFrostSpeed's gm.sm.FrostSpeed (+ other per-scene reads) NullRef. Bare instance => defaults.
             var sm = gmGo.AddComponent<Silksong::CustomSceneManager>();
-            typeof(Silksong::GameManager)
-                .GetField("<sm>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
-                ?.SetValue(gm, sm);
+            gm.SetFieldValue("<sm>k__BackingField", sm);
 
             // SilkSpool.Instance (set in Awake, skipped): silk-cost FSM actions (AddUsingSilk/…) deref it, and being
             // PlayMaker actions never Finish() on NullRef -> FSM state hangs -> hero stuck. Bare instance suffices.
             var spool = gmGo.AddComponent<Silksong::SilkSpool>();
-            typeof(Silksong::SilkSpool).GetProperty("Instance", BindingFlags.Public | BindingFlags.Static)
-                ?.GetSetMethod(true)?.Invoke(null, [spool]);
+            typeof(Silksong::SilkSpool).SetPropertyValue("Instance", spool);
 
             // UpdateBatcher: batched HUD components (JitterSelf, …) do gm.GetComponent<UpdateBatcher>().Add(this) -> NullRef.
             gmGo.AddComponent<Silksong::UpdateBatcher>();
@@ -115,8 +104,8 @@ internal static class SilksongBootstrap {
 
             // Platform.Current null (set only in Silksong's boot) -> the hero's EnterScene derefs Platform.Current.
             // EnterSceneWait. Assign an uninitialized DesktopPlatform (no ctor/Steam init; EnterSceneWait reads base 0f).
-            typeof(Silksong::Platform).GetField("current", BindingFlags.NonPublic | BindingFlags.Static)
-                ?.SetValue(null, FormatterServices.GetUninitializedObject(typeof(Silksong::DesktopPlatform)));
+            typeof(Silksong::Platform)
+                .SetFieldValue("current", FormatterServices.GetUninitializedObject(typeof(Silksong::DesktopPlatform)));
             Silksong::CheatManager.SceneEntryWait = 0f;
 
             Object.DontDestroyOnLoad(gmGo);
@@ -166,9 +155,7 @@ internal static class SilksongBootstrap {
     internal static void SetHeroCtrl(Silksong::HeroController hero) {
         if (bootstrapGm == null) return;
         try {
-            typeof(Silksong::GameManager)
-                .GetField("<hero_ctrl>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
-                ?.SetValue(bootstrapGm, hero);
+            bootstrapGm.SetFieldValue("<hero_ctrl>k__BackingField", hero);
 
             if (bootstrapCamCtrl != null) {
                 var ct = GameCamerasBootstrap.CameraTargetGo?.GetComponent<Silksong::CameraTarget>();
@@ -178,13 +165,10 @@ internal static class SilksongBootstrap {
             // screenFader_fsm: SetupGameRefs finds it under HudCamera/In-game; the rig is up, so locate + wire it.
             var hudCam = GameCamerasBootstrap.HudCameraGo;
             if (hudCam != null) {
-                var gameplayChild = hudCam.GetComponent<Silksong::HUDCamera>()?.GetType()
-                    .GetProperty("GameplayChild")?.GetValue(hudCam.GetComponent<Silksong::HUDCamera>()) as GameObject;
+                var hudCamComp = hudCam.GetComponent<Silksong::HUDCamera>();
+                var gameplayChild = hudCamComp != null ? hudCamComp.GetPropertyValue<GameObject>("GameplayChild") : null;
                 var sf = gameplayChild != null ? Silksong::FSMUtility.LocateFSM(gameplayChild, "Screen Fader") : null;
-                if (sf != null)
-                    typeof(Silksong::GameManager)
-                        .GetField("<screenFader_fsm>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
-                        ?.SetValue(bootstrapGm, sf);
+                if (sf != null) bootstrapGm.SetFieldValue("<screenFader_fsm>k__BackingField", sf);
             }
 
             Log.Debug("[Bootstrap] hero_ctrl + camTarget + screenFader wired");

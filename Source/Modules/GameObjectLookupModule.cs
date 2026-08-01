@@ -1,6 +1,6 @@
 using System;
+using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
-using HornetInHallownest.Playground;
 using UnityEngine;
 
 namespace HornetInHallownest.Modules;

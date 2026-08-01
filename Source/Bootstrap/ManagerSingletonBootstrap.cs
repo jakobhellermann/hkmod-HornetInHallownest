@@ -1,13 +1,12 @@
 extern alias Silksong;
 using System;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
 
-namespace HornetInHallownest.Playground;
+namespace HornetInHallownest.Bootstrap;
 
 // Shared mechanism for the surgical manager bring-ups. Silksong's `_GameManager` prefab carries ~17 ManagerSingletons
 // on one root GO, so we can't activate just one (Unity Awakes every component), and the whole prefab was tried +
@@ -59,7 +58,8 @@ internal static class ManagerSingletonBootstrap {
         go.SetActive(false); // inactive -> AddComponent does not fire Awake yet; copy fields first
         var mgr = go.AddComponent(managerType);
         foreach (var name in serializedFields) {
-            var f = GetField(managerType, name);
+            // GetFieldInfo walks base types, so a [SerializeField] declared on a base class still resolves.
+            var f = managerType.GetFieldInfo(name, ReflectionExtension.InstanceAnyVisibility, logFailure: false);
             if (f == null) {
                 Log.Error($"[Manager] {managerType.Name}.{name} field not found");
                 continue;
@@ -93,29 +93,16 @@ internal static class ManagerSingletonBootstrap {
         return mgr;
     }
 
-    // Walk up the type chain so a [SerializeField] declared on a base class still resolves.
-    private static FieldInfo? GetField(Type t, string name) {
-        for (var cur = t; cur != null; cur = cur.BaseType) {
-            var f = cur.GetField(name, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-            if (f != null) return f;
-        }
-
-        return null;
-    }
-
     private static Type ClosedManagerSingleton(Type managerType) {
         return typeof(Silksong::ManagerSingleton<>).MakeGenericType(managerType);
     }
 
     private static object? SilentInstance(Type managerType) {
-        return ClosedManagerSingleton(managerType)
-            .GetProperty("SilentInstance", BindingFlags.Public | BindingFlags.Static)
-            ?.GetValue(null);
+        return ClosedManagerSingleton(managerType).GetPropertyValue<object>("SilentInstance");
     }
 
     private static void SetSingleton(Type managerType, Component mgr) {
-        ClosedManagerSingleton(managerType).GetProperty("UnsafeInstance", BindingFlags.Public | BindingFlags.Static)
-            ?.GetSetMethod(true)?.Invoke(null, [mgr]);
+        ClosedManagerSingleton(managerType).SetPropertyValue("UnsafeInstance", mgr);
     }
 
     // DestroyImmediate (not Object.Destroy) so the GO is gone before a hot-reload's Initialize runs BringUp again.
