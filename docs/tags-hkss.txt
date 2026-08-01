@@ -1,0 +1,32 @@
+0 Default
+1 TransparentFX
+2 Ignore Raycast
+3 
+4 Water
+5 UI
+6 
+7 Currency Self Collide
+8 Terrain
+9 Player
+10 Self Collide
+11 Enemies
+12 Projectiles
+13 Hero Detector
+14 Terrain Detector
+15 Enemy Detector
+16 Tinker
+17 Attack
+18 Particle
+19 Interactive Object
+20 Hero Box
+21 Grass
+22 Enemy Attack
+23 Water Surface
+24 Bouncer
+25 Soft Terrain
+26 Corpse
+27 Physical Pusher
+28 Hero Only
+29 ActiveRegion
+30 Physical Push React
+31 Attack Detector
