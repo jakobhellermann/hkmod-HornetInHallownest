@@ -1,4 +1,4 @@
-﻿﻿extern alias Silksong;
+extern alias Silksong;
 using System;
 using System.Reflection;
 using HornetInHallownest.Bootstrap;
