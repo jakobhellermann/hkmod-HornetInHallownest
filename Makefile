@@ -1,22 +1,33 @@
-# Generate Silksong.*.dll libs in Source/lib
-# Generate modified monoscript/resources.assets
+PIPELINE   := $(CURDIR)/tools/asset-pipeline
+LOCAL_REFS := $(CURDIR)/local-refs
 
-PIPELINE := $(CURDIR)/tools/asset-pipeline
-LIB      := $(CURDIR)/Source/lib
+# Managed dirs the csproj references
+GAME_PATH  ?= $(HOME)/.local/share/Steam/steamapps/common/Hollow Knight
+HK_MANAGED ?= $(GAME_PATH)/hollow_knight_Data/Managed
+SS_MANAGED ?= $(GAME_PATH)/../Hollow Knight Silksong/Hollow Knight Silksong_Data/Managed
 
-.PHONY: all setup-libs remap-monoscripts repack-resources docs help
+CI_REFS := $(CURDIR)/ci-refs
+
+# Assemblies the csproj <Reference>s
+HK_REFS := Assembly-CSharp TeamCherry.TK2D TeamCherry.SharedUtils TeamCherry.NestedFadeGroup \
+           PlayMaker TeamCherry.Localization Newtonsoft.Json Mono.Cecil \
+           MonoMod.RuntimeDetour MonoMod.Utils \
+           UnityEngine UnityEngine.CoreModule UnityEngine.Physics2DModule UnityEngine.AudioModule \
+           UnityEngine.ParticleSystemModule UnityEngine.AnimationModule UnityEngine.UI \
+           UnityEngine.JSONSerializeModule UnityEngine.InputLegacyModule UnityEngine.ImageConversionModule \
+           UnityEngine.ScreenCaptureModule UnityEngine.AssetBundleModule
+SS_REFS := Unity.Addressables Unity.ResourceManager Newtonsoft.Json.UnityConverters
+
+.PHONY: local-refs ci-refs remap-monoscripts repack-resources docs help
 
 help:
-	@echo "HornetInHallownest asset pipeline (regenerates Source/lib/):"
-	@echo "  make setup-libs        prefix Silksong Assembly-CSharp/firstpass/PlayMaker/TeamCherry -> Silksong.*.dll"
+	@echo "HornetInHallownest asset pipeline:"
+	@echo "  make local-refs        prefix dlls with Silksong into local-refs/Silksong.*.dll"
+	@echo "  make ci-refs           Stub local-refs + game dlls into ci-refs"
 	@echo "  make remap-monoscripts rebuild monoscripts.silksong.bundle (m_AssemblyName -> Silksong.*)"
 	@echo "  make repack-resources  repack Silksong resources.assets -> silksong-resources.bundle"
-	@echo "  make docs              regenerate docs/tags-{hk,hkss}.txt from each game's TagManager"
-	@echo "  make all               all of the above"
+	@echo "  make docs              regenerate tag docs"
 
-all: setup-libs remap-monoscripts repack-resources
-
-# Dump each layer table
 TAGS_JQ := .layers | to_entries[] | (.key|tostring) + " " + .value
 
 docs: docs/tags-hk.txt docs/tags-hkss.txt
@@ -27,9 +38,15 @@ docs/tags-hk.txt:
 docs/tags-hkss.txt:
 	rabex --steam-game 'Silksong'      file globalgamemanagers object TagManager cat --jq '$(TAGS_JQ)' | sed 's/^"//;s/"$$//' > $@
 
-# Prefix Silksong's required libs into Source/libs
-setup-libs:
-	dotnet msbuild $(CURDIR)/Source/HornetInHallownest.csproj -t:SetupSilksongLibs
+local-refs:
+	dotnet msbuild $(CURDIR)/Source/HornetInHallownest.csproj -t:GenerateLocalRefs
+
+# Stub the references into ci-refs
+ci-refs: local-refs
+	rm -rf $(CI_REFS)
+	mkdir -p $(CI_REFS)/managed $(CI_REFS)/lib
+	refasmer --omit-non-api-members true -O $(CI_REFS)/managed $(patsubst %,"$(HK_MANAGED)/%.dll",$(HK_REFS)) $(patsubst %,"$(SS_MANAGED)/%.dll",$(SS_REFS))
+	refasmer --omit-non-api-members true -O $(CI_REFS)/lib $(LOCAL_REFS)/*.dll
 
 # Rebuild monoscripts bundle, rewriting m_AssemblyName -> Silksong.*
 remap-monoscripts:

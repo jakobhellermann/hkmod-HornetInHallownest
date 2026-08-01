@@ -2,7 +2,6 @@
 /Source/bin
 /Source/obj
 /Source/LocalConfig.props
-/Source/lib/*.dll
-/Source/lib/*.dll
 /tools/*/bin
 /tools/*/obj
+/local-refs

@@ -122,7 +122,7 @@ If they don't work for your setup, create a `LocalConfig.props` with this conten
 </Project>
 ```
 
-Before building, you'll have to run
+If you want to be able to view silksong sources in your IDE, instead of the stubbed CI definitions, run
 ```sh
 dotnet msbuild -t SetupSilksongLibs
 ```

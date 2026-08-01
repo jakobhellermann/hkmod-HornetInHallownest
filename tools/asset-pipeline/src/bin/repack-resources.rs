@@ -28,7 +28,7 @@ use rustc_hash::FxHashMap;
 
 const OUT: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../Source/lib/silksong-resources.bundle"
+    "/../../Assets/bundles/silksong-resources.bundle"
 );
 
 // Toggle for experiments; must stay true (see module doc).
