@@ -11,13 +11,15 @@ By Jakob Hellermann (`@dubi steinkek`) and Planet_Xplorer
 Playable with some bugs, currently ready for playtesting.
 
 Right now the mod is only playable on the latest Hollow Knight version (1.5.12620, released 2026) with this branch of the modding API: https://github.com/hk-modding/api/pull/164.
-Supporting older hollow knight versions might be possible, but that's not the focus right  now.
+The download can be found in the releases tab: [https://github.com/jakobhellermann/hkmod-HornetInHallownest/releases/tag/v0.1.0]
 
-A list of known issues can be found at [KNOWN_ISSUES.md](./KNOWN_ISSUES.md), but feel free to open issues at https://github.com/jakobhellermann/HornetPlayer/issues.
+Please check the existing [issues](https://github.com/jakobhellermann/hkmod-HornetInHallownest/issues) when reporting a bug.
 
 > [!IMPORTANT]
 > After installing the mod, you have to start the game *twice*.
 > The first run will say `HornetInHallownest: Failed to initialize! Check ModLog.txt` in the mod menu.
+
+The changelog can be found in [CHANGELOG.md](./CHANGELOG.md).
 
 ## Ability Sync
 
@@ -124,5 +126,3 @@ To create a zip for distribution, run
 dotnet publish
 # Source/bin/Release/HornetInHallownest.zip
 ```
-
-
