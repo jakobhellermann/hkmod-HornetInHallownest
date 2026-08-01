@@ -11,7 +11,7 @@ By Jakob Hellermann (`@dubi steinkek`) and Planet_Xplorer
 Playable with some bugs, currently ready for playtesting.
 
 Right now the mod is only playable on the latest Hollow Knight version (1.5.12620, released 2026) with this branch of the modding API: https://github.com/hk-modding/api/pull/164.
-The download can be found in the releases tab: [https://github.com/jakobhellermann/hkmod-HornetInHallownest/releases/tag/v0.1.0]
+The download for the mod and the modding API can be found in the [releases tab](https://github.com/jakobhellermann/hkmod-HornetInHallownest/releases/latest).
 
 Please check the existing [issues](https://github.com/jakobhellermann/hkmod-HornetInHallownest/issues) when reporting a bug.
 
