@@ -113,6 +113,9 @@
         <Reference Include="UnityEngine.Physics2DModule" Private="false">
             <HintPath>$(HollowKnightManaged)/UnityEngine.Physics2DModule.dll</HintPath>
         </Reference>
+        <Reference Include="System.ValueTuple" Private="false">
+            <HintPath>$(HollowKnightManaged)/System.ValueTuple.dll</HintPath>
+        </Reference>
 
         <!-- Referenced directly from the silksong Managed dir, so that dotnet build works without relying on mod setup -->
         <Reference Include="Newtonsoft.Json.UnityConverters" Private="false">

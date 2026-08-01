@@ -96,8 +96,6 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
     // Initialization steps taken only after the initial restart was performed.
     private void Bootstrap() {
         // Must run before any MonoMod Hook is created
-        RosettaPlatformFix.Apply();
-
         playgroundHost = new GameObject("HornetInHallownest.Playground");
         Object.DontDestroyOnLoad(playgroundHost);
         var host = playgroundHost.AddComponent<HornetRuntime>();
