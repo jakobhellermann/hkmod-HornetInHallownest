@@ -25,6 +25,15 @@
 
         <CopyDir Condition="'$(CopyDir)' == ''">$(HollowKnightManaged)/Mods/HornetInHallownest</CopyDir>
 
+        <!-- Assembly references: Use full local-refs when present, otherwise fall back to committed stubs for CI -->
+        <CiRefs>$(MSBuildProjectDirectory)/../ci-refs</CiRefs>
+        <LocalRefs>$(MSBuildProjectDirectory)/../local-refs</LocalRefs>
+        <AssetsDir>$(MSBuildProjectDirectory)/../Assets</AssetsDir>
+        <HollowKnightManaged Condition="!Exists('$(HollowKnightManaged)')">$(CiRefs)/managed</HollowKnightManaged>
+        <SilksongManaged Condition="!Exists('$(SilksongManaged)')">$(CiRefs)/managed</SilksongManaged>
+        <RefsDir Condition="Exists('$(LocalRefs)/Silksong.Assembly-CSharp.dll')">$(LocalRefs)</RefsDir>
+        <RefsDir Condition="'$(RefsDir)' == ''">$(CiRefs)/lib</RefsDir>
+
         <!-- Shortens and anonymizes paths in debug symbols relative to the project directory. Breakpoints will not work, however. -->
         <PathMap Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectDirectory)=/</PathMap>
     </PropertyGroup>
@@ -35,16 +44,16 @@
 
     <ItemGroup>
         <Reference Include="Silksong.Assembly-CSharp" Private="true" Aliases="Silksong">
-            <HintPath>lib/Silksong.Assembly-CSharp.dll</HintPath>
+            <HintPath>$(RefsDir)/Silksong.Assembly-CSharp.dll</HintPath>
         </Reference>
         <Reference Include="Silksong.Assembly-CSharp-firstpass" Private="true" Aliases="Silksong">
-            <HintPath>lib/Silksong.Assembly-CSharp-firstpass.dll</HintPath>
+            <HintPath>$(RefsDir)/Silksong.Assembly-CSharp-firstpass.dll</HintPath>
         </Reference>
         <Reference Include="Silksong.PlayMaker" Private="true" Aliases="SilksongPM">
-            <HintPath>lib/Silksong.PlayMaker.dll</HintPath>
+            <HintPath>$(RefsDir)/Silksong.PlayMaker.dll</HintPath>
         </Reference>
         <Reference Include="Silksong.TeamCherry.Localization" Private="true" Aliases="SilksongLoc">
-            <HintPath>lib/Silksong.TeamCherry.Localization.dll</HintPath>
+            <HintPath>$(RefsDir)/Silksong.TeamCherry.Localization.dll</HintPath>
         </Reference>
     </ItemGroup>
 
@@ -117,23 +126,23 @@
         </Reference>
     </ItemGroup>
 
-    <!-- Generate lib/Silksong.*.dll from the Silksong install -->
-    <Target Name="SetupSilksongLibs">
+    <!-- Generate full local-refs/Silksong.*.dll from the Silksong install for local referencing -->
+    <Target Name="GenerateLocalRefs">
         <Error Condition="!Exists('$(SilksongManaged)')" Text="Silksong not found at $(SilksongManaged)"/>
         <ItemGroup>
             <PrefixInput Include="Assembly-CSharp;Assembly-CSharp-firstpass;PlayMaker;ConditionalExpression;TeamCherry.NestedFadeGroup;TeamCherry.Localization;TeamCherry.SharedUtils"/>
-            <StaleLib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
+            <StaleRef Include="$(LocalRefs)/*.dll"/>
         </ItemGroup>
-        <Delete Files="@(StaleLib)"/>
-        <Exec Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongPrefixer&quot; -- Silksong &quot;$(MSBuildProjectDirectory)/lib&quot; --managed &quot;$(SilksongManaged)&quot; @(PrefixInput->'&quot;$(SilksongManaged)/%(Identity).dll&quot;', ' ')"/>
+        <Delete Files="@(StaleRef)"/>
+        <Exec Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongPrefixer&quot; -- Silksong &quot;$(LocalRefs)&quot; --managed &quot;$(SilksongManaged)&quot; @(PrefixInput->'&quot;$(SilksongManaged)/%(Identity).dll&quot;', ' ')"/>
     </Target>
 
-    <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(CopyDir)' != ''">
+    <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="Exists('$(CopyDir)')">
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="$(AssetsDir)/bundles/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="$(AssetsDir)/bundles/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
     </Target>
 
     <!-- Allowlist files for `dotnet publish` -->
@@ -143,7 +152,7 @@
         </ItemGroup>
         <Delete Files="@(PublishJunk)"/>
         <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PublishDir)"/>
-        <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/monoscripts.silksong.bundle;$(MSBuildProjectDirectory)/lib/silksong-resources.bundle" DestinationFolder="$(PublishDir)"/>
+        <Copy SourceFiles="$(AssetsDir)/bundles/monoscripts.silksong.bundle;$(AssetsDir)/bundles/silksong-resources.bundle" DestinationFolder="$(PublishDir)"/>
 
         <!-- create zip for distribution -->
         <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(MSBuildProjectDirectory)/bin/$(Configuration)/HornetInHallownest.zip" Overwrite="true"/>

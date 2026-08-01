@@ -15,7 +15,7 @@ use rabex_env::unity::types::{AssetBundle, MonoScript};
 const CAB: &str = "CAB-283454ff0b75a987406e2e403b4dec2b";
 const OUT: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../Source/lib/monoscripts.silksong.bundle"
+    "/../../Assets/bundles/monoscripts.silksong.bundle"
 );
 
 // Prefix an assembly name in our set to "Silksong.<base>" (mirrors AssemblyPrefixer.PrefixedName)
