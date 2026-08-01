@@ -3,15 +3,21 @@ using System;
 using System.Collections.Generic;
 using HornetInHallownest.Core;
 using UnityEngine;
+using UnityEngine.Events;
 using Object = UnityEngine.Object;
+using USceneManager = UnityEngine.SceneManagement.SceneManager;
+using UScene = UnityEngine.SceneManagement.Scene;
 using SIHit = Silksong::IHitResponder;
 using SHitInstance = Silksong::HitInstance;
 using SHealthManager = Silksong::HealthManager;
+using STinkEffect = Silksong::TinkEffect;
 
 namespace HornetInHallownest.Modules;
 
-// Bridge Hornet's attacks to HK enemies. The nail slash DamageEnemies runs normally, but for that it needs a Silksong
-// HealthManager. So we create one that relays the Hit to the HK HealthManager
+// Bridge Hornet's attacks to HK
+// - The nail slash `DamageEnemies` runs normally, but it needs a Silksong `HealthManager` -> create that on hit
+// - Non-Hunter crests and harpoon rely on silksongs `TinkEffect` to be present. Those can't easily be created on demand
+// (required before GetHitResponders runs) so we create them all on scene change.
 public sealed class HitBridgeModule : ModuleBase {
     public override string Id => "enemy-damage";
 
@@ -19,16 +25,29 @@ public sealed class HitBridgeModule : ModuleBase {
         Detour(typeof(Silksong::HitTaker), "GetHitResponders", OnGetHitResponders,
             typeof(List<SIHit>), typeof(GameObject), typeof(int), typeof(HashSet<SIHit>));
         Detour(typeof(SHealthManager), "Hit", OnHealthManagerHit, typeof(SHitInstance));
-        // might be called by IInitialisable?
+        // OnAwake, not Awake: HealthManager also runs it via IInitialisable, which hooking Awake alone would miss.
         Detour(typeof(SHealthManager), "OnAwake", OnHealthManagerAwake);
         Detour(typeof(Silksong::DamageEnemies), "DoEnemyDamageNailImbuement", OnNailImbuement,
             typeof(SHealthManager), typeof(SHitInstance));
         // HK enemy hits call HeroController.instance.SoulGain, redirect to Hornet's SilkGain when active.
         Detour(typeof(HeroController), "SoulGain", OnSoulGain);
+
+        USceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 
     protected override void OnDeinitialize() {
+        USceneManager.activeSceneChanged -= OnActiveSceneChanged;
         foreach (var b in Resources.FindObjectsOfTypeAll<HkEnemyHitBridge>()) Object.Destroy(b);
+        foreach (var t in Resources.FindObjectsOfTypeAll<HkTinkBridge>()) Object.Destroy(t);
+    }
+
+    private static void OnActiveSceneChanged(UScene from, UScene to) => AddTinkEffectMirrorsInScene();
+
+    private static void AddTinkEffectMirrorsInScene() {
+        foreach (var tink in Object.FindObjectsByType<TinkEffect>(FindObjectsSortMode.None)) {
+            var go = tink.gameObject;
+            if (!go.TryGetComponent<HkTinkBridge>(out _)) go.AddComponent<HkTinkBridge>();
+        }
     }
 
     private void OnGetHitResponders(Action<List<SIHit>, GameObject, int, HashSet<SIHit>> orig, List<SIHit> store,
@@ -126,5 +145,20 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
         }
 
         return SIHit.Response.DamageEnemy;
+    }
+}
+
+// Required to pass a GetComponent<TinkEffect> in DamageEnemies.OnTriggerEnter2D
+internal sealed class HkTinkBridge : STinkEffect {
+    protected override void Awake() {
+        base.Awake();
+        OnTinked = new UnityEvent();
+        OnTinkedHeavy = new UnityEvent();
+        OnTinkedUp = new UnityEvent();
+        OnTinkedDown = new UnityEvent();
+        OnTinkedLeft = new UnityEvent();
+        OnTinkedRight = new UnityEvent();
+        // without this, some spikes (Kings station roof rightmost) don't make sounds until after knight does it.
+        if (TryGetComponent<TinkEffect>(out var hk)) blockEffect = hk.blockEffect;
     }
 }
