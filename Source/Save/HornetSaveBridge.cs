@@ -61,6 +61,8 @@ internal static class HornetSaveBridge {
         if (pendingPlayerData != null)
             try {
                 JsonConvert.PopulateObject(pendingPlayerData, spd, SaveSettings);
+                // The restore bypasses SetEquippedTools, so refresh them manually.
+                Playground.ToolItemManagerBootstrap.RefreshBoundAttackTools();
             } catch (Exception e) {
                 Log.Error($"[HornetSave] PopulateObject failed: {e.Message}");
             } finally {

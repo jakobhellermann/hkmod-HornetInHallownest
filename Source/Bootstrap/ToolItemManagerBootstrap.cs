@@ -102,6 +102,16 @@ internal static class ToolItemManagerBootstrap {
         return new { crests = crestCount, slots = slotCount };
     }
 
+    internal static void RefreshBoundAttackTools() {
+        var mgr = Silksong::ToolItemManager.SilentInstance;
+        if (mgr == null) return;
+        typeof(Silksong::ToolItemManager)
+            .GetField("queueAttackToolsChanged", BindingFlags.NonPublic | BindingFlags.Instance)
+            ?.SetValue(mgr, true);
+        Silksong::ToolItemManager.ReportAllBoundAttackToolsUpdated();
+        Silksong::ToolItemManager.SendEquippedChangedEvent(true);
+    }
+
     internal static void Cleanup() {
         ManagerSingletonBootstrap.Destroy(GoName);
     }
