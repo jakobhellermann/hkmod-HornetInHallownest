@@ -18,16 +18,19 @@ const OUT: &str = concat!(
     "/../../Source/lib/monoscripts.silksong.bundle"
 );
 
-fn remap_assembly(a: &str) -> Option<&'static str> {
-    match a {
-        "Assembly-CSharp" => Some("Silksong.AssemblyCSharp"),
-        "Assembly-CSharp-firstpass" => Some("Silksong.AssemblyCSharpfirstpass"),
-        "PlayMaker" | "PlayMaker.dll" => Some("Silksong.PlayMaker"),
-        "TeamCherry.NestedFadeGroup" => Some("Silksong.TeamCherryNestedFadeGroup"),
-        "TeamCherry.Localization" => Some("Silksong.TeamCherryLocalization"),
-        "ConditionalExpression" => Some("Silksong.ConditionalExpression"),
-        _ => None,
-    }
+// Prefix an assembly name in our set to "Silksong.<base>" (mirrors AssemblyPrefixer.PrefixedName)
+fn remap_assembly(a: &str) -> Option<String> {
+    let base = a.strip_suffix(".dll").unwrap_or(a); // PlayMaker.dll is suffixed
+    matches!(
+        base,
+        "Assembly-CSharp"
+            | "Assembly-CSharp-firstpass"
+            | "PlayMaker"
+            | "TeamCherry.NestedFadeGroup"
+            | "TeamCherry.Localization"
+            | "ConditionalExpression"
+    )
+    .then(|| format!("Silksong.{base}"))
 }
 
 fn main() -> Result<()> {
@@ -59,7 +62,7 @@ fn main() -> Result<()> {
                 if let Some(new_asm) = remap_assembly(&ms.m_AssemblyName) {
                     // Assembly-only rename (matches SilksongPrefixer): m_Namespace/m_ClassName stay intact so name-based
                     // resolution keeps working.
-                    ms.m_AssemblyName = new_asm.to_string();
+                    ms.m_AssemblyName = new_asm;
                     remapped += 1;
                 }
                 b.add_object_at(pid, &ms)?;

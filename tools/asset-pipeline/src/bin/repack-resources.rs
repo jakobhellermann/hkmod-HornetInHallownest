@@ -34,17 +34,19 @@ const OUT: &str = concat!(
 // Toggle for experiments; must stay true (see module doc).
 const BAKE_TYPETREE: bool = true;
 
-// Same mapping SilksongPrefixer / remap-monoscripts use: assembly base name -> IL-prefixed name.
-fn remap_assembly(a: &str) -> Option<&'static str> {
-    match a {
-        "Assembly-CSharp" => Some("Silksong.AssemblyCSharp"),
-        "Assembly-CSharp-firstpass" => Some("Silksong.AssemblyCSharpfirstpass"),
-        "PlayMaker" => Some("Silksong.PlayMaker"),
-        "TeamCherry.NestedFadeGroup" => Some("Silksong.TeamCherryNestedFadeGroup"),
-        "TeamCherry.Localization" => Some("Silksong.TeamCherryLocalization"),
-        "ConditionalExpression" => Some("Silksong.ConditionalExpression"),
-        _ => None,
-    }
+// Prefix an assembly name in our set to "Silksong.<base>" (same rule as SilksongPrefixer / remap-monoscripts).
+fn remap_assembly(a: &str) -> Option<String> {
+    let base = a.strip_suffix(".dll").unwrap_or(a);
+    matches!(
+        base,
+        "Assembly-CSharp"
+            | "Assembly-CSharp-firstpass"
+            | "PlayMaker"
+            | "TeamCherry.NestedFadeGroup"
+            | "TeamCherry.Localization"
+            | "ConditionalExpression"
+    )
+    .then(|| format!("Silksong.{base}"))
 }
 
 fn main() -> Result<()> {
@@ -120,7 +122,7 @@ fn main() -> Result<()> {
             let p = embed_pid;
             embed_pid += 1;
             if let Some(n) = remap_assembly(ms.assembly_name_base()) {
-                ms.m_AssemblyName = n.to_string();
+                ms.m_AssemblyName = n;
             }
             b.add_object_at(p, &ms)?;
             ms_embed.insert(ggma_pid, p);

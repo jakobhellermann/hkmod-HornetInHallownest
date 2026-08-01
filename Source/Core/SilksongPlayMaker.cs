@@ -15,8 +15,8 @@ namespace HornetInHallownest.Core;
 internal static class SilksongPlayMaker {
     // Assemblies containing PlayMaker actions.
     private static readonly string[] extraActionAssemblies = [
-        "Silksong.TeamCherryNestedFadeGroup",
-        "Silksong.TeamCherryLocalization",
+        "Silksong.TeamCherry.NestedFadeGroup",
+        "Silksong.TeamCherry.Localization",
         "Silksong.ConditionalExpression",
     ];
 

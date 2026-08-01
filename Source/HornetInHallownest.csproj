@@ -34,17 +34,17 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Reference Include="Silksong.AssemblyCSharp" Private="true" Aliases="Silksong">
-            <HintPath>lib/Silksong.AssemblyCSharp.dll</HintPath>
+        <Reference Include="Silksong.Assembly-CSharp" Private="true" Aliases="Silksong">
+            <HintPath>lib/Silksong.Assembly-CSharp.dll</HintPath>
         </Reference>
-        <Reference Include="Silksong.AssemblyCSharpfirstpass" Private="true" Aliases="Silksong">
-            <HintPath>lib/Silksong.AssemblyCSharpfirstpass.dll</HintPath>
+        <Reference Include="Silksong.Assembly-CSharp-firstpass" Private="true" Aliases="Silksong">
+            <HintPath>lib/Silksong.Assembly-CSharp-firstpass.dll</HintPath>
         </Reference>
         <Reference Include="Silksong.PlayMaker" Private="true" Aliases="SilksongPM">
             <HintPath>lib/Silksong.PlayMaker.dll</HintPath>
         </Reference>
-        <Reference Include="Silksong.TeamCherryLocalization" Private="true" Aliases="SilksongLoc">
-            <HintPath>lib/Silksong.TeamCherryLocalization.dll</HintPath>
+        <Reference Include="Silksong.TeamCherry.Localization" Private="true" Aliases="SilksongLoc">
+            <HintPath>lib/Silksong.TeamCherry.Localization.dll</HintPath>
         </Reference>
     </ItemGroup>
 
@@ -134,22 +134,16 @@
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <ItemGroup>
-            <B2Lib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
-        </ItemGroup>
-        <Copy SourceFiles="@(B2Lib)" DestinationFiles="@(B2Lib->'$(CopyDir)/%(Filename)%(Extension).managed')" SkipUnchangedFiles="true"/>
     </Target>
 
     <!-- Allowlist files for `dotnet publish` -->
     <Target Name="CurateModPublish" AfterTargets="Publish">
         <ItemGroup>
             <PublishJunk Include="$(PublishDir)**/*"/>
-            <ModLib Include="$(MSBuildProjectDirectory)/lib/*.dll"/>
         </ItemGroup>
         <Delete Files="@(PublishJunk)"/>
         <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PublishDir)"/>
         <Copy SourceFiles="$(MSBuildProjectDirectory)/lib/monoscripts.silksong.bundle;$(MSBuildProjectDirectory)/lib/silksong-resources.bundle" DestinationFolder="$(PublishDir)"/>
-        <Copy SourceFiles="@(ModLib)" DestinationFiles="@(ModLib->'$(PublishDir)%(Filename)%(Extension).managed')"/>
 
         <!-- create zip for distribution -->
         <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(MSBuildProjectDirectory)/bin/$(Configuration)/HornetInHallownest.zip" Overwrite="true"/>

@@ -9,4 +9,8 @@
   <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="0.11.6" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Shared with the mod's setup code -->
+    <Compile Include="../../Source/Core/AssemblyPrefixer.cs" Link="AssemblyPrefixer.cs" />
+  </ItemGroup>
 </Project>
