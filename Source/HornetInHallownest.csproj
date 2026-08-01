@@ -11,20 +11,22 @@
         <EnableNETAnalyzers>True</EnableNETAnalyzers>
         <AnalysisMode>recommended</AnalysisMode>
 
-        <!-- Shortens and anonymizes paths in debug symbols relative to the project directory. Breakpoints will not work, however. -->
-        <PathMap Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectDirectory)=/</PathMap>
-
+        <!-- Game path, default steam location. Override in LocalConfig.props -->
         <GamePath Condition="'$(GamePath)' == '' And '$(OS)' == 'Windows_NT'">C:/Program Files (x86)/Steam/steamapps/common/Hollow Knight</GamePath>
         <GamePath Condition="'$(GamePath)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/Library/Application Support/Steam/steamapps/common/Hollow Knight</GamePath>
         <GamePath Condition="'$(GamePath)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Hollow Knight</GamePath>
-        <HollowKnightRefs Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(GamePath)/hollow_knight.app/Contents/Resources/Data/Managed</HollowKnightRefs>
-        <HollowKnightRefs Condition="'$(HollowKnightRefs)' == ''">$(GamePath)/hollow_knight_Data/Managed</HollowKnightRefs>
-
         <SilksongGamePath Condition="'$(SilksongGamePath)' == ''">$([MSBuild]::NormalizePath('$(GamePath)', '..', 'Hollow Knight Silksong'))</SilksongGamePath>
+
+        <!-- Managed directories -->
+        <HollowKnightManaged Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(GamePath)/hollow_knight.app/Contents/Resources/Data/Managed</HollowKnightManaged>
+        <HollowKnightManaged Condition="'$(HollowKnightManaged)' == ''">$(GamePath)/hollow_knight_Data/Managed</HollowKnightManaged>
         <SilksongManaged Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(SilksongGamePath)/Hollow Knight Silksong.app/Contents/Resources/Data/Managed</SilksongManaged>
         <SilksongManaged Condition="'$(SilksongManaged)' == ''">$(SilksongGamePath)/Hollow Knight Silksong_Data/Managed</SilksongManaged>
 
-        <CopyDir Condition="'$(CopyDir)' == ''">$(HollowKnightRefs)/Mods/HornetInHallownest</CopyDir>
+        <CopyDir Condition="'$(CopyDir)' == ''">$(HollowKnightManaged)/Mods/HornetInHallownest</CopyDir>
+
+        <!-- Shortens and anonymizes paths in debug symbols relative to the project directory. Breakpoints will not work, however. -->
+        <PathMap Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectDirectory)=/</PathMap>
     </PropertyGroup>
 
     <ItemGroup>
@@ -48,80 +50,70 @@
 
 
     <ItemGroup>
+    	<!-- HK / Modding API -->
         <Reference Include="Assembly-CSharp" Private="false">
-            <HintPath>$(HollowKnightRefs)/Assembly-CSharp.dll</HintPath>
+            <HintPath>$(HollowKnightManaged)/Assembly-CSharp.dll</HintPath>
         </Reference>
-        <Reference Include="TeamCherry.TK2D" Private="false">
-            <HintPath>$(HollowKnightRefs)/TeamCherry.TK2D.dll</HintPath>
+        <Reference Include="Mono.Cecil" Private="false">
+            <HintPath>$(HollowKnightManaged)/Mono.Cecil.dll</HintPath>
         </Reference>
-        <Reference Include="TeamCherry.SharedUtils" Private="false">
-            <HintPath>$(HollowKnightRefs)/TeamCherry.SharedUtils.dll</HintPath>
+        <Reference Include="MonoMod.RuntimeDetour" Private="false">
+            <HintPath>$(HollowKnightManaged)/MonoMod.RuntimeDetour.dll</HintPath>
         </Reference>
-        <Reference Include="TeamCherry.NestedFadeGroup" Private="false">
-            <HintPath>$(HollowKnightRefs)/TeamCherry.NestedFadeGroup.dll</HintPath>
+        <Reference Include="MonoMod.Utils" Private="false">
+            <HintPath>$(HollowKnightManaged)/MonoMod.Utils.dll</HintPath>
+        </Reference>
+        <Reference Include="Newtonsoft.Json" Private="false">
+            <HintPath>$(HollowKnightManaged)/Newtonsoft.Json.dll</HintPath>
         </Reference>
         <Reference Include="PlayMaker" Private="false">
-            <HintPath>$(HollowKnightRefs)/PlayMaker.dll</HintPath>
+            <HintPath>$(HollowKnightManaged)/PlayMaker.dll</HintPath>
         </Reference>
-        <Reference Include="UnityEngine.Physics2DModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.Physics2DModule.dll</HintPath>
+        <Reference Include="TeamCherry.Localization" Private="false">
+            <HintPath>$(HollowKnightManaged)/TeamCherry.Localization.dll</HintPath>
         </Reference>
-        <Reference Include="UnityEngine.AudioModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.AudioModule.dll</HintPath>
+        <Reference Include="TeamCherry.NestedFadeGroup" Private="false">
+            <HintPath>$(HollowKnightManaged)/TeamCherry.NestedFadeGroup.dll</HintPath>
         </Reference>
-        <Reference Include="UnityEngine.ParticleSystemModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.ParticleSystemModule.dll</HintPath>
+        <Reference Include="TeamCherry.SharedUtils" Private="false">
+            <HintPath>$(HollowKnightManaged)/TeamCherry.SharedUtils.dll</HintPath>
+        </Reference>
+        <Reference Include="TeamCherry.TK2D" Private="false">
+            <HintPath>$(HollowKnightManaged)/TeamCherry.TK2D.dll</HintPath>
+        </Reference>
+
+        <!-- Unity Modules -->
+        <Reference Include="UnityEngine" Private="false">
+            <HintPath>$(HollowKnightManaged)/UnityEngine.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.AnimationModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.AnimationModule.dll</HintPath>
+            <HintPath>$(HollowKnightManaged)/UnityEngine.AnimationModule.dll</HintPath>
         </Reference>
-        <Reference Include="UnityEngine.UI" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.UI.dll</HintPath>
+        <Reference Include="UnityEngine.AssetBundleModule" Private="false">
+            <HintPath>$(HollowKnightManaged)/UnityEngine.AssetBundleModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.AudioModule" Private="false">
+            <HintPath>$(HollowKnightManaged)/UnityEngine.AudioModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule" Private="false">
+            <HintPath>$(HollowKnightManaged)/UnityEngine.CoreModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.InputLegacyModule" Private="false">
+            <HintPath>$(HollowKnightManaged)/UnityEngine.InputLegacyModule.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.Physics2DModule" Private="false">
+            <HintPath>$(HollowKnightManaged)/UnityEngine.Physics2DModule.dll</HintPath>
+        </Reference>
+
+        <!-- Referenced directly from the silksong Managed dir, so that dotnet build works without relying on mod setup -->
+        <Reference Include="Newtonsoft.Json.UnityConverters" Private="false">
+            <HintPath>$(SilksongManaged)/Newtonsoft.Json.UnityConverters.dll</HintPath>
         </Reference>
         <Reference Include="Unity.Addressables" Private="false">
             <HintPath>$(SilksongManaged)/Unity.Addressables.dll</HintPath>
         </Reference>
         <Reference Include="Unity.ResourceManager" Private="false">
             <HintPath>$(SilksongManaged)/Unity.ResourceManager.dll</HintPath>
-        </Reference>
-        <Reference Include="TeamCherry.Localization" Private="false">
-            <HintPath>$(HollowKnightRefs)/TeamCherry.Localization.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine.CoreModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.CoreModule.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine.JSONSerializeModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.JSONSerializeModule.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine.InputLegacyModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.InputLegacyModule.dll</HintPath>
-        </Reference>
-        <Reference Include="MonoMod.RuntimeDetour" Private="false">
-            <HintPath>$(HollowKnightRefs)/MonoMod.RuntimeDetour.dll</HintPath>
-        </Reference>
-        <Reference Include="MonoMod.Utils" Private="false">
-            <HintPath>$(HollowKnightRefs)/MonoMod.Utils.dll</HintPath>
-        </Reference>
-        <Reference Include="Mono.Cecil" Private="false">
-            <HintPath>$(HollowKnightRefs)/Mono.Cecil.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine.ImageConversionModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.ImageConversionModule.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine.ScreenCaptureModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.ScreenCaptureModule.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine.AssetBundleModule" Private="false">
-            <HintPath>$(HollowKnightRefs)/UnityEngine.AssetBundleModule.dll</HintPath>
-        </Reference>
-        <Reference Include="Newtonsoft.Json" Private="false">
-            <HintPath>$(HollowKnightRefs)/Newtonsoft.Json.dll</HintPath>
-        </Reference>
-        <Reference Include="Newtonsoft.Json.UnityConverters" Private="false">
-            <HintPath>$(SilksongManaged)/Newtonsoft.Json.UnityConverters.dll</HintPath>
         </Reference>
     </ItemGroup>
 
