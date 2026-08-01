@@ -27,9 +27,10 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         ["hasShadowDash"] = (ss, v) => RecomputeArts(ss, shadeCloak: v) // Shade Cloak
     };
 
-    // Silk skills unlock at level thresholds and are additive (one-way); hasSilkSpecial is the shared gate.
     private static readonly Dictionary<string, Action<SPlayerData, int>> ints = new() {
-        ["nailSmithUpgrades"] = (ss, v) => ss.nailUpgrades = v,
+        // Nail upgrades set tool pouches + crafting kits as well
+        ["nailSmithUpgrades"] = (ss, v) => { ss.nailUpgrades = v; ss.ToolPouchUpgrades = v; ss.ToolKitUpgrades = v; },
+        // Any silk skill sets hasSilkSpecial
         ["fireballLevel"] = (ss, v) => {
             if (v >= 1) { ss.hasNeedleThrow = true; ss.hasSilkSpecial = true; } // Silkspear
             if (v >= 2) ss.hasSilkCharge = true; // Sharpdart
