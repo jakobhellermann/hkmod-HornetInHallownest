@@ -137,7 +137,7 @@
         <Exec Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongPrefixer&quot; -- Silksong &quot;$(LocalRefs)&quot; --managed &quot;$(SilksongManaged)&quot; @(PrefixInput->'&quot;$(SilksongManaged)/%(Identity).dll&quot;', ' ')"/>
     </Target>
 
-    <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="Exists('$(CopyDir)')">
+    <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="Exists('$([System.IO.Path]::GetDirectoryName($([System.IO.Path]::GetDirectoryName($(CopyDir)))))')">
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
