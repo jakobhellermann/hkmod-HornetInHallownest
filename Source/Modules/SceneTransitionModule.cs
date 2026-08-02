@@ -8,7 +8,6 @@ using MonoMod.RuntimeDetour;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
-// A bare `SceneManager` binds to HK's Assembly-CSharp SceneManager (global namespace wins over the using); alias Unity's.
 using USceneManager = UnityEngine.SceneManagement.SceneManager;
 using SGate = Silksong::GlobalEnums.GatePosition;
 using SHeroTransition = Silksong::GlobalEnums.HeroTransitionState;
@@ -37,6 +36,8 @@ public sealed class SceneTransitionModule : ModuleBase {
     private bool dreamHeroPlaced;
     private bool arrivalInvulnerable; // block hazard damage through the dream-arrival window (park + placement settle)
     private bool dreamPending;
+
+    private bool godhomeArrivalPending;
     private string? dreamGate;
 
     public override string Id => "scene-transition";
@@ -344,8 +345,9 @@ public sealed class SceneTransitionModule : ModuleBase {
         cameraCaughtUp = true;
     }
 
-    // enterWithoutInput entries deliberately skip AcceptInput (expecting an HK arrival FSM to close them); Hornet has
-    // none. Do just the Regain-Control close. Skip move-resumes (dash/sprint/quake), they resume on their own.
+    // enterWithoutInput arrivals leave AcceptInput to a per-scene HK arrival FSM. The ones that drive Hornet (Godhome,
+    // godhomeArrivalPending) pass through untouched; the rest have no FSM to reach her, so restore control here or she
+    // stays frozen. Skip move-resumes (dash/sprint/quake), they resume on their own.
     private void OnFinishedEnteringScene(Action<Silksong::HeroController, bool, bool> orig, Silksong::HeroController self,
         bool setHazardMarker, bool preventRunBob) {
         var wasEnterWithoutInput = self.enterWithoutInput;
@@ -362,6 +364,10 @@ public sealed class SceneTransitionModule : ModuleBase {
         }
 
         if (!wasEnterWithoutInput || isMoveResume || !HeroSwitch.HornetActive) return;
+        if (godhomeArrivalPending) {
+            LogDebug("skipped enterWithoutInput close: GodsAndGlory arrival, HK Dream Entry FSM owns control");
+            return;
+        }
         self.RegainControl();
         self.StartAnimationControl();
         self.AcceptInput();
@@ -370,7 +376,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         // no-op here left a permanent whitescreen. Send it ourselves (same call the dream-return path uses). Harmless
         // no-op if the blanker isn't faded in (Idle/Faded Out ignore FADE OUT).
         FadeBlankerOut("Blanker White");
-        LogDebug("closed enterWithoutInput entry (RegainControl+AcceptInput+FADE OUT white; Hornet has no arrival FSM)");
+        LogDebug("closed enterWithoutInput entry (RegainControl+AcceptInput+FADE OUT white; no HK arrival FSM here)");
     }
 
     // Run Hornet's real EnterScene from a Silksong TransitionPoint fabricated to mirror HK's gate, so she walks/drops in
@@ -432,11 +438,13 @@ public sealed class SceneTransitionModule : ModuleBase {
     // fade it out + return control on arrival. Hornet lacks it; arm the fade-out (and capture the gate for a same-scene
     // re-entry HeroSwitch's name-change snap misses).
     private void ArmDreamArrival(GameManager.SceneLoadInfo info) {
+        godhomeArrivalPending = false;
         if (!HeroSwitch.HornetActive) return;
         var vis = info.Visualization;
         if (vis != GameManager.SceneLoadVisualizations.Dream &&
             vis != GameManager.SceneLoadVisualizations.GrimmDream &&
             vis != GameManager.SceneLoadVisualizations.GodsAndGlory) return;
+        godhomeArrivalPending = vis == GameManager.SceneLoadVisualizations.GodsAndGlory;
         dreamPending = true;
         dreamArrivalPending = true;
         dreamGate = info.EntryGateName;
@@ -513,7 +521,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (!hero) return;
         // With a real gate, RunEntry (EnterScene -> FinishedEnteringScene) owns the control-return; doing it here mid-entry
         // breaks its no_input door walk (she gets input+gravity and falls out of the arena, non-deterministically).
-        if (!entryInProgress) {
+        // godhomeArrivalPending: control return is owned by HK's "Dream Entry" FSM; only the blanker fade + DREAM WAKE run.
+        if (!entryInProgress && !godhomeArrivalPending) {
             if (hero.transitionState == SHeroTransition.WAITING_TO_ENTER_LEVEL)
                 hero.transitionState = SHeroTransition.WAITING_TO_TRANSITION;
             hero.enterWithoutInput = false;
