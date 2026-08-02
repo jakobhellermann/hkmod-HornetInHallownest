@@ -150,14 +150,14 @@ public sealed class HornetSpawner : ModuleBase {
         ToolItemManager.UnlockAllCrests();
         ToolItemManagerBootstrap.UnlockAllCrestSlots();
 
+        using (SilksongContext.Enter()) {
+            hornetInstance.SetActive(true);
+        }
+
         try {
             GameCamerasBootstrap.BringUpHud(true);
         } catch (Exception e) {
             Log.Error($"[HornetSpawner] BringUpHud: {e}");
-        }
-
-        using (SilksongContext.Enter()) {
-            hornetInstance.SetActive(true);
         }
 
         var vignette = hornetInstance.transform.Find("Vignette");
