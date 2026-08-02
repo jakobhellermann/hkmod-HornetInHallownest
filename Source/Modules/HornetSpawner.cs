@@ -82,6 +82,9 @@ public sealed class HornetSpawner : ModuleBase {
         Func<GameManager, GameManager.ReturnToMainMenuSaveModes, Action<bool>, IEnumerator> orig, GameManager self,
         GameManager.ReturnToMainMenuSaveModes mode, Action<bool> cb) {
         if (HornetRoot) {
+            // Like Silksongs QuitToMenu. Kills cogflies, for example.
+            Silksong::ObjectPool.RecycleAll();
+
             // ReturnToMainMenu autosaves, but we force the Knight active below (camera handback), which would otherwise
             // record Knight and clobber the "was playing Hornet" state. Capture the real hero first.
             HornetSaveBridge.SaveActiveOverride = HeroSwitch.HornetActive;
