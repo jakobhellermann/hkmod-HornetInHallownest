@@ -124,7 +124,7 @@ If they don't work for your setup, create a `LocalConfig.props` with this conten
 
 If you want to be able to view silksong sources in your IDE, instead of the stubbed CI definitions, run
 ```sh
-dotnet msbuild -t SetupSilksongLibs
+dotnet msbuild -t GenerateLocalRefs
 ```
 once in order to generate the `Source/lib/Silksong.*.dll` libs from the silksong install.
 
