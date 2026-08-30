@@ -3,6 +3,7 @@ extern alias SilksongPM;
 using System;
 using HornetInHallownest.Util;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace HornetInHallownest.Bootstrap;
 
@@ -22,9 +23,8 @@ internal static class HudRefresh {
 
     private static void SendToHealthDisplays(string evt) {
         // Re-enable the self-disabled (EnableFsmSelf(false)) FSMs first, so the event reaches masks parked in Idle/Inactive.
-        foreach (var f in Resources.FindObjectsOfTypeAll<SilksongPM::PlayMakerFSM>())
-            if (f != null && string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase) &&
-                f.gameObject.activeInHierarchy)
+        foreach (var f in Object.FindObjectsByType<SilksongPM::PlayMakerFSM>(FindObjectsSortMode.None))
+            if (string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase))
                 try {
                     Behaviour b = f;
                     if (!b.enabled) b.enabled = true;
