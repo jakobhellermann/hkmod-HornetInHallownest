@@ -71,8 +71,12 @@ public sealed class HitBridgeModule : ModuleBase {
         }
 
         var resp = target.GetComponentInParent<IHitResponder>();
-        if (resp as Component is not { } respComp) return;
-        
+        if (resp as Component is not { } respComp) {
+            // No IHitResponder (e.g. Geo Rock): HK's DamageEnemies sends TAKE DAMAGE always
+            FSMUtility.SendEventToGameObject(target, "TAKE DAMAGE");
+            return;
+        }
+
         var respGo = respComp.gameObject;
         if (!respGo.TryGetComponent<HkEnemyHitBridge>(out var bridge)) {
             bridge = respGo.AddComponent<HkEnemyHitBridge>();
