@@ -11,6 +11,7 @@ using SIHit = Silksong::IHitResponder;
 using SHitInstance = Silksong::HitInstance;
 using SHealthManager = Silksong::HealthManager;
 using STinkEffect = Silksong::TinkEffect;
+using SSpecialTypes = Silksong::SpecialTypes;
 
 namespace HornetInHallownest.Modules;
 
@@ -128,7 +129,9 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
     internal SIHit.HitResponse ForwardHit(SHitInstance si) {
         var isUnhandledAttackType = (int) si.AttackType > (int) AttackTypes.NailBeam;
         var attackType = isUnhandledAttackType ? AttackTypes.Generic : (AttackTypes) si.AttackType;
-        
+        // Allow e.g. silkspear to pierce enemies with a shield
+        if ((si.SpecialType & SSpecialTypes.Piercer) != 0) attackType = AttackTypes.Spell;
+
         var hkHit = new HitInstance {
             Source = si.Source,
             AttackType = attackType,
