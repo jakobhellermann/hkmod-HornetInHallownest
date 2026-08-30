@@ -1,11 +1,13 @@
+extern alias Silksong;
 extern alias SilksongPM;
 using System;
+using HornetInHallownest.Util;
 using UnityEngine;
 
 namespace HornetInHallownest.Bootstrap;
 
-// Silksong's health-mask HUD, driven through the isolated Silksong PlayMaker via the per-mask health_display FSMs.
-internal static class HealthHud {
+// Refreshes for Silksong HUD elements that don't auto-update when their backing PlayerData field changes mid-play.
+internal static class HudRefresh {
     // "MAX HP UP" can only ever add a mask.
     internal static void RefreshMaxHealthHud() {
         SendToHealthDisplays("MAX HP UP");
@@ -24,10 +26,17 @@ internal static class HealthHud {
             if (f != null && string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase) &&
                 f.gameObject.activeInHierarchy)
                 try {
-                    var b = (Behaviour)f;
+                    Behaviour b = f;
                     if (!b.enabled) b.enabled = true;
                     f.SendEvent(evt);
-                } catch {
+                } catch (Exception e) {
+                    Log.Error($"[HudRefresh] {f.FsmName}: {e.Message}");
                 }
+    }
+
+    // DrawSpool() resizes the spool bar from PlayerData.CurrentSilkMaxBasic; nothing else re-runs it after silkMax
+    // changes mid-play (it's only called once at HUD bring-up).
+    internal static void RefreshMaxSilkHud() {
+        Silksong::SilkSpool.Instance?.DrawSpool();
     }
 }

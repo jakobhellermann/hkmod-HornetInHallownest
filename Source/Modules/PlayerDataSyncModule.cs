@@ -102,8 +102,9 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         var ss = SPlayerData.instance;
         if (!ints.TryGetValue(name, out var apply)) return orig;
         apply(ss, orig);
-        // A mask gained mid-play bumps maxHealth silently (AddToMaxHealth sends no HUD event); appear the new mask.
-        if (name == "maxHealthBase") HealthHud.RefreshMaxHealthHud();
+        // Refresh hud if sync made changes
+        if (name == "maxHealthBase") HudRefresh.RefreshMaxHealthHud();
+        if (name is "MPReserveMax" or "vesselFragments") HudRefresh.RefreshMaxSilkHud();
         return orig;
     }
 

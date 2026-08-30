@@ -9,6 +9,7 @@
 - Respect Ascended & Radiant difficulties in godhome
 - Fix silk regeneration not working after re-entering a save
 - Clear active tools on new savefile creation
+- Refresh silkspool HUD after gaining an upgrade
 
 ## v0.1.0
 
