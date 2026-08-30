@@ -163,6 +163,9 @@ public sealed class HornetSpawner : ModuleBase {
             Log.Error($"[HornetSpawner] BringUpHud: {e}");
         }
 
+        // Necessary during new save file creation
+        ToolItemManagerBootstrap.RefreshBoundAttackTools();
+
         var vignette = hornetInstance.transform.Find("Vignette");
         if (vignette) {
             vignette.gameObject.SetActive(false);

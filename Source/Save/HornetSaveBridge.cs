@@ -1,27 +1,33 @@
 extern alias Silksong;
 using System;
 using HornetInHallownest.Bootstrap;
+using HornetInHallownest.Core;
 using Newtonsoft.Json;
 using Newtonsoft.Json.UnityConverters;
 using HornetInHallownest.Modules;
 using HornetInHallownest.Util;
+using Modding;
 
 namespace HornetInHallownest.Save;
 
-// Persists Hornet's Silksong PlayerData across HK's save/load (HornetInHallownestMod delegates its ILocalSettings here).
-// Snapshot() <- OnSaveLocal (SaveGame); Stash() <- OnLoadLocal (LoadGame). Load runs before the hero is spawned, so
-// Stash keeps the JSON and ApplyPending() applies it post-spawn, once (pending clears on apply).
-internal static class HornetSaveBridge {
-    // Which hero to record as active in the next snapshot, overriding live HeroSwitch. Set by the quit-to-menu hook
-    // before it force-switches to the Knight (camera handback), so the follow-up autosave doesn't record Knight.
+// Persists Hornet's Silksong PlayerData in modded savefile.
+// Since the modded settings may be loaded before the hornet is activated, stash to-be-loaded settings away until she is.
+public sealed class HornetSaveBridge : ModuleBase {
+    public override string Id => "save-bridge";
+
+    public override void Initialize() => ModHooks.NewGameHook += OnNewGame;
+    protected override void OnDeinitialize() => ModHooks.NewGameHook -= OnNewGame;
+
+    // Override set by quit to menu before switching back to knight, in order to prevent always autosaving knight.
     internal static bool? SaveActiveOverride;
 
-    // Mirror Silksong's own PlayerData serializer: the Unity converters emit clean {x,y,…} for Vector/Color and skip
-    // computed struct properties (the self-referencing-loop cause). Lazy so type-init stays free of the UnityConverters dep.
+    // Matches Silksong's PlayerData serializer
     private static JsonSerializerSettings SaveSettings => field ??= BuildSettings();
 
     private static string? pendingPlayerData;
     private static bool? pendingHornetActive;
+
+    private static void OnNewGame() => Silksong::PlayerData.CreateNewSingleton(false);
 
     private static JsonSerializerSettings BuildSettings() {
         var s = new JsonSerializerSettings {
@@ -49,15 +55,12 @@ internal static class HornetSaveBridge {
         ApplyPending(); // apply now if the hero already exists; otherwise deferred to the post-spawn call
     }
 
-    // Apply the stashed save post-spawn, overriding the bootstrap's default grants (the save is the truth).
     internal static void ApplyPending() {
-        // Gate on the spawned hero, not PlayerData.instance (a singleton that survives despawn): during a menu->game
-        // load it's non-null before the hero exists, so restoring then would consume the pending state with no hero.
         var hero = HornetSpawner.Hornet;
-        if (hero == null) return; // hero not spawned yet, the post-spawn hook will call us again
+        if (!hero) return; // hero not spawned yet, the post-spawn hook will call us again
         var spd = Silksong::PlayerData.instance;
 
-        SaveActiveOverride = null; // back in gameplay: live HeroSwitch state is authoritative for future saves again
+        SaveActiveOverride = null;
 
         if (pendingPlayerData != null)
             try {

@@ -136,6 +136,7 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         moduleHost.Add(new NeedolinDreamNailModule());
         moduleHost.Add(new BenchModule());
         moduleHost.Add(new SceneTransitionModule());
+        moduleHost.Add(new HornetSaveBridge());
         moduleHost.Add(new HornetSpawner());
         moduleHost.InitializeAll();
 
