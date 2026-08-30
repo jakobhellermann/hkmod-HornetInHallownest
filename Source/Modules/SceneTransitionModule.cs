@@ -37,7 +37,6 @@ public sealed class SceneTransitionModule : ModuleBase {
     private bool arrivalInvulnerable; // block hazard damage through the dream-arrival window (park + placement settle)
     private bool dreamPending;
 
-    private bool godhomeArrivalPending;
     private string? dreamGate;
 
     public override string Id => "scene-transition";
@@ -345,9 +344,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         cameraCaughtUp = true;
     }
 
-    // enterWithoutInput arrivals leave AcceptInput to a per-scene HK arrival FSM. The ones that drive Hornet (Godhome,
-    // godhomeArrivalPending) pass through untouched; the rest have no FSM to reach her, so restore control here or she
-    // stays frozen. Skip move-resumes (dash/sprint/quake), they resume on their own.
+    // For boss scene entry there's a Dream Entry FSM which leaves enterWithoutInput.
+    // For the Hall of Gods return, the Knight uses its Dream Return FSM, we have to do it here.
     private void OnFinishedEnteringScene(Action<Silksong::HeroController, bool, bool> orig, Silksong::HeroController self,
         bool setHazardMarker, bool preventRunBob) {
         var wasEnterWithoutInput = self.enterWithoutInput;
@@ -364,8 +362,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         }
 
         if (!wasEnterWithoutInput || isMoveResume || !HeroSwitch.HornetActive) return;
-        if (godhomeArrivalPending) {
-            LogDebug("skipped enterWithoutInput close: GodsAndGlory arrival, HK Dream Entry FSM owns control");
+        if (BossSceneController.IsBossScene) {
+            LogDebug("skipped enterWithoutInput close: boss scene, its own Dream Entry FSM owns control");
             return;
         }
         self.RegainControl();
@@ -438,13 +436,11 @@ public sealed class SceneTransitionModule : ModuleBase {
     // fade it out + return control on arrival. Hornet lacks it; arm the fade-out (and capture the gate for a same-scene
     // re-entry HeroSwitch's name-change snap misses).
     private void ArmDreamArrival(GameManager.SceneLoadInfo info) {
-        godhomeArrivalPending = false;
         if (!HeroSwitch.HornetActive) return;
         var vis = info.Visualization;
         if (vis != GameManager.SceneLoadVisualizations.Dream &&
             vis != GameManager.SceneLoadVisualizations.GrimmDream &&
             vis != GameManager.SceneLoadVisualizations.GodsAndGlory) return;
-        godhomeArrivalPending = vis == GameManager.SceneLoadVisualizations.GodsAndGlory;
         dreamPending = true;
         dreamArrivalPending = true;
         dreamGate = info.EntryGateName;
@@ -521,8 +517,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (!hero) return;
         // With a real gate, RunEntry (EnterScene -> FinishedEnteringScene) owns the control-return; doing it here mid-entry
         // breaks its no_input door walk (she gets input+gravity and falls out of the arena, non-deterministically).
-        // godhomeArrivalPending: control return is owned by HK's "Dream Entry" FSM; only the blanker fade + DREAM WAKE run.
-        if (!entryInProgress && !godhomeArrivalPending) {
+        // Boss scene: control return is owned by its own Dream Entry FSM; only the blanker fade + DREAM WAKE run.
+        if (!entryInProgress && !BossSceneController.IsBossScene) {
             if (hero.transitionState == SHeroTransition.WAITING_TO_ENTER_LEVEL)
                 hero.transitionState = SHeroTransition.WAITING_TO_TRANSITION;
             hero.enterWithoutInput = false;
