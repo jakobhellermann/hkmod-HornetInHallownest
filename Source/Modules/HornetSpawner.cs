@@ -177,6 +177,9 @@ public sealed class HornetSpawner : ModuleBase {
         // damage. Reset on spawn.
         Silksong::HeroBox.Inactive = false;
 
+        // Silk regen doesn't work without it, after hornet re-enters a save.
+        heroController.SetFieldValue("hasSilkSpoolAppeared", true);
+
         // Do not auto-activate Hornet here: the spawn coincides with HK's scene entry, and inerting the Knight mid-entry
         // breaks HK's entry handshake (never finishes -> Hornet ends in nirvana). A "reload stays on Hornet" feature
         // must defer the switch until the Knight's entry completed (isHeroInPosition + grounded).

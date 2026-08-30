@@ -7,6 +7,7 @@
 - Fix having to re-equip tools after restart
 - Grant tool pouches and crafting kits for nail upgrades
 - Respect Ascended & Radiant difficulties in godhome
+- Fix silk regeneration not working after re-entering a save
 
 ## v0.1.0
 
