@@ -6,6 +6,7 @@
 - Fix unbalanced loud audio for certain sound effects
 - Fix having to re-equip tools after restart
 - Grant tool pouches and crafting kits for nail upgrades
+- Respect Ascended & Radiant difficulties in godhome
 
 ## v0.1.0
 
