@@ -1,6 +1,9 @@
 # Changelog
 
 ## _Unreleased_
+
+## v0.2.0
+
 - Fix clawline not bouncing off of spikes
 - Fix non-hunters crest not being able to pogo
 - Fix unbalanced loud audio for certain sound effects
