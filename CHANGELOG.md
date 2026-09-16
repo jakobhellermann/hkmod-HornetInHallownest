@@ -8,6 +8,7 @@
 - Inherit HK controller bindings
 - Update inherited bindings when changing them
 - Fix soul master activating both phase 1 and 2 in godhome
+- Fix mod not loading on upgrade or silksong path change on windows
 
 ## v0.2.0
 
