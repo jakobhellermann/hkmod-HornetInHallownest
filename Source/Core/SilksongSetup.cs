@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using HornetInHallownest.Util;
@@ -47,6 +48,7 @@ internal static class SilksongSetup {
 
     private static bool EnsureInstalledAssemblies(InstalledFiles install) {
         var fingerprint = FingerprintGameVersion();
+        install.SweepStale();
         if (install.IsCurrent(fingerprint)) return false;
 
         install.Reinstall(fingerprint);
@@ -72,8 +74,26 @@ internal static class SilksongSetup {
         }
 
         private void Clean() {
-            foreach (var name in deps) File.Delete($"{managed}/{name}.dll");
-            foreach (var path in Directory.GetFiles(managed, "Silksong.*.dll")) File.Delete(path);
+            foreach (var name in deps) Remove($"{managed}/{name}.dll");
+            foreach (var path in Directory.GetFiles(managed, "Silksong.*.dll")) Remove(path);
+        }
+
+        private void Remove(string path) {
+            if (!File.Exists(path)) return;
+            try {
+                File.Delete(path);
+            } catch (UnauthorizedAccessException) {
+                // Windows doesn't let you delete a loaded DLL. Renaming works.
+                var stale = $"{path}.{Guid.NewGuid():N}.stale";
+                File.Move(path, stale);
+            }
+        }
+
+        public void SweepStale() {
+            foreach (var stale in Directory.GetFiles(managed, "*.stale")) {
+                try { File.Delete(stale); }
+                catch (UnauthorizedAccessException) { Log.Debug($"[SilksongSetup] Failed to delete {Path.GetFileName(stale)}"); }
+            }
         }
 
         private static string? ReadOrNull(string path) => File.Exists(path) ? File.ReadAllText(path) : null;
