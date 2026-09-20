@@ -5,6 +5,7 @@ using HornetInHallownest.Core;
 using HornetInHallownest.Save;
 using HornetInHallownest.Util;
 using InControl;
+using GlobalEnums;
 using Modding;
 using UnityEngine;
 using SsActions = Silksong::HeroActions;
@@ -13,7 +14,7 @@ using SsAction = Silksong::InControl.PlayerAction;
 namespace HornetInHallownest.Modules;
 
 // Feed Silksong's HeroActions.
-// If possible (and not overridden), reuse HK keybinds for the equivalent silksong actinos.
+// If possible (and not overridden), reuse HK keybinds for the equivalent silksong actions.
 // Silksong's InControl InputManager is inactive, and manually Committed.
 public sealed class InputModule : ModuleBase {
     // Actions mirrored from HK, not rebindable (UI, movement).
@@ -37,11 +38,10 @@ public sealed class InputModule : ModuleBase {
         new(s => s.Bind, h => h.cast, a => a.Cast),
         new(s => s.Tool, h => h.quickCast, a => a.QuickCast),
         new(s => s.Needolin, h => h.dreamNail, a => a.DreamNail),
-        // inventory sets default from HK, but is separate since HK is disabled when hornet is active.
-        new(s => s.OpenInventory, null, a => a.OpenInventory, h => h.openInventory),
+        new(s => s.OpenInventory, null, a => a.OpenInventory, h => h.openInventory, PrimaryOnly: true),
         // without HK equivalent
         new(s => s.Taunt, null, a => a.Taunt),
-        new(s => s.OpenTools, null, a => a.OpenInventoryTools)
+        new(s => s.OpenTools, null, a => a.OpenInventoryTools, PrimaryOnly: true)
     ];
 
     // Global-persisted binds
@@ -58,24 +58,55 @@ public sealed class InputModule : ModuleBase {
     private static HeroActions? HkActions => InputHandler.Instance != null ? InputHandler.Instance.inputActions : null;
 
     public override void Initialize() {
+        BuildOverrides();
+
+        Detour(typeof(InputHandler), nameof(InputHandler.MapControllerButtons), OnMapControllerButtons);
+    }
+
+    private void OnMapControllerButtons(Action<InputHandler, GamepadType> orig, InputHandler self, GamepadType type) {
+        orig(self, type);
+        BuildOverrides();
+    }
+
+    private void BuildOverrides() {
+        overrideSet?.Destroy();
         overrideSet = new HornetInputActions(overridable.Length);
         overrideActions = new PlayerAction?[overridable.Length];
         var hk = HkActions;
-        for (var i = 0; i < overridable.Length; i++) {
+        for (int i = 0; i < overridable.Length; i++) {
             var def = overridable[i];
-            var bind = def.Setting(Settings);
-            if (bind == null && def.DefaultFrom != null && hk != null) // inherit HK's current binding as the default
-                bind = KeybindUtil.GetKeyOrMouseBinding(def.DefaultFrom(hk)).ToString();
-            if (bind == null) continue; // mirrored action or no bind
-            if (KeybindUtil.ParseBinding(bind) is not { } parsed) {
-                LogError($"unparseable keybind '{bind}'");
-                continue;
+            string? bind = def.Setting(Settings) ?? (def.DefaultFrom != null && hk != null
+                ? KeybindUtil.GetKeyOrMouseBinding(def.DefaultFrom(hk)).ToString()
+                : null);
+            var action = overrideSet.Slots[i];
+            bool bound = false;
+            if (bind != null) {
+                if (KeybindUtil.ParseBinding(bind) is { } parsed) {
+                    action.AddKeyOrMouseBinding(parsed);
+                    bound = true;
+                } else {
+                    LogError($"unparseable keybind '{bind}'");
+                }
             }
 
-            var action = overrideSet.Slots[i];
-            action.AddKeyOrMouseBinding(parsed);
-            overrideActions[i] = action;
+            if (bound) {
+                InheritDeviceBindings(HkSource(def, hk), action);
+                overrideActions[i] = action;
+            }
         }
+    }
+
+    // Copy HK's controller bindings onto the override
+    private static void InheritDeviceBindings(PlayerAction? hkAction, PlayerAction action) {
+        if (hkAction == null) return;
+        foreach (var b in hkAction.Bindings)
+            if (b is DeviceBindingSource dbs && dbs.Control != InputControlType.None)
+                action.AddBinding(new DeviceBindingSource(dbs.Control));
+    }
+
+    private static PlayerAction? HkSource(Overridable def, HeroActions? hk) {
+        if (hk == null) return null;
+        return (def.DefaultFrom ?? def.Hk)?.Invoke(hk);
     }
 
     protected override void OnDeinitialize() {
