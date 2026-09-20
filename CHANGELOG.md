@@ -7,6 +7,7 @@
 - Fix not being able to press R3 for taunt on controller
 - Inherit HK controller bindings
 - Update inherited bindings when changing them
+- Fix soul master activating both phase 1 and 2 in godhome
 
 ## v0.2.0
 

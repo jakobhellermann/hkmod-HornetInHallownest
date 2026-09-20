@@ -312,10 +312,13 @@ public sealed class SceneTransitionModule : ModuleBase {
     private System.Collections.IEnumerator ManageArrivalLayer() {
         var hero = HornetSpawner.Hornet;
         if (!hero) yield break;
+        // see EnterSceneDreamGate
+        hero.AffectedByGravity(false);
         for (var i = 0; i < 120 && !dreamHeroPlaced && hero; i++) { // park: non-colliding until placed (cap ~2.4s)
             hero.gameObject.layer = IgnoreRaycastLayer;
             yield return new WaitForFixedUpdate();
         }
+        if (hero && !dreamHeroPlaced) hero.AffectedByGravity(true);
 
         for (var i = 0; i < 45 && hero; i++) { // placed: hold Player through HK's late restore so there's no gap
             if (hero.gameObject.layer != PlayerLayer) hero.gameObject.layer = PlayerLayer;
