@@ -1,6 +1,7 @@
 # Changelog
 
 ## _Unreleased_
+- Prevent HK iframes eating damage dealt in quick succession
 
 ## v0.2.0
 

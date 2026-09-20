@@ -141,7 +141,7 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
             MagnitudeMultiplier = si.MagnitudeMultiplier,
             Multiplier = si.Multiplier <= 0f ? 1f : si.Multiplier,
             MoveAngle = si.MoveAngle,
-            IgnoreInvulnerable = false
+            IgnoreInvulnerable = true, // prevent iframes
         };
         Responder.Hit(hkHit);
         
