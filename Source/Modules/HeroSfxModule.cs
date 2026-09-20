@@ -42,13 +42,13 @@ public sealed class HeroSfxModule : ModuleBase {
     }
 
     private void ReroutePrefabAudio(GameObject? prefab) {
-        if (!prefab || !reroutedPrefabs.Add(prefab!)) return;
+        if (!prefab || !reroutedPrefabs.Add(prefab)) return;
         if (!ready && !EnsureReady()) {
-            reroutedPrefabs.Remove(prefab!); // not ready yet, retry on a later spawn
+            reroutedPrefabs.Remove(prefab); // not ready yet, retry on a later spawn
             return;
         }
 
-        foreach (var src in prefab!.GetComponentsInChildren<AudioSource>(true)) {
+        foreach (var src in prefab.GetComponentsInChildren<AudioSource>(true)) {
             if (!src) continue;
             var group = src.outputAudioMixerGroup;
             if (ReferenceEquals(group, null) || !ssMixers.Contains(group.audioMixer)) continue;
@@ -94,6 +94,15 @@ public sealed class HeroSfxModule : ModuleBase {
 
         if (!hkSfxGroup) return false;
 
+        // On hot reload, reconstruct ss mixers from hornet, since the templates are already on HK mixers
+        var hero = HornetSpawner.Hornet;
+        if (hero) {
+            foreach (var src in hero.GetComponentsInChildren<AudioSource>(true)) {
+                var g = src != null ? src.outputAudioMixerGroup : null;
+                if (g && g.audioMixer) ssMixers.Add(g.audioMixer);
+            }
+        }
+        // on a fresh process the templates cover the mixers the hero does not reference (UI etc.)
         AddMixer(SAudio.DefaultAudioSourcePrefab);
         AddMixer(SAudio.Default2DAudioSourcePrefab);
         AddMixer(SAudio.DefaultUIAudioSourcePrefab);
@@ -105,6 +114,8 @@ public sealed class HeroSfxModule : ModuleBase {
 
     private void AddMixer(AudioSource? prefab) {
         var g = prefab ? prefab.outputAudioMixerGroup : null;
-        if (g && g.audioMixer) ssMixers.Add(g.audioMixer);
+        if (!g || !g.audioMixer) return;
+        if (g == hkSfxGroup) return; // already rerouted by a previous hot reload
+        ssMixers.Add(g.audioMixer);
     }
 }
