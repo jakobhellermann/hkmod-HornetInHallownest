@@ -38,7 +38,7 @@ public sealed class InputModule : ModuleBase {
         new(s => s.Bind, h => h.cast, a => a.Cast),
         new(s => s.Tool, h => h.quickCast, a => a.QuickCast),
         new(s => s.Needolin, h => h.dreamNail, a => a.DreamNail),
-        new(s => s.OpenInventory, null, a => a.OpenInventory, h => h.openInventory, PrimaryOnly: true),
+        new(s => s.OpenInventory, h => h.openInventory, a => a.OpenInventory, SnapshotKey: true, PrimaryOnly: true),
         // without HK equivalent
         new(s => s.Taunt, null, a => a.Taunt, SsControllerInput: InputControlType.RightStickButton),
         new(s => s.OpenTools, null, a => a.OpenInventoryTools, PrimaryOnly: true)
@@ -60,11 +60,19 @@ public sealed class InputModule : ModuleBase {
     public override void Initialize() {
         BuildOverrides();
 
+        // Rebuild when HK's bindings change.
         Detour(typeof(InputHandler), nameof(InputHandler.MapControllerButtons), OnMapControllerButtons);
+        Detour(typeof(InputHandler), nameof(InputHandler.SendKeyBindingsToGameSettings), OnBindingsChanged);
+        Detour(typeof(InputHandler), nameof(InputHandler.RemapUIButtons), OnBindingsChanged);
     }
 
     private void OnMapControllerButtons(Action<InputHandler, GamepadType> orig, InputHandler self, GamepadType type) {
         orig(self, type);
+        BuildOverrides();
+    }
+
+    private void OnBindingsChanged(Action<InputHandler> orig, InputHandler self) {
+        orig(self);
         BuildOverrides();
     }
 
@@ -75,40 +83,29 @@ public sealed class InputModule : ModuleBase {
         var hk = HkActions;
         for (int i = 0; i < overridable.Length; i++) {
             var def = overridable[i];
-            string? bind = def.Setting(Settings) ?? (def.DefaultFrom != null && hk != null
-                ? KeybindUtil.GetKeyOrMouseBinding(def.DefaultFrom(hk)).ToString()
-                : null);
-            var action = overrideSet.Slots[i];
-            bool bound = false;
-            if (bind != null) {
-                if (KeybindUtil.ParseBinding(bind) is { } parsed) {
-                    action.AddKeyOrMouseBinding(parsed);
-                    bound = true;
-                } else {
-                    LogError($"unparseable keybind '{bind}'");
-                }
+            string? bind = def.Setting(Settings);
+            if (bind == null && def is { SnapshotKey: true, Hk: not null } && hk != null)
+                bind = KeybindUtil.GetKeyOrMouseBinding(def.Hk(hk)).ToString();
+            if (bind == null) continue; // mirrored action or no bind
+            if (KeybindUtil.ParseBinding(bind) is not { } parsed) {
+                LogError($"unparseable keybind '{bind}'");
+                continue;
             }
 
-            if (bound) {
-                InheritDeviceBindings(HkSource(def, hk), action);
-                if (def.SsControllerInput is { } pad)
-                    action.AddBinding(new DeviceBindingSource(pad));
-                overrideActions[i] = action;
-            }
+            var action = overrideSet.Slots[i];
+            action.AddKeyOrMouseBinding(parsed);
+            
+            if (hk != null) InheritDeviceBindings(def.Hk?.Invoke(hk), action);
+            if (def.SsControllerInput is { } button) action.AddBinding(new DeviceBindingSource(button));
+            overrideActions[i] = action;
         }
     }
 
-    // Copy HK's controller bindings onto the override
     private static void InheritDeviceBindings(PlayerAction? hkAction, PlayerAction action) {
         if (hkAction == null) return;
         foreach (var b in hkAction.Bindings)
             if (b is DeviceBindingSource dbs && dbs.Control != InputControlType.None)
                 action.AddBinding(new DeviceBindingSource(dbs.Control));
-    }
-
-    private static PlayerAction? HkSource(Overridable def, HeroActions? hk) {
-        if (hk == null) return null;
-        return (def.DefaultFrom ?? def.Hk)?.Invoke(hk);
     }
 
     protected override void OnDeinitialize() {
@@ -191,7 +188,7 @@ public sealed class InputModule : ModuleBase {
         Func<InputSettings, string?> Setting, // global settings key
         Func<HeroActions, PlayerAction>? Hk, // hk action
         Func<SsActions, SsAction> Ss, // silksong action
-        Func<HeroActions, PlayerAction>? DefaultFrom = null, // snapshot HK binding as default
+        bool SnapshotKey = false, // snapshot HK binding as default (since hk is disabled while Hornet is primary)
         bool PrimaryOnly = false, // suppressed while Hornet is active but not primary
         InputControlType? SsControllerInput = null); // Silksong's controller default
 }

@@ -6,6 +6,7 @@
 - Fix not being able to open inventory on controller
 - Fix not being able to press R3 for taunt on controller
 - Inherit HK controller bindings
+- Fix inherited bindings going stale after rebinding in HK's options menu
 
 ## v0.2.0
 
