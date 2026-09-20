@@ -24,6 +24,7 @@ public sealed class MinorFixesModule : ModuleBase {
         Detour(typeof(MonoBehaviour), "StartCoroutine", OnStartCoroutine, typeof(IEnumerator));
         Detour(typeof(Silksong::GameManager), "FreezeMoment", OnFreezeMoment, typeof(SFreeze), typeof(Action));
         Detour(typeof(Silksong::HeroController), "RelinquishControl", OnRelinquishControl);
+        Detour(typeof(Silksong::HeroController),nameof(Silksong::HeroController.PreventCastByDialogueEnd), OnPreventCastByDialogueEnd);
     }
 
     #region Sprint + cutscene RelinquishControl
@@ -49,5 +50,10 @@ public sealed class MinorFixesModule : ModuleBase {
     private static void OnFreezeMoment(Action<Silksong::GameManager, SFreeze, Action> orig,
         Silksong::GameManager self, SFreeze type, Action? onFinish) {
         onFinish?.Invoke();
+    }
+
+    private static void OnPreventCastByDialogueEnd(Action<Silksong::HeroController> orig, Silksong::HeroController self) {
+        // Silksong never calls the method, and never decrements the resulting timer, leading to cast/taunt being broken
+        // after HK calls this on dialogue close.
     }
 }

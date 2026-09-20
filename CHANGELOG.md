@@ -2,6 +2,7 @@
 
 ## _Unreleased_
 - Prevent HK iframes eating damage dealt in quick succession
+- Fix bind/taunt being broken after dialogue
 
 ## v0.2.0
 
