@@ -40,8 +40,8 @@ public sealed class InputModule : ModuleBase {
         new(s => s.Needolin, h => h.dreamNail, a => a.DreamNail),
         new(s => s.OpenInventory, h => h.openInventory, a => a.OpenInventory, SnapshotKey: true, PrimaryOnly: true),
         // without HK equivalent
-        new(s => s.Taunt, null, a => a.Taunt, SsControllerInput: InputControlType.RightStickButton),
-        new(s => s.OpenTools, null, a => a.OpenInventoryTools, PrimaryOnly: true)
+        new(s => s.Taunt, null, a => a.Taunt, ControllerSetting: s => s.TauntController),
+        new(s => s.OpenTools, null, a => a.OpenInventoryTools, ControllerSetting: s => s.OpenToolsController, PrimaryOnly: true)
     ];
 
     // Global-persisted binds
@@ -96,7 +96,7 @@ public sealed class InputModule : ModuleBase {
             action.AddKeyOrMouseBinding(parsed);
             
             if (hk != null) InheritDeviceBindings(def.Hk?.Invoke(hk), action);
-            if (def.SsControllerInput is { } button) action.AddBinding(new DeviceBindingSource(button));
+            AddControllerBinding(action, def.ControllerSetting?.Invoke(Settings));
             overrideActions[i] = action;
         }
     }
@@ -106,6 +106,12 @@ public sealed class InputModule : ModuleBase {
         foreach (var b in hkAction.Bindings)
             if (b is DeviceBindingSource dbs && dbs.Control != InputControlType.None)
                 action.AddBinding(new DeviceBindingSource(dbs.Control));
+    }
+
+    private void AddControllerBinding(PlayerAction action, string? buttonName) {
+        if (buttonName == null) return;
+        if (Enum.TryParse(buttonName, true, out InputControlType control)) action.AddBinding(new DeviceBindingSource(control));
+        else LogError($"unparseable controller binding '{buttonName}'");
     }
 
     protected override void OnDeinitialize() {
@@ -190,5 +196,5 @@ public sealed class InputModule : ModuleBase {
         Func<SsActions, SsAction> Ss, // silksong action
         bool SnapshotKey = false, // snapshot HK binding as default (since hk is disabled while Hornet is primary)
         bool PrimaryOnly = false, // suppressed while Hornet is active but not primary
-        InputControlType? SsControllerInput = null); // Silksong's controller default
+        Func<InputSettings, string?>? ControllerSetting = null); // Silksong's controller default
 }
