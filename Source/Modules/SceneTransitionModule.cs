@@ -145,6 +145,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         // redirects it), so Hornet's never runs. Flag it; Tick positions her and runs hers.
         Detour(typeof(HeroController), "EnterSceneDreamGate", OnEnterSceneDreamGate);
 
+        Detour(typeof(GameManager), "LevelActivated", OnLevelActivated, typeof(Scene), typeof(Scene));
+
         // Arrival i-frames: block damage through the dream-arrival window (see arrivalInvulnerable). Needed because on a
         // cross-scene dream warp she briefly sits at the carried-over position, which in Radiance's arena is inside the
         // Abyss Pit spike; the damage box is HeroBox (a child GO with its own layer) so root-layer tricks don't stop it.
@@ -205,9 +207,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         dreamArrivalPending = false;
     }
 
-    // Arm the entry on a scene change (from = scene we're leaving). Pre-place her at the gate now: HK moved the Knight
-    // there but Hornet still holds old coords, and enemy FSMs sampling the entry position fire before Tick's
-    // isHeroInPosition walk-in moves her. The definitive walk-in runs from Tick.
+    // Arm the entry on a scene change (from = scene we're leaving). The definitive walk-in runs from Tick; the
+    // entrance park runs in OnLevelActivated, after HK placed the Knight.
     private void ArmEntry(Scene from) {
         pendingSnap = true;
         // from.name is null when the previous scene was already unloaded (single-mode load, e.g. quit-to-menu); it's
@@ -217,8 +218,17 @@ public sealed class SceneTransitionModule : ModuleBase {
         cameraCaughtUp = false;
         // Leaving a dream scene leaves a white blanker faded in that HK's Knight-only Dream Return FSM would fade out.
         if (dreamReturnPending) ClearDreamWhiteBlanker();
+    }
+
+    // orig moves the knight to scene entry. Move hornet as well, otherwise scene FSMs read her old position.
+    // TEST: insta soul master phase 2 in godhome (checks position to start scene 2)
+    private void OnLevelActivated(Action<GameManager, Scene, Scene> orig, GameManager self, Scene from, Scene to) {
+        orig(self, from, to);
+        if (from.name == to.name || liftArrivalPending) return;
         var knight = HeroController.UnsafeInstance;
-        if (knight) SnapHornetToKnight(knight);
+        if (!knight) return;
+        SnapHornetToKnight(knight);
+        LogDebug($"set hornet entry to position {knight.transform.position}");
     }
 
     // Relinquish control and let the "Lift Move" FSM carry the hero: it parents the global "Hero" var to elev_main
