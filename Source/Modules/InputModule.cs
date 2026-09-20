@@ -40,7 +40,7 @@ public sealed class InputModule : ModuleBase {
         new(s => s.Needolin, h => h.dreamNail, a => a.DreamNail),
         new(s => s.OpenInventory, null, a => a.OpenInventory, h => h.openInventory, PrimaryOnly: true),
         // without HK equivalent
-        new(s => s.Taunt, null, a => a.Taunt),
+        new(s => s.Taunt, null, a => a.Taunt, SsControllerInput: InputControlType.RightStickButton),
         new(s => s.OpenTools, null, a => a.OpenInventoryTools, PrimaryOnly: true)
     ];
 
@@ -91,6 +91,8 @@ public sealed class InputModule : ModuleBase {
 
             if (bound) {
                 InheritDeviceBindings(HkSource(def, hk), action);
+                if (def.SsControllerInput is { } pad)
+                    action.AddBinding(new DeviceBindingSource(pad));
                 overrideActions[i] = action;
             }
         }
@@ -190,5 +192,6 @@ public sealed class InputModule : ModuleBase {
         Func<HeroActions, PlayerAction>? Hk, // hk action
         Func<SsActions, SsAction> Ss, // silksong action
         Func<HeroActions, PlayerAction>? DefaultFrom = null, // snapshot HK binding as default
-        bool PrimaryOnly = false); // suppressed while Hornet is active but not primary
+        bool PrimaryOnly = false, // suppressed while Hornet is active but not primary
+        InputControlType? SsControllerInput = null); // Silksong's controller default
 }

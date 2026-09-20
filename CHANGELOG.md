@@ -4,6 +4,7 @@
 - Prevent HK iframes eating damage dealt in quick succession
 - Fix bind/taunt being broken after dialogue
 - Fix not being able to open inventory on controller
+- Fix not being able to press R3 for taunt on controller
 - Inherit HK controller bindings
 
 ## v0.2.0
