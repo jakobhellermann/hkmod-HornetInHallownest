@@ -5,7 +5,7 @@
 use std::io::Cursor;
 
 use anyhow::{Context, Result};
-use hornet_asset_pipeline::find_game;
+use hornet_asset_pipeline::{find_game, target_unity_version};
 use rabex::files::bundlefile::{BundleFileBuilder, CompressionType};
 use rabex::files::serializedfile::build_common_offset_map;
 use rabex::files::serializedfile::builder::SerializedFileBuilder;
@@ -74,7 +74,7 @@ fn main() -> Result<()> {
     let mut serialized = Vec::new();
     b.write(Cursor::new(&mut serialized))?;
 
-    let mut bundle = BundleFileBuilder::unityfs(7, &version);
+    let mut bundle = BundleFileBuilder::unityfs(7, &target_unity_version(&version));
     bundle.add_file(CAB, Cursor::new(serialized))?;
     let mut out = std::fs::File::create(OUT)?;
     bundle.write(&mut out, CompressionType::None)?; // uncompressed: loads fine, avoids needing the lz4hc feature

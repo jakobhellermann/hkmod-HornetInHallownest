@@ -23,7 +23,7 @@ public sealed class MinorFixesModule : ModuleBase {
     public override string Id => "minor-fixes";
 
     public override void Initialize() {
-        host = Object.FindAnyObjectByType<HornetRuntime>();
+        host = Object.FindObjectOfType<HornetRuntime>();
         Detour(typeof(MonoBehaviour), "StartCoroutine", OnStartCoroutine, typeof(IEnumerator));
         Detour(typeof(Silksong::GameManager), "FreezeMoment", OnFreezeMoment, typeof(SFreeze), typeof(Action));
         Detour(typeof(Silksong::HeroController), "RelinquishControl", OnRelinquishControl);

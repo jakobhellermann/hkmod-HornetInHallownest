@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Types + call targets that Silksong's Unity 6 IL needs but Hollow Knight 1.5.78.11833 (Unity 2020.2.2f1)
+       doesn't have. UnityDowngrader retargets the missing references here. See tools/UnityDowngrader. -->
+  <PropertyGroup>
+    <!-- Compiled against Hollow Knight's OWN BCL rather than reference assemblies. This shim exists to supply
+         types the host lacks (HashCode, MathF, SpanAction) while SHARING the ones it has (Span<T>, ReadOnlySpan<T>,
+         which live in Unity's mscorlib but are absent from the netstandard 2.0 reference surface). Referencing a
+         NuGet System.Memory instead would define a second, incompatible Span identity. -->
+    <TargetFramework>net472</TargetFramework>
+    <!-- Resolve mscorlib/System/System.Core from the GAME's Managed dir, not from reference assemblies. Without
+         this MSBuild silently prefers the net472 reference-assembly package, whose mscorlib has no Span<T>. -->
+    <FrameworkPathOverride>$(HKRefs)</FrameworkPathOverride>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
+    <AssemblyName>HornetInHallownest.UnityCompat</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>CS0436;CS0649</NoWarn>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="netstandard"><HintPath>$(HKRefs)/netstandard.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System"><HintPath>$(HKRefs)/System.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Core"><HintPath>$(HKRefs)/System.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GalaxyCSharp"><HintPath>$(HKRefs)/GalaxyCSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(HKRefs)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(HKRefs)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(HKRefs)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.Physics2DModule"><HintPath>$(HKRefs)/UnityEngine.Physics2DModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(HKRefs)/UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.VideoModule"><HintPath>$(HKRefs)/UnityEngine.VideoModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.AssetBundleModule"><HintPath>$(HKRefs)/UnityEngine.AssetBundleModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestModule"><HintPath>$(HKRefs)/UnityEngine.UnityWebRequestModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UnityWebRequestAssetBundleModule"><HintPath>$(HKRefs)/UnityEngine.UnityWebRequestAssetBundleModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(HKRefs)/UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

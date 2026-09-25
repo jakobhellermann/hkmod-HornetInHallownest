@@ -2,7 +2,11 @@
     <Import Condition="Exists('../HollowKnightPath.props')" Project="../HollowKnightPath.props"/>
 
     <PropertyGroup>
-        <TargetFramework>netstandard2.1</TargetFramework>
+        <!-- The Unity 6 Hollow Knight ships netstandard 2.1; HK 1.5.78.11833 (Unity 2020.2.2f1) only ships 2.0,
+             and a 2.1 reference does not resolve there. The source compiles cleanly against both, so this defaults
+             to the lower bar; override with -p:HornetTargetFramework=netstandard2.1 for the Unity 6 host. -->
+        <HornetTargetFramework Condition="'$(HornetTargetFramework)' == ''">netstandard2.0</HornetTargetFramework>
+        <TargetFramework>$(HornetTargetFramework)</TargetFramework>
         <AssemblyTitle>HornetInHallownest</AssemblyTitle>
         <Version>0.4.0</Version>
         <DebugType>portable</DebugType>
@@ -83,7 +87,7 @@
     <ItemGroup Condition="Exists('$(ManagedDir)')">
         <LocalReferences Include="Assembly-CSharp;PlayMaker;Mono.Cecil;MonoMod.RuntimeDetour;MonoMod.Utils;Newtonsoft.Json"/>
         <LocalReferences Include="TeamCherry.Localization;TeamCherry.NestedFadeGroup;TeamCherry.SharedUtils;TeamCherry.TK2D;System.ValueTuple"/>
-        <LocalReferences Include="UnityEngine;UnityEngine.AnimationModule;UnityEngine.AssetBundleModule;UnityEngine.AudioModule;UnityEngine.CoreModule;UnityEngine.InputLegacyModule;UnityEngine.Physics2DModule"/>
+        <LocalReferences Include="UnityEngine;UnityEngine.AnimationModule;UnityEngine.AssetBundleModule;UnityEngine.AudioModule;UnityEngine.CoreModule;UnityEngine.InputLegacyModule;UnityEngine.Physics2DModule;UnityEngine.ParticleSystemModule"/>
         <Reference Include="@(LocalReferences->'$(ManagedDir)/%(Identity).dll')" Private="false"/>
     </ItemGroup>
 

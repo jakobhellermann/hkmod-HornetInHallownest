@@ -104,6 +104,9 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         var host = playgroundHost.AddComponent<HornetRuntime>();
         ModuleBase.Runtime = host;
 
+        // Before any Silksong content loads: remember HK's own shaders so Silksong copies can be told apart.
+        ShaderFallbackModule.SnapshotHostShaders();
+
         // must run before any silksong code attempts to access addressables, since one failure permanently poisons the addressables somehow
         SilksongAddressables.EnsureMounted();
         SilksongResources.Install();
@@ -119,6 +122,8 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         moduleHost.Add(new PogoModule());
         moduleHost.Add(new AnimationRemapModule());
         moduleHost.Add(new MinorFixesModule());
+        moduleHost.Add(new AnimatorSafetyModule());
+        moduleHost.Add(new ShaderFallbackModule());
         moduleHost.Add(new PlayerDataSyncModule());
         moduleHost.Add(new CurrencyModule());
         moduleHost.Add(new FsmLookupModule());

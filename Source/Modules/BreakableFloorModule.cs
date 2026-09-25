@@ -66,7 +66,7 @@ public sealed class BreakableFloorModule : ModuleBase {
         quaking = true;
         floors.Clear();
         floorCols.Clear();
-        foreach (var fsm in Object.FindObjectsByType<PlayMakerFSM>(FindObjectsSortMode.None)) {
+        foreach (var fsm in Object.FindObjectsOfType<PlayMakerFSM>()) {
             if (fsm && fsm.FsmName == "quake_floor") {
                 fsm.SendEvent("QUAKE FALL START");
                 floors.Add(fsm);

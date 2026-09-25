@@ -1,6 +1,5 @@
 using System;
 using HornetInHallownest.Util;
-using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -8,12 +7,24 @@ namespace HornetInHallownest.Core;
 
 // Serves Resource.Load assets from the bundled `silksong-resources.bundle`, which contains scripts remapped to `Silksong.*`.
 internal static class SilksongResources {
-    private static Hook? hook;
+    private static Api? installed;
     private static AssetBundle? bundle;
     private static string ResourcesBundlePath => Paths.ModFile("silksong-resources.bundle");
 
+    // Unity's own interception point for Resources.Load, rather than a native detour on Resources.Load itself.
+    // Resources.Load(string, Type) is a 9-instruction forwarder to ResourcesAPI.ActiveAPI.Load; MonoMod cannot
+    // reliably patch something that small (on HK 1.5.78 the detour dies inside DetourNativeX86Platform.Apply with
+    // a NullReferenceException, i.e. no native entry to write to). overrideAPI is a public, supported setter and
+    // exists identically on both Unity generations, so this is the better mechanism on either host.
+    private sealed class Api : ResourcesAPI {
+        protected override Object Load(string path, Type systemTypeInstance) => Detour(Base, path, systemTypeInstance);
+
+        // `base.Load` cannot be converted to a delegate directly, so route through an instance method.
+        private Object Base(string path, Type? systemTypeInstance) => base.Load(path, systemTypeInstance);
+    }
+
     internal static void Install() {
-        if (hook != null) return;
+        if (installed != null) return;
 
         bundle = AssetBundle.LoadFromFile(ResourcesBundlePath);
         if (bundle == null) {
@@ -23,14 +34,14 @@ internal static class SilksongResources {
 
         Log.Debug($"[SilksongResources] loaded resources bundle ({bundle.GetAllAssetNames().Length} assets)");
 
-        var target = typeof(Resources).GetMethod(nameof(Resources.Load), [typeof(string), typeof(Type)])!;
-        hook = new Hook(target, (Func<Func<string, Type?, Object>, string, Type, Object?>)Detour);
+        installed = new Api();
+        ResourcesAPI.overrideAPI = installed;
     }
 
     internal static void Cleanup() {
-        hook?.Dispose();
-        hook = null;
-        if(bundle) bundle.Unload(true);
+        if (installed != null && ReferenceEquals(ResourcesAPI.overrideAPI, installed)) ResourcesAPI.overrideAPI = null;
+        installed = null;
+        if (bundle) bundle.Unload(true);
         bundle = null;
     }
 
