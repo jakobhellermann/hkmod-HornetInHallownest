@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Reports every type/member reference the rewritten assemblies make that the HOST cannot satisfy, across ALL
+       scopes including the BCL. Unity 2020.2's profile is narrower than the .NET Standard 2.1 surface Silksong was
+       compiled against, and each gap becomes a MissingMethodException the moment its caller is JITted — which is
+       exactly how Addressables died on string.Contains(char, StringComparison) while mounting the catalog. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><RollForward>Major</RollForward>
+    <Nullable>disable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>apigapcheck</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup><PackageReference Include="Mono.Cecil" Version="0.11.6" /></ItemGroup>
+</Project>

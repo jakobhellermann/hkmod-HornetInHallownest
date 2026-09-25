@@ -9,6 +9,7 @@ publish = false
 rabex = { version = "0.1", default-features = false, features = ["embed-tpk"] }
 rabex-env = { git = "https://github.com/jakobhellermann/rabex-env.git", rev = "6a3ba4ea8e6d506bb04a24ecd78c4bf7619b7b86" }
 anyhow = "1.0"
+serde_json = "1.0"
 rustc-hash = "2.1"
 steamlocate = "2.0"
 
@@ -19,3 +20,23 @@ path = "src/bin/remap-monoscripts.rs"
 [[bin]]
 name = "repack-resources"
 path = "src/bin/repack-resources.rs"
+
+[[bin]]
+name = "recontainer"
+path = "src/bin/recontainer.rs"
+
+[[bin]]
+name = "convert-aa"
+path = "src/bin/convert-aa.rs"
+
+[[bin]]
+name = "retarget-monoscripts"
+path = "src/bin/retarget-monoscripts.rs"
+
+[[bin]]
+name = "dump-objects"
+path = "src/bin/dump-objects.rs"
+
+[[bin]]
+name = "fix-discrete-curves"
+path = "src/bin/fix-discrete-curves.rs"

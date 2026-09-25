@@ -4,5 +4,8 @@
 /Source/LocalConfig.props
 /tools/*/bin
 /tools/*/obj
+/tools/asset-pipeline/target
 /local-refs
 /HollowKnightPath.props
+/Source/lib/
+.DS_Store

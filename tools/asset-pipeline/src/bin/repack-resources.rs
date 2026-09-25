@@ -15,7 +15,7 @@ use std::borrow::Cow;
 use std::io::Cursor;
 
 use anyhow::{Context, Result};
-use hornet_asset_pipeline::find_game;
+use hornet_asset_pipeline::{find_game, target_unity_version};
 use rabex::files::bundlefile::{BundleFileBuilder, CompressionType};
 use rabex::files::serializedfile::builder::SerializedFileBuilder;
 use rabex::files::serializedfile::{LocalSerializedObjectIdentifier, build_common_offset_map};
@@ -219,11 +219,13 @@ fn main() -> Result<()> {
 
     let mut serialized = Vec::new();
     b.write(Cursor::new(&mut serialized))?;
-    let mut bundle = BundleFileBuilder::unityfs(7, &version);
+    let declared = target_unity_version(&version);
+    let mut bundle = BundleFileBuilder::unityfs(7, &declared);
     bundle.add_file("CAB-silksongresources", Cursor::new(serialized))?;
     let mut out = std::fs::File::create(OUT)?;
     bundle.write(&mut out, CompressionType::None)?;
 
+    println!("declared engine version: {declared}");
     println!(
         "wrote {OUT}: {} container entries, {} MonoBehaviours, {} embedded monoscripts",
         n_entries,

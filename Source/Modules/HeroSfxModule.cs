@@ -19,9 +19,15 @@ public sealed class HeroSfxModule : ModuleBase {
     public override string Id => "hero-sfx";
 
     public override void Initialize() {
-        Detour(typeof(AudioSource), "PlayHelper", OnPlay, typeof(AudioSource), typeof(ulong));
-        Detour(typeof(AudioSource), "PlayOneShotHelper", OnPlayOneShot, typeof(AudioSource), typeof(AudioClip),
-            typeof(float));
+        // Unity 6 routes every Play/PlayOneShot through managed static helpers; on Unity 2020 (HK 1.5.78) those helpers
+        // are native internal calls, so hook the public managed wrappers there instead.
+        if (TryDetour(typeof(AudioSource), "PlayHelper", OnPlay, typeof(AudioSource), typeof(ulong)) == null) {
+            TryDetour(typeof(AudioSource), "Play", OnPlayNoDelay, NoParams);
+            TryDetour(typeof(AudioSource), "Play", OnPlayInstance, typeof(ulong));
+        }
+        if (TryDetour(typeof(AudioSource), "PlayOneShotHelper", OnPlayOneShot, typeof(AudioSource), typeof(AudioClip),
+                typeof(float)) == null)
+            TryDetour(typeof(AudioSource), "PlayOneShot", OnPlayOneShotInstance, typeof(AudioClip), typeof(float));
         // Some pool objects like double damage audio don't go through PlayActive but set playOnAwake.
         Detour(typeof(Silksong::ObjectPool), "Spawn", OnSpawn,
             typeof(GameObject), typeof(Transform), typeof(Vector3), typeof(Quaternion), typeof(bool));
@@ -69,6 +75,22 @@ public sealed class HeroSfxModule : ModuleBase {
     private void OnPlay(Action<AudioSource, ulong> orig, AudioSource source, ulong delay) {
         Normalize(source);
         orig(source, delay);
+    }
+
+    private void OnPlayNoDelay(Action<AudioSource> orig, AudioSource source) {
+        Normalize(source);
+        orig(source);
+    }
+
+    private void OnPlayInstance(Action<AudioSource, ulong> orig, AudioSource source, ulong delay) {
+        Normalize(source);
+        orig(source, delay);
+    }
+
+    private void OnPlayOneShotInstance(Action<AudioSource, AudioClip, float> orig, AudioSource source, AudioClip clip,
+        float volumeScale) {
+        Normalize(source);
+        orig(source, clip, volumeScale);
     }
 
     private void OnPlayOneShot(Action<AudioSource, AudioClip, float> orig, AudioSource source, AudioClip clip,

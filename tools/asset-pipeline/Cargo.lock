@@ -259,6 +259,7 @@ dependencies = [
  "rabex",
  "rabex-env",
  "rustc-hash",
+ "serde_json",
  "steamlocate",
 ]
 

@@ -41,7 +41,7 @@ public sealed class Field(string name, int? index = null) {
     }
 
     public override int GetHashCode() {
-        return HashCode.Combine(Name, Index);
+        return HashCombine.Of(Name, Index);
     }
 }
 
@@ -75,7 +75,7 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
     }
 
     public override int GetHashCode() {
-        return HashCode.Combine(Segments.Count, Component);
+        return HashCombine.Of(Segments.Count, Component);
     }
 
     /// Parse a [ComponentPath]. Throws [FormatException] on malformed input.
@@ -221,7 +221,7 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
     }
 
     private static IEnumerable<GameObject> AllGameObjects() {
-        return Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        return Object.FindObjectsOfType<GameObject>(true);
     }
 
     private static IEnumerable<GameObject> SiblingsOf(GameObject go) {
@@ -243,5 +243,18 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
 
     private static int CountSameName(GameObject go) {
         return SiblingsOf(go).Count(s => s.name == go.name);
+    }
+}
+
+/// System.HashCode is netstandard2.1+; Hollow Knight 1.5.78.11833 (Unity 2020.2.2f1) only ships netstandard 2.0,
+/// so combine by hand. Same shape as the classic Roslyn-generated combiner.
+internal static class HashCombine {
+    internal static int Of(object? a, object? b) {
+        unchecked {
+            var hash = 17;
+            hash = hash * 31 + (a?.GetHashCode() ?? 0);
+            hash = hash * 31 + (b?.GetHashCode() ?? 0);
+            return hash;
+        }
     }
 }
