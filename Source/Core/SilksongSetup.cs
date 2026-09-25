@@ -19,9 +19,22 @@ internal static class SilksongSetup {
         "Unity.Profiling.Core",
         "Unity.Mathematics",
         "Unity.Burst",
+        "Unity.Burst.Unsafe",               // Unity.Burst has a hard reference to it
         "Newtonsoft.Json.UnityConverters",
         "TeamCherry.Splines",
-        "Coffee.SoftMaskForUGUI"
+        "Coffee.SoftMaskForUGUI",
+        // Reachable from the prefixed Silksong assemblies. Computed as a transitive closure over the assembly
+        // scopes their type references actually name, NOT guessed: everything reachable that the host does not
+        // already ship has to be on the probe path, or the first type that touches it fails to load.
+        "TeamCherry.SharedUtils",           // TeamCherry.Splines -> (unprefixed) SharedUtils
+        "TeamCherry.Cinematics",
+        "TeamCherry.BuildBot",
+        "Unity.InputSystem",
+        "SharpDX",
+        "SharpDX.DirectInput",
+        "com.rlabrecque.steamworks.net",
+        // Only present on hosts older than Silksong's Unity (see tools/setup-hk178.sh).
+        "HornetInHallownest.UnityCompat"    // Unity 6 + netstandard2.1 API surface 2020.2 lacks
     ];
 
     private const string Prefix = "Silksong";
@@ -66,8 +79,12 @@ internal static class SilksongSetup {
 
         public void Reinstall(string fingerprint) {
             Clean();
-            foreach (var name in deps)
-                File.Copy($"{Paths.SilksongManagedDir}/{name}.dll", $"{managed}/{name}.dll");
+            // Entries absent from the Silksong install (e.g. HornetInHallownest.UnityCompat, only added on hosts
+            // older than Silksong's Unity) are skipped rather than failing the install.
+            foreach (var name in deps) {
+                var src = $"{Paths.SilksongManagedDir}/{name}.dll";
+                if (File.Exists(src)) File.Copy(src, $"{managed}/{name}.dll");
+            }
             AssemblyPrefixer.Prefix(Prefix, Paths.SilksongManagedDir,
                 prefixInputs.Select(n => $"{Paths.SilksongManagedDir}/{n}.dll"), managed);
             File.WriteAllText($"{managed}/{FingerprintFile}", fingerprint);
