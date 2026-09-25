@@ -21,6 +21,14 @@ public sealed class InventoryModule : ModuleBase {
     public override void Initialize() {
         Detour(typeof(Silksong::GameManager), "SetIsInventoryOpen", OnSetInventoryOpen);
         Detour(typeof(GameManager), "SetIsInventoryOpen", OnSetHkInventoryOpen);
+        // Silksong freezes the view when the inventory opens: renders Camera.main into a texture shown on a plane sized
+        // from ITS camera (a disabled stand-in here -> the "game squeezes" frame), blurs it with a multi-pass shader
+        // Unity 2020 can't run, and switches the real camera off. The world is already paused (timeScale 0), so skip
+        // it and let the paused game keep rendering behind the inventory - a true overlay.
+        Detour(typeof(Silksong::DisplayFrozenCamera), "Freeze",
+            (Action<Action<Silksong::DisplayFrozenCamera>, Silksong::DisplayFrozenCamera>)((_, _) => { }));
+        Detour(typeof(Silksong::DisplayFrozenCamera), "Unfreeze",
+            (Action<Action<Silksong::DisplayFrozenCamera>, Silksong::DisplayFrozenCamera>)((_, _) => { }));
     }
 
     private static void OnSetHkInventoryOpen(Action<GameManager, bool> orig, GameManager self, bool value) {

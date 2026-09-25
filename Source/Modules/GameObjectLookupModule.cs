@@ -12,9 +12,13 @@ public sealed class GameObjectLookupModule : ModuleBase {
     public override string Id => "unity-lookup";
 
     public override void Initialize() {
-        Detour(typeof(GameObject), "CompareTag", OnCompareTag, typeof(string));
-        Detour(typeof(GameObject), "GetComponent", OnGetComponent, typeof(string));
-        Detour(typeof(GameObject), "FindGameObjectWithTag", OnFindWithTag, typeof(string));
+        // GameObject.CompareTag / FindGameObjectWithTag are native internal calls on Unity 2020 (HK 1.5.78); fall back
+        // to the managed entry points that exist there (Component.CompareTag, GameObject.FindWithTag).
+        if (TryDetour(typeof(GameObject), "CompareTag", OnCompareTag, typeof(string)) == null)
+            TryDetour(typeof(Component), "CompareTag", OnComponentCompareTag, typeof(string));
+        TryDetour(typeof(GameObject), "GetComponent", OnGetComponent, typeof(string));
+        if (TryDetour(typeof(GameObject), "FindGameObjectWithTag", OnFindWithTag, typeof(string)) == null)
+            TryDetour(typeof(GameObject), "FindWithTag", OnFindWithTag, typeof(string));
     }
 
     private static bool OnCompareTag(Func<GameObject, string, bool> orig, GameObject self, string tag) {
@@ -24,6 +28,10 @@ public sealed class GameObjectLookupModule : ModuleBase {
         }
 
         return orig(self, tag);
+    }
+
+    private static bool OnComponentCompareTag(Func<Component, string, bool> orig, Component self, string tag) {
+        return tag == RecoilerTag || orig(self, tag);
     }
 
     // A string GetComponent resolves to the HK type only, so it misses Hornet's Silksong component. Fall back to a
