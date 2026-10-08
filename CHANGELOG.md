@@ -132,6 +132,8 @@
 - Announce the silk skills Hornet earns with Silksong's full-screen skill message, in place of HK's spell screen
 - Show only HK's screens for the Knight's pickups, and leave out HK's screen when Hornet's own message announces the
   same reward
+- Announce Swift Step, Cling Grip, Clawline and Silk Soar with Silksong's full-screen message when Hornet earns them
+  from the Mothwing Cloak, Mantis Claw, Crystal Heart and King's Brand, in place of HK's screen
 
 ## v0.4.0
 
