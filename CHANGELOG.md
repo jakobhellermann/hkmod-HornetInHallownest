@@ -14,6 +14,8 @@
 - Make Sylphsong restore Hornet's silk while she rests at a bench, at the pace of Silksong's benches
 - Give Hornet plain Needolin from the start; the Dream Nail unlocks Elegy of the Deep (Needolin holding down), which
   acts as the Dream Nail, while any song still drains a dreamer from inside its dream
+- Add Beastling Call (Needolin holding up), unlocked with the Dream Gate: it takes Hornet to the stag station the Stag
+  waits at, wherever HK would let her set a Dream Gate
 
 ## v0.4.0
 

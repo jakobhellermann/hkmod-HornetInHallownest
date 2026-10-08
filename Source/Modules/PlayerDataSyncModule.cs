@@ -19,6 +19,7 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         ["hasDoubleJump"] = (ss, v) => ss.hasDoubleJump = v,
         ["hasSuperDash"] = (ss, v) => ss.hasHarpoonDash = v, // Harpoon Dash
         ["hasDreamNail"] = (ss, v) => ss.hasNeedolinMemoryPowerup = v, // Elegy of the Deep (Needolin + down)
+        ["hasDreamGate"] = (ss, v) => ss.UnlockedFastTravelTeleport = v, // Beastling Call (Needolin + up)
         ["hasKingsBrand"] = (ss, v) => ss.hasSuperJump = v, // Silk Soar
         // HK's 3 nail arts + Shade Cloak -> Hornet charge attack + silk-heart regen tiers (see RecomputeArts).
         ["hasCyclone"] = (ss, v) => RecomputeArts(ss, cyclone: v),
