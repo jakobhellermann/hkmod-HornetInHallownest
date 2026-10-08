@@ -118,6 +118,8 @@
 - Hornet earns her tools, crests, silk skills, crest slots and Eva's upgrades through Hallownest's charms, bosses and
   spells instead of having them all from the start
 - Hornet gets the Drifter's Cloak together with double jump (Monarch Wings) instead of from the start
+- Hornet earns Memory Lockets from charm notches, Grubfather, relics and the Seer, and opens the crest slots she picks
+  with them, like in Silksong
 
 ## v0.4.0
 

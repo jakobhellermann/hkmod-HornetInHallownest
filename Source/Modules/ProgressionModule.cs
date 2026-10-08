@@ -28,6 +28,7 @@ public sealed class ProgressionModule : ModuleBase {
     private const int ExtraBlueSlotNotches = 8;
     private const int ExtraYellowSlotNotches = 11;
     private const string StartingCrest = "Hunter";
+    private const string MemoryLocket = "Crest Socket Unlocker";
 
     private static Flag Charm(int id) => new($"gotCharm_{id}");
 
@@ -119,8 +120,24 @@ public sealed class ProgressionModule : ModuleBase {
 
     internal static readonly Rule SylphsongRule = Earned("Sylphsong", new Flag("salubraBlessing"));
 
+    internal static readonly Rule[] LocketRules = [
+        Earned("Grubfather 10", new Flag("grubsCollected", 10)),
+        Earned("Grubfather 16", new Flag("grubsCollected", 16)),
+        Earned("Grubfather 23", new Flag("grubsCollected", 23)),
+        Earned("Grubfather 31", new Flag("grubsCollected", 31)),
+        Earned("Grubfather 38", new Flag("grubsCollected", 38)),
+        Earned("Wanderer's Journal", new Flag("foundTrinket1")),
+        Earned("Hallownest Seal", new Flag("foundTrinket2")),
+        Earned("King's Idol", new Flag("foundTrinket3")),
+        Earned("Arcane Egg", new Flag("foundTrinket4")),
+        Earned("Seer 100", new Flag("dreamReward1")),
+        Earned("Seer 700", new Flag("dreamReward5")),
+        Earned("Seer 1800", new Flag("dreamReward9"))
+    ];
+
     private static readonly HashSet<string> watchedFields = [
-        .. ToolRules.Concat(CrestRules).Append(SylphsongRule).SelectMany(r => r.Flags).Select(f => f.Field),
+        .. ToolRules.Concat(CrestRules).Concat(LocketRules).Append(SylphsongRule).SelectMany(r => r.Flags)
+            .Select(f => f.Field),
         "charmSlots"
     ];
 
@@ -182,19 +199,14 @@ public sealed class ProgressionModule : ModuleBase {
         }
 
         var earnedCrests = CrestRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward).ToHashSet();
-        var lockedSlotsOpen = Math.Max(0, pd.GetInt("charmSlots") - BaseCharmNotches);
         foreach (var crest in SToolItemManager.GetAllCrests()) {
             if (!crest) continue;
-            if (earnedCrests.Contains(crest.name)) {
-                crest.Unlock();
-                OpenLockedSlots(crest, lockedSlotsOpen);
-            }
-            else if (crest.IsUnlocked) {
-                LockCrest(crest);
-            }
+            if (earnedCrests.Contains(crest.name)) crest.Unlock();
+            else if (crest.IsUnlocked) LockCrest(crest);
         }
 
         if (!earnedCrests.Contains(ss.CurrentCrestID)) SToolItemManager.SetEquippedCrest(StartingCrest);
+        GrantMemoryLockets(pd, ss);
 
         var notches = pd.GetInt("charmSlots");
         ss.UnlockedExtraBlueSlot = notches >= ExtraBlueSlotNotches;
@@ -225,23 +237,26 @@ public sealed class ProgressionModule : ModuleBase {
         crest.SaveData = data;
     }
 
-    // Silksong opens a crest's locked slots with Memory Lockets; here each charm notch above the starting three opens
-    // one more on every crest. A slot that closes again drops its tool.
-    private static void OpenLockedSlots(SToolCrest crest, int count) {
-        var config = crest.Slots;
-        if (config == null) return;
-        var data = crest.SaveData;
-        var slots = new List<Silksong::ToolCrestsData.SlotData>(config.Length);
-        var openedCount = 0;
-        for (var i = 0; i < config.Length; i++) {
-            var isUnlocked = !config[i].IsLocked || openedCount++ < count;
-            var equippedTool = isUnlocked && data.Slots != null && i < data.Slots.Count
-                ? data.Slots[i].EquippedTool
-                : null;
-            slots.Add(new Silksong::ToolCrestsData.SlotData { EquippedTool = equippedTool, IsUnlocked = isUnlocked });
+    internal static int EarnedMemoryLockets(PlayerData pd) =>
+        Math.Max(0, pd.GetInt("charmSlots") - BaseCharmNotches) + LocketRules.Count(r => r.IsEarned(pd));
+
+    // An upgraded crest carries over its previous version's slots, so only the newest version counts.
+    private static void GrantMemoryLockets(PlayerData pd, SPlayerData ss) {
+        var openedSlots = 0;
+        foreach (var crest in SToolItemManager.GetAllCrests()) {
+            if (!crest || !crest.IsUnlocked) continue;
+            var upgradedCrest = crest.GetFieldValue<SToolCrest>("upgradedVersion");
+            if (upgradedCrest && upgradedCrest.IsUnlocked) continue;
+            var config = crest.Slots;
+            var slots = crest.SaveData.Slots;
+            if (config == null || slots == null) continue;
+            for (var i = 0; i < config.Length && i < slots.Count; i++)
+                if (config[i].IsLocked && slots[i].IsUnlocked)
+                    openedSlots++;
         }
 
-        data.Slots = slots;
-        crest.SaveData = data;
+        var data = ss.Collectables.GetData(MemoryLocket);
+        data.Amount = Math.Max(0, EarnedMemoryLockets(pd) - openedSlots);
+        ss.Collectables.SetData(MemoryLocket, data);
     }
 }
