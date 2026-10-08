@@ -121,6 +121,7 @@
 - Hornet earns Memory Lockets from charm notches, Grubfather, relics and the Seer, and opens the crest slots she picks
   with them, like in Silksong
 - Announce the tools, crests and Memory Lockets Hornet earns with Silksong's own item and crest messages
+- Fix Hornet's inventory still showing the Memory Lockets of a save loaded earlier in the session
 
 ## v0.4.0
 

@@ -272,6 +272,8 @@ public sealed class ProgressionModule : ModuleBase {
 
         data.Amount = heldLockets;
         ss.Collectables.SetData(MemoryLocket, data);
+        // The inventory keeps listing the previous save's items until this changes; Silksong's own save load bumps it.
+        Silksong::CollectableItemManager.IncrementVersion();
     }
 
     // Silksong's full-screen crest message, which holds the hero until a button press dismisses it.
