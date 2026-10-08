@@ -36,6 +36,7 @@ public sealed class ProgressionModule : ModuleBase {
     private const string MemoryLocket = "Crest Socket Unlocker";
     private const string PromptsBundle = "prompts_assets_all.bundle";
     private const string SylphsongMsgPath = "Assets/Prefabs/UI/Hornet UI/Ancestral_Art_Get_Prompt.prefab";
+    private const string ExtraSlotMsgPath = "Assets/Prefabs/UI/Messages/Extra Tool Slot UI Msg.prefab";
 
     private static AssetBundle? promptsBundle;
 
@@ -238,8 +239,15 @@ public sealed class ProgressionModule : ModuleBase {
         GrantMemoryLockets(pd, ss, showPopups);
 
         var notches = pd.GetInt("charmSlots");
-        ss.UnlockedExtraBlueSlot = notches >= ExtraBlueSlotNotches;
-        ss.UnlockedExtraYellowSlot = notches >= ExtraYellowSlotNotches;
+        var extraBlueSlot = notches >= ExtraBlueSlotNotches;
+        var extraYellowSlot = notches >= ExtraYellowSlotNotches;
+        var extraSlotCount = (ss.UnlockedExtraBlueSlot ? 1 : 0) + (ss.UnlockedExtraYellowSlot ? 1 : 0);
+        if (showPopups && extraBlueSlot && !ss.UnlockedExtraBlueSlot)
+            ShowExtraSlotMsg(Silksong::ToolItemType.Blue, ++extraSlotCount);
+        if (showPopups && extraYellowSlot && !ss.UnlockedExtraYellowSlot)
+            ShowExtraSlotMsg(Silksong::ToolItemType.Yellow, ++extraSlotCount);
+        ss.UnlockedExtraBlueSlot = extraBlueSlot;
+        ss.UnlockedExtraYellowSlot = extraYellowSlot;
         var sylphsong = SylphsongRule.IsEarned(pd);
         if (showPopups && sylphsong && !ss.HasBoundCrestUpgrader) ShowSylphsongMsg();
         ss.HasBoundCrestUpgrader = sylphsong;
@@ -320,18 +328,24 @@ public sealed class ProgressionModule : ModuleBase {
         }
 
         ShowHeldMsg(afterMsg => Silksong::ToolCrestUIMsg.Spawn(crest, prefab, afterMsg));
-        RetitleUpgradeMsg();
+        // Silksong evolves the Hunter Crest with another message, titled with this line.
+        RetitleMsg("UI_MSG_UPG_TITLE_CREST", "Prompts", "UI_MSG_HCOMBO_PREFIX");
     }
 
-    // Silksong evolves the Hunter Crest with another message, and this one's title points at a line missing from its
-    // text, so it takes that message's title instead.
-    private static void RetitleUpgradeMsg() {
+    // Some of these message prefabs have a title pointing at a line missing from Silksong's text; Silksong itself fills
+    // that title in from the message that shows them.
+    private static void RetitleMsg(string missingKey, string sheet, string key) {
         foreach (var title in UnityEngine.Object.FindObjectsByType<Silksong::SetTextMeshProGameText>(
                      FindObjectsSortMode.None))
-            if (title.Text.Key == "UI_MSG_UPG_TITLE_CREST")
-                title.Text = new SilksongLoc::TeamCherry.Localization.LocalisedString {
-                    Sheet = "Prompts", Key = "UI_MSG_HCOMBO_PREFIX"
-                };
+            if (title.Text.Key == missingKey)
+                title.Text = new SilksongLoc::TeamCherry.Localization.LocalisedString { Sheet = sheet, Key = key };
+    }
+
+    private static void ShowExtraSlotMsg(Silksong::ToolItemType slotType, int slotNumber) {
+        var prefab = LoadPromptPrefab(ExtraSlotMsgPath);
+        if (!prefab) return;
+        ShowHeldMsg(afterMsg => Silksong::ExtraToolSlotUIMsg.Spawn(slotType, prefab, afterMsg));
+        RetitleMsg("UI_MSG_TITLE_EXTRASLOT_PREFIX", "Tools", $"UI_MSG_TITLE_EXTRASLOT_PREFIX_{slotNumber}");
     }
 
     private static void ShowSylphsongMsg() {
