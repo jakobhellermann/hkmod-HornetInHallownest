@@ -5,6 +5,8 @@
 - Fix a new game showing tools and items Hornet had in the game played before it
 - Fix a down attack carried through a room transition staying armed and pogoing off the first thing Hornet touches
 - Fix Hornet's masks never appearing in a new game
+- Make Hornet's Compass show her on the map and her Magnetite Brooch pull in geo, in place of the Knight's Wayward
+  Compass and Gathering Swarm
 
 ## v0.4.0
 
