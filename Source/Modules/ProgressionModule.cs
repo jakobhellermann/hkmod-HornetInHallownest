@@ -33,6 +33,7 @@ public sealed class ProgressionModule : ModuleBase {
     private const string CharmGetMsg = "Charm Get Msg";
     private const string MemoryLocket = "Crest Socket Unlocker";
     private const string PromptsBundle = "prompts_assets_all.bundle";
+    private const string SylphsongMsgPath = "Assets/Prefabs/UI/Hornet UI/Ancestral_Art_Get_Prompt.prefab";
 
     private static AssetBundle? promptsBundle;
 
@@ -236,7 +237,9 @@ public sealed class ProgressionModule : ModuleBase {
         var notches = pd.GetInt("charmSlots");
         ss.UnlockedExtraBlueSlot = notches >= ExtraBlueSlotNotches;
         ss.UnlockedExtraYellowSlot = notches >= ExtraYellowSlotNotches;
-        ss.HasBoundCrestUpgrader = SylphsongRule.IsEarned(pd);
+        var sylphsong = SylphsongRule.IsEarned(pd);
+        if (showPopups && sylphsong && !ss.HasBoundCrestUpgrader) ShowSylphsongMsg();
+        ss.HasBoundCrestUpgrader = sylphsong;
 
         BenchModule.RefreshToolHud();
     }
@@ -291,7 +294,6 @@ public sealed class ProgressionModule : ModuleBase {
         Silksong::CollectableItemManager.IncrementVersion();
     }
 
-    // Silksong's full-screen crest message, which holds the hero until a button press dismisses it.
     private static void ShowCrestMsg(SToolCrest crest) {
         var prefabName = crest.name switch {
             "Hunter_v2" or "Hunter_v3" => "Tool Crest Upgrade UI Msg",
@@ -304,9 +306,21 @@ public sealed class ProgressionModule : ModuleBase {
             return;
         }
 
+        ShowHeldMsg(afterMsg => Silksong::ToolCrestUIMsg.Spawn(crest, prefab, afterMsg));
+    }
+
+    private static void ShowSylphsongMsg() {
+        var prefab = LoadPromptPrefab(SylphsongMsgPath);
+        var msg = prefab ? prefab.GetComponent<Silksong::PowerUpGetMsg>() : null;
+        if (!msg) return;
+        ShowHeldMsg(afterMsg => Silksong::PowerUpGetMsg.Spawn(msg, Silksong::PowerUpGetMsg.PowerUps.EvaHeal, afterMsg));
+    }
+
+    // Silksong's full-screen messages hold the hero until a button press dismisses them.
+    private static void ShowHeldMsg(Action<Action> spawn) {
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
         if (hero) hero.RelinquishControl();
-        Silksong::ToolCrestUIMsg.Spawn(crest, prefab, () => {
+        spawn(() => {
             if (hero) hero.RegainControl();
         });
     }
