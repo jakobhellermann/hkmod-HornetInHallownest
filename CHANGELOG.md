@@ -134,6 +134,8 @@
   same reward
 - Announce Swift Step, Cling Grip, Clawline and Silk Soar with Silksong's full-screen message when Hornet earns them
   from the Mothwing Cloak, Mantis Claw, Crystal Heart and King's Brand, in place of HK's screen
+- Fix Hornet's message for a spell or ability from a pickup cutscene, such as Desolate Dive, showing before the
+  cutscene and HK's screen after it, and the arena staying locked once it's closed
 
 ## v0.4.0
 

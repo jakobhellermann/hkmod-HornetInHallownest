@@ -44,6 +44,7 @@ public sealed class ProgressionModule : ModuleBase {
     private static AssetBundle? promptsBundle;
     private static int heldMsgCount;
     private static readonly HashSet<GameObject> hiddenMsgs = [];
+    private static readonly List<Action> msgsAwaitingHk = [];
 
     private static Flag Charm(int id) => new($"gotCharm_{id}");
 
@@ -184,7 +185,7 @@ public sealed class ProgressionModule : ModuleBase {
         QueueApply(name);
         if (value && HeroSwitch.HornetActive && abilityMsgs.TryGetValue(name, out var powerUp) &&
             !PlayerData.instance.GetBool(name))
-            ShowPowerUpMsg(powerUp);
+            ShowInPlaceOfHkMsg(() => ShowPowerUpMsg(powerUp));
         return value;
     }
 
@@ -205,9 +206,11 @@ public sealed class ProgressionModule : ModuleBase {
         orig(self);
     }
 
-    // Some pickups, such as the Abyss Shriek, bring HK's message up only after Hornet's message for the same reward.
     private static void OnCreateUIMsgGetItem(Action<CreateUIMsgGetItem> orig, CreateUIMsgGetItem self) {
         orig(self);
+        var shows = msgsAwaitingHk.ToArray();
+        msgsAwaitingHk.Clear();
+        foreach (var show in shows) show();
         if (heldMsgCount > 0) HideMsg(self.storeObject.Value);
     }
 
@@ -243,7 +246,7 @@ public sealed class ProgressionModule : ModuleBase {
                 // Silksong announces each silk skill with its own full-screen message.
                 tool.Unlock(null, showPopups && !skill ? SToolItem.PopupFlags.ItemGet : SToolItem.PopupFlags.None);
                 MarkUnlocked(tool);
-                if (showPopups && skill) ShowSkillMsg(skill);
+                if (showPopups && skill) ShowInPlaceOfHkMsg(() => ShowSkillMsg(skill));
             }
             else if (!earned && tool.IsUnlocked) {
                 LockTool(tool);
@@ -402,9 +405,20 @@ public sealed class ProgressionModule : ModuleBase {
         ShowHeldMsg(afterMsg => Silksong::PowerUpGetMsg.Spawn(msg, powerUp, afterMsg));
     }
 
-    // Silksong's full-screen messages hold the hero until a button press dismisses them.
+    // Hornet's message for a reward HK announces with a screen of its own takes that screen's place, so it waits for the
+    // screen to come up: some pickups, such as Desolate Dive, play a cutscene between the reward and the screen.
+    private static void ShowInPlaceOfHkMsg(Action show) {
+        if (UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None)
+            .Any(msg => Array.IndexOf(hkItemMsgs, msg.name) >= 0))
+            show();
+        else
+            msgsAwaitingHk.Add(show);
+    }
+
+    // A cutscene that already holds her lets her go itself, and expects her animation to stay its own until then.
     private static void ShowHeldMsg(Action<Action> spawn) {
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
+        if (hero && hero.controlReqlinquished) hero = null;
         if (hero) hero.RelinquishControl();
         heldMsgCount++;
         HideHkItemMsgs();
