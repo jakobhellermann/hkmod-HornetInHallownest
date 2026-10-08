@@ -9,14 +9,16 @@ using Object = UnityEngine.Object;
 
 namespace HornetInHallownest.Modules;
 
-// Hornet's Needolin acts as a Dream Nail on nearby HK dream-reactive objects.
+// Hornet's Needolin stands in for the Dream Nail: any song drains a dreamer from inside its dream, and Elegy of the Deep
+// (Needolin played holding down) acts as a Dream Nail on nearby HK dream-reactive objects.
 public sealed class NeedolinDreamNailModule : ModuleBase {
     private const float Radius = 6f; // Needolin noise radius
     private const int HeroAttackLayer = 17; // HK's dream nail Hitbox layer
 
     private GameObject? hitboxGo;
     private Collider2D? collider;
-    private bool wasPlaying;
+    private bool wasPerforming;
+    private bool wasPlayingElegy;
     private int silkAtStart;
     private bool impactArmed;
     private static string? drainEndScene;
@@ -70,7 +72,8 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         if (hitboxGo) Object.Destroy(hitboxGo);
         hitboxGo = null;
         collider = null;
-        wasPlaying = false;
+        wasPerforming = false;
+        wasPlayingElegy = false;
         impactArmed = false;
     }
 
@@ -79,31 +82,43 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
 
         // Not Silk Specials' "Needolin Sub" state: holding the button while CanPlayNeedolin() fails re-enters it every
         // few frames, and each re-entry would dream-impact (white flash) everything in range.
-        var playing = Silksong::HeroPerformanceRegion.IsPerforming;
-        if (playing != wasPlaying) {
-            wasPlaying = playing;
-            NeedolinToggled(hero, playing);
+        var performing = Silksong::HeroPerformanceRegion.IsPerforming;
+        if (performing != wasPerforming) {
+            wasPerforming = performing;
+            FocusToggled(performing);
         }
 
-        if (playing && !impactArmed && Silksong::PlayerData.instance.silk < silkAtStart) ArmImpact();
+        var playingElegy = performing && hero.cState.needolinPlayingMemory;
+        if (playingElegy != wasPlayingElegy) {
+            wasPlayingElegy = playingElegy;
+            ElegyToggled(hero, playingElegy);
+        }
+
+        if (playingElegy && !impactArmed && Silksong::PlayerData.instance.silk < silkAtStart) ArmImpact();
     }
 
-    private void NeedolinToggled(Silksong::HeroController hero, bool playing) {
-        impactArmed = false;
-        if (!playing) {
-            if (collider) collider.enabled = false;
+    private static void FocusToggled(bool performing) {
+        if (!performing) {
             // Releasing Focus broadcasts this in vanilla: a draining dreamer goes back to waiting instead of draining on
             // while Hornet walks off its platform.
             PlayMakerFSM.BroadcastEvent("DREAM FOCUS END");
             return;
         }
 
-        EnsureHitbox(hero);
-        silkAtStart = Silksong::PlayerData.instance.silk;
-
         // Frees an already-wounded HK dreamer (drains on "DREAM FOCUS START"). Vanilla broadcasts this while Focus is
         // held; Needolin is Hornet's sustained-focus equivalent. Global like vanilla, only a wounded dreamer reacts.
         PlayMakerFSM.BroadcastEvent("DREAM FOCUS START");
+    }
+
+    private void ElegyToggled(Silksong::HeroController hero, bool playing) {
+        impactArmed = false;
+        if (!playing) {
+            if (collider) collider.enabled = false;
+            return;
+        }
+
+        EnsureHitbox(hero);
+        silkAtStart = Silksong::PlayerData.instance.silk;
     }
 
     private void ArmImpact() {

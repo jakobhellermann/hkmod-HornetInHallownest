@@ -18,7 +18,7 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         ["hasWalljump"] = (ss, v) => ss.hasWalljump = v,
         ["hasDoubleJump"] = (ss, v) => ss.hasDoubleJump = v,
         ["hasSuperDash"] = (ss, v) => ss.hasHarpoonDash = v, // Harpoon Dash
-        ["hasDreamNail"] = (ss, v) => ss.hasNeedolin = v, // Needolin
+        ["hasDreamNail"] = (ss, v) => ss.hasNeedolinMemoryPowerup = v, // Elegy of the Deep (Needolin + down)
         ["hasKingsBrand"] = (ss, v) => ss.hasSuperJump = v, // Silk Soar
         // HK's 3 nail arts + Shade Cloak -> Hornet charge attack + silk-heart regen tiers (see RecomputeArts).
         ["hasCyclone"] = (ss, v) => RecomputeArts(ss, cyclone: v),
@@ -90,6 +90,8 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         foreach (var kv in bools) kv.Value(ss, hk.GetBool(kv.Key));
         foreach (var kv in ints) kv.Value(ss, hk.GetInt(kv.Key));
         ss.hasBrolly = true; // no HK equivalent
+        // Plain Needolin does nothing in HK, so it's always there.
+        ss.hasNeedolin = true;
     }
 
     // HK's 3 nail arts + Shade Cloak fill Hornet's leftover unlocks: 1st art -> charge attack; the rest (2nd art, 3rd
