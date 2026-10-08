@@ -124,6 +124,7 @@
 - Fix Hornet's inventory still showing the Memory Lockets of a save loaded earlier in the session
 - Leave out HK's charm message when Hornet picks up a charm, so it doesn't overlap the message for her reward
 - Announce Sylphsong with Silksong's full-screen skill message when Hornet earns it
+- Fix the Hunter Crest's evolution message showing a raw text key as its title
 
 ## v0.4.0
 

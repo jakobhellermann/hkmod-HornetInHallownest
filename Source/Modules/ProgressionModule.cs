@@ -1,4 +1,5 @@
 extern alias Silksong;
+extern alias SilksongLoc;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -307,6 +308,18 @@ public sealed class ProgressionModule : ModuleBase {
         }
 
         ShowHeldMsg(afterMsg => Silksong::ToolCrestUIMsg.Spawn(crest, prefab, afterMsg));
+        RetitleUpgradeMsg();
+    }
+
+    // Silksong evolves the Hunter Crest with another message, and this one's title points at a line missing from its
+    // text, so it takes that message's title instead.
+    private static void RetitleUpgradeMsg() {
+        foreach (var title in UnityEngine.Object.FindObjectsByType<Silksong::SetTextMeshProGameText>(
+                     FindObjectsSortMode.None))
+            if (title.Text.Key == "UI_MSG_UPG_TITLE_CREST")
+                title.Text = new SilksongLoc::TeamCherry.Localization.LocalisedString {
+                    Sheet = "Prompts", Key = "UI_MSG_HCOMBO_PREFIX"
+                };
     }
 
     private static void ShowSylphsongMsg() {
