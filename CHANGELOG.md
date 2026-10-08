@@ -10,6 +10,7 @@
 - Show Hornet's own head for the map compass while playing as her, and mark her cocoon's room on the map
 - Fix the quick map not opening after Hornet's death until she sat on a bench or left the room
 - Fix Hornet's cocoon spawning inside a wall when she dies right next to it
+- Make Needolin enter a dream only once it has spent its first silk, like charging the Dream Nail, instead of right away
 
 ## v0.4.0
 

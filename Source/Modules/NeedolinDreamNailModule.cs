@@ -17,6 +17,8 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
     private GameObject? hitboxGo;
     private Collider2D? collider;
     private bool wasPlaying;
+    private int silkAtStart;
+    private bool impactArmed;
     private static string? drainEndScene;
 
     public override string Id => "needolin-dreamnail";
@@ -69,6 +71,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         hitboxGo = null;
         collider = null;
         wasPlaying = false;
+        impactArmed = false;
     }
 
     public override void HornetActiveUpdate(Silksong::HeroController hero) {
@@ -77,13 +80,16 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         // Not Silk Specials' "Needolin Sub" state: holding the button while CanPlayNeedolin() fails re-enters it every
         // few frames, and each re-entry would dream-impact (white flash) everything in range.
         var playing = Silksong::HeroPerformanceRegion.IsPerforming;
-        if (playing == wasPlaying) return;
-        wasPlaying = playing;
+        if (playing != wasPlaying) {
+            wasPlaying = playing;
+            NeedolinToggled(hero, playing);
+        }
 
-        NeedolinToggled(hero, playing);
+        if (playing && !impactArmed && Silksong::PlayerData.instance.silk < silkAtStart) ArmImpact();
     }
 
     private void NeedolinToggled(Silksong::HeroController hero, bool playing) {
+        impactArmed = false;
         if (!playing) {
             if (collider) collider.enabled = false;
             // Releasing Focus broadcasts this in vanilla: a draining dreamer goes back to waiting instead of draining on
@@ -93,16 +99,20 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         }
 
         EnsureHitbox(hero);
-        // Re-enable so Unity re-emits OnTriggerEnter2D for everything already inside the radius (Hornet is stationary
-        // while playing, so a freshly-enabled trigger cleanly reports current overlaps).
-        if (collider) {
-            collider.enabled = false;
-            collider.enabled = true;
-        }
+        silkAtStart = Silksong::PlayerData.instance.silk;
 
         // Frees an already-wounded HK dreamer (drains on "DREAM FOCUS START"). Vanilla broadcasts this while Focus is
         // held; Needolin is Hornet's sustained-focus equivalent. Global like vanilla, only a wounded dreamer reacts.
         PlayMakerFSM.BroadcastEvent("DREAM FOCUS START");
+    }
+
+    private void ArmImpact() {
+        impactArmed = true;
+        if (!collider) return;
+        // Re-enable so Unity re-emits OnTriggerEnter2D for everything already inside the radius (Hornet is stationary
+        // while playing, so a freshly-enabled trigger cleanly reports current overlaps).
+        collider.enabled = false;
+        collider.enabled = true;
     }
 
     private void EnsureHitbox(Silksong::HeroController hero) {
