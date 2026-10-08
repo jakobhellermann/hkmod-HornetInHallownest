@@ -96,6 +96,24 @@ public sealed class SceneTransitionModule : ModuleBase {
         DeparentHero("scene transition");
     }
 
+    // Entering a scene clears the attack and downspike states (ResetMotion, ResetAttacks) but disarms a slash only while
+    // the down attack state is still set, and never disarms a downspike, so one cut off by the transition keeps its hitbox
+    // armed and pogos off the first thing it touches.
+    private static void CancelArmedSlashes(Silksong::HeroController hero) {
+        if (hero.cState.downSpiking || hero.cState.downAttacking) return;
+        foreach (var attack in hero.GetComponentsInChildren<Silksong::NailAttackBase>()) {
+            if (!attack.IsDamagerActive) continue;
+            switch (attack) {
+                case Silksong::NailSlash slash:
+                    slash.CancelAttack();
+                    break;
+                case Silksong::Downspike downspike:
+                    downspike.CancelAttackAndDamage();
+                    break;
+            }
+        }
+    }
+
     private Scene OnLoadScene(Func<string, LoadSceneParameters, Scene> orig, string name, LoadSceneParameters p) {
         DeparentHero($"LoadScene({name})");
         return orig(name, p);
@@ -416,6 +434,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         var wasEnterWithoutInput = self.enterWithoutInput;
         var isMoveResume = self.exitedSuperDashing || self.exitedQuake || self.exitedSprinting;
         orig(self, setHazardMarker, preventRunBob);
+        CancelArmedSlashes(self);
 
         // HK's gameState is driven by the HK EnterScene, which finishes after Hornet. During that window she has control
         // but gates are disabled during ENTERING_LEVEL, so dashing back through the transition keeps her out of bounds.
