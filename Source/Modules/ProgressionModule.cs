@@ -37,7 +37,7 @@ public sealed class ProgressionModule : ModuleBase {
     private const string GetItemMsgEnd = "GET ITEM MSG END";
     private const string MemoryLocket = "Crest Socket Unlocker";
     private const string PromptsBundle = "prompts_assets_all.bundle";
-    private const string SylphsongMsgPath = "Assets/Prefabs/UI/Hornet UI/Ancestral_Art_Get_Prompt.prefab";
+    private const string PowerUpMsgPath = "Assets/Prefabs/UI/Hornet UI/Ancestral_Art_Get_Prompt.prefab";
     private const string ExtraSlotMsgPath = "Assets/Prefabs/UI/Messages/Extra Tool Slot UI Msg.prefab";
     private const string SkillMsgPath = "Assets/Prefabs/UI/Hornet UI/Silk_Skill_Get_Prompt.prefab";
 
@@ -135,6 +135,14 @@ public sealed class ProgressionModule : ModuleBase {
 
     internal static readonly Rule SylphsongRule = Earned("Sylphsong", new Flag("salubraBlessing"));
 
+    // HK abilities whose Silksong counterpart (PlayerDataSyncModule) has a full-screen message of its own.
+    private static readonly Dictionary<string, Silksong::PowerUpGetMsg.PowerUps> abilityMsgs = new() {
+        ["hasDash"] = Silksong::PowerUpGetMsg.PowerUps.Sprint,
+        ["hasWalljump"] = Silksong::PowerUpGetMsg.PowerUps.WallJump,
+        ["hasSuperDash"] = Silksong::PowerUpGetMsg.PowerUps.HarpoonDash,
+        ["hasKingsBrand"] = Silksong::PowerUpGetMsg.PowerUps.SuperJump
+    };
+
     internal static readonly Rule[] LocketRules = [
         Earned("Grubfather 10", new Flag("grubsCollected", 10)),
         Earned("Grubfather 16", new Flag("grubsCollected", 16)),
@@ -174,6 +182,9 @@ public sealed class ProgressionModule : ModuleBase {
 
     private bool OnSetBool(string name, bool value) {
         QueueApply(name);
+        if (value && HeroSwitch.HornetActive && abilityMsgs.TryGetValue(name, out var powerUp) &&
+            !PlayerData.instance.GetBool(name))
+            ShowPowerUpMsg(powerUp);
         return value;
     }
 
@@ -265,7 +276,8 @@ public sealed class ProgressionModule : ModuleBase {
         ss.UnlockedExtraBlueSlot = extraBlueSlot;
         ss.UnlockedExtraYellowSlot = extraYellowSlot;
         var sylphsong = SylphsongRule.IsEarned(pd);
-        if (showPopups && sylphsong && !ss.HasBoundCrestUpgrader) ShowSylphsongMsg();
+        if (showPopups && sylphsong && !ss.HasBoundCrestUpgrader)
+            ShowPowerUpMsg(Silksong::PowerUpGetMsg.PowerUps.EvaHeal);
         ss.HasBoundCrestUpgrader = sylphsong;
 
         BenchModule.RefreshToolHud();
@@ -383,11 +395,11 @@ public sealed class ProgressionModule : ModuleBase {
         }));
     }
 
-    private static void ShowSylphsongMsg() {
-        var prefab = LoadPromptPrefab(SylphsongMsgPath);
+    private static void ShowPowerUpMsg(Silksong::PowerUpGetMsg.PowerUps powerUp) {
+        var prefab = LoadPromptPrefab(PowerUpMsgPath);
         var msg = prefab ? prefab.GetComponent<Silksong::PowerUpGetMsg>() : null;
         if (!msg) return;
-        ShowHeldMsg(afterMsg => Silksong::PowerUpGetMsg.Spawn(msg, Silksong::PowerUpGetMsg.PowerUps.EvaHeal, afterMsg));
+        ShowHeldMsg(afterMsg => Silksong::PowerUpGetMsg.Spawn(msg, powerUp, afterMsg));
     }
 
     // Silksong's full-screen messages hold the hero until a button press dismisses them.
