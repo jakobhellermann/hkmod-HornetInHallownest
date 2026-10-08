@@ -8,6 +8,7 @@
 - Make Hornet's Compass show her on the map and her Magnetite Brooch pull in geo, in place of the Knight's Wayward
   Compass and Gathering Swarm
 - Show Hornet's own head for the map compass while playing as her, and mark her cocoon's room on the map
+- Fix the quick map not opening after Hornet's death until she sat on a bench or left the room
 
 ## v0.4.0
 

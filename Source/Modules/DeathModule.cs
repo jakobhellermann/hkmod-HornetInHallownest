@@ -243,6 +243,8 @@ public sealed class DeathModule : ModuleBase {
         hero.gameObject.layer = 9; // Die moved her to layer 2 (no-collision)
         hero.AffectedByGravity(true);
         hero.MaxHealth();
+        // Die disabled pausing, which also blocks the quick map; Silksong lifts it on entering the respawn scene.
+        SPlayerData.instance.disablePause = false;
 
         var atBench = PlayerData.instance.atBench;
         if (!atBench) {
