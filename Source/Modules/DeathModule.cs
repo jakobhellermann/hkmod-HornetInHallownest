@@ -32,6 +32,7 @@ public sealed class DeathModule : ModuleBase {
     private bool handling;
     private bool wasDead;
     private static GameObject? cocoonPrefab;
+    private static readonly int terrainMask = LayerMask.GetMask("Terrain");
 
     public override string Id => "death";
 
@@ -101,11 +102,25 @@ public sealed class DeathModule : ModuleBase {
         if (spd == null || string.IsNullOrEmpty(spd.HeroCorpseScene) || scene.name != spd.HeroCorpseScene) return;
         if (!LoadCocoonPrefab()) return;
 
-        var pos = spd.HeroDeathScenePos;
-        var cocoon = Object.Instantiate(cocoonPrefab!, new Vector3(pos.x, pos.y, cocoonPrefab!.transform.position.z),
+        var pos = ClearOfWalls(spd.HeroDeathScenePos, cocoonPrefab!.GetComponent<BoxCollider2D>().size * 0.5f);
+        var cocoon = Object.Instantiate(cocoonPrefab, new Vector3(pos.x, pos.y, cocoonPrefab.transform.position.z),
             Quaternion.identity);
         // Instantiate lands in the still-active previous scene, which unloads right after.
         USceneManager.MoveGameObjectToScene(cocoon, scene);
+    }
+
+    // HK's walls are hollow edge colliders. A cocoon spawned across one has its RepositionFromWalls rays start inside the
+    // wall, and they push it further in. Hornet stood at the death position, so rays from there reach the walls next to
+    // her.
+    private static Vector2 ClearOfWalls(Vector2 pos, Vector2 halfSize) {
+        pos.x += Clearance(pos, Vector2.left, halfSize.x) - Clearance(pos, Vector2.right, halfSize.x);
+        pos.y += Clearance(pos, Vector2.down, halfSize.y) - Clearance(pos, Vector2.up, halfSize.y);
+        return pos;
+    }
+
+    private static float Clearance(Vector2 pos, Vector2 direction, float halfSize) {
+        var hit = Physics2D.Raycast(pos, direction, halfSize, terrainMask);
+        return hit.collider ? halfSize - hit.distance : 0f;
     }
 
     // The cocoon has no Addressables key of its own; it ships in Hero_Hornet's bundle.
