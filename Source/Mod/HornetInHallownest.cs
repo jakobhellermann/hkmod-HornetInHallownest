@@ -114,6 +114,7 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         InputModule.Settings = globalSettings.Controls; // apply the loaded key bindings before the module reads them
         moduleHost.Add(new InputModule()); // first: before any module reads input actions
         moduleHost.Add(new PlayerLoopModule());
+        moduleHost.Add(new LanguageSyncModule());
         moduleHost.Add(new BreakableFloorModule());
         moduleHost.Add(new DashGeoPickupModule());
         moduleHost.Add(new PogoModule());

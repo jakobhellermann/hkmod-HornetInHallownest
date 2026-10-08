@@ -16,6 +16,7 @@
   acts as the Dream Nail, while any song still drains a dreamer from inside its dream
 - Add Beastling Call (Needolin holding up), unlocked with the Dream Gate: it takes Hornet to the stag station the Stag
   waits at, wherever HK would let her set a Dream Gate
+- Show Hornet's Silksong UI in the language picked in HK instead of always in English
 
 ## v0.4.0
 
