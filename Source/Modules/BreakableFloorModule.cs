@@ -8,7 +8,7 @@ using SHeroController = Silksong::HeroController;
 
 namespace HornetInHallownest.Modules;
 
-// Hornet's down-dash breaks HK breakable floors (vanilla only the Knight's Desolate Dive does; Hornet has no equivalent).
+// Hornet's down-dash breaks HK breakable floors (vanilla only the Knight's Desolate Dive does).
 // HK quake floors idle in "Solid"; "QUAKE FALL START" flips them to "Transient" (collider -> trigger), "QUAKE FALL END"
 // back. We broadcast those around a down-dash and, while quaking, send "DESTROY" to any transient floor Hornet's body
 // overlaps. // TODO is that necessary?
@@ -49,7 +49,8 @@ public sealed class BreakableFloorModule : ModuleBase {
 
     private void OnDashPressed(Action<SHeroController> orig, SHeroController self) {
         orig(self);
-        if (!quaking && HeroSwitch.HornetActive && self.dashingDown) StartQuake();
+        if (!quaking && HeroSwitch.HornetActive && self.dashingDown && PlayerData.instance.quakeLevel > 0)
+            StartQuake();
     }
 
     // Some floors (Crystal Peak Loose Floors via the "Detect Quake" FSM) check HeroController.GetState("spellQuake")
