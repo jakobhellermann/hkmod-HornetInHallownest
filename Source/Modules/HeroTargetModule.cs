@@ -15,6 +15,10 @@ namespace HornetInHallownest.Modules;
 //   - the GetHero action
 //   - SoulOrb (a plain MonoBehaviour reading HeroController.instance directly) + soul->silk conversion
 public sealed class HeroTargetModule : ModuleBase {
+    private const int SoulPerSilk = 11;
+
+    private int unspentSoul;
+
     public override string Id => "hero-target";
 
     public override void Initialize() {
@@ -22,7 +26,7 @@ public sealed class HeroTargetModule : ModuleBase {
         Detour(typeof(GetHero), "OnEnter", OnGetHero);
 
         // SoulOrb (pooled) homes to HeroController.instance: Start caches it once at pool warmup (before Hornet exists),
-        // OnEnable fires per fling, so retarget on both. AddMPCharge converts the soul grant to silk.
+        // OnEnable fires per fling, so retarget on both. AddMPCharge converts the soul to silk.
         Detour(typeof(SoulOrb), "Start", OnSoulOrbActivate);
         Detour(typeof(SoulOrb), "OnEnable", OnSoulOrbActivate);
         Detour(typeof(HeroController), "AddMPCharge", OnAddMpCharge, typeof(int));
@@ -160,7 +164,10 @@ public sealed class HeroTargetModule : ModuleBase {
 
     private void OnAddMpCharge(Action<HeroController, int> orig, HeroController self, int amount) {
         if (HeroSwitch.HornetActive && HornetSpawner.Hornet is { } hero) {
-            hero.AddSilk(1, true); // 1 silk per orb; skip the Knight's soul add
+            unspentSoul += amount;
+            var silk = unspentSoul / SoulPerSilk;
+            unspentSoul %= SoulPerSilk;
+            if (silk > 0) hero.AddSilk(silk, true);
             return;
         }
 
