@@ -2,10 +2,15 @@ extern alias Silksong;
 extern alias SilksongPM;
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using GlobalEnums;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
+using USceneManager = UnityEngine.SceneManagement.SceneManager;
 using SBumpCheck = Silksong::CharacterBumpCheck;
 using SCollisionSide = Silksong::GlobalEnums.CollisionSide;
 using SFreeze = Silksong::GlobalEnums.FreezeMomentTypes;
@@ -27,7 +32,12 @@ public sealed class MinorFixesModule : ModuleBase {
     private delegate void CheckForBumpHook(CheckForBumpOrig orig, SBumpCheck self, SCollisionSide side,
         out bool hitBump, out bool hitWall, out bool hitHighWall);
 
+    // Above any ledge top Hornet's vault or clamber accepts (at most 0.94 over her head).
+    private const float ClamberLandingHeight = 1.2f;
+
     private static readonly RaycastHit2D[] wallHits = new RaycastHit2D[10];
+    private static readonly List<(Rect Bounds, Vector2[] Points)> terrainOutlines = [];
+    private static Scene outlinesScene;
     private MonoBehaviour? host;
 
     public override string Id => "minor-fixes";
@@ -41,6 +51,7 @@ public sealed class MinorFixesModule : ModuleBase {
             OnPreventCastByDialogueEnd);
         Detour(typeof(IgnoreHeroCollision), "Ignore", OnIgnoreHeroCollision);
         Detour(typeof(SBumpCheck), nameof(SBumpCheck.CheckForBump), (CheckForBumpHook)OnCheckForBump);
+        Detour(typeof(Silksong::NoClamberRegion), "get_IsClamberBlocked", OnIsClamberBlocked);
         Detour(typeof(SFsm), "SwitchState", OnSilksongSwitchState, typeof(SFsmState));
     }
 
@@ -115,6 +126,49 @@ public sealed class MinorFixesModule : ModuleBase {
         var highY = bounds.max.y + Physics2D.defaultContactOffset * 2f + 0.001f;
         hitHighWall = HitsWall(new Vector2(x, highY), direction, filter, distance);
         hitWall = hitHighWall || HitsWall(new Vector2(x, bounds.min.y + 0.2f), direction, filter, distance);
+    }
+
+    // HK's tilemap terrain is an outline of edges, hollow inside, where Silksong's terrain is solid. Under a ceiling that
+    // tops a wall, Hornet's vault and clamber rays find nothing past the wall and would carry her into the rock.
+    private static bool OnIsClamberBlocked(Func<bool> orig) {
+        if (orig()) return true;
+        var hero = HornetSpawner.Hornet;
+        if (!hero) return false;
+        var bounds = hero.GetComponent<Collider2D>().bounds;
+        var ahead = hero.cState.facingRight ? bounds.max.x + bounds.extents.x : bounds.min.x - bounds.extents.x;
+        return IsInsideTerrain(new Vector2(ahead, bounds.max.y + ClamberLandingHeight));
+    }
+
+    // Even-odd over the closed terrain outlines, so an open room inside a chunk's outline counts as open.
+    private static bool IsInsideTerrain(Vector2 point) {
+        var inside = false;
+        foreach (var (bounds, points) in TerrainOutlines()) {
+            if (!bounds.Contains(point)) continue;
+            for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
+                if (points[i].y > point.y != points[j].y > point.y &&
+                    point.x < points[i].x + (point.y - points[i].y) * (points[j].x - points[i].x) /
+                    (points[j].y - points[i].y))
+                    inside = !inside;
+        }
+
+        return inside;
+    }
+
+    private static List<(Rect Bounds, Vector2[] Points)> TerrainOutlines() {
+        var scene = USceneManager.GetActiveScene();
+        if (scene == outlinesScene) return terrainOutlines;
+        outlinesScene = scene;
+        terrainOutlines.Clear();
+        foreach (var edge in Object.FindObjectsByType<EdgeCollider2D>(FindObjectsSortMode.None)) {
+            var local = edge.points;
+            if (edge.gameObject.layer != (int)PhysLayers.TERRAIN || local.Length < 4 || local[0] != local[^1]) continue;
+            var points = local.Select(p => (Vector2)edge.transform.TransformPoint(p + edge.offset)).ToArray();
+            var min = new Vector2(points.Min(p => p.x), points.Min(p => p.y));
+            var max = new Vector2(points.Max(p => p.x), points.Max(p => p.y));
+            terrainOutlines.Add((new Rect(min, max - min), points));
+        }
+
+        return terrainOutlines;
     }
 
     private static bool HitsWall(Vector2 origin, Vector2 direction, ContactFilter2D filter, float distance) {

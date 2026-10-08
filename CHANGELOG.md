@@ -21,6 +21,7 @@
 - Fix soul totems filling Hornet's whole silk spool: soul from totems, Grubsong and Dream Nail hits turns into silk at
   the rate of a nail hit
 - Fix bounce shrooms launching Hornet lower than the Knight when she pogos off them, short of ledges she needs
+- Fix Hornet slipping out of bounds by vaulting or clambering at a wall whose top meets a low ceiling
 
 ## v0.4.0
 
