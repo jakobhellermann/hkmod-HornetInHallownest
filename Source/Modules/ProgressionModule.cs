@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
+using HutongGames.PlayMaker.Actions;
 using Modding;
 using UnityEngine;
 using SPlayerData = Silksong::PlayerData;
@@ -29,6 +30,7 @@ public sealed class ProgressionModule : ModuleBase {
     private const int ExtraBlueSlotNotches = 8;
     private const int ExtraYellowSlotNotches = 11;
     private const string StartingCrest = "Hunter";
+    private const string CharmGetMsg = "Charm Get Msg";
     private const string MemoryLocket = "Crest Socket Unlocker";
     private const string PromptsBundle = "prompts_assets_all.bundle";
 
@@ -152,6 +154,7 @@ public sealed class ProgressionModule : ModuleBase {
     public override void Initialize() {
         ModHooks.SetPlayerBoolHook += OnSetBool;
         ModHooks.SetPlayerIntHook += OnSetInt;
+        Detour(typeof(CreateObject), nameof(CreateObject.OnEnter), OnCreateObject);
     }
 
     protected override void OnDeinitialize() {
@@ -167,6 +170,18 @@ public sealed class ProgressionModule : ModuleBase {
     private int OnSetInt(string name, int value) {
         QueueApply(name);
         return value;
+    }
+
+    // HK's message for a picked-up charm shows where Hornet's message for its reward does, so it isn't created while
+    // she's active. The pickup carries on without waiting for it.
+    private static void OnCreateObject(Action<CreateObject> orig, CreateObject self) {
+        var prefab = self.gameObject.Value;
+        if (HeroSwitch.HornetActive && prefab && prefab.name == CharmGetMsg) {
+            self.Finish();
+            return;
+        }
+
+        orig(self);
     }
 
     // The hooks run before HK stores the new value, so apply on the next frame.
