@@ -30,19 +30,8 @@ internal static class SilksongBootstrap {
         if (done) return;
         done = true;
         try {
-            // Abilities/nailUpgrades are seeded from the Knight's progression at spawn (PlayerDataSync); Hornet-only bits here.
             var pd = Silksong::PlayerData.instance;
-            pd.silkMax = 9; // silk resource so silk-cost abilities can fire
-            pd.silk = 9;
-            pd.IsSilkSpoolBroken = false;
-            pd.silkSpecialLevel = 1;
-            // The HUD Health FSM enables one mask renderer per health; 0 default -> no masks shown. Grant a full bar.
-            pd.maxHealth = 5;
-            pd.health = 5;
-            // health_display FSM self-shows HP only once bindCutscenePlayed is set (the game sets it after the intro we skip).
-            pd.bindCutscenePlayed = true;
-            // Equip a valid crest so GetCrestByName resolves (-> nail-art crestConfig). Fresh PD skips [DefaultValue("Hunter")].
-            if (string.IsNullOrEmpty(pd.CurrentCrestID)) pd.CurrentCrestID = "Hunter";
+            SeedPlayerData(pd);
 
             gmGo = new GameObject("Silksong_GameManager");
             gmGo.SetActive(false); // inactive => GameManager/InputHandler Awake never runs
@@ -144,10 +133,25 @@ internal static class SilksongBootstrap {
             // gm.GameState is maintained per-frame by HornetRuntime (mirrors HK's pause), not set here.
 
             Log.Debug($"[Bootstrap] GameManager.instance={(Silksong::GameManager.instance != null)}, " +
-                     $"inputHandler={(gm.GetComponent<Silksong::InputHandler>() != null)}");
+                      $"inputHandler={(gm.GetComponent<Silksong::InputHandler>() != null)}");
         } catch (Exception e) {
             Log.Error($"[Bootstrap] FAILED: {e}");
         }
+    }
+
+    // Abilities/nailUpgrades are seeded from the Knight's progression at spawn (PlayerDataSync); Hornet-only bits here.
+    internal static void SeedPlayerData(Silksong::PlayerData pd) {
+        pd.silkMax = 9; // silk resource so silk-cost abilities can fire
+        pd.silk = 9;
+        pd.IsSilkSpoolBroken = false;
+        pd.silkSpecialLevel = 1;
+        // The HUD Health FSM enables one mask renderer per health; 0 default -> no masks shown. Grant a full bar.
+        pd.maxHealth = 5;
+        pd.health = 5;
+        // health_display FSM self-shows HP only once bindCutscenePlayed is set (the game sets it after the intro we skip).
+        pd.bindCutscenePlayed = true;
+        // Equip a valid crest so GetCrestByName resolves (-> nail-art crestConfig). Fresh PD skips [DefaultValue("Hunter")].
+        if (string.IsNullOrEmpty(pd.CurrentCrestID)) pd.CurrentCrestID = "Hunter";
     }
 
     // Called from SpawnReal (hero spawned + rig up): wires gm.hero_ctrl (PlayerDeadFromHazard.cState.dead), the bare
@@ -166,7 +170,8 @@ internal static class SilksongBootstrap {
             var hudCam = GameCamerasBootstrap.HudCameraGo;
             if (hudCam != null) {
                 var hudCamComp = hudCam.GetComponent<Silksong::HUDCamera>();
-                var gameplayChild = hudCamComp != null ? hudCamComp.GetPropertyValue<GameObject>("GameplayChild") : null;
+                var gameplayChild =
+                    hudCamComp != null ? hudCamComp.GetPropertyValue<GameObject>("GameplayChild") : null;
                 var sf = gameplayChild != null ? Silksong::FSMUtility.LocateFSM(gameplayChild, "Screen Fader") : null;
                 if (sf != null) bootstrapGm.SetFieldValue("<screenFader_fsm>k__BackingField", sf);
             }

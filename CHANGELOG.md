@@ -3,9 +3,8 @@
 ## _Unreleased_
 
 - Fix a new game showing tools and items Hornet had in the game played before it
-- Fix Hornet's masks never appearing after switching to her during a new game's intro: switching to Hornet now waits
-  until the Knight's HUD is in
 - Fix a down attack carried through a room transition staying armed and pogoing off the first thing Hornet touches
+- Fix Hornet's masks never appearing in a new game
 
 ## v0.4.0
 

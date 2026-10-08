@@ -34,6 +34,7 @@ public sealed class HornetSaveBridge : ModuleBase {
         var fresh = Silksong::PlayerData.CreateNewSingleton(false);
         Silksong::PlayerData.instance = current;
         JsonConvert.PopulateObject(JsonConvert.SerializeObject(fresh, SaveSettings), current, ResetSettings);
+        SilksongBootstrap.SeedPlayerData(current);
         if (HornetSpawner.Hornet) Resync();
     }
 

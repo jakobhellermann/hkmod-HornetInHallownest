@@ -150,20 +150,7 @@ internal static class HeroSwitch {
                 return;
             }
 
-            if (!HornetActive && !IsHkHudShown(gc)) {
-                Log.Debug("[HeroSwitch] hero switch ignored while the Knight's HUD is out");
-                return;
-            }
-
             Toggle();
-        }
-
-        // Hornet's HUD comes in with the Knight's. Switching while his is out (a new game's intro, cutscenes) leaves her
-        // masks waiting for an appear that never reaches them.
-        private static bool IsHkHudShown(GameCameras? gc) {
-            if (!gc || !gc.hudCanvas || !gc.hudCanvas.activeInHierarchy) return false;
-            var slide = FSMUtility.LocateFSM(gc.hudCanvas, "Slide Out");
-            return !slide || slide.ActiveStateName is "Idle" or "In" or "Come In";
         }
     }
 }
