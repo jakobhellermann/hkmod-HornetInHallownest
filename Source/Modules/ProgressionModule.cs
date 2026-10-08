@@ -33,12 +33,17 @@ public sealed class ProgressionModule : ModuleBase {
     private const string StartingCrest = "Hunter";
     private const string CharmGetMsg = "Charm Get Msg";
     private static readonly string[] silkshots = ["WebShot Weaver", "WebShot Forge", "WebShot Architect"];
+    private static readonly string[] hkItemMsgs = ["UI Msg Get Item(Clone)", "Relic Get Msg(Clone)"];
+    private const string GetItemMsgEnd = "GET ITEM MSG END";
     private const string MemoryLocket = "Crest Socket Unlocker";
     private const string PromptsBundle = "prompts_assets_all.bundle";
     private const string SylphsongMsgPath = "Assets/Prefabs/UI/Hornet UI/Ancestral_Art_Get_Prompt.prefab";
     private const string ExtraSlotMsgPath = "Assets/Prefabs/UI/Messages/Extra Tool Slot UI Msg.prefab";
+    private const string SkillMsgPath = "Assets/Prefabs/UI/Hornet UI/Silk_Skill_Get_Prompt.prefab";
 
     private static AssetBundle? promptsBundle;
+    private static int heldMsgCount;
+    private static readonly HashSet<GameObject> hiddenMsgs = [];
 
     private static Flag Charm(int id) => new($"gotCharm_{id}");
 
@@ -159,6 +164,7 @@ public sealed class ProgressionModule : ModuleBase {
         ModHooks.SetPlayerBoolHook += OnSetBool;
         ModHooks.SetPlayerIntHook += OnSetInt;
         Detour(typeof(CreateObject), nameof(CreateObject.OnEnter), OnCreateObject);
+        Detour(typeof(CreateUIMsgGetItem), nameof(CreateUIMsgGetItem.OnEnter), OnCreateUIMsgGetItem);
     }
 
     protected override void OnDeinitialize() {
@@ -188,6 +194,12 @@ public sealed class ProgressionModule : ModuleBase {
         orig(self);
     }
 
+    // Some pickups, such as the Abyss Shriek, bring HK's message up only after Hornet's message for the same reward.
+    private static void OnCreateUIMsgGetItem(Action<CreateUIMsgGetItem> orig, CreateUIMsgGetItem self) {
+        orig(self);
+        if (heldMsgCount > 0) HideMsg(self.storeObject.Value);
+    }
+
     // The hooks run before HK stores the new value, so apply on the next frame.
     private void QueueApply(string field) {
         if (applyQueued || !watchedFields.Contains(field) || !HornetSpawner.HornetRoot) return;
@@ -198,11 +210,9 @@ public sealed class ProgressionModule : ModuleBase {
     private IEnumerator ApplyNextFrame() {
         yield return null;
         applyQueued = false;
-        Apply(showPopups: true);
+        Apply(showPopups: HeroSwitch.HornetActive);
     }
 
-    // Unlocks what HK's progression has earned and locks the rest, so a save from before this gating catches up too.
-    // Popups announce rewards earned in play; a load or spawn only catches the data up, silently.
     internal static void Apply(bool showPopups = false) {
         var pd = PlayerData.instance;
         var ss = SPlayerData.instance;
@@ -215,8 +225,14 @@ public sealed class ProgressionModule : ModuleBase {
         foreach (var tool in SToolItemManager.GetAllTools()) {
             if (!tool) continue;
             var earned = earnedTools.Contains(tool.name);
-            if (earned && !tool.IsUnlocked) {
-                tool.Unlock(null, showPopups ? SToolItem.PopupFlags.ItemGet : SToolItem.PopupFlags.None);
+            // A silk skill also counts as unlocked by its PlayerData flag, which PlayerDataSyncModule sets from the spell
+            // before this runs.
+            var skill = tool as Silksong::ToolItemSkill;
+            if (earned && (!tool.IsUnlocked || (skill && !tool.SavedData.IsUnlocked))) {
+                // Silksong announces each silk skill with its own full-screen message.
+                tool.Unlock(null, showPopups && !skill ? SToolItem.PopupFlags.ItemGet : SToolItem.PopupFlags.None);
+                MarkUnlocked(tool);
+                if (showPopups && skill) ShowSkillMsg(skill);
             }
             else if (!earned && tool.IsUnlocked) {
                 LockTool(tool);
@@ -278,6 +294,14 @@ public sealed class ProgressionModule : ModuleBase {
         data.IsUnlocked = false;
         tool.SavedData = data;
         SToolItemManager.RemoveToolFromAllCrests(tool);
+    }
+
+    // Unlock leaves the saved data alone for a tool that already counts as unlocked.
+    private static void MarkUnlocked(SToolItem tool) {
+        var data = tool.SavedData;
+        if (data.IsUnlocked) return;
+        data.IsUnlocked = true;
+        tool.SavedData = data;
     }
 
     private static void LockCrest(SToolCrest crest) {
@@ -348,6 +372,17 @@ public sealed class ProgressionModule : ModuleBase {
         RetitleMsg("UI_MSG_TITLE_EXTRASLOT_PREFIX", "Tools", $"UI_MSG_TITLE_EXTRASLOT_PREFIX_{slotNumber}");
     }
 
+    // Given an end callback, the skill message leaves bringing the HUD back to it.
+    private static void ShowSkillMsg(Silksong::ToolItemSkill skill) {
+        var prefab = LoadPromptPrefab(SkillMsgPath);
+        var msg = prefab ? prefab.GetComponent<Silksong::SkillGetMsg>() : null;
+        if (!msg) return;
+        ShowHeldMsg(afterMsg => Silksong::SkillGetMsg.Spawn(msg, skill, () => {
+            Silksong::GameCameras.instance.HUDIn();
+            afterMsg();
+        }));
+    }
+
     private static void ShowSylphsongMsg() {
         var prefab = LoadPromptPrefab(SylphsongMsgPath);
         var msg = prefab ? prefab.GetComponent<Silksong::PowerUpGetMsg>() : null;
@@ -359,9 +394,39 @@ public sealed class ProgressionModule : ModuleBase {
     private static void ShowHeldMsg(Action<Action> spawn) {
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
         if (hero) hero.RelinquishControl();
+        heldMsgCount++;
+        HideHkItemMsgs();
         spawn(() => {
+            if (--heldMsgCount == 0) EndHiddenMsgs();
             if (hero) hero.RegainControl();
         });
+    }
+
+    // Hornet's full-screen message stands in for HK's screen for the same pickup. HK's is hidden, then ended with
+    // Hornet's, since the pickup waits for it.
+    private static void HideHkItemMsgs() {
+        foreach (var msg in UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
+            if (Array.IndexOf(hkItemMsgs, msg.name) >= 0)
+                HideMsg(msg);
+    }
+
+    // HK's message switches its parts' renderers back on as it fades them in, but leaves its own scale alone.
+    private static void HideMsg(GameObject? msg) {
+        if (!msg) return;
+        msg.transform.localScale = Vector3.zero;
+        hiddenMsgs.Add(msg);
+    }
+
+    // HK's message ends in the state that tells the pickup it's done and destroys the message.
+    private static void EndHiddenMsgs() {
+        foreach (var msg in hiddenMsgs.Where(msg => msg))
+        foreach (var fsm in msg.GetComponents<PlayMakerFSM>()) {
+            var end = fsm.FsmStates.FirstOrDefault(state =>
+                state.Actions.OfType<SendEventByName>().Any(action => action.sendEvent.Value == GetItemMsgEnd));
+            if (end != null) fsm.SetState(end.Name);
+        }
+
+        hiddenMsgs.Clear();
     }
 
     // The message prefabs have no Addressables key. Their bundle may already be mounted by Addressables, and a second
