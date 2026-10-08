@@ -17,7 +17,7 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         ["hasDash"] = (ss, v) => ss.hasDash = v,
         ["hasWalljump"] = (ss, v) => ss.hasWalljump = v,
         ["hasJournal"] = (ss, v) => ss.hasJournal = v,
-        ["hasDoubleJump"] = (ss, v) => ss.hasDoubleJump = v,
+        ["hasDoubleJump"] = (ss, v) => ss.hasDoubleJump = ss.hasBrolly = v, // Faydown Cloak + Drifter's Cloak
         ["hasSuperDash"] = (ss, v) => ss.hasHarpoonDash = v, // Harpoon Dash
         ["hasDreamNail"] = (ss, v) => ss.hasNeedolinMemoryPowerup = v, // Elegy of the Deep (Needolin + down)
         ["hasDreamGate"] = (ss, v) => ss.UnlockedFastTravelTeleport = v, // Beastling Call (Needolin + up)
@@ -91,7 +91,6 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         var ss = SPlayerData.instance;
         foreach (var kv in bools) kv.Value(ss, hk.GetBool(kv.Key));
         foreach (var kv in ints) kv.Value(ss, hk.GetInt(kv.Key));
-        ss.hasBrolly = true; // no HK equivalent
         // Plain Needolin does nothing in HK, so it's always there.
         ss.hasNeedolin = true;
     }

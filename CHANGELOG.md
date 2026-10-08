@@ -117,6 +117,7 @@
 - Make Hornet kneel to lay the Delicate Flower on the Traitor Lord's child's grave instead of playing her hurt pose
 - Hornet earns her tools, crests, silk skills, crest slots and Eva's upgrades through Hallownest's charms, bosses and
   spells instead of having them all from the start
+- Hornet gets the Drifter's Cloak together with double jump (Monarch Wings) instead of from the start
 
 ## v0.4.0
 
