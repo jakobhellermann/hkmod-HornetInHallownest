@@ -8,11 +8,11 @@ using SPlayerData = Silksong::PlayerData;
 
 namespace HornetInHallownest.Modules;
 
-// HK (Knight) progression -> Hornet's Silksong PlayerData. SyncHKToSS() at spawn is the full authoritative sync; the
+// HK (Knight) progression -> Hornet's Silksong PlayerData. SyncHkToSs() at spawn is the full authoritative sync; the
 // ModHooks mirror live pickups. Grant-only, and the Silksong writes are direct/unhooked, so there's no feedback loop.
 // See docs/playerdata-sync.md.
 public sealed class PlayerDataSyncModule : ModuleBase {
-    // HK field name -> how to apply it to Silksong PD. Single source: SyncHKToSS() iterates these, hooks dispatch by name.
+    // HK field name -> how to apply it to Silksong PD. Single source: SyncHkToSs() iterates these, hooks dispatch by name.
     private static readonly Dictionary<string, Action<SPlayerData, bool>> bools = new() {
         ["hasDash"] = (ss, v) => ss.hasDash = v,
         ["hasWalljump"] = (ss, v) => ss.hasWalljump = v,
@@ -29,21 +29,44 @@ public sealed class PlayerDataSyncModule : ModuleBase {
 
     private static readonly Dictionary<string, Action<SPlayerData, int>> ints = new() {
         // Nail upgrades set tool pouches + crafting kits as well
-        ["nailSmithUpgrades"] = (ss, v) => { ss.nailUpgrades = v; ss.ToolPouchUpgrades = v; ss.ToolKitUpgrades = v; },
+        ["nailSmithUpgrades"] = (ss, v) => {
+            ss.nailUpgrades = v;
+            ss.ToolPouchUpgrades = v;
+            ss.ToolKitUpgrades = v;
+        },
         // Any silk skill sets hasSilkSpecial
         ["fireballLevel"] = (ss, v) => {
-            if (v >= 1) { ss.hasNeedleThrow = true; ss.hasSilkSpecial = true; } // Silkspear
+            // Silkspear
+            if (v >= 1) {
+                ss.hasNeedleThrow = true;
+                ss.hasSilkSpecial = true;
+            }
+
             if (v >= 2) ss.hasSilkCharge = true; // Sharpdart
         },
         ["quakeLevel"] = (ss, v) => {
-            if (v >= 1) { ss.hasParry = true; ss.hasSilkSpecial = true; } // Cross Stitch
+            // Cross Stitch
+            if (v >= 1) {
+                ss.hasParry = true;
+                ss.hasSilkSpecial = true;
+            }
+
             if (v >= 2) ss.hasSilkBomb = true; // Rune Rage
         },
         ["screamLevel"] = (ss, v) => {
-            if (v >= 1) { ss.hasThreadSphere = true; ss.hasSilkSpecial = true; } // Thread Storm
+            // Thread Storm
+            if (v >= 1) {
+                ss.hasThreadSphere = true;
+                ss.hasSilkSpecial = true;
+            }
+
             if (v >= 2) ss.hasSilkBossNeedle = true; // Pale Nails
         },
-        ["maxHealthBase"] = (ss, v) => { ss.maxHealthBase = v; ss.maxHealth = v; }, // mask capacity (not current HP)
+        // mask capacity (not current HP)
+        ["maxHealthBase"] = (ss, v) => {
+            ss.maxHealthBase = v;
+            ss.maxHealth = v;
+        },
         // Soul Vessel progression -> silk spools (9 -> 18)
         ["MPReserveMax"] = (ss, v) => RecomputeSilk(ss, mpReserveMax: v),
         ["vesselFragments"] = (ss, v) => RecomputeSilk(ss, vesselFragments: v)
@@ -61,7 +84,7 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         ModHooks.SetPlayerIntHook -= OnSetInt;
     }
 
-    internal static void SyncHKToSS() {
+    internal static void SyncHkToSs() {
         var hk = PlayerData.instance;
         var ss = SPlayerData.instance;
         foreach (var kv in bools) kv.Value(ss, hk.GetBool(kv.Key));
@@ -108,7 +131,8 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         return orig;
     }
 
-    // POST /grant-kit: full kit regardless of HK progression (playground testing).
+    // POST /grant-kit: full kit regardless of HK progression (playground testing). The route lives on the debug branch.
+    // ReSharper disable once UnusedMember.Global
     internal static object GrantFullKit() {
         var ss = SPlayerData.instance;
         ss.hasDash = ss.hasWalljump = ss.hasDoubleJump = ss.hasBrolly = ss.hasSuperJump = ss.hasHarpoonDash = true;

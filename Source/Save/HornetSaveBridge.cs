@@ -69,7 +69,7 @@ public sealed class HornetSaveBridge : ModuleBase {
                 // upgrades reached HK PD exist only in the snapshot, so carry them over before re-syncing.
                 var hk = PlayerData.instance;
                 if (spd.maxHealthBase > hk.maxHealthBase) hk.AddToMaxHealth(spd.maxHealthBase - hk.maxHealthBase);
-                PlayerDataSyncModule.SyncHKToSS();
+                PlayerDataSyncModule.SyncHkToSs();
                 HudRefresh.ResetHealthHud();
                 HudRefresh.RefreshMaxSilkHud();
                 // The restore bypasses SetEquippedTools, so refresh them manually.

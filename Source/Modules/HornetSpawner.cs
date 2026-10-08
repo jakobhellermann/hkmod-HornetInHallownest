@@ -149,7 +149,7 @@ public sealed class HornetSpawner : ModuleBase {
         HornetRoot = hornetInstance;
         hornet = heroController;
 
-        PlayerDataSyncModule.SyncHKToSS();
+        PlayerDataSyncModule.SyncHkToSs();
 
         // Tools and crests are granted up front; only silk skills are playthrough-gated (via PlayerDataSyncModule).
         ToolItemManagerBootstrap.UnlockAllToolsSilently();
