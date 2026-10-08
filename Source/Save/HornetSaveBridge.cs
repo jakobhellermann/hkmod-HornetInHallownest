@@ -27,7 +27,19 @@ public sealed class HornetSaveBridge : ModuleBase {
     private static string? pendingPlayerData;
     private static bool? pendingHornetActive;
 
-    private static void OnNewGame() => Silksong::PlayerData.CreateNewSingleton(false);
+    // Reset Hornet's data in place instead of swapping in a new instance: the GameManager, the hero and the HUD keep
+    // references to the current one.
+    private static void OnNewGame() {
+        var current = Silksong::PlayerData.instance;
+        var fresh = Silksong::PlayerData.CreateNewSingleton(false);
+        Silksong::PlayerData.instance = current;
+        JsonConvert.PopulateObject(JsonConvert.SerializeObject(fresh, SaveSettings), current, ResetSettings);
+        if (HornetSpawner.Hornet) Resync();
+    }
+
+    private static JsonSerializerSettings ResetSettings => field ??= new JsonSerializerSettings(SaveSettings) {
+        ObjectCreationHandling = ObjectCreationHandling.Replace
+    };
 
     private static JsonSerializerSettings BuildSettings() {
         var s = new JsonSerializerSettings {
@@ -69,11 +81,7 @@ public sealed class HornetSaveBridge : ModuleBase {
                 // upgrades reached HK PD exist only in the snapshot, so carry them over before re-syncing.
                 var hk = PlayerData.instance;
                 if (spd.maxHealthBase > hk.maxHealthBase) hk.AddToMaxHealth(spd.maxHealthBase - hk.maxHealthBase);
-                PlayerDataSyncModule.SyncHkToSs();
-                HudRefresh.ResetHealthHud();
-                HudRefresh.RefreshMaxSilkHud();
-                // The restore bypasses SetEquippedTools, so refresh them manually.
-                ToolItemManagerBootstrap.RefreshBoundAttackTools();
+                Resync();
             } catch (Exception e) {
                 Log.Error($"[HornetSave] PopulateObject failed: {e.Message}");
             } finally {
@@ -85,5 +93,13 @@ public sealed class HornetSaveBridge : ModuleBase {
         var want = pendingHornetActive.Value ? ActiveHero.Hornet : ActiveHero.Knight;
         if (HeroSwitch.Active != want) HeroSwitch.SetActive(want);
         pendingHornetActive = null;
+    }
+
+    private static void Resync() {
+        PlayerDataSyncModule.SyncHkToSs();
+        HudRefresh.ResetHealthHud();
+        HudRefresh.RefreshMaxSilkHud();
+        // A restore bypasses SetEquippedTools, so refresh them manually.
+        ToolItemManagerBootstrap.RefreshBoundAttackTools();
     }
 }

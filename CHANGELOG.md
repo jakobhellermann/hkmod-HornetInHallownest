@@ -2,6 +2,8 @@
 
 ## _Unreleased_
 
+- Fix a new game showing tools and items Hornet had in the game played before it
+
 ## v0.4.0
 
 - Fix camera sticking to Hornet, jerking on ledges and not looking up/down
