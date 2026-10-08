@@ -32,6 +32,7 @@ public sealed class ProgressionModule : ModuleBase {
     private const int ExtraYellowSlotNotches = 11;
     private const string StartingCrest = "Hunter";
     private const string CharmGetMsg = "Charm Get Msg";
+    private static readonly string[] silkshots = ["WebShot Weaver", "WebShot Forge", "WebShot Architect"];
     private const string MemoryLocket = "Crest Socket Unlocker";
     private const string PromptsBundle = "prompts_assets_all.bundle";
     private const string SylphsongMsgPath = "Assets/Prefabs/UI/Hornet UI/Ancestral_Art_Get_Prompt.prefab";
@@ -209,6 +210,7 @@ public sealed class ProgressionModule : ModuleBase {
         ss.SeenToolWeaponGetPrompt = true;
 
         var earnedTools = ToolRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward).ToHashSet();
+        KeepOneSilkshot(earnedTools);
         foreach (var tool in SToolItemManager.GetAllTools()) {
             if (!tool) continue;
             var earned = earnedTools.Contains(tool.name);
@@ -243,6 +245,16 @@ public sealed class ProgressionModule : ModuleBase {
         ss.HasBoundCrestUpgrader = sylphsong;
 
         BenchModule.RefreshToolHud();
+    }
+
+    // Silksong gives only one of its three Silkshots, so Hornet keeps the one from the first dreamer she defeats.
+    private static void KeepOneSilkshot(HashSet<string> earnedTools) {
+        var earnedSilkshots = silkshots.Where(earnedTools.Contains).ToList();
+        if (earnedSilkshots.Count < 2) return;
+        var keptSilkshot =
+            earnedSilkshots.FirstOrDefault(name => SToolItemManager.GetToolByName(name) is { IsUnlocked: true }) ??
+            earnedSilkshots[0];
+        earnedTools.ExceptWith(earnedSilkshots.Where(name => name != keptSilkshot));
     }
 
     // A tool also counts as unlocked while its alternate unlock test passes, so that test is failed too.
