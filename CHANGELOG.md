@@ -11,6 +11,7 @@
 - Fix the quick map not opening after Hornet's death until she sat on a bench or left the room
 - Fix Hornet's cocoon spawning inside a wall when she dies right next to it
 - Make Needolin enter a dream only once it has spent its first silk, like charging the Dream Nail, instead of right away
+- Make Sylphsong restore Hornet's silk while she rests at a bench, at the pace of Silksong's benches
 
 ## v0.4.0
 
