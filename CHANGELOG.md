@@ -125,6 +125,8 @@
 - Leave out HK's charm message when Hornet picks up a charm, so it doesn't overlap the message for her reward
 - Announce Sylphsong with Silksong's full-screen skill message when Hornet earns it
 - Fix the Hunter Crest's evolution message showing a raw text key as its title
+- Give Hornet her Silk Hearts for HK's spells: the first spell, all three, and the first one upgraded, instead of for
+  nail arts and the Shade Cloak
 
 ## v0.4.0
 
