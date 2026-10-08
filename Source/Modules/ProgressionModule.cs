@@ -6,6 +6,7 @@ using System.Linq;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
 using Modding;
+using UnityEngine;
 using SPlayerData = Silksong::PlayerData;
 using SToolCrest = Silksong::ToolCrest;
 using SToolItem = Silksong::ToolItem;
@@ -29,6 +30,9 @@ public sealed class ProgressionModule : ModuleBase {
     private const int ExtraYellowSlotNotches = 11;
     private const string StartingCrest = "Hunter";
     private const string MemoryLocket = "Crest Socket Unlocker";
+    private const string PromptsBundle = "prompts_assets_all.bundle";
+
+    private static AssetBundle? promptsBundle;
 
     private static Flag Charm(int id) => new($"gotCharm_{id}");
 
@@ -175,11 +179,12 @@ public sealed class ProgressionModule : ModuleBase {
     private IEnumerator ApplyNextFrame() {
         yield return null;
         applyQueued = false;
-        Apply();
+        Apply(showPopups: true);
     }
 
     // Unlocks what HK's progression has earned and locks the rest, so a save from before this gating catches up too.
-    internal static void Apply() {
+    // Popups announce rewards earned in play; a load or spawn only catches the data up, silently.
+    internal static void Apply(bool showPopups = false) {
         var pd = PlayerData.instance;
         var ss = SPlayerData.instance;
         if (pd == null || ss == null) return;
@@ -191,7 +196,7 @@ public sealed class ProgressionModule : ModuleBase {
             if (!tool) continue;
             var earned = earnedTools.Contains(tool.name);
             if (earned && !tool.IsUnlocked) {
-                tool.Unlock(null, SToolItem.PopupFlags.None);
+                tool.Unlock(null, showPopups ? SToolItem.PopupFlags.ItemGet : SToolItem.PopupFlags.None);
             }
             else if (!earned && tool.IsUnlocked) {
                 LockTool(tool);
@@ -201,12 +206,17 @@ public sealed class ProgressionModule : ModuleBase {
         var earnedCrests = CrestRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward).ToHashSet();
         foreach (var crest in SToolItemManager.GetAllCrests()) {
             if (!crest) continue;
-            if (earnedCrests.Contains(crest.name)) crest.Unlock();
-            else if (crest.IsUnlocked) LockCrest(crest);
+            if (earnedCrests.Contains(crest.name) && !crest.IsUnlocked && !IsSuperseded(crest)) {
+                crest.Unlock();
+                if (showPopups) ShowCrestMsg(crest);
+            }
+            else if (!earnedCrests.Contains(crest.name) && crest.IsUnlocked) {
+                LockCrest(crest);
+            }
         }
 
         if (!earnedCrests.Contains(ss.CurrentCrestID)) SToolItemManager.SetEquippedCrest(StartingCrest);
-        GrantMemoryLockets(pd, ss);
+        GrantMemoryLockets(pd, ss, showPopups);
 
         var notches = pd.GetInt("charmSlots");
         ss.UnlockedExtraBlueSlot = notches >= ExtraBlueSlotNotches;
@@ -241,12 +251,10 @@ public sealed class ProgressionModule : ModuleBase {
         Math.Max(0, pd.GetInt("charmSlots") - BaseCharmNotches) + LocketRules.Count(r => r.IsEarned(pd));
 
     // An upgraded crest carries over its previous version's slots, so only the newest version counts.
-    private static void GrantMemoryLockets(PlayerData pd, SPlayerData ss) {
+    private static void GrantMemoryLockets(PlayerData pd, SPlayerData ss, bool showPopups) {
         var openedSlots = 0;
         foreach (var crest in SToolItemManager.GetAllCrests()) {
-            if (!crest || !crest.IsUnlocked) continue;
-            var upgradedCrest = crest.GetFieldValue<SToolCrest>("upgradedVersion");
-            if (upgradedCrest && upgradedCrest.IsUnlocked) continue;
+            if (!crest || !crest.IsUnlocked || IsSuperseded(crest)) continue;
             var config = crest.Slots;
             var slots = crest.SaveData.Slots;
             if (config == null || slots == null) continue;
@@ -256,7 +264,47 @@ public sealed class ProgressionModule : ModuleBase {
         }
 
         var data = ss.Collectables.GetData(MemoryLocket);
-        data.Amount = Math.Max(0, EarnedMemoryLockets(pd) - openedSlots);
+        var heldLockets = Math.Max(0, EarnedMemoryLockets(pd) - openedSlots);
+        if (showPopups && heldLockets > data.Amount) {
+            Silksong::CollectableItemManager.GetItemByName(MemoryLocket).Collect(heldLockets - data.Amount);
+            return;
+        }
+
+        data.Amount = heldLockets;
         ss.Collectables.SetData(MemoryLocket, data);
+    }
+
+    // Silksong's full-screen crest message, which holds the hero until a button press dismisses it.
+    private static void ShowCrestMsg(SToolCrest crest) {
+        var prefabName = crest.name switch {
+            "Hunter_v2" or "Hunter_v3" => "Tool Crest Upgrade UI Msg",
+            "Toolmaster" => "Tool Crest UI Msg Architect Variant",
+            _ => "Tool Crest UI Msg"
+        };
+        var prefab = LoadPromptPrefab($"Assets/Prefabs/UI/Messages/{prefabName}.prefab");
+        if (!prefab || !prefab.GetComponent<Silksong::ToolCrestUIMsg>()) {
+            Silksong::CollectableUIMsg.Spawn(crest);
+            return;
+        }
+
+        var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
+        if (hero) hero.RelinquishControl();
+        Silksong::ToolCrestUIMsg.Spawn(crest, prefab, () => {
+            if (hero) hero.RegainControl();
+        });
+    }
+
+    // The message prefabs have no Addressables key. Their bundle may already be mounted by Addressables, and a second
+    // LoadFromFile of a mounted bundle throws.
+    private static GameObject? LoadPromptPrefab(string path) {
+        if (!promptsBundle)
+            promptsBundle = AssetBundle.GetAllLoadedAssetBundles().FirstOrDefault(b => b && b.Contains(path)) ??
+                            AssetBundle.LoadFromFile(Paths.SilksongAddressablesBundle(PromptsBundle));
+        return promptsBundle ? promptsBundle.LoadAsset<GameObject>(path) : null;
+    }
+
+    private static bool IsSuperseded(SToolCrest crest) {
+        var upgradedCrest = crest.GetFieldValue<SToolCrest>("upgradedVersion");
+        return upgradedCrest && upgradedCrest.IsUnlocked;
     }
 }
