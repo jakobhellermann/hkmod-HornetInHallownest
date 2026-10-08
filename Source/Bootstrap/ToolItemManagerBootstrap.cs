@@ -1,5 +1,4 @@
 extern alias Silksong;
-using System.Collections.Generic;
 using System.Linq;
 using HornetInHallownest.Util;
 
@@ -21,6 +20,8 @@ internal static class ToolItemManagerBootstrap {
     }
 
     // Diagnostic: confirm the singleton + serialized lists resolve, and that GetCrestByName works.
+    // Called by a dev server route on the debug branch.
+    // ReSharper disable once UnusedMember.Global
     internal static object Diag() {
         var mgr = Silksong::ToolItemManager.SilentInstance;
         if (mgr == null) return new { error = "ToolItemManager singleton null (Ensure not run / spawn first)" };
@@ -38,20 +39,6 @@ internal static class ToolItemManagerBootstrap {
         };
     }
 
-    // Like ToolItemManager.UnlockAllTools() but PopupFlags.None instead of Default, so it doesn't spawn a "tool get"
-    // popup per tool.
-    internal static void UnlockAllToolsSilently() {
-        var pd = Silksong::PlayerData.instance;
-        pd.SeenToolGetPrompt = true;
-        pd.SeenToolWeaponGetPrompt = true;
-
-        foreach (var tool in Silksong::ToolItemManager.GetAllTools()) {
-            if (!tool) continue;
-            tool.SetUnlockedTestsComplete();
-            tool.Unlock(null, Silksong::ToolItem.PopupFlags.None);
-        }
-    }
-
     // Unlock + equip a tool by name without a bench (Silksong gates the equip UI to benches). Idempotent.
     internal static void EquipToolByName(string name) {
         var tool = Silksong::ToolItemManager.GetToolByName(name);
@@ -66,36 +53,6 @@ internal static class ToolItemManagerBootstrap {
         tool.Unlock(null, Silksong::ToolItem.PopupFlags.None);
         Silksong::ToolItemManager.AutoEquip(tool);
         Silksong::ToolItemManager.SendEquippedChangedEvent(true);
-    }
-
-    // Unlock every crest + all its tool slots: rebuild each crest's slot list from its config with IsUnlocked=true,
-    // preserving equipped tools. Requires ToolItemManager + PlayerData up (post-spawn).
-    internal static object UnlockAllCrestSlots() {
-        var pd = Silksong::PlayerData.instance;
-        var crests = Silksong::ToolItemManager.GetAllCrests();
-        if (crests == null || crests.Count == 0) return new { error = "no crests (ToolItemManager not up?)" };
-        var equips = pd.ToolEquips;
-        int crestCount = 0, slotCount = 0;
-        foreach (var crest in crests) {
-            if (crest == null) continue;
-            var data = equips.GetData(crest.name);
-            var config = crest.Slots; // authoritative slot count/layout, preferred over the saved data.Slots
-            var count = config?.Length ?? data.Slots?.Count ?? 0;
-            var slots = new List<Silksong::ToolCrestsData.SlotData>(count);
-            for (var i = 0; i < count; i++) {
-                var equipped = data.Slots != null && i < data.Slots.Count ? data.Slots[i].EquippedTool : null;
-                slots.Add(new Silksong::ToolCrestsData.SlotData { EquippedTool = equipped, IsUnlocked = true });
-            }
-
-            data.Slots = slots;
-            data.IsUnlocked = true;
-            equips.SetData(crest.name, data);
-            crestCount++;
-            slotCount += count;
-        }
-
-        Log.Debug($"[ToolItemManager] unlocked all crest slots: {crestCount} crests, {slotCount} slots");
-        return new { crests = crestCount, slots = slotCount };
     }
 
     internal static void RefreshBoundAttackTools() {
