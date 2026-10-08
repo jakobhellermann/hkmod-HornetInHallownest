@@ -127,6 +127,7 @@
 - Fix the Hunter Crest's evolution message showing a raw text key as its title
 - Give Hornet her Silk Hearts for HK's spells: the first spell, all three, and the first one upgraded, instead of for
   nail arts and the Shade Cloak
+- Give Hornet only one Silkshot, from the first dreamer she defeats, like Silksong's one-of-three choice
 
 ## v0.4.0
 
