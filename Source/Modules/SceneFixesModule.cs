@@ -50,8 +50,35 @@ public sealed class SceneFixesModule : ModuleBase {
             case "Crossroads_ShamanTemple":
                 EnsureVengefulSpiritEquipped();
                 break;
+            case "RestingGrounds_04":
+                if (!PlayerData.instance.hasDreamNail) StartCoroutine(LiftHornetIntoDream());
+                break;
         }
     }
+
+    #region Dream Nail dreamers' lift
+
+    // The dreamers' cutscene ("Dreamer Scene 2") hides the hero and lifts a Knight sprite ("Knight Lift") into the dream
+    // in its place. Lift Hornet with it instead.
+    private static IEnumerator LiftHornetIntoDream() {
+        var scene = GameObject.Find("Dreamer Scene 2");
+        var lift = scene ? scene.transform.Find("Knight Lift") : null;
+        while (lift && !lift.gameObject.activeInHierarchy) yield return null;
+        if (!lift || !HeroSwitch.HornetActive || HornetSpawner.Hornet is not { } hero) yield break;
+
+        lift.GetComponent<MeshRenderer>().enabled = false;
+        hero.GetComponent<MeshRenderer>().enabled = true;
+        hero.StopAnimationControl();
+        hero.AnimCtrl.PlayClipForced("Collect Memory Orb");
+        hero.AffectedByGravity(false);
+        var offset = hero.transform.position - lift.position;
+        while (lift && lift.gameObject.activeInHierarchy) {
+            hero.transform.position = lift.position + offset;
+            yield return null;
+        }
+    }
+
+    #endregion
 
     // Silksong's wall cling and collision handler ask her NonSlider registry, which HK's scene objects never join: HK's
     // NonSlider is an empty marker class with no registry, and solid HERO_DETECTOR colliders (e.g. the Godhome edges'

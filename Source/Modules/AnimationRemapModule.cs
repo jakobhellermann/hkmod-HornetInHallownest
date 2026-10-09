@@ -17,7 +17,9 @@ public sealed class AnimationRemapModule : ModuleBase {
         ["Collect SD 4"] = "Collect Normal 3",
         ["Collect Heart Piece End"] = "Collect Normal 3",
         ["Challenge Start"] = "Challenge Strong",
-        ["Challenge End"] = "ChallengeStrongToIdle"
+        ["Challenge End"] = "ChallengeStrongToIdle",
+        ["Collect Magical Fall"] = "Fall",
+        ["Dreamer Land"] = "Idle Hurt"
     };
 
     // These clips are looping, but the orig HK clip play expects an animation finished event.
@@ -36,9 +38,9 @@ public sealed class AnimationRemapModule : ModuleBase {
                 LogDebugOnce($"clipmap|{self.gameObject.name}|{name}",
                     $"remapped HK clip '{name}' -> Hornet '{mapped}' on '{self.gameObject.name}'");
                 orig(self, mapped);
-                
+
                 if (loopingClips.Contains(mapped)) StartCoroutine(SendAnimationCompletionEvent(self, clip));
-                
+
                 return;
             }
 

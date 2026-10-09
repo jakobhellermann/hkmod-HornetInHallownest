@@ -237,9 +237,10 @@ public sealed class SceneTransitionModule : ModuleBase {
             SnapHornetToKnight(knight);
             var hornet = HornetSpawner.Hornet;
             if (hornet) {
-                // A death in Godhome returns through "door_dreamReturn", which EnterHero swaps for the statue door.
+                // HK's Dream Return FSM lays the Knight down on arrival through "door_dreamReturn" (in Godhome EnterHero
+                // swaps it for "door_dreamReturnGG*").
                 lieDownArrival = fromMaskBreak ||
-                                 knight.GetEntryGateName().StartsWith("door_dreamReturnGG", StringComparison.Ordinal);
+                                 knight.GetEntryGateName().StartsWith("door_dreamReturn", StringComparison.Ordinal);
                 hornet.EnterSceneDreamGate();
                 StartCoroutine(lieDownArrival ? PlayLieDownArrival(hornet) : PlayDreamArrival(hornet));
             }
@@ -557,13 +558,15 @@ public sealed class SceneTransitionModule : ModuleBase {
         }
     }
 
-    // Back at a Hall of Gods statue or from a dreamer's mask-break cutscene, HK's Knight-only Dream Return FSM lays the
-    // Knight down and gets him up on the first input, broadcasting DREAM WAKE: the statue door waits for it to finish its
-    // transition. Do the same with Hornet. The blankers fade out on the Knight's beat, once the door's own transition
+    // Back at a Hall of Gods statue, from a dreamer's mask-break cutscene or in the Dream Nail's dream, HK's Knight-only
+    // Dream Return FSM lays the Knight down and gets him up on the first input, broadcasting DREAM WAKE: the statue door
+    // waits for it to finish its transition. The blankers fade out on the Knight's beat, once the door's own transition
     // already covers the screen. She's laid back down every frame: after a death, DeathModule's revive hands her control
-    // and the idle clip right after this starts.
+    // and the idle clip right after this starts. HK's gate entry shows the Knight again: the dreamers' cutscene hides the
+    // hero before sending him through.
     private IEnumerator PlayLieDownArrival(Silksong::HeroController hero) {
         playingDreamArrival = true;
+        hero.GetComponent<MeshRenderer>().enabled = true;
         try {
             var start = Time.time;
             var faded = false;

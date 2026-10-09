@@ -23,6 +23,8 @@
 - Fix bounce shrooms launching Hornet lower than the Knight when she pogos off them, short of ledges she needs
 - Fix Hornet slipping out of bounds by vaulting or clambering at a wall whose top meets a low ceiling
 - Give Hornet the Crystal Heart: hold up + Clawline on the ground or a wall to charge, release to fly
+- Fix the Dream Nail cutscene lifting a Knight sprite instead of Hornet, leaving her half-turned during the dreamers'
+  dialogue and invisible in the dream
 
 ## v0.4.0
 
