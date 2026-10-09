@@ -144,6 +144,7 @@
 - Fix the silk skill message never closing when Hornet's crest has nothing equipped yet, such as on a new save
 - Fix Hornet's masks and silk spool staying hidden after the message for Swift Step, Cling Grip, Clawline, Silk Soar
   or Sylphsong
+- Fix Hornet's item messages drawing over HK's relic and journal messages: they now stack above them
 
 ## v0.4.0
 

@@ -39,6 +39,8 @@ public sealed class ProgressionModule : ModuleBase {
     private const string CharmBenchMsg = "Charm Equip Msg";
     private const string CharmBenchMsgDown = "CHARM MSG DOWN";
     private static readonly string[] silkshots = ["WebShot Weaver", "WebShot Forge", "WebShot Architect"];
+    private static readonly string[] hkItemMsgFsms = ["Relic Msg", "Journal Msg"];
+    private static readonly HashSet<Fsm> shownHkItemMsgs = [];
     private const string GetItemMsgEnd = "GET ITEM MSG END";
     private const string MemoryLocket = "Crest Socket Unlocker";
     private const string PromptsBundle = "prompts_assets_all.bundle";
@@ -195,11 +197,27 @@ public sealed class ProgressionModule : ModuleBase {
         ModHooks.SetPlayerIntHook += OnSetInt;
         Detour(typeof(CreateObject), nameof(CreateObject.OnEnter), OnCreateObject);
         Detour(typeof(CreateUIMsgGetItem), nameof(CreateUIMsgGetItem.OnEnter), OnCreateUIMsgGetItem);
+        Detour(typeof(Fsm), "SwitchState", OnSwitchState, typeof(FsmState));
     }
 
     protected override void OnDeinitialize() {
         ModHooks.SetPlayerBoolHook -= OnSetBool;
         ModHooks.SetPlayerIntHook -= OnSetInt;
+        shownHkItemMsgs.Clear();
+        Silksong::UIMsgPopupBaseBase.MinYPos = float.MinValue;
+    }
+
+    // HK's small item and journal messages sit where Silksong's item messages start their stack.
+    private static void OnSwitchState(Action<Fsm, FsmState> orig, Fsm self, FsmState to) {
+        orig(self, to);
+        if (Array.IndexOf(hkItemMsgFsms, self.Name) < 0) return;
+        if (to.Name == "Up") shownHkItemMsgs.Add(self);
+        else shownHkItemMsgs.Remove(self);
+        shownHkItemMsgs.RemoveWhere(msg => !msg.GameObject);
+        Silksong::UIMsgPopupBaseBase.MinYPos = shownHkItemMsgs.Count == 0
+            ? float.MinValue
+            : Silksong::GlobalSettings.UI.UIMsgPopupStartPosition.y +
+              Silksong::GlobalSettings.UI.UIMsgPopupStackOffset.y;
     }
 
     private bool OnSetBool(string name, bool value) {
