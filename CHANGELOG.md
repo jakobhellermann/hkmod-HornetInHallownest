@@ -25,6 +25,8 @@
 - Give Hornet the Crystal Heart: hold up + Clawline on the ground or a wall to charge, release to fly
 - Fix the Dream Nail cutscene lifting a Knight sprite instead of Hornet, leaving her half-turned during the dreamers'
   dialogue and invisible in the dream
+- Hornet now wakes lying down after leaving a dream and gets up on input like the Knight, and the white flash of later
+  dreamer visions shows again
 
 ## v0.4.0
 

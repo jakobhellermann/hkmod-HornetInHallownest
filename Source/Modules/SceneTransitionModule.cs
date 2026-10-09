@@ -446,7 +446,8 @@ public sealed class SceneTransitionModule : ModuleBase {
             }
         }
 
-        if (!wasEnterWithoutInput || isMoveResume || !HeroSwitch.HornetActive) return;
+        // A lie-down arrival returns control itself once she's up.
+        if (!wasEnterWithoutInput || isMoveResume || !HeroSwitch.HornetActive || playingDreamArrival) return;
         if (BossSceneController.IsBossScene) {
             LogDebug("skipped enterWithoutInput close: boss scene, its own Dream Entry FSM owns control");
             return;
@@ -574,11 +575,8 @@ public sealed class SceneTransitionModule : ModuleBase {
             while (Time.time < start + 1f || !(input.up.WasPressed || input.down.WasPressed || input.left.WasPressed ||
                                                input.right.WasPressed || input.attack.WasPressed ||
                                                input.jump.WasPressed)) {
-                if (!hero.controlReqlinquished || hero.acceptingInput) hero.RelinquishControl();
-                if (hero.AnimCtrl.animator.CurrentClip?.name != "Prostrate") {
-                    hero.StopAnimationControl();
-                    hero.AnimCtrl.PlayClipForced("Prostrate");
-                }
+                Hold();
+                if (hero.AnimCtrl.animator.CurrentClip?.name != "Prostrate") hero.AnimCtrl.PlayClipForced("Prostrate");
 
                 if (!faded && Time.time >= start + 0.5f) {
                     FadeBlankerOut("Blanker White");
@@ -592,7 +590,10 @@ public sealed class SceneTransitionModule : ModuleBase {
             PlayMakerFSM.BroadcastEvent("DREAM WAKE");
             hero.AnimCtrl.PlayClipForced("Prostrate Rise");
             var rise = hero.AnimCtrl.animator.CurrentClip;
-            while (rise != null && hero.AnimCtrl.animator.IsPlaying(rise)) yield return null;
+            while (rise != null && hero.AnimCtrl.animator.IsPlaying(rise)) {
+                Hold();
+                yield return null;
+            }
         } finally {
             playingDreamArrival = false;
             lieDownArrival = false;
@@ -601,14 +602,25 @@ public sealed class SceneTransitionModule : ModuleBase {
                 hero.StartAnimationControl();
             }
         }
+
+        // A dream return's own door entry hands her control and her animations back when it finishes.
+        void Hold() {
+            if (!hero.controlReqlinquished || hero.acceptingInput) hero.RelinquishControl();
+            if (hero.AnimCtrl.controlEnabled) hero.StopAnimationControl();
+        }
     }
 
     // Dream-return arrival: normal entry, then force the idle clip once grounded ("door_dreamReturn" is a door path with
     // no real door, leaving her animator on the warp clip; HK's Dream Return get-up would do this).
     private IEnumerator DreamReturnEntry(HeroController knight) {
-        yield return RunEntry(knight);
         var hero = HornetSpawner.Hornet;
-        if (!hero) yield break;
+        if (hero && knight.GetEntryGateName().StartsWith("door_dreamReturn", StringComparison.Ordinal)) {
+            lieDownArrival = true;
+            StartCoroutine(PlayLieDownArrival(hero));
+        }
+
+        yield return RunEntry(knight);
+        if (!hero || lieDownArrival) yield break;
         for (var i = 0; i < 60 && (hero.cState == null || !hero.cState.onGround); i++) yield return null;
         hero.StartAnimationControlToIdle();
     }
@@ -724,9 +736,12 @@ public sealed class SceneTransitionModule : ModuleBase {
         LogDebug($"completed dream arrival + DREAM WAKE (transitionState={hero.transitionState})");
     }
 
+    // Its FSMs restart on enable, back to clear: switched off for good, later cutscenes' white fades never show.
     private void ClearDreamWhiteBlanker() {
         var blanker = FindBlanker("Blanker White");
-        if (blanker) blanker.SetActive(false);
+        if (!blanker) return;
+        blanker.SetActive(false);
+        blanker.SetActive(true);
     }
 
     // Send "FADE OUT" to every PlayMakerFSM on the blanker GO (PlayMaker ignores events a state doesn't handle, so we
