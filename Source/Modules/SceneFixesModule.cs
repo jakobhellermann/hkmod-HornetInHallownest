@@ -6,7 +6,6 @@ using System.Linq;
 using GlobalEnums;
 using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
-using HutongGames.PlayMaker.Actions;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using SFsm = SilksongPM::HutongGames.PlayMaker.Fsm;
@@ -42,9 +41,6 @@ public sealed class SceneFixesModule : ModuleBase {
         inShamanTemple = scene.name == "Crossroads_ShamanTemple";
 
         switch (scene.name) {
-            case "Deepnest_Spider_Town":
-                FixSpiderTrapBench();
-                break;
             case "White_Palace_12":
                 DisableWhitePalace12Saws(scene);
                 break;
@@ -53,18 +49,6 @@ public sealed class SceneFixesModule : ModuleBase {
                 break;
             case "Crossroads_ShamanTemple":
                 EnsureVengefulSpiritEquipped();
-                break;
-            case "Fungus1_04_boss":
-                FixDreamerFallGate("Dreamer Scene 1");
-                break;
-            case "Mines_31":
-                FixSuperDashGetFallGate();
-                break;
-            case "Ruins1_27":
-                FixHornetFountainLandGate();
-                break;
-            case "Abyss_12":
-                FixScreamGetFallGate();
                 break;
         }
     }
@@ -221,93 +205,6 @@ public sealed class SceneFixesModule : ModuleBase {
         } catch (Exception e) {
             LogError(e.Message);
         }
-    }
-
-    #endregion
-
-    #region Knight-calibrated fall-land gates
-
-    // A class of HK cutscene FSM: relinquish control, drop the hero, then gate the landing on a FloatCompare of the
-    // hero's Y against a baked target Y (equal/lessThan -> FINISHED, greaterThan has no transition). The target is
-    // calibrated to where the Knight's origin rests on that floor. Hornet rests ~0.16 higher (deeper collider feet),
-    // so her Y never reaches it -> the compare never fires -> the FSM hangs no-input and control is never returned.
-    // Raise the baked target into Hornet's frame by the live collider feet-delta; the gate then fires as she lands.
-    private void RaiseHeroLandGate(GameObject? go, string fsmName, string varName) {
-        try {
-            if (go == null) return;
-
-            PlayMakerFSM? fsm = null;
-            foreach (var f in go.GetComponents<PlayMakerFSM>())
-                if (f.FsmName == fsmName) {
-                    fsm = f;
-                    break;
-                }
-
-            var landY = fsm?.FsmVariables.FindFsmFloat(varName);
-            if (landY == null) return;
-
-            var delta = FeetDelta();
-            if (delta <= 0f) return; // colliders not ready, or no overshoot to correct
-
-            var before = landY.Value;
-            landY.Value = before + delta;
-            LogDebug($"raised '{varName}' {before} -> {landY.Value} (+{delta} feet-delta) on {go.name}/{fsmName}");
-        } catch (Exception e) {
-            LogError(e.Message);
-        }
-    }
-
-    // Trap bench `Fade` FSM: Fall -> gate `Hero Y <= Hero Land Y` -> Land -> Relinquish Control (SetBenchRespawn,
-    // SaveGame). TODO(unverified): numbers confirmed live, but the softlock -> fixed round-trip isn't verified
-    // end-to-end (the trap is a one-time spiderCapture and the test save is past it). Re-verify on a fresh save.
-    private void FixSpiderTrapBench() => RaiseHeroLandGate(GameObject.Find("RestBench Spider"), "Fade", "Hero Land Y");
-
-    // Dreamer cutscene `Control` FSM: Blast -> gate `Hero Y <= Knight Scene Y` (Hero Fall) -> Land -> ... -> End
-    // (RegainControl). Without the raise, Hero Fall hangs no-input (verified: raising the gate live runs it to End).
-    private void FixDreamerFallGate(string sceneObjectName) =>
-        RaiseHeroLandGate(GameObject.Find(sceneObjectName), "Control", "Knight Scene Y");
-
-    private void FixSuperDashGetFallGate() =>
-        RaiseHeroLandGate(GameObject.Find("Super Dash Get/Inspect Region"), "Inspect", "Knight Ground Y");
-
-    // City of Tears fountain Hornet cutscene: Take Control gates `Hero Y < 5.51` (LAND).
-    private void FixHornetFountainLandGate() =>
-        RaiseLiteralLandGate(GameObject.Find("Hornet Fountain Encounter"), "Control", "Take Control");
-
-    // Abyss shriek cutscene: Fall gates `Hero Y < 10.5` (LAND).
-    private void FixScreamGetFallGate() =>
-        RaiseLiteralLandGate(screamGet ? screamGet.gameObject : null, "Scream Get", "Fall");
-
-    // Like RaiseHeroLandGate, for gates that take the target as a literal on the FloatCompare instead of an FSM variable.
-    private void RaiseLiteralLandGate(GameObject? go, string fsmName, string stateName) {
-        try {
-            var fsm = go ? go.GetComponents<PlayMakerFSM>().FirstOrDefault(f => f.FsmName == fsmName) : null;
-            var state = fsm ? fsm.FsmStates.FirstOrDefault(s => s.Name == stateName) : null;
-            if (state == null) return;
-
-            var delta = FeetDelta();
-            if (delta <= 0f) return;
-
-            foreach (var comparison in state.Actions.OfType<FloatCompare>()) {
-                var landY = comparison.float2.Value;
-                comparison.float2.Value = landY + delta;
-                LogDebug($"raised land Y {landY} -> {comparison.float2.Value} (+{delta} feet-delta) on {go!.name}");
-            }
-        } catch (Exception e) {
-            LogError(e.Message);
-        }
-    }
-
-    // How much higher Hornet's origin rests on a floor than the Knight's, from the live colliders (collider bottom =
-    // offset.y - size.y/2). Returns 0 if either collider is missing (fail-safe: no patch).
-    private static float FeetDelta() {
-        var hornetCol = HornetSpawner.TerrainCollider;
-        var knight = HeroController.UnsafeInstance;
-        var knightCol = knight != null ? knight.GetComponent<BoxCollider2D>() : null;
-        if (hornetCol == null || knightCol == null) return 0f;
-        var hornetBottom = hornetCol.offset.y - hornetCol.size.y / 2f;
-        var knightBottom = knightCol.offset.y - knightCol.size.y / 2f;
-        return knightBottom - hornetBottom;
     }
 
     #endregion

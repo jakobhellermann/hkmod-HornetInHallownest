@@ -4,6 +4,7 @@ using GlobalEnums;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
 using HutongGames.PlayMaker;
+using HutongGames.PlayMaker.Actions;
 using UnityEngine;
 
 namespace HornetInHallownest.Modules;
@@ -38,7 +39,63 @@ public sealed class HeroTargetModule : ModuleBase {
         Detour(typeof(CameraTarget), "Update", (Action<Action<CameraTarget>, CameraTarget>)OnCameraUpdate);
         Detour(typeof(CameraController), "LateUpdate",
             (Action<Action<CameraController>, CameraController>)OnCameraUpdate);
+
+        Detour(typeof(GetPosition), "DoGetPosition", OnGetPosition);
+        Detour(typeof(GetPosition2D), "DoGetPosition", OnGetPosition2D);
+        Detour(typeof(SetPosition), "DoSetPosition", OnSetPosition);
+        Detour(typeof(SetPositionToObject), "DoSetPosition", OnSetPositionToObject);
     }
+
+    #region Position in the Knight's terms
+
+    // HK's cutscenes gate landings on the hero's height and place him at points measured from the Knight's origin, which
+    // rests FeetDelta lower above a floor than Hornet's.
+    private static void OnGetPosition(Action<GetPosition> orig, GetPosition self) {
+        orig(self);
+        if (!IsHornet(self.Fsm.GetOwnerDefaultTarget(self.gameObject))) return;
+        var delta = FeetDelta();
+        self.vector.Value -= new Vector3(0f, delta, 0f);
+        self.y.Value -= delta;
+    }
+
+    private static void OnGetPosition2D(Action<GetPosition2D> orig, GetPosition2D self) {
+        orig(self);
+        if (!IsHornet(self.Fsm.GetOwnerDefaultTarget(self.gameObject))) return;
+        var delta = FeetDelta();
+        self.vector.Value -= new Vector2(0f, delta);
+        self.y.Value -= delta;
+    }
+
+    private static void OnSetPosition(Action<SetPosition> orig, SetPosition self) {
+        orig(self);
+        var target = self.Fsm.GetOwnerDefaultTarget(self.gameObject);
+        if ((self.vector.IsNone && self.y.IsNone) || !IsHornet(target)) return;
+        target.transform.position += new Vector3(0f, FeetDelta(), 0f);
+    }
+
+    private static void OnSetPositionToObject(Action<SetPositionToObject> orig, SetPositionToObject self) {
+        orig(self);
+        var target = self.Fsm.GetOwnerDefaultTarget(self.gameObject);
+        if (!target) return;
+        if (IsHornet(target)) target.transform.position += new Vector3(0f, FeetDelta(), 0f);
+        else if (IsHornet(self.targetObject.Value)) target.transform.position -= new Vector3(0f, FeetDelta(), 0f);
+    }
+
+    private static bool IsHornet(GameObject? go) =>
+        go && HeroSwitch.HornetActive && go == HornetSpawner.HornetRoot;
+
+    // How much higher Hornet's origin rests on a floor than the Knight's.
+    internal static float FeetDelta() {
+        var hornetCol = HornetSpawner.TerrainCollider;
+        var knight = HeroController.UnsafeInstance;
+        var knightCol = knight != null ? knight.GetComponent<BoxCollider2D>() : null;
+        if (hornetCol == null || knightCol == null) return 0f;
+        var hornetBottom = hornetCol.offset.y - hornetCol.size.y / 2f;
+        var knightBottom = knightCol.offset.y - knightCol.size.y / 2f;
+        return knightBottom - hornetBottom;
+    }
+
+    #endregion
 
     protected override void OnDeinitialize() {
         // Leave HK coherent: point the global back at the Knight.
