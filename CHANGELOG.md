@@ -35,6 +35,7 @@
   staying hidden afterwards: she now lies there and gets up on input
 - Fix Hornet dropping flat and getting up from the floor in the Shade Soul cutscene: she now kneels, floats while
   taking the spell and lands
+- Show Hornet instead of the Knight absorbing the Abyss Shriek, once her Thread Storm that called it finishes
 
 ## v0.4.0
 

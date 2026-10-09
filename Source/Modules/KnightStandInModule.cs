@@ -24,14 +24,19 @@ public sealed class KnightStandInModule : ModuleBase {
         ["Ruins1_24"] = ["Quake Real Parent/Knight Get Quake/Knight Cutscene Animator"],
         ["Ruins1_24_boss"] = ["Quake Fake Parent/Knight Get Quake Fake/Knight Cutscene Animator"],
         ["Room_Fungus_Shaman"] = ["Scream Control/Knight Get Scream/Knight Cutscene Animator"],
-        ["Abyss_21"] = ["Shiny Item DJ/Knight Cutscene"]
+        ["Abyss_21"] = ["Shiny Item DJ/Knight Cutscene"],
+        ["Abyss_12"] = ["Scream 2 Get/Cutscene Knight"]
     };
 
-    // The stand-ins' clips that aren't DefaultClip.
-    private static readonly Dictionary<string, string> clips = new() {
+    // Null leaves her own clip playing: the Abyss Shriek orb comes to her while the Thread Storm that called it still goes
+    // on.
+    private static readonly Dictionary<string, string?> clips = new() {
         ["Collect Magical Fall"] = "Fall",
         ["Collect Magical Land"] = "Land",
-        ["DN End"] = "Idle"
+        ["DN End"] = "Idle",
+        ["Orb"] = null,
+        ["Absorb"] = "Collect Silk Heart",
+        ["Return"] = "Collect Silk Heart"
     };
 
     private static bool heroShown;
@@ -87,25 +92,26 @@ public sealed class KnightStandInModule : ModuleBase {
             hero.AffectedByGravity(false);
             var color = sprite ? sprite.color : Color.white;
             if (sprite) sprite.color = Color.clear;
-            string? playing = null;
             heroShown = false;
             while (standIn && IsShown() && hero && !heroShown && (hero.controlReqlinquished || !hero.acceptingInput)) {
                 hero.GetComponent<MeshRenderer>().enabled = true;
-                // A Knight sprite faces left at a positive x scale; Hornet's facing is her own state.
-                if (standIn.lossyScale.x < 0f != hero.cState.facingRight) {
-                    if (standIn.lossyScale.x < 0f) hero.FaceRight();
-                    else hero.FaceLeft();
+                if (!standIn.IsChildOf(hero.transform)) {
+                    // A Knight sprite faces left at a positive x scale.
+                    if (standIn.lossyScale.x < 0f != hero.cState.facingRight) {
+                        if (standIn.lossyScale.x < 0f) hero.FaceRight();
+                        else hero.FaceLeft();
+                    }
+
+                    hero.transform.position = standIn.position + new Vector3(0f, HeroTargetModule.FeetDelta(), 0f);
                 }
 
-                hero.transform.position = standIn.position + new Vector3(0f, HeroTargetModule.FeetDelta(), 0f);
                 var clip = animator && animator.CurrentClip is { } current &&
                            clips.TryGetValue(current.name, out var mapped)
                     ? mapped
                     : DefaultClip;
-                if (clip != playing) {
+                // Her own FSMs can still be playing clips over it, such as a silk skill cast that started the cutscene.
+                if (clip != null && hero.AnimCtrl.animator.CurrentClip?.name != clip)
                     hero.AnimCtrl.PlayClipForced(clip);
-                    playing = clip;
-                }
 
                 yield return null;
             }
