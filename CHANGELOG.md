@@ -43,6 +43,7 @@
 - Show Silksong's action names and Hornet's buttons in HK's control reminders, such as her silk skill button after
   Vengeful Spirit and up + Clawline for the Crystal Heart
 - Fix spikes not hurting Hornet in rooms whose spikes are one object spread over several areas, such as Crystal Peak's
+- Fix geo rocks, levers and breakable walls ignoring Hornet's slashes once her Crystal Heart has hit them
 
 ## v0.4.0
 

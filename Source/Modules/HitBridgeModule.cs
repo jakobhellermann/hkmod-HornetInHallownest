@@ -2,6 +2,7 @@ extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using HornetInHallownest.Core;
+using HutongGames.PlayMaker;
 using UnityEngine;
 using UnityEngine.Events;
 using Object = UnityEngine.Object;
@@ -23,9 +24,13 @@ namespace HornetInHallownest.Modules;
 public sealed class HitBridgeModule : ModuleBase {
     public override string Id => "enemy-damage";
 
+    private static Silksong::DamageEnemies? currentDamager;
+    private static Fsm? damagerFsm;
+
     public override void Initialize() {
         Detour(typeof(Silksong::HitTaker), "GetHitResponders", OnGetHitResponders,
             typeof(List<SIHit>), typeof(GameObject), typeof(int), typeof(HashSet<SIHit>));
+        Detour(typeof(Silksong::DamageEnemies), "DoDamage", OnDoDamage, typeof(GameObject), typeof(bool));
         Detour(typeof(SHealthManager), "Hit", OnHealthManagerHit, typeof(SHitInstance));
         // OnAwake, not Awake: HealthManager also runs it via IInitialisable, which hooking Awake alone would miss.
         Detour(typeof(SHealthManager), "OnAwake", OnHealthManagerAwake);
@@ -71,7 +76,7 @@ public sealed class HitBridgeModule : ModuleBase {
 
         // HK's DamageEnemies sends TAKE DAMAGE to every target it hits, responder or not. Geo rocks break on it, and some
         // enemies only wake on it (sleeping Gruz Mother).
-        FSMUtility.SendEventToGameObject(target, "TAKE DAMAGE");
+        SendTakeDamage(target);
         if (alreadyBridged) return;
 
         var resp = target.GetComponentInParent<IHitResponder>();
@@ -85,6 +90,37 @@ public sealed class HitBridgeModule : ModuleBase {
 
         bridge.Responder = resp;
         if (!blackList.Contains(bridge)) store.Add(bridge);
+    }
+
+    private static bool OnDoDamage(Func<Silksong::DamageEnemies, GameObject, bool, bool> orig,
+        Silksong::DamageEnemies self, GameObject target, bool isFirstHit) {
+        var previous = currentDamager;
+        currentDamager = self;
+        try {
+            return orig(self, target, isFirstHit);
+        } finally {
+            currentDamager = previous;
+        }
+    }
+
+    // Geo rocks, levers and breakable walls check that a hit is a nail hit by reading "attackType" off the "damages_enemy"
+    // FSM of the event's sender. Sent from code, the event has no sender and they keep the previous hit's type. Sent by an
+    // FSM owned by her damager, the read finds FsmLookupModule's stand-in for it.
+    private static void SendTakeDamage(GameObject target) {
+        if (!currentDamager) {
+            FSMUtility.SendEventToGameObject(target, "TAKE DAMAGE");
+            return;
+        }
+
+        // Fsm.Event reads the sender's active state, which throws while its states are null.
+        damagerFsm ??= new Fsm { Name = "damages_enemy", States = [] };
+        damagerFsm.Owner = currentDamager;
+        FsmExecutionStack.PushFsm(damagerFsm);
+        try {
+            FSMUtility.SendEventToGameObject(target, "TAKE DAMAGE");
+        } finally {
+            FsmExecutionStack.PopFsm();
+        }
     }
 
     private static SIHit.HitResponse OnHealthManagerHit(Func<SHealthManager, SHitInstance, SIHit.HitResponse> orig,
