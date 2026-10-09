@@ -33,6 +33,8 @@
   up twice after the Crystal Heart's
 - Fix Hornet walking off while HK's Hornet rescues the Knight from the King's Brand avalanche next to her, and her HUD
   staying hidden afterwards: she now lies there and gets up on input
+- Fix Hornet dropping flat and getting up from the floor in the Shade Soul cutscene: she now kneels, floats while
+  taking the spell and lands
 
 ## v0.4.0
 

@@ -23,7 +23,7 @@ public sealed class AnimationRemapModule : ModuleBase {
         ["Collect Magical 1"] = "Collect Memory Orb",
         ["Collect Shadow"] = "Collect Memory Orb",
         ["DJ Get Land"] = "Collect Normal 1",
-        ["ToProne"] = "FallToProstrate",
+        ["ToProne"] = "Abyss Kneel",
         ["Collect Acid"] = "Collect Normal 1",
         ["Collect StandToIdle"] = "Collect Stand 3",
         ["Look At King"] = "LookUp"
@@ -33,6 +33,12 @@ public sealed class AnimationRemapModule : ModuleBase {
     // Send it manually when the animation first loops.
     private static readonly HashSet<string> loopingClips = ["Challenge Strong"];
 
+    private static readonly HashSet<string> loopStartClips = ["Collect Shadow"];
+
+    private static readonly Dictionary<(string Playing, string Next), string> followUpMap = new() {
+        [("Collect Memory Orb", "GetUpToIdle")] = "Land"
+    };
+
     public override string Id => "animation-remap";
 
     public override void Initialize() {
@@ -40,11 +46,19 @@ public sealed class AnimationRemapModule : ModuleBase {
     }
 
     private void OnPlay(Action<tk2dSpriteAnimator, string> orig, tk2dSpriteAnimator self, string name) {
+        if (self && self.CurrentClip is { } playing &&
+            followUpMap.TryGetValue((playing.name, name), out var followUp) &&
+            self.GetClipByName(followUp) is not null) {
+            orig(self, followUp);
+            return;
+        }
+
         if (self && !string.IsNullOrEmpty(name) && self.GetClipByName(name) is null) {
             if (clipMap.TryGetValue(name, out var mapped) && self.GetClipByName(mapped) is { } clip) {
                 LogDebugOnce($"clipmap|{self.gameObject.name}|{name}",
                     $"remapped HK clip '{name}' -> Hornet '{mapped}' on '{self.gameObject.name}'");
-                orig(self, mapped);
+                if (loopStartClips.Contains(name)) self.PlayFromFrame(clip, clip.loopStart);
+                else orig(self, mapped);
 
                 if (loopingClips.Contains(mapped)) StartCoroutine(SendAnimationCompletionEvent(self, clip));
 
