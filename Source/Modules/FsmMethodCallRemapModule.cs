@@ -59,6 +59,10 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
         { "AddToMaxMPReserve", (knight, amount) => knight.AddToMaxMPReserve(amount) }
     };
 
+    // HK's SpriteFlash runs one flash at a time, so each flash its FSMs send ends the repeating one before it, such as a
+    // dream warrior's absorb flashing. Silksong's layers them.
+    private static int? hkRepeatingFlashId;
+
     public override string Id => "fsm-method-remap";
 
     public override void Initialize() {
@@ -67,12 +71,30 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
         Detour(typeof(SendMessage), "DoSendMessage", DoSendMessageHook);
     }
 
+    protected override void OnDeinitialize() => hkRepeatingFlashId = null;
+
     private static void DoSendMessageHook(Action<SendMessage> orig, SendMessage self) {
-        orig(self);
         var hornet = HornetSpawner.HornetRoot;
+        var functionName = self.functionCall.FunctionName;
+        if (!hornet || self.Fsm.GetOwnerDefaultTarget(self.gameObject) != hornet) {
+            orig(self);
+            return;
+        }
+
+        var flash = functionName.StartsWith("flash", StringComparison.OrdinalIgnoreCase)
+            ? hornet.GetComponent<Silksong::SpriteFlash>()
+            : null;
+        if (flash && hkRepeatingFlashId is { } id) {
+            flash.CancelRepeatingFlash(id);
+            hkRepeatingFlashId = null;
+        }
+
+        orig(self);
+        if (flash && functionName.StartsWith("Flashing", StringComparison.Ordinal))
+            hkRepeatingFlashId = flash.GetFieldValue<int>("lastFlashId");
+
         var knight = HeroController.UnsafeInstance;
-        if (!hornet || !knight || self.Fsm.GetOwnerDefaultTarget(self.gameObject) != hornet) return;
-        if (knightUpgrades.TryGetValue(self.functionCall.FunctionName, out var deliver))
+        if (knight && knightUpgrades.TryGetValue(functionName, out var deliver))
             deliver(knight, self.functionCall.IntParameter.Value);
     }
 
