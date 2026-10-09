@@ -29,6 +29,12 @@ public sealed class AnimationRemapModule : ModuleBase {
         ["Look At King"] = "LookUp"
     };
 
+    // Clips a scene plays for something other than what they mean everywhere else: Elderbug takes the Delicate Flower
+    // from the hero's hands.
+    private static readonly Dictionary<(string Scene, string Clip), string> sceneClipMap = new() {
+        [("Town", "Collect SD 1")] = "Collect Stand 1"
+    };
+
     // These clips are looping, but the orig HK clip play expects an animation finished event.
     // Send it manually when the animation first loops.
     private static readonly HashSet<string> loopingClips = ["Challenge Strong"];
@@ -54,7 +60,9 @@ public sealed class AnimationRemapModule : ModuleBase {
         }
 
         if (self && !string.IsNullOrEmpty(name) && self.GetClipByName(name) is null) {
-            if (clipMap.TryGetValue(name, out var mapped) && self.GetClipByName(mapped) is { } clip) {
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if ((sceneClipMap.TryGetValue((scene, name), out var mapped) || clipMap.TryGetValue(name, out mapped)) &&
+                self.GetClipByName(mapped) is { } clip) {
                 LogDebugOnce($"clipmap|{self.gameObject.name}|{name}",
                     $"remapped HK clip '{name}' -> Hornet '{mapped}' on '{self.gameObject.name}'");
                 if (loopStartClips.Contains(name)) self.PlayFromFrame(clip, clip.loopStart);
