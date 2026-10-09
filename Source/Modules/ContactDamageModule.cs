@@ -59,8 +59,8 @@ public sealed class ContactDamageModule : ModuleBase {
             // hazard sitting entirely above her (now shorter) body. Hazards only; enemy combat keeps the full hurtbox.
             if (HornetSpawner.KnightHeightCollider && ssHazard != SHazard.ENEMY) {
                 var body = HornetSpawner.TerrainCollider;
-                var dmgCol = other.GetComponent<Collider2D>();
-                if (body != null && dmgCol != null && dmgCol.bounds.min.y >= body.bounds.max.y) return;
+                var hurtbox = self.GetComponent<Collider2D>();
+                if (body != null && hurtbox && IsAboveBody(other, hurtbox, body.bounds.max.y)) return;
             }
 
             var side = other.transform.position.x > self.transform.position.x ? SSide.right : SSide.left;
@@ -71,6 +71,14 @@ public sealed class ContactDamageModule : ModuleBase {
         } catch (Exception e) {
             LogError(e.Message);
         }
+    }
+
+    // A hazard can span a room with several colliders, such as Crystal Peak's "Cave Spikes Invis".
+    private static bool IsAboveBody(GameObject hazard, Collider2D hurtbox, float bodyTop) {
+        foreach (var col in hazard.GetComponents<Collider2D>())
+            if (col.enabled && col.Distance(hurtbox).isOverlapped && col.bounds.min.y < bodyTop)
+                return false;
+        return true;
     }
 
     // Allowlist for specific attacks that are impossible to dodge and are balanced around shade cloak.

@@ -42,6 +42,7 @@
 - Fix Hornet snapping up from a kneel after dropping out of the Distant Village web trap: she now lands hard and rises
 - Show Silksong's action names and Hornet's buttons in HK's control reminders, such as her silk skill button after
   Vengeful Spirit and up + Clawline for the Crystal Heart
+- Fix spikes not hurting Hornet in rooms whose spikes are one object spread over several areas, such as Crystal Peak's
 
 ## v0.4.0
 
