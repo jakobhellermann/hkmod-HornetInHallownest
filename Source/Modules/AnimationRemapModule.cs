@@ -29,11 +29,12 @@ public sealed class AnimationRemapModule : ModuleBase {
         ["Look At King"] = "Idle"
     };
 
-    // Clips a scene plays for something other than what they mean everywhere else: Elderbug takes the Delicate Flower
-    // from the hero's hands, and the Collector's Map lies at her height.
+    // Elderbug takes the Delicate Flower from the hero's hands, the Collector's Map lies at her height, and the web trap
+    // drops her with no get-up after.
     private static readonly Dictionary<(string Scene, string Clip), string> sceneClipMap = new() {
         [("Town", "Collect SD 1")] = "Collect Stand 1",
-        [("Ruins2_11", "Collect SD 1")] = "Collect Stand 1"
+        [("Ruins2_11", "Collect SD 1")] = "Collect Stand 1",
+        [("Deepnest_Spider_Town", "DJ Get Land")] = "HardLand"
     };
 
     // These clips are looping, but the orig HK clip play expects an animation finished event.
