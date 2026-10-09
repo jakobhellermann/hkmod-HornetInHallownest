@@ -39,6 +39,7 @@ public sealed class SceneFixesModule : ModuleBase {
         if (birthplaceForcedCharm && scene.name != "Abyss_06_Core") RestoreBirthplaceCharm();
         screamGet = scene.name == "Abyss_12" ? FindScreamGetFsm() : null;
         blizzardRescue = scene.name == "Deepnest_East_12" ? FindBlizzardRescueFsm() : null;
+        pathOfPainEnd = scene.name == "White_Palace_20" ? GameObject.Find("End Scene") : null;
         inShamanTemple = scene.name == "Crossroads_ShamanTemple";
 
         switch (scene.name) {
@@ -125,6 +126,7 @@ public sealed class SceneFixesModule : ModuleBase {
     public override void HornetActiveUpdate(Silksong::HeroController hero) {
         HoldThroughScreamGet(hero);
         HoldThroughBlizzardRescue(hero);
+        FaceKingAtPathOfPainEnd(hero);
     }
 
     // The Knight's Spell Control keeps him without input or animation control until the cutscene reaches "End". Hornet's
@@ -202,6 +204,26 @@ public sealed class SceneFixesModule : ModuleBase {
         var go = GameObject.Find("Hornet Blizzard Return Scene");
         if (!go) return null;
         return go.GetComponents<PlayMakerFSM>().FirstOrDefault(fsm => fsm.FsmName == "Control");
+    }
+
+    #endregion
+
+    #region Path of Pain end
+
+    private GameObject? pathOfPainEnd;
+
+    // The Knight's clip looks up at the King wherever he stands, but the NPC turn before it faces the hero to the middle
+    // of the scene, away from the King when she comes from his side.
+    private void FaceKingAtPathOfPainEnd(Silksong::HeroController hero) {
+        if (!pathOfPainEnd) return;
+        var convo = pathOfPainEnd!.GetComponents<PlayMakerFSM>()
+            .FirstOrDefault(fsm => fsm.FsmName == "Conversation Control");
+        var king = pathOfPainEnd.transform.Find("initial_loop/End Scene King");
+        if (!convo || convo.ActiveStateName != "Hero Anim" || !king) return;
+        var kingRight = king.position.x > hero.transform.position.x;
+        if (kingRight == hero.cState.facingRight) return;
+        if (kingRight) hero.FaceRight();
+        else hero.FaceLeft();
     }
 
     #endregion

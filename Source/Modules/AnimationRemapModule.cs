@@ -26,7 +26,7 @@ public sealed class AnimationRemapModule : ModuleBase {
         ["ToProne"] = "Abyss Kneel",
         ["Collect Acid"] = "Collect Normal 1",
         ["Collect StandToIdle"] = "Collect Stand 3",
-        ["Look At King"] = "LookUp"
+        ["Look At King"] = "Idle"
     };
 
     // Clips a scene plays for something other than what they mean everywhere else: Elderbug takes the Delicate Flower
