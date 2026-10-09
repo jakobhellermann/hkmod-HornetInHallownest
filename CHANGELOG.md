@@ -44,6 +44,7 @@
   Vengeful Spirit and up + Clawline for the Crystal Heart
 - Fix spikes not hurting Hornet in rooms whose spikes are one object spread over several areas, such as Crystal Peak's
 - Fix geo rocks, levers and breakable walls ignoring Hornet's slashes once her Crystal Heart has hit them
+- Fix the Crystal Heart's charge glow staying under Hornet after she flies with it
 
 ## v0.4.0
 

@@ -34,6 +34,8 @@ public sealed class CrystalHeartModule : ModuleBase {
         "Effects/SD Crystal Burst W", "SuperDash Damage"
     ];
 
+    private static readonly string[] chargeEffects = ["SD Charge", "SD Charge Wall"];
+
     private bool superdashing;
     private GameObject? effects;
 
@@ -226,7 +228,10 @@ public sealed class CrystalHeartModule : ModuleBase {
             copy.name = source.name;
             copy.transform.localPosition = knight.transform.InverseTransformPoint(source.position);
             foreach (var fsm in copy.GetComponentsInChildren<PlayMakerFSM>(true)) fsm.enabled = true;
-            foreach (var renderer in copy.GetComponentsInChildren<Renderer>(true)) renderer.enabled = true;
+            // The charge effects' faders draw them from UP on. Drawn earlier, the one a superdash doesn't charge with
+            // loops its default clip, whose frames undo the fader's fade.
+            var drawn = Array.IndexOf(chargeEffects, copy.name) < 0;
+            foreach (var renderer in copy.GetComponentsInChildren<Renderer>(true)) renderer.enabled = drawn;
         }
 
         return effects;
