@@ -19,7 +19,14 @@ public sealed class AnimationRemapModule : ModuleBase {
         ["Challenge Start"] = "Challenge Strong",
         ["Challenge End"] = "ChallengeStrongToIdle",
         ["Collect Magical Fall"] = "Fall",
-        ["Dreamer Land"] = "Idle Hurt"
+        ["Dreamer Land"] = "Idle Hurt",
+        ["Collect Magical 1"] = "Collect Memory Orb",
+        ["Collect Shadow"] = "Collect Memory Orb",
+        ["DJ Get Land"] = "Collect Normal 1",
+        ["ToProne"] = "FallToProstrate",
+        ["Collect Acid"] = "Collect Normal 1",
+        ["Collect StandToIdle"] = "Collect Stand 3",
+        ["Look At King"] = "LookUp"
     };
 
     // These clips are looping, but the orig HK clip play expects an animation finished event.

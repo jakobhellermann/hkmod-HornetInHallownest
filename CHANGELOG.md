@@ -27,6 +27,8 @@
   dialogue and invisible in the dream
 - Hornet now wakes lying down after leaving a dream and gets up on input like the Knight, and the white flash of later
   dreamer visions shows again
+- Show Hornet instead of a Knight sprite when taking a spell, the Dream Nail or Monarch Wings, and in the dreamers'
+  visions
 
 ## v0.4.0
 
