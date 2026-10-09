@@ -10,11 +10,11 @@ namespace HornetInHallownest.Modules;
 // Required for FSMs waiting for certain animation events.
 public sealed class AnimationRemapModule : ModuleBase {
     private static readonly Dictionary<string, string> clipMap = new() {
-        ["Collect SD 1"] = "Collect Normal 3",
+        ["Collect SD 1"] = "Collect Normal 1",
         ["Collect SD 1 Back"] = "Collect Normal 3",
         ["Collect SD 2"] = "Collect Normal 3",
         ["Collect SD 3"] = "Collect Normal 3",
-        ["Collect SD 4"] = "Collect Normal 3",
+        ["Collect SD 4"] = "Collect Normal 1",
         ["Collect Heart Piece End"] = "Collect Normal 3",
         ["Challenge Start"] = "Challenge Strong",
         ["Challenge End"] = "ChallengeStrongToIdle",

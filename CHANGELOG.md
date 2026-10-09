@@ -29,6 +29,8 @@
   dreamer visions shows again
 - Show Hornet instead of a Knight sprite when taking a spell, the Dream Nail or Monarch Wings, and in the dreamers'
   visions
+- Fix Hornet playing her pickup animation again after the message for a big item, such as the Mantis Claw, and getting
+  up twice after the Crystal Heart's
 
 ## v0.4.0
 
