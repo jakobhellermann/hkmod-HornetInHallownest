@@ -137,6 +137,11 @@
 - Fix Hornet's message for a spell or ability from a pickup cutscene, such as Desolate Dive, showing before the
   cutscene and HK's screen after it, and the arena staying locked once it's closed
 - Let Hornet's down-dash break Desolate Dive floors only once Desolate Dive is earned
+- Announce the Faydown Cloak, Elegy of the Deep and Beastling Call with Silksong's own screen in place of HK's when
+  Hornet gets Monarch Wings, the Dream Nail or Dreamgate
+- Show Silksong's first-tool tutorial in place of HK's first-charm tutorial, and leave out HK's charm reminder at
+  benches for Hornet
+- Fix the silk skill message never closing when Hornet's crest has nothing equipped yet, such as on a new save
 
 ## v0.4.0
 

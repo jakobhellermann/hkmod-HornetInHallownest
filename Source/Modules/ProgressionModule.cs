@@ -1,14 +1,17 @@
 extern alias Silksong;
 extern alias SilksongLoc;
+extern alias SilksongPM;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
+using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
 using Modding;
 using UnityEngine;
+using UnityEngine.U2D;
 using SPlayerData = Silksong::PlayerData;
 using SToolCrest = Silksong::ToolCrest;
 using SToolItem = Silksong::ToolItem;
@@ -32,19 +35,22 @@ public sealed class ProgressionModule : ModuleBase {
     private const int ExtraYellowSlotNotches = 11;
     private const string StartingCrest = "Hunter";
     private const string CharmGetMsg = "Charm Get Msg";
+    private const string CharmTutorialMsg = "Charm Tutorial Msg";
+    private const string CharmBenchMsg = "Charm Equip Msg";
+    private const string CharmBenchMsgDown = "CHARM MSG DOWN";
     private static readonly string[] silkshots = ["WebShot Weaver", "WebShot Forge", "WebShot Architect"];
-    private static readonly string[] hkItemMsgs = ["UI Msg Get Item(Clone)", "Relic Get Msg(Clone)"];
     private const string GetItemMsgEnd = "GET ITEM MSG END";
     private const string MemoryLocket = "Crest Socket Unlocker";
     private const string PromptsBundle = "prompts_assets_all.bundle";
     private const string PowerUpMsgPath = "Assets/Prefabs/UI/Hornet UI/Ancestral_Art_Get_Prompt.prefab";
     private const string ExtraSlotMsgPath = "Assets/Prefabs/UI/Messages/Extra Tool Slot UI Msg.prefab";
     private const string SkillMsgPath = "Assets/Prefabs/UI/Hornet UI/Silk_Skill_Get_Prompt.prefab";
+    private const string ItemMsgPath = "Assets/Prefabs/UI/Messages/UI Msg Get Item.prefab";
+    private const string PromptIconsBundle = "atlases_assets_assets/sprites/_atlases/prompts.spriteatlas.bundle";
+    private const string PromptIconsPath = "Assets/Sprites/_Atlases/Prompts.spriteatlas";
 
     private static AssetBundle? promptsBundle;
-    private static int heldMsgCount;
-    private static readonly HashSet<GameObject> hiddenMsgs = [];
-    private static readonly List<Action> msgsAwaitingHk = [];
+    private static AssetBundle? promptIconsBundle;
 
     private static Flag Charm(int id) => new($"gotCharm_{id}");
 
@@ -136,12 +142,27 @@ public sealed class ProgressionModule : ModuleBase {
 
     internal static readonly Rule SylphsongRule = Earned("Sylphsong", new Flag("salubraBlessing"));
 
-    // HK abilities whose Silksong counterpart (PlayerDataSyncModule) has a full-screen message of its own.
-    private static readonly Dictionary<string, Silksong::PowerUpGetMsg.PowerUps> abilityMsgs = new() {
-        ["hasDash"] = Silksong::PowerUpGetMsg.PowerUps.Sprint,
-        ["hasWalljump"] = Silksong::PowerUpGetMsg.PowerUps.WallJump,
-        ["hasSuperDash"] = Silksong::PowerUpGetMsg.PowerUps.HarpoonDash,
-        ["hasKingsBrand"] = Silksong::PowerUpGetMsg.PowerUps.SuperJump
+    // Keyed by HK's item screens (CreateUIMsgGetItem's "Item").
+    private static readonly Dictionary<string, Silksong::PowerUpGetMsg.PowerUps> powerUpScreens = new() {
+        ["Dash"] = Silksong::PowerUpGetMsg.PowerUps.Sprint,
+        ["Walljump"] = Silksong::PowerUpGetMsg.PowerUps.WallJump,
+        ["Super Dash"] = Silksong::PowerUpGetMsg.PowerUps.HarpoonDash,
+        ["Kings Brand"] = Silksong::PowerUpGetMsg.PowerUps.SuperJump
+    };
+
+    private static readonly Dictionary<string, string> skillScreens = new() {
+        ["Fireball"] = "Silk Spear",
+        ["Fireball2"] = "Silk Charge",
+        ["Quake"] = "Parry",
+        ["Quake 2"] = "Silk Bomb",
+        ["Scream"] = "Thread Sphere",
+        ["Scream 2"] = "Silk Boss Needle"
+    };
+
+    private static readonly Dictionary<string, (string Item, string Icon)> itemScreens = new() {
+        ["Double Jump"] = ("Double Jump", "Hornet_Double_Jump_Prompt"), // Faydown Cloak
+        ["Dream Nail"] = ("Memory Melody", "deep_melody_prompts"), // Elegy of the Deep
+        ["Dreamgate"] = ("Bellbeast Melody", "bellbeast_melody_prompts") // Beastling Call
     };
 
     internal static readonly Rule[] LocketRules = [
@@ -183,9 +204,6 @@ public sealed class ProgressionModule : ModuleBase {
 
     private bool OnSetBool(string name, bool value) {
         QueueApply(name);
-        if (value && HeroSwitch.HornetActive && abilityMsgs.TryGetValue(name, out var powerUp) &&
-            !PlayerData.instance.GetBool(name))
-            ShowInPlaceOfHkMsg(() => ShowPowerUpMsg(powerUp));
         return value;
     }
 
@@ -195,7 +213,8 @@ public sealed class ProgressionModule : ModuleBase {
     }
 
     // HK's message for a picked-up charm shows where Hornet's message for its reward does, so it isn't created while
-    // she's active. The pickup carries on without waiting for it.
+    // she's active. The pickup carries on without waiting for it. The pickup closes its first charm's tutorial on a
+    // button press, which also dismisses Silksong's tutorial for the first tool shown in its place.
     private static void OnCreateObject(Action<CreateObject> orig, CreateObject self) {
         var prefab = self.gameObject.Value;
         if (HeroSwitch.HornetActive && prefab && prefab.name == CharmGetMsg) {
@@ -203,15 +222,57 @@ public sealed class ProgressionModule : ModuleBase {
             return;
         }
 
+        if (HeroSwitch.HornetActive && prefab && prefab.name == CharmBenchMsg) {
+            self.Fsm.Event(CharmBenchMsgDown);
+            self.Finish();
+            return;
+        }
+
+        if (HeroSwitch.HornetActive && prefab && prefab.name == CharmTutorialMsg && CharmTool(self) is { } tool) {
+            Silksong::ToolTutorialMsg.Spawn(tool);
+            self.Finish();
+            return;
+        }
+
         orig(self);
     }
 
+    private static SToolItem? CharmTool(CreateObject create) {
+        var charm = FindLaterAction<SetFsmInt>(create, setId => setId.variableName.Value == "ID");
+        var rule = charm == null ? null : ToolRules.FirstOrDefault(r => r.Flags.Contains(Charm(charm.setValue.Value)));
+        return rule == null ? null : SToolItemManager.GetToolByName(rule.Reward);
+    }
+
     private static void OnCreateUIMsgGetItem(Action<CreateUIMsgGetItem> orig, CreateUIMsgGetItem self) {
+        var item = FindLaterAction<SetFsmString>(self, setItem => setItem.variableName.Value == "Item")?.setValue.Value;
+        if (HeroSwitch.HornetActive && HasHornetScreen(item)) {
+            var fsm = self.Fsm;
+            ShowHornetScreen(item!, () => fsm.Event(GetItemMsgEnd));
+            self.Finish();
+            return;
+        }
+
         orig(self);
-        var shows = msgsAwaitingHk.ToArray();
-        msgsAwaitingHk.Clear();
-        foreach (var show in shows) show();
-        if (heldMsgCount > 0) HideMsg(self.storeObject.Value);
+    }
+
+    // HK's messages are filled in by later actions of the state that creates them.
+    private static T? FindLaterAction<T>(FsmStateAction action, Func<T, bool> match) where T : FsmStateAction {
+        var actions = action.State.Actions;
+        for (var i = Array.IndexOf(actions, action) + 1; i < actions.Length; i++)
+            if (actions[i] is T later && match(later))
+                return later;
+        return null;
+    }
+
+    private static bool HasHornetScreen(string? item) =>
+        item != null &&
+        (powerUpScreens.ContainsKey(item) || skillScreens.ContainsKey(item) || itemScreens.ContainsKey(item));
+
+    private static void ShowHornetScreen(string item, Action afterMsg) {
+        if (powerUpScreens.TryGetValue(item, out var powerUp)) ShowPowerUpMsg(powerUp, afterMsg);
+        else if (itemScreens.TryGetValue(item, out var itemScreen))
+            ShowItemMsg(itemScreen.Item, itemScreen.Icon, afterMsg);
+        else ShowSkillMsg(SToolItemManager.GetToolByName(skillScreens[item]) as Silksong::ToolItemSkill, afterMsg);
     }
 
     // The hooks run before HK stores the new value, so apply on the next frame.
@@ -243,10 +304,9 @@ public sealed class ProgressionModule : ModuleBase {
             // before this runs.
             var skill = tool as Silksong::ToolItemSkill;
             if (earned && (!tool.IsUnlocked || (skill && !tool.SavedData.IsUnlocked))) {
-                // Silksong announces each silk skill with its own full-screen message.
+                // A silk skill is announced in place of HK's screen for its spell (skillScreens).
                 tool.Unlock(null, showPopups && !skill ? SToolItem.PopupFlags.ItemGet : SToolItem.PopupFlags.None);
                 MarkUnlocked(tool);
-                if (showPopups && skill) ShowInPlaceOfHkMsg(() => ShowSkillMsg(skill));
             }
             else if (!earned && tool.IsUnlocked) {
                 LockTool(tool);
@@ -388,81 +448,86 @@ public sealed class ProgressionModule : ModuleBase {
     }
 
     // Given an end callback, the skill message leaves bringing the HUD back to it.
-    private static void ShowSkillMsg(Silksong::ToolItemSkill skill) {
+    private static void ShowSkillMsg(Silksong::ToolItemSkill? skill, Action? afterMsg = null) {
         var prefab = LoadPromptPrefab(SkillMsgPath);
         var msg = prefab ? prefab.GetComponent<Silksong::SkillGetMsg>() : null;
-        if (!msg) return;
-        ShowHeldMsg(afterMsg => Silksong::SkillGetMsg.Spawn(msg, skill, () => {
+        if (!msg || !skill) {
+            afterMsg?.Invoke();
+            return;
+        }
+
+        // Silksong equips a new skill before announcing it, and the message reads the crest's slots that equipping
+        // fills in: a new save's crest has none.
+        SToolItemManager.AutoEquip(skill);
+        ShowHeldMsg(end => Silksong::SkillGetMsg.Spawn(msg, skill, () => {
             Silksong::GameCameras.instance.HUDIn();
-            afterMsg();
-        }));
+            end();
+        }), afterMsg);
     }
 
-    private static void ShowPowerUpMsg(Silksong::PowerUpGetMsg.PowerUps powerUp) {
+    private static void ShowPowerUpMsg(Silksong::PowerUpGetMsg.PowerUps powerUp, Action? afterMsg = null) {
         var prefab = LoadPromptPrefab(PowerUpMsgPath);
         var msg = prefab ? prefab.GetComponent<Silksong::PowerUpGetMsg>() : null;
-        if (!msg) return;
-        ShowHeldMsg(afterMsg => Silksong::PowerUpGetMsg.Spawn(msg, powerUp, afterMsg));
+        if (!msg) {
+            afterMsg?.Invoke();
+            return;
+        }
+
+        ShowHeldMsg(end => Silksong::PowerUpGetMsg.Spawn(msg, powerUp, end), afterMsg);
     }
 
-    // Hornet's message for a reward HK announces with a screen of its own takes that screen's place, so it waits for the
-    // screen to come up: some pickups, such as Desolate Dive, play a cutscene between the reward and the screen.
-    private static void ShowInPlaceOfHkMsg(Action show) {
-        if (UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None)
-            .Any(msg => Array.IndexOf(hkItemMsgs, msg.name) >= 0))
-            show();
-        else
-            msgsAwaitingHk.Add(show);
+    // The screen's own FSM picks its text by the item and reports its end to every register of the event; a register
+    // stays subscribed until destroyed, so the screen goes with it.
+    private static void ShowItemMsg(string item, string icon, Action afterMsg) {
+        var prefab = LoadPromptPrefab(ItemMsgPath);
+        if (!prefab) {
+            afterMsg();
+            return;
+        }
+
+        ShowHeldMsg(end => {
+            Silksong::GameCameras.instance.HUDOut();
+            var msg = UnityEngine.Object.Instantiate(prefab, Vector3.zero, Quaternion.identity);
+            if (msg.transform.Find("Icon") is { } iconSlot)
+                iconSlot.GetComponent<SpriteRenderer>().sprite = LoadPromptIcon(icon);
+            msg.SetActive(true);
+            msg.GetComponents<SilksongPM::PlayMakerFSM>().First(fsm => fsm.FsmName == "Msg Control").FsmVariables
+                .FindFsmString("Item").Value = item;
+            Silksong::EventRegister.GetRegisterGuaranteed(msg, GetItemMsgEnd).ReceivedEvent += () => {
+                UnityEngine.Object.Destroy(msg);
+                Silksong::GameCameras.instance.HUDIn();
+                end();
+            };
+        }, afterMsg);
     }
 
     // A cutscene that already holds her lets her go itself, and expects her animation to stay its own until then.
-    private static void ShowHeldMsg(Action<Action> spawn) {
+    private static void ShowHeldMsg(Action<Action> spawn, Action? afterMsg = null) {
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
         if (hero && hero.controlReqlinquished) hero = null;
         if (hero) hero.RelinquishControl();
-        heldMsgCount++;
-        HideHkItemMsgs();
         spawn(() => {
-            if (--heldMsgCount == 0) EndHiddenMsgs();
             if (hero) hero.RegainControl();
+            afterMsg?.Invoke();
         });
     }
 
-    // Hornet's full-screen message stands in for HK's screen for the same pickup. HK's is hidden, then ended with
-    // Hornet's, since the pickup waits for it.
-    private static void HideHkItemMsgs() {
-        foreach (var msg in UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
-            if (Array.IndexOf(hkItemMsgs, msg.name) >= 0)
-                HideMsg(msg);
-    }
-
-    // HK's message switches its parts' renderers back on as it fades them in, but leaves its own scale alone.
-    private static void HideMsg(GameObject? msg) {
-        if (!msg) return;
-        msg.transform.localScale = Vector3.zero;
-        hiddenMsgs.Add(msg);
-    }
-
-    // HK's message ends in the state that tells the pickup it's done and destroys the message.
-    private static void EndHiddenMsgs() {
-        foreach (var msg in hiddenMsgs.Where(msg => msg))
-        foreach (var fsm in msg.GetComponents<PlayMakerFSM>()) {
-            var end = fsm.FsmStates.FirstOrDefault(state =>
-                state.Actions.OfType<SendEventByName>().Any(action => action.sendEvent.Value == GetItemMsgEnd));
-            if (end != null) fsm.SetState(end.Name);
-        }
-
-        hiddenMsgs.Clear();
-    }
-
-    // The message prefabs have no Addressables key. Their bundle may already be mounted by Addressables, and a second
-    // LoadFromFile of a mounted bundle throws.
     private static GameObject? LoadPromptPrefab(string path) {
-        if (!promptsBundle)
-            promptsBundle = AssetBundle.GetAllLoadedAssetBundles().FirstOrDefault(b => b && b.Contains(path)) ??
-                            AssetBundle.LoadFromFile(Paths.SilksongAddressablesBundle(PromptsBundle));
+        if (!promptsBundle) promptsBundle = FindOrLoadBundle(PromptsBundle, path);
         return promptsBundle ? promptsBundle.LoadAsset<GameObject>(path) : null;
     }
+
+    private static Sprite? LoadPromptIcon(string name) {
+        if (!promptIconsBundle) promptIconsBundle = FindOrLoadBundle(PromptIconsBundle, PromptIconsPath);
+        var atlas = promptIconsBundle ? promptIconsBundle.LoadAsset<SpriteAtlas>(PromptIconsPath) : null;
+        return atlas ? atlas.GetSprite(name) : null;
+    }
+
+    // The message prefabs and their icons have no Addressables key. Their bundle may already be mounted by Addressables,
+    // and a second LoadFromFile of a mounted bundle throws.
+    private static AssetBundle? FindOrLoadBundle(string file, string path) =>
+        AssetBundle.GetAllLoadedAssetBundles().FirstOrDefault(b => b && b.Contains(path)) ??
+        AssetBundle.LoadFromFile(Paths.SilksongAddressablesBundle(file));
 
     private static bool IsSuperseded(SToolCrest crest) {
         var upgradedCrest = crest.GetFieldValue<SToolCrest>("upgradedVersion");
