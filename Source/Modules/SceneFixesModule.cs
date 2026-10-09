@@ -38,6 +38,7 @@ public sealed class SceneFixesModule : ModuleBase {
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
         if (birthplaceForcedCharm && scene.name != "Abyss_06_Core") RestoreBirthplaceCharm();
         screamGet = scene.name == "Abyss_12" ? FindScreamGetFsm() : null;
+        blizzardRescue = scene.name == "Deepnest_East_12" ? FindBlizzardRescueFsm() : null;
         inShamanTemple = scene.name == "Crossroads_ShamanTemple";
 
         switch (scene.name) {
@@ -121,7 +122,10 @@ public sealed class SceneFixesModule : ModuleBase {
     private bool holdingForScreamGet;
     private static readonly string[] screamGetFallStates = ["Fall", "Land", "Ui Msg", "Get Up"];
 
-    public override void HornetActiveUpdate(Silksong::HeroController hero) => HoldThroughScreamGet(hero);
+    public override void HornetActiveUpdate(Silksong::HeroController hero) {
+        HoldThroughScreamGet(hero);
+        HoldThroughBlizzardRescue(hero);
+    }
 
     // The Knight's Spell Control keeps him without input or animation control until the cutscene reaches "End". Hornet's
     // animation control would replace the "Get Up" clip the cutscene waits on, so it never ends.
@@ -161,6 +165,43 @@ public sealed class SceneFixesModule : ModuleBase {
         }
 
         orig(fsm, to);
+    }
+
+    #endregion
+
+    #region Blizzard rescue (after King's Brand)
+
+    private PlayMakerFSM? blizzardRescue;
+    private bool holdingForBlizzardRescue;
+
+    private static readonly string[] blizzardRescueStates =
+        ["Fade Pause", "Fade In", "Burst", "Land", "Leave Antic", "Leave", "Left", "Get Up"];
+
+    // HK's Hornet carries the Knight out of the avalanche and leaves him lying until a button gets him up. Her own animation
+    // control would replace the get-up clip the cutscene waits on, so it never ends.
+    private void HoldThroughBlizzardRescue(Silksong::HeroController hero) {
+        var holding = blizzardRescue && Array.IndexOf(blizzardRescueStates, blizzardRescue!.ActiveStateName) >= 0;
+        if (!holding) {
+            if (!holdingForBlizzardRescue) return;
+            holdingForBlizzardRescue = false;
+            hero.RegainControl();
+            hero.StartAnimationControl();
+            return;
+        }
+
+        if (!holdingForBlizzardRescue && blizzardRescue!.GetComponent<tk2dSprite>() is { } rescuer)
+            rescuer.color = Color.clear;
+        holdingForBlizzardRescue = true;
+        if (!hero.controlReqlinquished || hero.acceptingInput) hero.RelinquishControl();
+        if (hero.AnimCtrl.controlEnabled) hero.StopAnimationControl();
+        if (blizzardRescue!.ActiveStateName != "Get Up" && hero.AnimCtrl.animator.CurrentClip?.name != "Prostrate")
+            hero.AnimCtrl.PlayClipForced("Prostrate");
+    }
+
+    private static PlayMakerFSM? FindBlizzardRescueFsm() {
+        var go = GameObject.Find("Hornet Blizzard Return Scene");
+        if (!go) return null;
+        return go.GetComponents<PlayMakerFSM>().FirstOrDefault(fsm => fsm.FsmName == "Control");
     }
 
     #endregion

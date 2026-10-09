@@ -31,6 +31,8 @@
   visions
 - Fix Hornet playing her pickup animation again after the message for a big item, such as the Mantis Claw, and getting
   up twice after the Crystal Heart's
+- Fix Hornet walking off while HK's Hornet rescues the Knight from the King's Brand avalanche next to her, and her HUD
+  staying hidden afterwards: she now lies there and gets up on input
 
 ## v0.4.0
 
