@@ -447,7 +447,7 @@ public sealed class ProgressionModule : ModuleBase {
         RetitleMsg("UI_MSG_TITLE_EXTRASLOT_PREFIX", "Tools", $"UI_MSG_TITLE_EXTRASLOT_PREFIX_{slotNumber}");
     }
 
-    // Given an end callback, the skill message leaves bringing the HUD back to it.
+    // Given an end callback, the skill and power-up messages leave bringing the HUD back to it.
     private static void ShowSkillMsg(Silksong::ToolItemSkill? skill, Action? afterMsg = null) {
         var prefab = LoadPromptPrefab(SkillMsgPath);
         var msg = prefab ? prefab.GetComponent<Silksong::SkillGetMsg>() : null;
@@ -473,7 +473,10 @@ public sealed class ProgressionModule : ModuleBase {
             return;
         }
 
-        ShowHeldMsg(end => Silksong::PowerUpGetMsg.Spawn(msg, powerUp, end), afterMsg);
+        ShowHeldMsg(end => Silksong::PowerUpGetMsg.Spawn(msg, powerUp, () => {
+            Silksong::GameCameras.instance.HUDIn();
+            end();
+        }), afterMsg);
     }
 
     // The screen's own FSM picks its text by the item and reports its end to every register of the event; a register

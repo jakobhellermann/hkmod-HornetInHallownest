@@ -142,6 +142,8 @@
 - Show Silksong's first-tool tutorial in place of HK's first-charm tutorial, and leave out HK's charm reminder at
   benches for Hornet
 - Fix the silk skill message never closing when Hornet's crest has nothing equipped yet, such as on a new save
+- Fix Hornet's masks and silk spool staying hidden after the message for Swift Step, Cling Grip, Clawline, Silk Soar
+  or Sylphsong
 
 ## v0.4.0
 
