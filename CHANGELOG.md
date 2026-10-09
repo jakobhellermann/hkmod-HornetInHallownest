@@ -40,6 +40,8 @@
 - Fix Hornet crouching in front of Elderbug instead of holding out the Delicate Flower to him, and for the Collector's
   Map lying at her height
 - Fix Hornet snapping up from a kneel after dropping out of the Distant Village web trap: she now lands hard and rises
+- Show Silksong's action names and Hornet's buttons in HK's control reminders, such as her silk skill button after
+  Vengeful Spirit and up + Clawline for the Crystal Heart
 
 ## v0.4.0
 

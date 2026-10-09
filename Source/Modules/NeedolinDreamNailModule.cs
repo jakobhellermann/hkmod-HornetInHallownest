@@ -1,6 +1,5 @@
 extern alias Silksong;
 using System;
-using GlobalEnums;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
 using HutongGames.PlayMaker;
@@ -31,8 +30,6 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
 
     private static void OnSwitchState(Action<Fsm, FsmState> orig, Fsm self, FsmState to) {
         orig(self, to);
-        if (self is { Name: "Display", GameObjectName: "Control Reminder" }) ShowDreamerReminder(self, to);
-
         if (self is { Name: "Control", GameObjectName: "Dreamer NPC" } && to.Name == "End Start")
             drainEndScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
     }
@@ -47,25 +44,6 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         }
 
         if (!hero.controlReqlinquished || hero.acceptingInput) hero.RelinquishControl();
-    }
-
-    // A dreamer's dream prompts "Hold [Cast] Focus" through the HUD Control Reminder's "Display" FSM; Hornet drains the
-    // dreamer with Needolin on the Dream Nail bind instead.
-    private static void ShowDreamerReminder(Fsm self, FsmState to) {
-        var reminder = self.GameObject.transform;
-        var needolin = to.Name == "Focus" && HeroSwitch.HornetActive &&
-                       UnityEngine.SceneManagement.SceneManager.GetActiveScene().name
-                           .StartsWith("Dream_Guardian_", StringComparison.Ordinal);
-        var cast = reminder.Find("ActionButton Cast");
-        if (cast && cast.TryGetComponent<ActionButtonIcon>(out var icon)) {
-            var action = needolin ? HeroActionButton.DREAM_NAIL : HeroActionButton.CAST;
-            if (icon.action != action) icon.SetAction(action);
-        }
-
-        var text = reminder.Find("Text");
-        if (!needolin || !text) return;
-        var label = Array.Find(text.GetComponents<Component>(), c => c.GetType().Name == "TextMeshPro");
-        if (label) label.SetPropertyValue("text", "Needolin");
     }
 
     protected override void OnDeinitialize() {
