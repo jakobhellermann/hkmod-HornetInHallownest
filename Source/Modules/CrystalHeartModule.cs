@@ -135,8 +135,9 @@ public sealed class CrystalHeartModule : ModuleBase {
 
         // Per frame, not per physics step: a jump or harpoon press lasts one frame.
         var hitWall = false;
-        for (var time = 0f; !IsInterrupted(hero); time += Time.deltaTime) {
+        for (var time = 0f;; time += Time.deltaTime) {
             yield return null;
+            if (IsInterrupted(hero)) break;
             if (hero.cState.transitioning) {
                 while (!IsInterrupted(hero) && hero.cState.transitioning) yield return null;
                 if (IsInterrupted(hero)) break;
@@ -168,13 +169,15 @@ public sealed class CrystalHeartModule : ModuleBase {
             Activate(fx, "SD Break", true);
             Shake("EnemyKillShake");
             hero.AnimCtrl.PlayClipForced(AirBrakeClip);
-            for (var time = 0f; time < AirBrakeTime && !IsInterrupted(hero); time += Time.fixedDeltaTime) {
+            for (var time = 0f; time < AirBrakeTime; time += Time.fixedDeltaTime) {
                 yield return new WaitForFixedUpdate();
+                if (IsInterrupted(hero)) break;
                 body.linearVelocity *= AirBrakeDeceleration;
             }
         }
 
-        body.linearVelocity = Vector2.zero;
+        // A scene load can replace Hornet mid-flight, destroying the body.
+        if (body) body.linearVelocity = Vector2.zero;
         if (hitWall && !IsInterrupted(hero)) {
             superdashing = false;
             hero.AffectedByGravity(true);
