@@ -57,6 +57,8 @@
   session, and her part of the save file growing with every load
 - Fix a save made before installing the mod giving Hornet the tools, crests and items of the save played before it
 - Fix Hornet's death in Steel Soul mode leaving a black screen and reviving her instead of ending the game
+- Fix Hornet's charged slash giving no silk on HK enemies, and her hits there ignoring Silksong's rules for which hits
+  give silk
 
 ## v0.4.0
 

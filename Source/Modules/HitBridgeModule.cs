@@ -26,6 +26,7 @@ public sealed class HitBridgeModule : ModuleBase {
 
     private static Silksong::DamageEnemies? currentDamager;
     private static Fsm? damagerFsm;
+    internal static SHitInstance? ForwardedHit;
 
     public override void Initialize() {
         Detour(typeof(Silksong::HitTaker), "GetHitResponders", OnGetHitResponders,
@@ -148,8 +149,9 @@ public sealed class HitBridgeModule : ModuleBase {
     }
 
     private static void OnSoulGain(Action<HeroController> orig, HeroController self) {
-        if (HeroSwitch.HornetActive && HornetSpawner.Hornet is { } hero) hero.SilkGain();
-        else orig(self);
+        if (!HeroSwitch.HornetActive || HornetSpawner.Hornet is not { } hero) orig(self);
+        else if (ForwardedHit is { } hit) hero.SilkGain(hit);
+        else hero.SilkGain();
     }
 }
 
@@ -163,7 +165,9 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
 
     internal SIHit.HitResponse ForwardHit(SHitInstance si) {
         var isUnhandledAttackType = (int)si.AttackType > (int)AttackTypes.NailBeam;
-        var attackType = isUnhandledAttackType ? AttackTypes.Generic : (AttackTypes)si.AttackType;
+        var attackType = si is { AttackType: SAttackTypes.Heavy, IsNailTag: true } ? AttackTypes.Nail
+            : isUnhandledAttackType ? AttackTypes.Generic
+            : (AttackTypes)si.AttackType;
         // Allow e.g. silkspear to pierce enemies with a shield
         if ((si.SpecialType & SSpecialTypes.Piercer) != 0) attackType = AttackTypes.Spell;
         if (si.CriticalHit) ApplyCrit(ref si);
@@ -179,7 +183,13 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
             MoveAngle = si.MoveAngle,
             IgnoreInvulnerable = true, // prevent iframes
         };
-        Responder.Hit(hkHit);
+        HitBridgeModule.ForwardedHit = si;
+        try {
+            Responder.Hit(hkHit);
+        } finally {
+            HitBridgeModule.ForwardedHit = null;
+        }
+
         RewardHero(si);
 
         if (si.Source && !(nonBouncer && nonBouncer.active)) {
