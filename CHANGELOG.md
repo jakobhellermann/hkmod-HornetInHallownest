@@ -67,6 +67,8 @@
 - Drain Hornet's silk in the Hall of Gods and pantheons where the Knight loses his soul, and refill her tools when she
   leaves a pantheon
 - Make Hornet's tool and nail statuses, such as the Pollip Pouch's poison and Flintslate's fire, work on HK enemies
+- Fix Hornet's tool counters showing the old amounts after her HUD comes back, such as refilled tools after losing a
+  pantheon
 
 ## v0.4.0
 

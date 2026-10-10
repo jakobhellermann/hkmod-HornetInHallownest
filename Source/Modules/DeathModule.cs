@@ -171,14 +171,6 @@ public sealed class DeathModule : ModuleBase {
             }
 
             Revive(HeroController.UnsafeInstance);
-
-            // Revive toggled the Hornet HUD off; the tool-icon refresh is lost across that toggle (ToolHudIcon doesn't
-            // re-read on re-enable), so re-fire it once the HUD is active again (two frames covers the re-activation).
-            if (PlayerData.instance.atBench) {
-                yield return null;
-                yield return null;
-                BenchModule.RefreshToolHud();
-            }
         } finally {
             handling = false;
             wasDead = false;

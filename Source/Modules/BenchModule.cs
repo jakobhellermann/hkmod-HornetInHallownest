@@ -2,6 +2,7 @@ extern alias Silksong;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
 using Modding;
@@ -21,6 +22,8 @@ public sealed class BenchModule : ModuleBase {
 
     public override void Initialize() {
         ModHooks.SetPlayerBoolHook += OnSetBool;
+        // A tool icon can't redraw while the HUD is hidden, and it doesn't redraw on its own when shown again.
+        GameCamerasBootstrap.HornetHudShown += RefreshToolHud;
         Detour(typeof(Silksong::ToolItemManager), "TryReplenishTools", OnTryReplenishTools, typeof(bool),
             typeof(SReplenishMethod));
     }
@@ -53,6 +56,7 @@ public sealed class BenchModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         ModHooks.SetPlayerBoolHook -= OnSetBool;
+        GameCamerasBootstrap.HornetHudShown -= RefreshToolHud;
         ResetAtBench();
     }
 
