@@ -64,8 +64,6 @@
 - Fix the Kingsoul staying equipped for good after saving in the Abyss room where Hornet opens the Birthplace floor
 - Fix the pause menu opening while Hornet dies, which let the game quit to the menu in the middle of her death
 - Fix the Knight showing in Hornet's place when quitting to the menu, and staying in her place if the save failed
-- Drain Hornet's silk in the Hall of Gods and pantheons where the Knight loses his soul, and refill her tools when she
-  leaves a pantheon
 - Make Hornet's tool and nail statuses, such as the Pollip Pouch's poison and Flintslate's fire, work on HK enemies
 - Fix Hornet's tool counters showing the old amounts after her HUD comes back, such as refilled tools after losing a
   pantheon
@@ -76,8 +74,10 @@
 - Fix a completed mask leaving Hornet's lost masks shown empty and the new mask missing from her HUD: like in
   Silksong, her masks now refill one by one and the new one appears full
 - Refill the tool uses Shell Satchel adds when Hornet equips it on a bench, without sitting down again
-- Give Hornet back the masks, silk and tools she spent in a dream boss's or Grey Prince Zote's dream
 - Make dreams work like Silksong's memories: Hornet enters at full health, and her cogflies don't follow her in or out
+- Drain Hornet's silk at the start of a Hall of Gods fight or a pantheon, where the Knight loses his soul
+- Give Hornet back the masks, silk and tools she spent in a dream boss's, Grey Prince Zote's or the Radiance's dream, a
+  Hall of Gods fight or a pantheon, whether she wins or dies there
 
 ## v0.4.0
 

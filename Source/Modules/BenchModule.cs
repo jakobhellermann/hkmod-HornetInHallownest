@@ -110,7 +110,7 @@ public sealed class BenchModule : ModuleBase {
     }
 
     // TODO: implement shell shards?
-    internal static void RefillTools() {
+    private static void RefillTools() {
         if (FillTools()) RefreshToolHud();
     }
 

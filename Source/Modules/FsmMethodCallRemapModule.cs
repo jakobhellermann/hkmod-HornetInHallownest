@@ -32,9 +32,6 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     private static readonly MethodInfo? noOpStandIn =
         typeof(FsmMethodCallRemapModule).GetMethod(nameof(HkOnlyNoOp), BindingFlags.NonPublic | BindingFlags.Static);
 
-    private static readonly MethodInfo? clearStandIn =
-        typeof(FsmMethodCallRemapModule).GetMethod(nameof(ClearSilk), BindingFlags.NonPublic | BindingFlags.Static);
-
     // HK's hot springs refill only the Knight's soul; Hornet's also heal her masks.
     private static bool SpaHeal() {
         if (HornetSpawner.Hornet is not { } hero) return true;
@@ -46,11 +43,6 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
         return true;
     }
 
-    private static bool ClearSilk() {
-        if (HornetSpawner.Hornet is { } hero) hero.TakeSilk(Silksong::PlayerData.instance.silk);
-        return true;
-    }
-
     private static bool HkOnlyNoOp() {
         return false;
     }
@@ -58,10 +50,10 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     #endregion
 
     // HK-only MP methods called on Hornet -> the stand-in that runs instead. Hornet has no soul, so most no-op; the
-    // hot-spring soul refill and the Hall of Gods' soul drain are the exceptions, mapped onto her silk and masks.
+    // hot-spring soul refill is the exception, mapped onto her silk and masks.
     private static readonly Dictionary<string, MethodInfo?> hkMethodStandIns = new() {
-        { "ClearMP", clearStandIn },
-        { "ClearMPSendEvents", clearStandIn },
+        { "ClearMP", noOpStandIn },
+        { "ClearMPSendEvents", noOpStandIn },
         { "AddMPCharge", noOpStandIn },
         { "StartMPDrain", noOpStandIn },
         { "StopMPDrain", noOpStandIn },

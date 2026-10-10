@@ -6,8 +6,7 @@ using SBossSceneController = Silksong::BossSceneController;
 
 namespace HornetInHallownest.Modules;
 
-// Apply Radiant/Ascended difficulty to hornet, drain her silk where pantheons drain the Knight's soul, and refill her
-// tools once she leaves one.
+// Apply Radiant/Ascended difficulty to hornet.
 public sealed class GodhomeDifficultyBridgeModule : ModuleBase {
     public override string Id => "boss-level-bridge";
 
@@ -16,23 +15,6 @@ public sealed class GodhomeDifficultyBridgeModule : ModuleBase {
     public override void Initialize() {
         Detour(typeof(BossSceneController), "Awake", OnAwake);
         Detour(typeof(BossSceneController), "OnDestroy", OnDestroy);
-        Detour(typeof(BossSequenceController), nameof(BossSequenceController.ApplyBindings), OnApplyBindings);
-        Detour(typeof(BossSequenceController), nameof(BossSequenceController.RestoreBindings), OnRestoreBindings);
-    }
-
-    private static void OnApplyBindings(Action orig) {
-        orig();
-        DrainSilk();
-    }
-
-    private static void OnRestoreBindings(Action orig) {
-        orig();
-        DrainSilk();
-        BenchModule.RefillTools();
-    }
-
-    private static void DrainSilk() {
-        if (HornetSpawner.Hornet is { } hero) hero.TakeSilk(Silksong::PlayerData.instance.silk);
     }
 
     private static void OnAwake(Action<BossSceneController> orig, BossSceneController self) {
