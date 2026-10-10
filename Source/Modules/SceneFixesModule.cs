@@ -6,6 +6,7 @@ using System.Linq;
 using GlobalEnums;
 using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
+using Modding;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using SFsm = SilksongPM::HutongGames.PlayMaker.Fsm;
@@ -17,6 +18,7 @@ namespace HornetInHallownest.Modules;
 public sealed class SceneFixesModule : ModuleBase {
     public override void Initialize() {
         UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        ModHooks.GetPlayerBoolHook += OnGetBool;
         // TODO: just hook into thread storm
         Detour(typeof(SFsm), "SwitchState",
             (Action<Action<SFsm, SFsmState?>, SFsm, SFsmState?>)OnSilksongSwitchState, typeof(SFsmState));
@@ -32,22 +34,19 @@ public sealed class SceneFixesModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
-        if (birthplaceForcedCharm) RestoreBirthplaceCharm();
+        ModHooks.GetPlayerBoolHook -= OnGetBool;
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
-        if (birthplaceForcedCharm && scene.name != "Abyss_06_Core") RestoreBirthplaceCharm();
         screamGet = scene.name == "Abyss_12" ? FindScreamGetFsm() : null;
         blizzardRescue = scene.name == "Deepnest_East_12" ? FindBlizzardRescueFsm() : null;
         pathOfPainEnd = scene.name == "White_Palace_20" ? GameObject.Find("End Scene") : null;
         inShamanTemple = scene.name == "Crossroads_ShamanTemple";
+        inBirthplace = scene.name == "Abyss_06_Core";
 
         switch (scene.name) {
             case "White_Palace_12":
                 DisableWhitePalace12Saws(scene);
-                break;
-            case "Abyss_06_Core":
-                OpenBirthplaceForKingsoulOwner();
                 break;
             case "Crossroads_ShamanTemple":
                 EnsureVengefulSpiritEquipped();
@@ -230,24 +229,13 @@ public sealed class SceneFixesModule : ModuleBase {
 
     #region Abyss birthplace floor
 
-    private bool birthplaceForcedCharm;
-    private bool priorEquippedCharm36;
+    private bool inBirthplace;
 
     // Hornet doesn't equip kingsoul, so pretend it is equipped in the abyss scene if we have it
     // royalCharmState 3 = King Soul, 4 = Void Heart
-    private void OpenBirthplaceForKingsoulOwner() {
-        var pd = PlayerData.instance;
-        if (pd.royalCharmState <= 2 || pd.equippedCharm_36) return;
-        priorEquippedCharm36 = pd.equippedCharm_36;
-        pd.equippedCharm_36 = true;
-        birthplaceForcedCharm = true;
-    }
-
-    private void RestoreBirthplaceCharm() {
-        birthplaceForcedCharm = false;
-        var pd = PlayerData.instance;
-        pd.equippedCharm_36 = priorEquippedCharm36;
-    }
+    private bool OnGetBool(string name, bool orig) =>
+        orig || inBirthplace && name == "equippedCharm_36" && HeroSwitch.HornetActive &&
+        PlayerData.instance.royalCharmState > 2;
 
     #endregion
 
