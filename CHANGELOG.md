@@ -145,6 +145,8 @@
 - Fix Hornet's masks and silk spool staying hidden after the message for Swift Step, Cling Grip, Clawline, Silk Soar
   or Sylphsong
 - Fix Hornet's item messages drawing over HK's relic and journal messages: they now stack above them
+- Give Hornet her whole kit in Godseeker mode: Silk Soar, every crest, tool and Silkshot, all Memory Lockets and
+  Sylphsong
 
 ## v0.4.0
 

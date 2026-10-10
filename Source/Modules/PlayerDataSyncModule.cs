@@ -22,7 +22,8 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         ["hasSuperDash"] = (ss, v) => ss.hasHarpoonDash = v, // Harpoon Dash
         ["hasDreamNail"] = (ss, v) => ss.hasNeedolinMemoryPowerup = v, // Elegy of the Deep (Needolin + down)
         ["hasDreamGate"] = (ss, v) => ss.UnlockedFastTravelTeleport = v, // Beastling Call (Needolin + up)
-        ["hasKingsBrand"] = (ss, v) => ss.hasSuperJump = v, // Silk Soar
+        // Silk Soar; Godseeker mode starts with every ability but has no King's Brand to earn it with
+        ["hasKingsBrand"] = (ss, v) => ss.hasSuperJump = v || PlayerData.instance.bossRushMode,
         ["hasCyclone"] = (ss, v) => RecomputeArts(ss, cyclone: v),
         ["hasDashSlash"] = (ss, v) => RecomputeArts(ss, dashSlash: v),
         ["hasUpwardSlash"] = (ss, v) => RecomputeArts(ss, greatSlash: v) // Great Slash
