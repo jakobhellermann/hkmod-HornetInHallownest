@@ -21,13 +21,134 @@ Please check the existing [issues](https://github.com/jakobhellermann/hkmod-Horn
 
 The changelog can be found in [CHANGELOG.md](./CHANGELOG.md).
 
-## Ability Sync
+## Progression
 
-Most abilities from Hollow Knight are automatically granted, e.g. `Vengeful Spirit` -> `Silkspear`, `Dreamnail` -> `Elegy of the Deep`
-(Needolin holding down). Plain Needolin is there from the start.
-The full list of mapping can be in [this google sheet](https://docs.google.com/spreadsheets/d/1V3tq-4Mp1XaV8E_Dwz7N1Tk0cHRW7SyeBtjGcvBrrHg).
+Hornet earns her Silksong kit through Hollow Knight's progress. Progress made as either hero counts for both; masks,
+mask shards and geo are shared outright.
 
-Currently, all crests and tools are automatically granted.
+### Abilities
+
+| Hollow Knight                                   | Hornet                                                      |
+| ----------------------------------------------- | ----------------------------------------------------------- |
+| Mothwing Cloak                                  | Swift Step                                                  |
+| Mantis Claw                                     | Cling Grip                                                  |
+| Monarch Wings                                   | Faydown Cloak and Drifter's Cloak                           |
+| Crystal Heart                                   | Clawline; hold up + Clawline to fly like the Crystal Heart  |
+| King's Brand                                    | Silk Soar                                                   |
+| Dream Nail                                      | Elegy of the Deep (Needolin holding down)                   |
+| Dreamgate                                       | Beastling Call (Needolin holding up)                        |
+| Any nail art                                    | Needle Strike                                               |
+| Nail upgrades                                   | Nail upgrades, tool pouch and crafting kit upgrades         |
+| Soul vessels and vessel fragments               | Silk spool: +1 silk per vessel fragment                     |
+| Vengeful Spirit, Desolate Dive, Howling Wraiths | Silk Hearts: one for the first spell, one for all three, one for the first upgraded spell |
+
+Plain Needolin is there from the start.
+
+### Silk skills
+
+| Silk skill   | Earned by       |
+| ------------ | --------------- |
+| Silkspear    | Vengeful Spirit |
+| Sharpdart    | Shade Soul      |
+| Cross Stitch | Desolate Dive   |
+| Rune Rage    | Descending Dark |
+| Thread Storm | Howling Wraiths |
+| Pale Nails   | Abyss Shriek    |
+
+### Crests
+
+| Crest                         | Earned by                              |
+| ----------------------------- | -------------------------------------- |
+| Hunter                        | Start                                  |
+| Hunter, second form           | 60 Hunter's Journal entries encountered |
+| Hunter, third form            | 80 Hunter's Journal entries completed  |
+| Shaman                        | All three spells upgraded              |
+| Beast                         | Herrah the Beast's dreamer mask broken |
+| Reaper                        | The Seer's reward at 200 Essence       |
+| Wanderer                      | Quirrel's farewell at Blue Lake        |
+| Architect                     | Pure Nail                              |
+| Witch                         | Lifeblood Core                         |
+
+### Tools
+
+| Tool              | Earned by                                                                     |
+| ----------------- | ----------------------------------------------------------------------------- |
+| Straight Pin      | False Knight defeated                                                         |
+| Threefold Pin     | Fragile Strength                                                              |
+| Sting Shard       | Nosk defeated                                                                 |
+| Tacks             | Isma's Tear                                                                   |
+| Longpin           | Heavy Blow                                                                    |
+| Curveclaw         | Mark of Pride                                                                 |
+| Curvesickle       | Traitor Lord defeated                                                         |
+| Throwing Ring     | Massive Moss Charger defeated                                                 |
+| Pimpillo          | Defender's Crest                                                              |
+| Conchcutter       | Shape of Unn                                                                  |
+| Silkshot          | The first dreamer whose mask breaks; Herrah, Monomon and Lurien each give a different one |
+| Snare Setter      | Glowing Womb                                                                  |
+| Delver's Drill    | Lumafly Lantern                                                               |
+| Cogwork Wheel     | Kingsoul                                                                      |
+| Cogfly            | Grimmchild's third form                                                       |
+| Rosary Cannon     | Unbreakable Greed                                                             |
+| Voltvessels       | Uumuu defeated                                                                |
+| Flintslate        | Troupe Master Grimm defeated                                                  |
+| Plasmium Phial    | Lifeblood Heart                                                               |
+| Needle Phial      | Hiveblood                                                                     |
+| Flea Brew         | Quick Slash                                                                   |
+| Warding Bell      | Baldur Shell                                                                  |
+| Injector Band     | Quick Focus                                                                   |
+| Multibinder       | Deep Focus                                                                    |
+| Reserve Bind      | Joni's Blessing                                                               |
+| Weavelight        | Soul Catcher                                                                  |
+| Spool Extender    | Soul Eater                                                                    |
+| Druid's Eye       | Grubsong                                                                      |
+| Druid's Eyes      | Grubberfly's Elegy                                                            |
+| Memory Crystal    | Thorns of Agony                                                               |
+| Sawtooth Circlet  | Sharp Shadow                                                                  |
+| Claw Mirror       | Awoken Dream Nail                                                             |
+| Claw Mirrors      | Dreamshield                                                                   |
+| Egg of Flealia    | Spell Twister                                                                 |
+| Fractured Mask    | Fragile Heart                                                                 |
+| Longclaw          | Longnail                                                                      |
+| Pin Badge         | Nailmaster's Glory                                                            |
+| Pollip Pouch      | Spore Shroom                                                                  |
+| Quick Sling       | Shaman Stone                                                                  |
+| Wispfire Lantern  | Any dream warrior defeated                                                    |
+| Volt Filament     | Flukenest                                                                     |
+| Snitch Pick       | The Collector defeated                                                        |
+| Compass           | Wayward Compass                                                               |
+| Magnetite Brooch  | Gathering Swarm                                                               |
+| Silkspeed Anklets | Sprintmaster                                                                  |
+| Scuttlebrace      | Dashmaster                                                                    |
+| Ascendant's Grip  | Crystal Guardian defeated                                                     |
+| Weighted Belt     | Steady Body                                                                   |
+| Barbed Bracelet   | Fury of the Fallen                                                            |
+| Magnetite Dice    | Stalwart Shell                                                                |
+| Thief's Mark      | Fragile Greed                                                                 |
+| Dead Bug's Purse  | Confessor Jiji summoning the shade                                            |
+| Spider Strings    | Dream Wielder                                                                 |
+| Shell Satchel     | Weaversong                                                                    |
+
+### Memory Lockets
+
+Hornet opens the locked crest slots of her choice with Memory Lockets, earned from:
+
+- each charm notch beyond the first three;
+- Grubfather's rewards at 10, 16, 23, 31 and 38 grubs;
+- the first Wanderer's Journal, Hallownest Seal, King's Idol and Arcane Egg found;
+- the Seer's rewards at 100, 700 and 1800 Essence.
+
+### Eva's upgrades
+
+| Upgrade                | Earned by          |
+| ---------------------- | ------------------ |
+| Extra blue tool slot   | 8 charm notches    |
+| Extra yellow tool slot | 11 charm notches   |
+| Sylphsong              | Salubra's Blessing |
+
+### Godseeker mode
+
+A Godseeker save starts Hornet with her whole kit: Silk Soar, every crest and tool, all three Silkshots, every Memory
+Locket and Sylphsong.
 
 ## Requirements
 
