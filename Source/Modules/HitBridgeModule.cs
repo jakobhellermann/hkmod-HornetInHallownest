@@ -2,6 +2,7 @@ extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using HornetInHallownest.Core;
+using HornetInHallownest.Util;
 using HutongGames.PlayMaker;
 using UnityEngine;
 using UnityEngine.Events;
@@ -35,8 +36,9 @@ public sealed class HitBridgeModule : ModuleBase {
         Detour(typeof(SHealthManager), "Hit", OnHealthManagerHit, typeof(SHitInstance));
         // OnAwake, not Awake: HealthManager also runs it via IInitialisable, which hooking Awake alone would miss.
         Detour(typeof(SHealthManager), "OnAwake", OnHealthManagerAwake);
-        Detour(typeof(Silksong::DamageEnemies), "DoEnemyDamageNailImbuement", OnNailImbuement,
-            typeof(SHealthManager), typeof(SHitInstance));
+        // Status ticks and lag hits deal their damage here, to the bridge's own hp.
+        Detour(typeof(SHealthManager), nameof(SHealthManager.ApplyExtraDamage), OnApplyExtraDamage,
+            typeof(SHitInstance));
         // HK enemy hits call HeroController.instance.SoulGain, redirect to Hornet's SilkGain when active.
         Detour(typeof(HeroController), "SoulGain", OnSoulGain);
 
@@ -131,22 +133,20 @@ public sealed class HitBridgeModule : ModuleBase {
         return orig(self, si);
     }
 
-    // Skip hit bridge awake (TagDamagerTaker.Add, FSMs). TODO: set this up
+    // Skip hit bridge awake (FSMs); the bridge sets up its own TagDamageTaker.
     private static bool OnHealthManagerAwake(Func<SHealthManager, bool> orig, SHealthManager self) {
         if (self is not HkEnemyHitBridge) return orig(self);
         return false;
     }
 
-    // Requries HealthManager.tagDamageTaker
-    private void OnNailImbuement(Action<Silksong::DamageEnemies, SHealthManager, SHitInstance> orig,
-        Silksong::DamageEnemies self, SHealthManager hm, SHitInstance hit) {
-        if (hm is HkEnemyHitBridge) {
-            LogDebug($"nail imbuement on '{hm.gameObject.name}' not implemented yet");
-            return;
-        }
-
-        orig(self, hm, hit);
+    private static void OnApplyExtraDamage(Action<SHealthManager, SHitInstance> orig, SHealthManager self,
+        SHitInstance hit) {
+        if (self is HkEnemyHitBridge b) b.ForwardExtraDamage(hit);
+        else orig(self, hit);
     }
+
+    // The bridges stay disabled, so HealthManager.Update never ticks their status damage.
+    public override void HornetActiveUpdate(Silksong::HeroController hero) => HkEnemyHitBridge.TickAll();
 
     private static void OnSoulGain(Action<HeroController> orig, HeroController self) {
         if (!HeroSwitch.HornetActive || HornetSpawner.Hornet is not { } hero) orig(self);
@@ -156,12 +156,42 @@ public sealed class HitBridgeModule : ModuleBase {
 }
 
 internal sealed class HkEnemyHitBridge : SHealthManager {
+    private static readonly HashSet<HkEnemyHitBridge> all = [];
+
     internal IHitResponder Responder = null!;
     private NonBouncer? nonBouncer;
+    private Silksong::TagDamageTaker tagTaker = null!;
 
 #pragma warning disable UNT0039
-    private new void Awake() => nonBouncer = GetComponent<NonBouncer>();
+    private new void Awake() {
+        nonBouncer = GetComponent<NonBouncer>();
+        tagTaker = Silksong::TagDamageTaker.Add(gameObject, this);
+        this.SetFieldValue("tagDamageTaker", tagTaker);
+        all.Add(this);
+    }
 #pragma warning restore UNT0039
+
+    private void OnDestroy() {
+        all.Remove(this);
+        tagTaker.ClearTagDamage();
+        Destroy(tagTaker);
+    }
+
+    internal static void TickAll() {
+        foreach (var bridge in all)
+            if (bridge.tagTaker.IsTagged)
+                bridge.tagTaker.Tick(bridge.Responder is not HealthManager hm || !hm.isDead);
+    }
+
+    internal void ForwardExtraDamage(SHitInstance si) {
+        Responder.Hit(new HitInstance {
+            Source = gameObject,
+            AttackType = AttackTypes.Generic,
+            DamageDealt = si.DamageDealt,
+            Multiplier = 1f,
+            IgnoreInvulnerable = true
+        });
+    }
 
     internal SIHit.HitResponse ForwardHit(SHitInstance si) {
         var isUnhandledAttackType = (int)si.AttackType > (int)AttackTypes.NailBeam;
@@ -183,11 +213,23 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
             MoveAngle = si.MoveAngle,
             IgnoreInvulnerable = true, // prevent iframes
         };
+        var hm = Responder as HealthManager;
+        var previousHp = hm ? hm.hp : 0;
         HitBridgeModule.ForwardedHit = si;
         try {
             Responder.Hit(hkHit);
         } finally {
             HitBridgeModule.ForwardedHit = null;
+        }
+
+        // Lag hits, such as Flintslate's fire, start only while the HealthManager's own hp is above 0.
+        hp = hm ? hm.hp : 1;
+        if (!hm || hm.hp < previousHp) {
+            if (si.PoisonDamageTicks > 0)
+                tagTaker.AddDamageTagToStack(Silksong::GlobalSettings.Gameplay.PoisonPouchDamageTag,
+                    si.PoisonDamageTicks);
+            if (si.ZapDamageTicks > 0)
+                tagTaker.AddDamageTagToStack(Silksong::GlobalSettings.Gameplay.ZapDamageTag, si.ZapDamageTicks);
         }
 
         RewardHero(si);

@@ -66,6 +66,7 @@
 - Fix the Knight showing in Hornet's place when quitting to the menu, and staying in her place if the save failed
 - Drain Hornet's silk in the Hall of Gods and pantheons where the Knight loses his soul, and refill her tools when she
   leaves a pantheon
+- Make Hornet's tool and nail statuses, such as the Pollip Pouch's poison and Flintslate's fire, work on HK enemies
 
 ## v0.4.0
 
