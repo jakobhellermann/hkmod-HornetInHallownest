@@ -1,5 +1,6 @@
 extern alias Silksong;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -69,13 +70,13 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
         { "AddMPChargeSpa", spaStandIn }
     };
 
-    // Mask and soul vessel pickups `SendMessage` their max-up to "Hero", i.e. Hornet, whose HeroController has no
-    // AddToMaxMPReserve and whose AddToMaxHealth writes only her PD. PlayerDataSyncModule mirrors HK PD onto hers, so the
-    // upgrade has to land on the Knight as well.
+    // Soul vessel pickups `SendMessage` their max-up to "Hero", i.e. Hornet, whose HeroController has no
+    // AddToMaxMPReserve. PlayerDataSyncModule mirrors HK PD onto hers, so the upgrade has to land on the Knight.
     private static readonly Dictionary<string, Action<HeroController, int>> knightUpgrades = new() {
-        { "AddToMaxHealth", (knight, amount) => knight.AddToMaxHealth(amount) },
         { "AddToMaxMPReserve", (knight, amount) => knight.AddToMaxMPReserve(amount) }
     };
+
+    private const float MaskHealInterval = 0.15f;
 
     // HK's SpriteFlash runs one flash at a time, so each flash its FSMs send ends the repeating one before it, such as a
     // dream warrior's absorb flashing. Silksong's layers them.
@@ -99,6 +100,11 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
             return;
         }
 
+        if (functionName == "AddToMaxHealth" && hornet.TryGetComponent<Silksong::HeroController>(out var hero)) {
+            Runtime.StartCoroutine(AddMask(hero, self.functionCall.IntParameter.Value));
+            return;
+        }
+
         var flash = functionName.StartsWith("flash", StringComparison.OrdinalIgnoreCase)
             ? hornet.GetComponent<Silksong::SpriteFlash>()
             : null;
@@ -114,6 +120,24 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
         var knight = HeroController.UnsafeInstance;
         if (knight && knightUpgrades.TryGetValue(functionName, out var deliver))
             deliver(knight, self.functionCall.IntParameter.Value);
+    }
+
+    // Silksong's own mask shard fills her masks one at a time, then adds the new one full and sends "MAX HP UP": a heal
+    // landing after it leaves the new mask no longer following damage. The Knight's AddToMaxHealth goes through SetInt,
+    // so PlayerDataSyncModule raises her maximum and sends "MAX HP UP" from it; her health is full ahead of that.
+    private static IEnumerator AddMask(Silksong::HeroController hero, int amount) {
+        var pd = Silksong::PlayerData.instance;
+        while (hero && pd.health < pd.CurrentMaxHealth) {
+            hero.AddHealth(1);
+            yield return new WaitForSeconds(MaskHealInterval);
+        }
+
+        if (hero) {
+            hero.MaxHealth();
+            pd.health = pd.maxHealth + amount;
+        }
+
+        if (HeroController.UnsafeInstance is { } knight) knight.AddToMaxHealth(amount);
     }
 
     // CallMethodProper caches the resolved behaviour instance on the first call and invokes on it forever, after we
