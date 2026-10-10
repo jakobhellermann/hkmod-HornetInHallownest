@@ -148,6 +148,7 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         moduleHost.Add(new KnightStandInModule());
         moduleHost.Add(new ControlReminderModule());
         moduleHost.Add(new BenchModule());
+        moduleHost.Add(new DreamRestoreModule());
         moduleHost.Add(new SceneTransitionModule());
         moduleHost.Add(new HornetSaveBridge());
         moduleHost.Add(new HornetSpawner());

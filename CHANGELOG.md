@@ -76,6 +76,7 @@
 - Fix a completed mask leaving Hornet's lost masks shown empty and the new mask missing from her HUD: like in
   Silksong, her masks now refill one by one and the new one appears full
 - Refill the tool uses Shell Satchel adds when Hornet equips it on a bench, without sitting down again
+- Give Hornet back the masks, silk and tools she spent in a dream boss's or Grey Prince Zote's dream
 
 ## v0.4.0
 
