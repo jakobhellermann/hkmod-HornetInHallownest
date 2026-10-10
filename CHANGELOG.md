@@ -52,6 +52,7 @@
 - Fix the Crystal Heart and Clawline no longer working after a room change interrupted a Crystal Heart flight
 - Show down beside the Needolin button in HK's Dream Nail reminder, such as at Whispering Roots, since Hornet's Dream
   Nail is Elegy of the Deep
+- Fix a save made with the mod turned off getting Hornet's data from the save played before it
 
 ## v0.4.0
 

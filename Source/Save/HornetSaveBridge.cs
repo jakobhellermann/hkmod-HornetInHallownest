@@ -24,8 +24,7 @@ public sealed class HornetSaveBridge : ModuleBase {
     // Matches Silksong's PlayerData serializer
     private static JsonSerializerSettings SaveSettings => field ??= BuildSettings();
 
-    private static string? pendingPlayerData;
-    private static bool? pendingHornetActive;
+    private static HornetSaveData? pending;
 
     // Reset Hornet's data in place instead of swapping in a new instance: the GameManager, the hero and the HUD keep
     // references to the current one.
@@ -54,6 +53,7 @@ public sealed class HornetSaveBridge : ModuleBase {
     }
 
     internal static HornetSaveData Snapshot() {
+        if (pending != null) return pending;
         var spd = Silksong::PlayerData.instance;
         return new HornetSaveData {
             Version = 1,
@@ -63,8 +63,7 @@ public sealed class HornetSaveBridge : ModuleBase {
     }
 
     internal static void Stash(HornetSaveData? data) {
-        pendingPlayerData = data?.PlayerData;
-        pendingHornetActive = data?.HornetActive;
+        pending = data;
         ApplyPending(); // apply now if the hero already exists; otherwise deferred to the post-spawn call
     }
 
@@ -75,9 +74,12 @@ public sealed class HornetSaveBridge : ModuleBase {
 
         SaveActiveOverride = null;
 
-        if (pendingPlayerData != null)
+        if (pending is not { } data) return;
+        pending = null;
+
+        if (data.PlayerData != null)
             try {
-                JsonConvert.PopulateObject(pendingPlayerData, spd, SaveSettings);
+                JsonConvert.PopulateObject(data.PlayerData, spd, SaveSettings);
                 // HK PD owns the synced progression; the snapshot's copy can be stale. Masks picked up as Hornet before
                 // upgrades reached HK PD exist only in the snapshot, so carry them over before re-syncing.
                 var hk = PlayerData.instance;
@@ -85,15 +87,10 @@ public sealed class HornetSaveBridge : ModuleBase {
                 Resync();
             } catch (Exception e) {
                 Log.Error($"[HornetSave] PopulateObject failed: {e.Message}");
-            } finally {
-                pendingPlayerData = null;
             }
 
-        if (pendingHornetActive == null) return;
-
-        var want = pendingHornetActive.Value ? ActiveHero.Hornet : ActiveHero.Knight;
+        var want = data.HornetActive ? ActiveHero.Hornet : ActiveHero.Knight;
         if (HeroSwitch.Active != want) HeroSwitch.SetActive(want);
-        pendingHornetActive = null;
     }
 
     private static void Resync() {

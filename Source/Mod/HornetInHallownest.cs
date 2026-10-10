@@ -51,6 +51,7 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
     }
 
     public void Unload() {
+        initialized = false;
         // TP Knight to hornet if hornet was active during hot reload. Must run before the module host despawns hornet,
         // otherwise HornetRool gets nullreference exceptions.
         try {
