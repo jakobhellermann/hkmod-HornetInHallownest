@@ -253,7 +253,7 @@ public sealed class DeathModule : ModuleBase {
         if (hero.GetFieldValue<MeshRenderer>("renderer") is { } mr) mr.enabled = true;
         hero.gameObject.layer = 9; // Die moved her to layer 2 (no-collision)
         hero.AffectedByGravity(true);
-        hero.MaxHealth();
+        if (!DreamRestoreModule.TryLeaveDream(hero)) hero.MaxHealth();
         // Die disabled pausing, which also blocks the quick map; Silksong lifts it on entering the respawn scene.
         SPlayerData.instance.disablePause = false;
         PlayerData.instance.disablePause = false;

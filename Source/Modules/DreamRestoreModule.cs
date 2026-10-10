@@ -17,7 +17,7 @@ public sealed class DreamRestoreModule : ModuleBase {
     public override string Id => "dream-restore";
 
     public override void Initialize() {
-        Detour(typeof(GameManager), "FinishedEnteringScene", OnEnteredScene);
+        Detour(typeof(GameManager), "OnNextLevelReady", OnNextLevelReady);
         USceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 
@@ -26,13 +26,25 @@ public sealed class DreamRestoreModule : ModuleBase {
         Forget();
     }
 
-    private static void OnEnteredScene(Action<GameManager> orig, GameManager self) {
-        orig(self);
+    // The new scene's zone is already known before the hero enters it, so she crosses into or out of a dream before she
+    // shows up there, and before a dream boss's scene heals her once she's in position (its FSM's "MaxHealth" message).
+    // A death in the dream is left by DeathModule's revive, which comes after this.
+    private static void OnNextLevelReady(Action<GameManager> orig, GameManager self) {
         var inDream = self.GetCurrentMapZone() == DreamZone;
-        if (inDream == preDreamState.IsRecorded) return;
-        if (HornetSpawner.Hornet is not { } hero) Forget();
-        else if (inDream) EnterDream(hero);
-        else LeaveDream(hero);
+        if (inDream != preDreamState.IsRecorded) {
+            if (HornetSpawner.Hornet is not { } hero) Forget();
+            else if (inDream) EnterDream(hero);
+            else if (!hero.cState.dead) LeaveDream(hero);
+        }
+
+        orig(self);
+    }
+
+    // DeathModule revives her through this after a death in a dream, instead of at full health.
+    internal static bool TryLeaveDream(Silksong::HeroController hero) {
+        if (!preDreamState.IsRecorded) return false;
+        LeaveDream(hero);
+        return true;
     }
 
     // A dream quit to the menu must not carry over into the next save loaded.
@@ -49,12 +61,17 @@ public sealed class DreamRestoreModule : ModuleBase {
         hero.MaxHealthKeepBlue();
     }
 
-    // Silksong's geo mirrors HK's, which the dream doesn't give back.
+    // Silksong's geo mirrors HK's, which the dream doesn't give back. Apply writes silk without redrawing the spool,
+    // which only AddSilk and TakeSilk do.
     private static void LeaveDream(Silksong::HeroController hero) {
         hero.SuppressRefillSound(2);
         hero.ClearEffectsInstant();
+        var silkDifference = preDreamState.Silk - hero.playerData.silk;
+        preDreamState.Silk = hero.playerData.silk;
         preDreamState.Rosaries = hero.playerData.geo;
         preDreamState.Apply(hero);
+        if (silkDifference > 0) hero.AddSilk(silkDifference, false);
+        else if (silkDifference < 0) hero.TakeSilk(-silkDifference);
         hero.UpdateBlueHealth();
         Silksong::EventRegister.SendEvent(Silksong::EventRegisterEvents.HealthUpdate);
         hero.playerData.ClearToolAmountsOverride();
