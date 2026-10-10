@@ -25,9 +25,11 @@ public sealed class ProgressionModule : ModuleBase {
         internal bool IsSet(PlayerData pd) => Min == 0 ? pd.GetBool(Field) : pd.GetInt(Field) >= Min;
     }
 
+    // Godseeker mode starts with the Knight's whole kit but none of the events that earn the rest.
     internal sealed record Rule(string Reward, Flag[] Flags, bool AnyFlag = false) {
         internal bool IsEarned(PlayerData pd) =>
-            Flags.Length == 0 || (AnyFlag ? Flags.Any(f => f.IsSet(pd)) : Flags.All(f => f.IsSet(pd)));
+            pd.bossRushMode || Flags.Length == 0 ||
+            (AnyFlag ? Flags.Any(f => f.IsSet(pd)) : Flags.All(f => f.IsSet(pd)));
     }
 
     private const int BaseCharmNotches = 3;
@@ -314,7 +316,7 @@ public sealed class ProgressionModule : ModuleBase {
         ss.SeenToolWeaponGetPrompt = true;
 
         var earnedTools = ToolRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward).ToHashSet();
-        KeepOneSilkshot(earnedTools);
+        if (!pd.bossRushMode) KeepOneSilkshot(earnedTools);
         foreach (var tool in SToolItemManager.GetAllTools()) {
             if (!tool) continue;
             var earned = earnedTools.Contains(tool.name);
