@@ -56,11 +56,11 @@ public sealed class ContactDamageModule : ModuleBase {
             if (hc == null) return;
 
             // Knight-height collider toggle shrinks her terrain collider but not her tall HeroBox hurtbox, so skip a
-            // hazard sitting entirely above her (now shorter) body. Hazards only; enemy combat keeps the full hurtbox.
+            // hazard touching only the hurtbox above her (now shorter) body. Hazards only; enemy combat keeps the full
+            // hurtbox.
             if (HornetSpawner.KnightHeightCollider && ssHazard != SHazard.ENEMY) {
                 var body = HornetSpawner.TerrainCollider;
-                var hurtbox = self.GetComponent<Collider2D>();
-                if (body != null && hurtbox && IsAboveBody(other, hurtbox, body.bounds.max.y)) return;
+                if (body != null && !TouchesBody(other, body)) return;
             }
 
             var side = other.transform.position.x > self.transform.position.x ? SSide.right : SSide.left;
@@ -74,11 +74,11 @@ public sealed class ContactDamageModule : ModuleBase {
     }
 
     // A hazard can span a room with several colliders, such as Crystal Peak's "Cave Spikes Invis".
-    private static bool IsAboveBody(GameObject hazard, Collider2D hurtbox, float bodyTop) {
+    private static bool TouchesBody(GameObject hazard, Collider2D body) {
         foreach (var col in hazard.GetComponents<Collider2D>())
-            if (col.enabled && col.Distance(hurtbox).isOverlapped && col.bounds.min.y < bodyTop)
-                return false;
-        return true;
+            if (col.enabled && col.Distance(body).isOverlapped)
+                return true;
+        return false;
     }
 
     // Allowlist for specific attacks that are impossible to dodge and are balanced around shade cloak.

@@ -72,6 +72,7 @@
 - Make hot springs heal Hornet's masks, one per second, besides refilling her silk
 - Let Hornet open the Abyss door to the Lifeblood Core in her lifeblood state, since her blue masks never reach the
   Knight's 15
+- Fix thorns that only reach above the Knight's height hurting Hornet, such as on the way to the Lifeblood Core
 
 ## v0.4.0
 
