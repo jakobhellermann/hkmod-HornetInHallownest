@@ -46,6 +46,7 @@
 - Fix geo rocks, levers and breakable walls ignoring Hornet's slashes once her Crystal Heart has hit them
 - Fix the Crystal Heart's charge glow staying under Hornet after she flies with it
 - Fix Hornet flashing white forever after absorbing a dream warrior
+- Fix Hornet being flung sideways after a short jump out of acid
 
 ## v0.4.0
 

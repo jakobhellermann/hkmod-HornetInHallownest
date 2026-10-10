@@ -30,7 +30,6 @@ public sealed class SwimModule : ModuleBase {
     private float graceTimer;
     private bool floatingInWater;
     private SWaterController? activeWc;
-    private Collider2D? waterRegion; // set only for neutral water (marks the source, so we restore its FSM on exit)
 
     private SWaterRegion? carrier; // stand-in region EnterWaterRegion requires + reads its swim params off
     private WaterSensor? sensor;
@@ -41,8 +40,11 @@ public sealed class SwimModule : ModuleBase {
         instance = this;
     }
 
-    internal static void NotifyInAcid(GameObject acid) => instance?.OnOverlap(acid.GetComponentInParent<Collider2D>(), SurfaceOffset, water: false);
-    internal static void NotifyInWater(Collider2D region) => instance?.OnOverlap(region, WaterSurfaceOffset, water: true);
+    internal static void NotifyInAcid(GameObject acid) =>
+        instance?.OnOverlap(acid.GetComponentInParent<Collider2D>(), SurfaceOffset, water: false);
+
+    internal static void NotifyInWater(Collider2D region) =>
+        instance?.OnOverlap(region, WaterSurfaceOffset, water: true);
 
     private void OnOverlap(Collider2D? region, float offset, bool water) {
         if (!region) return;
@@ -50,8 +52,9 @@ public sealed class SwimModule : ModuleBase {
         if (!hero || hero.transitionState != HeroTransitionState.WAITING_TO_TRANSITION) return;
         graceTimer = GracePeriod;
         if (floatingInWater) return;
-        waterRegion = water ? region : null;
-        if (water) SuppressRegionFsm(region); // stop HK's water FSM (Hero->Hornet via global var) from repositioning her
+        if (hero.Body.linearVelocity.y > 0f) return;
+        if (water)
+            SuppressRegionFsm(region); // stop HK's water FSM (Hero->Hornet via global var) from repositioning her
         Enter(hero, region, offset);
     }
 
@@ -90,6 +93,7 @@ public sealed class SwimModule : ModuleBase {
                 // so that TumbleOut's exit-recoil picks the correct side
                 wc.SetFieldValue("waterBounds", region.bounds);
             }
+
             activeWc = wc;
             floatingInWater = true;
         } catch (Exception e) {
@@ -111,13 +115,21 @@ public sealed class SwimModule : ModuleBase {
     public override void HornetActiveUpdate(SHero hero) {
         EnsureSensor(hero);
         if (!floatingInWater) return;
-        if (!activeWc || !activeWc.IsInWater) { // controller self-exited (damage/scene)
+        if (!activeWc || !activeWc.IsInWater) {
+            // controller self-exited (damage/scene)
             floatingInWater = false;
             activeWc = null;
-            waterRegion = null;
             RestoreRegionFsm();
             return;
         }
+
+        // A jump out ends the swim but leaves IsInWater set, which Silksong's region clears as she leaves it. Left set,
+        // the controller re-enters water as soon as she falls, even above it.
+        if (activeWc.CurrentState == SWaterController.States.Inactive) {
+            Exit();
+            return;
+        }
+
         graceTimer -= Time.deltaTime; // refreshed each overlap; lapses once she leaves
         if (graceTimer <= 0f) Exit();
     }
@@ -128,7 +140,6 @@ public sealed class SwimModule : ModuleBase {
 
     private void Exit() {
         floatingInWater = false;
-        waterRegion = null;
         RestoreRegionFsm();
         if (activeWc && activeWc.IsInWater) activeWc.ExitWaterRegion();
         activeWc = null;
@@ -156,7 +167,6 @@ public sealed class SwimModule : ModuleBase {
         RestoreRegionFsm();
         floatingInWater = false;
         activeWc = null;
-        waterRegion = null;
         graceTimer = 0f;
         if (sensor) Object.Destroy(sensor);
         sensor = null;
@@ -164,6 +174,7 @@ public sealed class SwimModule : ModuleBase {
             Object.Destroy(carrier.gameObject);
             carrier = null;
         }
+
         instance = null;
     }
 }
