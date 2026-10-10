@@ -150,13 +150,15 @@ public sealed class HeroTargetModule : ModuleBase {
     #region Knight position
 
     // Runs before HK's scripts read the position this frame. Skipped while HK places the Knight itself (scene entry,
-    // respawn): the entry and revive code then move Hornet onto him.
+    // respawn): the entry and revive code then move Hornet onto him. Once he's placed, HK plays out the rest of his
+    // entry on timers after hers has ended, so he follows her from then on.
     public override void HornetActiveUpdate(Silksong::HeroController hero) {
         var knight = HeroController.UnsafeInstance;
         var gm = GameManager.UnsafeInstance;
         if (HeroSwitch.BothActive || !knight || knight.enabled || !gm) return;
-        if (gm.gameState != GameState.PLAYING || gm.RespawningHero || hero.cState.dead) return;
-        if (knight.transitionState != HeroTransitionState.WAITING_TO_TRANSITION || !knight.isHeroInPosition) return;
+        if (gm.gameState is not (GameState.PLAYING or GameState.ENTERING_LEVEL)) return;
+        if (gm.RespawningHero || hero.cState.dead || !knight.isHeroInPosition) return;
+        if (hero.transitionState != Silksong::GlobalEnums.HeroTransitionState.WAITING_TO_TRANSITION) return;
 
         var kt = knight.transform;
         var position = hero.transform.position;

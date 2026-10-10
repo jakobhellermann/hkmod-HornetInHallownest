@@ -19,11 +19,24 @@ public sealed class MapMarkerModule : ModuleBase {
 
     private static GameObject? hornetCompass;
     private static GameObject? cocoonMarker;
+    private static string? compassScene;
 
     public override string Id => "map-markers";
 
     public override void Initialize() {
         Detour(typeof(GameMap), nameof(GameMap.PositionCompass), OnPositionCompass);
+        Detour(typeof(GameMap), "Update", OnMapUpdate);
+    }
+
+    // HK picks the compass's room only as the map opens, since the Knight can't walk with it open.
+    private static void OnMapUpdate(Action<GameMap> orig, GameMap self) {
+        if (HeroSwitch.HornetActive && compassScene != GameManager.instance.sceneName &&
+            self.GetFieldValue<bool>("displayingCompass")) {
+            if (HornetSpawner.Hornet is not { isHeroInPosition: true }) return;
+            self.PositionCompass(false);
+        }
+
+        orig(self);
     }
 
     protected override void OnDeinitialize() {
@@ -34,6 +47,7 @@ public sealed class MapMarkerModule : ModuleBase {
     private static void OnPositionCompass(Action<GameMap, bool> orig, GameMap self, bool posShade) {
         orig(self, posShade);
         if (posShade) return;
+        compassScene = GameManager.instance.sceneName;
         try {
             UpdateCompass(self);
             UpdateCocoon(self);
@@ -43,6 +57,9 @@ public sealed class MapMarkerModule : ModuleBase {
     }
 
     private static void UpdateCompass(GameMap map) {
+        // The map places the compass at the hero it cached, the Knight, who stays at his previous room's spot for a moment
+        // after a door until HK places him.
+        if (HeroSwitch.ActiveHeroGameObject is { } hero) map.SetFieldValue("hero", hero);
         var knightHead = map.compassIcon.GetComponent<Renderer>();
         if (!hornetCompass) hornetCompass = CloneMarker(CompassIconName, map.compassIcon.transform, knightHead);
         if (!hornetCompass) return;
