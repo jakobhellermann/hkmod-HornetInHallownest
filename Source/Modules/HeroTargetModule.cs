@@ -35,8 +35,10 @@ public sealed class HeroTargetModule : ModuleBase {
         // The camera follows Hornet's transform (RetargetCamera) but reads the hero's state off HeroController.instance,
         // the inert Knight whose cState froze on deactivation: a frozen `falling` glues the camera to her Y (fallStick),
         // look up/down never triggers, the look-ahead keeps his facing. Mirror her state onto him for the call, and her
-        // position too: CameraController's look offset is relative to hero_ctrl.transform.
+        // position too: CameraController's look offset is relative to hero_ctrl.transform. Leaving a lock zone reads his
+        // transitionState, still mid-entry after a door while she already moves, and stops following her for good.
         Detour(typeof(CameraTarget), "Update", (Action<Action<CameraTarget>, CameraTarget>)OnCameraUpdate);
+        Detour(typeof(CameraTarget), "ExitLockZone", (Action<Action<CameraTarget>, CameraTarget>)OnCameraUpdate);
         Detour(typeof(CameraController), "LateUpdate",
             (Action<Action<CameraController>, CameraController>)OnCameraUpdate);
 
@@ -192,11 +194,13 @@ public sealed class HeroTargetModule : ModuleBase {
         var hs = hornet.cState;
         var savedPosition = kt.position;
         var savedVelocity = knight.current_velocity;
+        var savedTransitionState = knight.transitionState;
         var (falling, lookingUp, lookingDown, facingRight, dashing) =
             (ks.falling, ks.lookingUp, ks.lookingDown, ks.facingRight, ks.dashing);
 
         kt.position = hornet.transform.position;
         knight.current_velocity = hornet.current_velocity;
+        knight.transitionState = (HeroTransitionState)hornet.transitionState;
         // Silksong sets `falling` at zero vertical velocity too (hanging on a ledge); HK only while moving down, and its
         // fall catch would yank the camera down to her.
         (ks.falling, ks.lookingUp, ks.lookingDown, ks.facingRight, ks.dashing) =
@@ -206,6 +210,7 @@ public sealed class HeroTargetModule : ModuleBase {
         } finally {
             kt.position = savedPosition;
             knight.current_velocity = savedVelocity;
+            knight.transitionState = savedTransitionState;
             (ks.falling, ks.lookingUp, ks.lookingDown, ks.facingRight, ks.dashing) =
                 (falling, lookingUp, lookingDown, facingRight, dashing);
         }

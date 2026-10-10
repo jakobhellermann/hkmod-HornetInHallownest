@@ -48,6 +48,7 @@
 - Fix Hornet flashing white forever after absorbing a dream warrior
 - Fix Hornet being flung sideways after a short jump out of acid
 - Fix the lantern's light and Hornet's map icon staying behind for a moment after she enters a room
+- Fix the camera sometimes no longer following Hornet once she enters a room
 
 ## v0.4.0
 
