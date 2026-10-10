@@ -24,6 +24,7 @@ public sealed class BenchModule : ModuleBase {
         ModHooks.SetPlayerBoolHook += OnSetBool;
         // A tool icon can't redraw while the HUD is hidden, and it doesn't redraw on its own when shown again.
         GameCamerasBootstrap.HornetHudShown += RefreshToolHud;
+        Silksong::ToolItemManager.OnEquippedStateChanged += OnEquipsChanged;
         Detour(typeof(Silksong::ToolItemManager), "TryReplenishTools", OnTryReplenishTools, typeof(bool),
             typeof(SReplenishMethod));
     }
@@ -57,6 +58,7 @@ public sealed class BenchModule : ModuleBase {
     protected override void OnDeinitialize() {
         ModHooks.SetPlayerBoolHook -= OnSetBool;
         GameCamerasBootstrap.HornetHudShown -= RefreshToolHud;
+        Silksong::ToolItemManager.OnEquippedStateChanged -= OnEquipsChanged;
         ResetAtBench();
     }
 
@@ -100,11 +102,22 @@ public sealed class BenchModule : ModuleBase {
         Silksong::ToolItemManager.SendEquippedChangedEvent(true);
     }
 
+    // Shell Satchel raises tool storage only while equipped, so equipping it on the bench leaves the extra empty.
+    // RefreshToolHud would raise this event again, but the icons only need the bound tools' update.
+    private static void OnEquipsChanged() {
+        if (!HeroSwitch.HornetActive || !Silksong::PlayerData.instance.atBench) return;
+        if (FillTools()) Silksong::ToolItemManager.ReportAllBoundAttackToolsUpdated();
+    }
+
     // TODO: implement shell shards?
     internal static void RefillTools() {
+        if (FillTools()) RefreshToolHud();
+    }
+
+    private static bool FillTools() {
         try {
             var tools = Silksong::PlayerData.instance.Tools;
-            if (tools == null) return;
+            if (tools == null) return false;
             foreach (var tool in Silksong::ToolItemManager.GetUnlockedTools()) {
                 if (!tool) continue;
                 var data = tools.GetData(tool.name);
@@ -112,9 +125,10 @@ public sealed class BenchModule : ModuleBase {
                 tools.SetData(tool.name, data);
             }
 
-            RefreshToolHud();
+            return true;
         } catch (Exception e) {
             Log.Error($"[Bench] tool refill failed: {e.Message}");
+            return false;
         }
     }
 }
