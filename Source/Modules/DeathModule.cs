@@ -152,9 +152,12 @@ public sealed class DeathModule : ModuleBase {
                 yield return DreamReturnRoutine(hkGm);
             }
             else {
-                if (!IsDreamZone(mapZone) && HornetSpawner.Hornet is { } hero) LeaveCocoon(hero);
+                var pd = PlayerData.instance;
+                if (pd.permadeathMode == 1) pd.permadeathMode = 2;
+                else if (!IsDreamZone(mapZone) && HornetSpawner.Hornet is { } hero) LeaveCocoon(hero);
                 yield return
                     hkGm.PlayerDead(DeathWait); // HK's full death sequence: freeze -> save -> fade -> transition
+                if (pd.permadeathMode == 2) yield break;
 
                 // Wait for the respawn to settle (Knight placed at the marker), timeout-bounded so a quirk can't strand us.
                 var t = 0f;

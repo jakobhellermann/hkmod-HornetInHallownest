@@ -56,6 +56,7 @@
 - Fix Hornet keeping the tools, crests and items of the save played before after loading another one in the same
   session, and her part of the save file growing with every load
 - Fix a save made before installing the mod giving Hornet the tools, crests and items of the save played before it
+- Fix Hornet's death in Steel Soul mode leaving a black screen and reviving her instead of ending the game
 
 ## v0.4.0
 
