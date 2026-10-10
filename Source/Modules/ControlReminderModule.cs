@@ -12,7 +12,7 @@ namespace HornetInHallownest.Modules;
 
 public sealed class ControlReminderModule : ModuleBase {
     private const string PromptsSheet = "Prompts";
-    private const float UpButtonOffset = 1.3f;
+    private const float DirectionButtonOffset = 1.3f;
     private static readonly string[] castButtons = ["ActionButton Cast", "ActionButton Cast JA"];
 
     private static readonly Dictionary<string, string> promptKeys = new() {
@@ -45,8 +45,21 @@ public sealed class ControlReminderModule : ModuleBase {
     private static void OnSwitchState(Action<Fsm, FsmState> orig, Fsm self, FsmState to) {
         orig(self, to);
         if (self is not { Name: "Display", GameObjectName: "Control Reminder" }) return;
-        if (to.Name is "Superdash" or "Interact")
-            PlaceUpButton(self.GameObject.transform, to.Name == "Superdash" && HeroSwitch.HornetActive);
+        var reminder = self.GameObject.transform;
+        switch (to.Name) {
+            case "Superdash":
+                PlaceDirectionButton(reminder, "ActionButton Up", HeroSwitch.HornetActive);
+                break;
+            case "Interact":
+                PlaceDirectionButton(reminder, "ActionButton Up", false);
+                break;
+            case "Dreamnail":
+                PlaceDirectionButton(reminder, "ActionButton Down", HeroSwitch.HornetActive);
+                break;
+            case "Look Down Mawlek":
+                PlaceDirectionButton(reminder, "ActionButton Down", false);
+                break;
+        }
 
         HeroActionButton? action = to.Name switch {
             "Focus" => HeroSwitch.HornetActive && InDreamerDream()
@@ -64,15 +77,13 @@ public sealed class ControlReminderModule : ModuleBase {
                 icon.SetAction(action.Value);
     }
 
-    // Hornet charges the Crystal Heart on up + Clawline (CrystalHeartModule), so its reminder shows Up beside the Clawline
-    // button. For the interact reminder Up sits where every other button does.
-    private static void PlaceUpButton(Transform reminder, bool crystalHeart) {
-        var up = reminder.Find("ActionButton Up");
+    private static void PlaceDirectionButton(Transform reminder, string name, bool besideAction) {
+        var direction = reminder.Find(name);
         var superDash = reminder.Find("ActionButton SD");
-        if (!up || !superDash) return;
-        var x = superDash.localPosition.x - (crystalHeart ? UpButtonOffset : 0f);
-        up.localPosition = new Vector3(x, up.localPosition.y, up.localPosition.z);
-        if (crystalHeart) up.gameObject.SetActive(true);
+        if (!direction || !superDash) return;
+        var x = superDash.localPosition.x - (besideAction ? DirectionButtonOffset : 0f);
+        direction.localPosition = new Vector3(x, direction.localPosition.y, direction.localPosition.z);
+        if (besideAction) direction.gameObject.SetActive(true);
     }
 
     private static bool InDreamerDream() =>

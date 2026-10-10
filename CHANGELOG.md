@@ -50,6 +50,8 @@
 - Fix the lantern's light and Hornet's map icon staying behind for a moment after she enters a room
 - Fix the camera sometimes no longer following Hornet once she enters a room
 - Fix the Crystal Heart and Clawline no longer working after a room change interrupted a Crystal Heart flight
+- Show down beside the Needolin button in HK's Dream Nail reminder, such as at Whispering Roots, since Hornet's Dream
+  Nail is Elegy of the Deep
 
 ## v0.4.0
 
