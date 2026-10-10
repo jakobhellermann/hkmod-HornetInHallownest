@@ -77,7 +77,7 @@ public sealed class ProgressionModule : ModuleBase {
         Earned("Silk Snare", Charm(22)), // Glowing Womb
         Earned("Screw Attack", new Flag("hasLantern")),
         Earned("Cogwork Saw", new Flag("royalCharmState", 3)), // Kingsoul
-        Earned("Cogwork Flier", Charm(40)), // Grimmchild
+        Earned("Cogwork Flier", new Flag("grimmChildLevel", 3)), // Grimmchild's third form
         Earned("Rosary Cannon", new Flag("fragileGreed_unbreakable")),
         Earned("Lightning Rod", new Flag("killedMegaJellyfish")), // Uumuu
         Earned("Flintstone", new Flag("killedGrimm")), // Troupe Master Grimm
@@ -134,9 +134,9 @@ public sealed class ProgressionModule : ModuleBase {
 
     internal static readonly Rule[] CrestRules = [
         Earned(StartingCrest),
-        Earned("Hunter_v2", new Flag("journalEntriesCompleted", 60)),
-        Earned("Hunter_v3", new Flag("hasHuntersMark")),
-        Earned("Spell", new Flag("fireballLevel", 1), new Flag("quakeLevel", 1), new Flag("screamLevel", 1)),
+        Earned("Hunter_v2", new Flag("journalEntriesCompleted", 60)), // entries encountered
+        Earned("Hunter_v3", new Flag("journalNotesCompleted", 80)), // entries completed
+        Earned("Spell", new Flag("fireballLevel", 2), new Flag("quakeLevel", 2), new Flag("screamLevel", 2)),
         Earned("Warrior", new Flag("maskBrokenHegemol")),
         Earned("Reaper", new Flag("dreamReward2")),
         Earned("Wanderer", new Flag("quirrelEpilogueCompleted")),
@@ -200,6 +200,13 @@ public sealed class ProgressionModule : ModuleBase {
         Detour(typeof(CreateObject), nameof(CreateObject.OnEnter), OnCreateObject);
         Detour(typeof(CreateUIMsgGetItem), nameof(CreateUIMsgGetItem.OnEnter), OnCreateUIMsgGetItem);
         Detour(typeof(Fsm), "SwitchState", OnSwitchState, typeof(FsmState));
+        Detour(typeof(PlayerData), nameof(PlayerData.CountJournalEntries), OnCountJournalEntries);
+    }
+
+    // HK counts the journal by writing its fields directly, past the SetInt hook.
+    private void OnCountJournalEntries(Action<PlayerData> orig, PlayerData self) {
+        orig(self);
+        QueueApply("journalEntriesCompleted");
     }
 
     protected override void OnDeinitialize() {

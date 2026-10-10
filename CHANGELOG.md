@@ -147,6 +147,8 @@
 - Fix Hornet's item messages drawing over HK's relic and journal messages: they now stack above them
 - Give Hornet her whole kit in Godseeker mode: Silk Soar, every crest, tool and Silkshot, all Memory Lockets and
   Sylphsong
+- Give Hornet the Hunter Crest's third form for 80 completed Hunter's Journal entries instead of the Hunter's Mark, the
+  Shaman Crest for all three spells upgraded instead of learned, and the Cogfly for Grimmchild's third form
 
 ## v0.4.0
 
