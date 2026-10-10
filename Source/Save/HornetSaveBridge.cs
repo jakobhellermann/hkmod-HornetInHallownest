@@ -15,8 +15,8 @@ namespace HornetInHallownest.Save;
 public sealed class HornetSaveBridge : ModuleBase {
     public override string Id => "save-bridge";
 
-    public override void Initialize() => ModHooks.NewGameHook += OnNewGame;
-    protected override void OnDeinitialize() => ModHooks.NewGameHook -= OnNewGame;
+    public override void Initialize() => ModHooks.NewGameHook += ResetPlayerData;
+    protected override void OnDeinitialize() => ModHooks.NewGameHook -= ResetPlayerData;
 
     // Override set by quit to menu before switching back to knight, in order to prevent always autosaving knight.
     internal static bool? SaveActiveOverride;
@@ -28,7 +28,7 @@ public sealed class HornetSaveBridge : ModuleBase {
 
     // Reset Hornet's data in place instead of swapping in a new instance: the GameManager, the hero and the HUD keep
     // references to the current one.
-    private static void OnNewGame() {
+    private static void ResetPlayerData() {
         var current = Silksong::PlayerData.instance;
         var fresh = Silksong::PlayerData.CreateNewSingleton(false);
         Silksong::PlayerData.instance = current;
@@ -62,7 +62,10 @@ public sealed class HornetSaveBridge : ModuleBase {
         };
     }
 
+    // The API stashes a new HornetSaveData, without PlayerData, when the main menu loads, and nothing else for a slot
+    // saved without the mod.
     internal static void Stash(HornetSaveData? data) {
+        if (data?.PlayerData == null) ResetPlayerData();
         pending = data;
         ApplyPending(); // apply now if the hero already exists; otherwise deferred to the post-spawn call
     }
