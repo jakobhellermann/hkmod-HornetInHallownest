@@ -77,6 +77,7 @@
   Silksong, her masks now refill one by one and the new one appears full
 - Refill the tool uses Shell Satchel adds when Hornet equips it on a bench, without sitting down again
 - Give Hornet back the masks, silk and tools she spent in a dream boss's or Grey Prince Zote's dream
+- Make dreams work like Silksong's memories: Hornet enters at full health, and her cogflies don't follow her in or out
 
 ## v0.4.0
 

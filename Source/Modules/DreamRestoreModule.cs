@@ -1,19 +1,18 @@
 extern alias Silksong;
 using System;
-using System.Collections.Generic;
 using HornetInHallownest.Core;
 using UnityEngine.SceneManagement;
 using USceneManager = UnityEngine.SceneManagement.SceneManager;
 
 namespace HornetInHallownest.Modules;
 
-// Hornet leaves a dream boss's or Grey Prince Zote's dream with the masks, silk and tools she entered it with.
+// HK's dreams, such as a dream boss's or Grey Prince Zote's, work like Silksong's memories (see its
+// GameManager.EnteredNewMapZone): Hornet fights at full health on tool uses set aside, and leaves with the masks, silk
+// and tools she entered with.
 public sealed class DreamRestoreModule : ModuleBase {
     private const string DreamZone = "DREAM_WORLD";
 
-    private static int? silk;
-    private static int health;
-    private static readonly Dictionary<string, int> toolAmounts = [];
+    private static Silksong::HeroItemsState preDreamState;
 
     public override string Id => "dream-restore";
 
@@ -30,8 +29,10 @@ public sealed class DreamRestoreModule : ModuleBase {
     private static void OnEnteredScene(Action<GameManager> orig, GameManager self) {
         orig(self);
         var inDream = self.GetCurrentMapZone() == DreamZone;
-        if (inDream && silk == null) Remember();
-        else if (!inDream && silk != null) Restore();
+        if (inDream == preDreamState.IsRecorded) return;
+        if (HornetSpawner.Hornet is not { } hero) Forget();
+        else if (inDream) EnterDream(hero);
+        else LeaveDream(hero);
     }
 
     // A dream quit to the menu must not carry over into the next save loaded.
@@ -39,41 +40,28 @@ public sealed class DreamRestoreModule : ModuleBase {
         if (to.name == "Menu_Title") Forget();
     }
 
-    private static void Remember() {
-        var pd = Silksong::PlayerData.instance;
-        silk = pd.silk;
-        health = pd.health;
-        foreach (var tool in Silksong::ToolItemManager.GetUnlockedTools())
-            if (tool)
-                toolAmounts[tool.name] = pd.Tools.GetData(tool.name).AmountLeft;
+    // Cogflies follow Hornet across scenes until cleared.
+    private static void EnterDream(Silksong::HeroController hero) {
+        hero.SuppressRefillSound(2);
+        preDreamState = Silksong::HeroItemsState.Record(hero);
+        hero.playerData.CaptureToolAmountsOverride();
+        Silksong::EventRegister.SendEvent(Silksong::EventRegisterEvents.ClearEffectsInstant);
+        hero.MaxHealthKeepBlue();
     }
 
-    private static void Restore() {
-        var pd = Silksong::PlayerData.instance;
-        foreach (var (name, amount) in toolAmounts) {
-            var data = pd.Tools.GetData(name);
-            data.AmountLeft = amount;
-            pd.Tools.SetData(name, data);
-        }
-
-        var silkDifference = silk!.Value - pd.silk;
-        if (HornetSpawner.Hornet is not { } hero) pd.silk = silk.Value;
-        else if (silkDifference > 0) hero.AddSilk(silkDifference, false);
-        else if (silkDifference < 0) hero.TakeSilk(-silkDifference);
-
-        // Dying in a dream revives her at full health, as it does the Knight, so only lost masks come back.
-        var healthDifference = health - pd.health;
-        if (healthDifference > 0) {
-            if (HornetSpawner.Hornet is { } healed) healed.AddHealth(healthDifference);
-            else pd.health = health;
-        }
-
-        BenchModule.RefreshToolHud();
-        Forget();
+    // Silksong's geo mirrors HK's, which the dream doesn't give back.
+    private static void LeaveDream(Silksong::HeroController hero) {
+        hero.SuppressRefillSound(2);
+        hero.ClearEffectsInstant();
+        preDreamState.Rosaries = hero.playerData.geo;
+        preDreamState.Apply(hero);
+        hero.UpdateBlueHealth();
+        Silksong::EventRegister.SendEvent(Silksong::EventRegisterEvents.HealthUpdate);
+        hero.playerData.ClearToolAmountsOverride();
     }
 
     private static void Forget() {
-        silk = null;
-        toolAmounts.Clear();
+        preDreamState = default;
+        Silksong::PlayerData.instance?.ClearToolAmountsOverride();
     }
 }
