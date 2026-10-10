@@ -18,9 +18,6 @@ public sealed class HornetSaveBridge : ModuleBase {
     public override void Initialize() => ModHooks.NewGameHook += ResetPlayerData;
     protected override void OnDeinitialize() => ModHooks.NewGameHook -= ResetPlayerData;
 
-    // Override set by quit to menu before switching back to knight, in order to prevent always autosaving knight.
-    internal static bool? SaveActiveOverride;
-
     // Matches Silksong's PlayerData serializer
     private static JsonSerializerSettings SaveSettings => field ??= BuildSettings();
 
@@ -58,7 +55,7 @@ public sealed class HornetSaveBridge : ModuleBase {
         return new HornetSaveData {
             Version = 1,
             PlayerData = JsonConvert.SerializeObject(spd, SaveSettings),
-            HornetActive = SaveActiveOverride ?? HeroSwitch.HornetActive
+            HornetActive = HeroSwitch.HornetActive
         };
     }
 
@@ -74,8 +71,6 @@ public sealed class HornetSaveBridge : ModuleBase {
         var hero = HornetSpawner.Hornet;
         if (!hero) return; // hero not spawned yet, the post-spawn hook will call us again
         var spd = Silksong::PlayerData.instance;
-
-        SaveActiveOverride = null;
 
         if (pending is not { } data) return;
         pending = null;

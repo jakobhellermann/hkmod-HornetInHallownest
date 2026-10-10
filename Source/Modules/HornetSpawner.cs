@@ -79,24 +79,29 @@ public sealed class HornetSpawner : ModuleBase {
     }
 
     private IEnumerator OnReturnToMainMenu(
-        Func<GameManager, GameManager.ReturnToMainMenuSaveModes, Action<bool>, IEnumerator> orig, GameManager self,
-        GameManager.ReturnToMainMenuSaveModes mode, Action<bool> cb) {
-        if (HornetRoot) {
-            // Like Silksongs QuitToMenu. Kills cogflies, for example.
-            Silksong::ObjectPool.RecycleAll();
-            HudRefresh.ForgetSilkChunks();
+        Func<GameManager, GameManager.ReturnToMainMenuSaveModes, Action<bool>?, IEnumerator> orig, GameManager self,
+        GameManager.ReturnToMainMenuSaveModes mode, Action<bool>? cb) {
+        if (!HornetRoot) return orig(self, mode, cb);
 
-            // ReturnToMainMenu autosaves, but we force the Knight active below (camera handback), which would otherwise
-            // record Knight and clobber the "was playing Hornet" state. Capture the real hero first.
-            HornetSaveBridge.SaveActiveOverride = HeroSwitch.HornetActive;
-            // Hand the camera back to the Knight before despawn, else CameraTarget.Update derefs a destroyed transform
-            // every frame through the menu fade.
-            HeroSwitch.SetActive(ActiveHero.Knight);
-            Despawn();
-            LogDebug("quit to menu -> despawned Hornet");
-        }
+        // HK raises UnloadingLevel once the save is done and the screen has faded out, or never when a failed save
+        // cancels the quit; it also raises it on every room change, hence the one-shot subscription.
+        self.UnloadingLevel += DespawnForMenu;
+        return orig(self, mode, didSave => {
+            if (mode == GameManager.ReturnToMainMenuSaveModes.SaveAndCancelOnFail && !didSave)
+                self.UnloadingLevel -= DespawnForMenu;
+            cb?.Invoke(didSave);
+        });
+    }
 
-        return orig(self, mode, cb);
+    private void DespawnForMenu() {
+        GameManager.instance.UnloadingLevel -= DespawnForMenu;
+        // Like Silksongs QuitToMenu. Kills cogflies, for example.
+        Silksong::ObjectPool.RecycleAll();
+        HudRefresh.ForgetSilkChunks();
+        // Hand the camera back to the Knight before despawn, else CameraTarget.Update derefs a destroyed transform.
+        HeroSwitch.SetActive(ActiveHero.Knight);
+        Despawn();
+        LogDebug("quit to menu -> despawned Hornet");
     }
 
     private void DespawnOutsideGameplay(Scene scene, LoadSceneMode mode) {
