@@ -59,6 +59,8 @@
 - Fix Hornet's death in Steel Soul mode leaving a black screen and reviving her instead of ending the game
 - Fix Hornet's charged slash giving no silk on HK enemies, and her hits there ignoring Silksong's rules for which hits
   give silk
+- Fix breakable floors giving way under Hornet, and her next down-dash breaking none, after a down-dash cut short by
+  an attack or a hit
 
 ## v0.4.0
 
