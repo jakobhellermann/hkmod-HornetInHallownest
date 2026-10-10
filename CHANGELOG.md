@@ -69,6 +69,7 @@
 - Make Hornet's tool and nail statuses, such as the Pollip Pouch's poison and Flintslate's fire, work on HK enemies
 - Fix Hornet's tool counters showing the old amounts after her HUD comes back, such as refilled tools after losing a
   pantheon
+- Make hot springs heal Hornet's masks, one per second, besides refilling her silk
 
 ## v0.4.0
 

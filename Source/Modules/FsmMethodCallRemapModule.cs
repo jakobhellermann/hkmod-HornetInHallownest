@@ -21,8 +21,12 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
 
     #region Replacement methods
 
-    private static readonly MethodInfo? spaChargeStandIn =
-        typeof(FsmMethodCallRemapModule).GetMethod(nameof(SpaChargeSilk), BindingFlags.NonPublic | BindingFlags.Static);
+    private const float SpaMaskInterval = 1f;
+
+    private static float nextSpaMaskTime;
+
+    private static readonly MethodInfo? spaStandIn =
+        typeof(FsmMethodCallRemapModule).GetMethod(nameof(SpaHeal), BindingFlags.NonPublic | BindingFlags.Static);
 
     private static readonly MethodInfo? noOpStandIn =
         typeof(FsmMethodCallRemapModule).GetMethod(nameof(HkOnlyNoOp), BindingFlags.NonPublic | BindingFlags.Static);
@@ -30,8 +34,14 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     private static readonly MethodInfo? clearStandIn =
         typeof(FsmMethodCallRemapModule).GetMethod(nameof(ClearSilk), BindingFlags.NonPublic | BindingFlags.Static);
 
-    private static bool SpaChargeSilk() {
-        if (HornetSpawner.Hornet is { } hero) hero.AddSilk(1, true);
+    // HK's hot springs refill only the Knight's soul; Hornet's also heal her masks.
+    private static bool SpaHeal() {
+        if (HornetSpawner.Hornet is not { } hero) return true;
+        hero.AddSilk(1, true);
+        var pd = Silksong::PlayerData.instance;
+        if (Time.time < nextSpaMaskTime || pd.health >= pd.CurrentMaxHealth) return true;
+        hero.AddHealth(1);
+        nextSpaMaskTime = Time.time + SpaMaskInterval;
         return true;
     }
 
@@ -47,7 +57,7 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     #endregion
 
     // HK-only MP methods called on Hornet -> the stand-in that runs instead. Hornet has no soul, so most no-op; the
-    // hot-spring soul refill and the Hall of Gods' soul drain are the exceptions, mapped onto her silk.
+    // hot-spring soul refill and the Hall of Gods' soul drain are the exceptions, mapped onto her silk and masks.
     private static readonly Dictionary<string, MethodInfo?> hkMethodStandIns = new() {
         { "ClearMP", clearStandIn },
         { "ClearMPSendEvents", clearStandIn },
@@ -55,8 +65,8 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
         { "StartMPDrain", noOpStandIn },
         { "StopMPDrain", noOpStandIn },
         { "SetMPCharge", noOpStandIn },
-        { "TryAddMPChargeSpa", spaChargeStandIn },
-        { "AddMPChargeSpa", spaChargeStandIn }
+        { "TryAddMPChargeSpa", spaStandIn },
+        { "AddMPChargeSpa", spaStandIn }
     };
 
     // Mask and soul vessel pickups `SendMessage` their max-up to "Hero", i.e. Hornet, whose HeroController has no
