@@ -70,6 +70,8 @@
 - Fix Hornet's tool counters showing the old amounts after her HUD comes back, such as refilled tools after losing a
   pantheon
 - Make hot springs heal Hornet's masks, one per second, besides refilling her silk
+- Let Hornet open the Abyss door to the Lifeblood Core in her lifeblood state, since her blue masks never reach the
+  Knight's 15
 
 ## v0.4.0
 

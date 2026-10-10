@@ -19,6 +19,7 @@ public sealed class SceneFixesModule : ModuleBase {
     public override void Initialize() {
         UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
         ModHooks.GetPlayerBoolHook += OnGetBool;
+        ModHooks.GetPlayerIntHook += OnGetInt;
         // TODO: just hook into thread storm
         Detour(typeof(SFsm), "SwitchState",
             (Action<Action<SFsm, SFsmState?>, SFsm, SFsmState?>)OnSilksongSwitchState, typeof(SFsmState));
@@ -35,6 +36,7 @@ public sealed class SceneFixesModule : ModuleBase {
     protected override void OnDeinitialize() {
         UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
         ModHooks.GetPlayerBoolHook -= OnGetBool;
+        ModHooks.GetPlayerIntHook -= OnGetInt;
     }
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
@@ -42,7 +44,7 @@ public sealed class SceneFixesModule : ModuleBase {
         blizzardRescue = scene.name == "Deepnest_East_12" ? FindBlizzardRescueFsm() : null;
         pathOfPainEnd = scene.name == "White_Palace_20" ? GameObject.Find("End Scene") : null;
         inShamanTemple = scene.name == "Crossroads_ShamanTemple";
-        inBirthplace = scene.name == "Abyss_06_Core";
+        inAbyssCore = scene.name == "Abyss_06_Core";
 
         switch (scene.name) {
             case "White_Palace_12":
@@ -227,15 +229,26 @@ public sealed class SceneFixesModule : ModuleBase {
 
     #endregion
 
-    #region Abyss birthplace floor
+    #region Abyss_06_Core birthplace floor and lifeblood door
 
-    private bool inBirthplace;
+    private const int LifebloodDoorBlueHealth = 15;
+    private const int HornetMaxBlueHealth = 9;
+
+    private bool inAbyssCore;
 
     // Hornet doesn't equip kingsoul, so pretend it is equipped in the abyss scene if we have it
     // royalCharmState 3 = King Soul, 4 = Void Heart
     private bool OnGetBool(string name, bool orig) =>
-        orig || inBirthplace && name == "equippedCharm_36" && HeroSwitch.HornetActive &&
+        orig || inAbyssCore && name == "equippedCharm_36" && HeroSwitch.HornetActive &&
         PlayerData.instance.royalCharmState > 2;
+
+    // The lifeblood door lights a lamp per blue mask up to the Knight's 15. Hornet's blue health stops short of 9: there
+    // Silksong turns it into her lifeblood state and empties healthBlue, so only that state opens the door.
+    private int OnGetInt(string name, int orig) {
+        if (!inAbyssCore || name != "healthBlue" || !HeroSwitch.HornetActive) return orig;
+        if (HornetSpawner.Hornet is { IsInLifebloodState: true }) return LifebloodDoorBlueHealth;
+        return Silksong::PlayerData.instance.healthBlue * LifebloodDoorBlueHealth / HornetMaxBlueHealth;
+    }
 
     #endregion
 
