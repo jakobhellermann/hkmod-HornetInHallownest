@@ -62,6 +62,7 @@
 - Fix breakable floors giving way under Hornet, and her next down-dash breaking none, after a down-dash cut short by
   an attack or a hit
 - Fix the Kingsoul staying equipped for good after saving in the Abyss room where Hornet opens the Birthplace floor
+- Fix the pause menu opening while Hornet dies, which let the game quit to the menu in the middle of her death
 
 ## v0.4.0
 

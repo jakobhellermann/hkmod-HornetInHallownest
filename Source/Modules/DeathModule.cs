@@ -143,6 +143,7 @@ public sealed class DeathModule : ModuleBase {
 
     private IEnumerator DeathRoutine() {
         var hkGm = GameManager.UnsafeInstance;
+        PlayerData.instance.disablePause = true;
         // try/finally guarantees `handling` always clears - a stuck DeathRoutine would break every later death.
         try {
             // HK does a "dream return" (wake at the dream entry, no bench) instead of a bench respawn for deaths in these
@@ -263,6 +264,7 @@ public sealed class DeathModule : ModuleBase {
         hero.MaxHealth();
         // Die disabled pausing, which also blocks the quick map; Silksong lifts it on entering the respawn scene.
         SPlayerData.instance.disablePause = false;
+        PlayerData.instance.disablePause = false;
 
         var atBench = PlayerData.instance.atBench;
         if (!atBench) {
