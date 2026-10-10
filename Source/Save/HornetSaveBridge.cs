@@ -79,7 +79,7 @@ public sealed class HornetSaveBridge : ModuleBase {
 
         if (data.PlayerData != null)
             try {
-                JsonConvert.PopulateObject(data.PlayerData, spd, SaveSettings);
+                JsonConvert.PopulateObject(data.PlayerData, spd, ResetSettings);
                 // HK PD owns the synced progression; the snapshot's copy can be stale. Masks picked up as Hornet before
                 // upgrades reached HK PD exist only in the snapshot, so carry them over before re-syncing.
                 var hk = PlayerData.instance;
