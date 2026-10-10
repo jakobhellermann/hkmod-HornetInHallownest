@@ -27,8 +27,16 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     private static readonly MethodInfo? noOpStandIn =
         typeof(FsmMethodCallRemapModule).GetMethod(nameof(HkOnlyNoOp), BindingFlags.NonPublic | BindingFlags.Static);
 
+    private static readonly MethodInfo? clearStandIn =
+        typeof(FsmMethodCallRemapModule).GetMethod(nameof(ClearSilk), BindingFlags.NonPublic | BindingFlags.Static);
+
     private static bool SpaChargeSilk() {
         if (HornetSpawner.Hornet is { } hero) hero.AddSilk(1, true);
+        return true;
+    }
+
+    private static bool ClearSilk() {
+        if (HornetSpawner.Hornet is { } hero) hero.TakeSilk(Silksong::PlayerData.instance.silk);
         return true;
     }
 
@@ -39,10 +47,10 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     #endregion
 
     // HK-only MP methods called on Hornet -> the stand-in that runs instead. Hornet has no soul, so most no-op; the
-    // hot-spring soul refill is the exception, mapped onto a silk gain.
+    // hot-spring soul refill and the Hall of Gods' soul drain are the exceptions, mapped onto her silk.
     private static readonly Dictionary<string, MethodInfo?> hkMethodStandIns = new() {
-        { "ClearMP", noOpStandIn },
-        { "ClearMPSendEvents", noOpStandIn },
+        { "ClearMP", clearStandIn },
+        { "ClearMPSendEvents", clearStandIn },
         { "AddMPCharge", noOpStandIn },
         { "StartMPDrain", noOpStandIn },
         { "StopMPDrain", noOpStandIn },

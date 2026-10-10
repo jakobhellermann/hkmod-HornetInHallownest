@@ -97,7 +97,7 @@ public sealed class BenchModule : ModuleBase {
     }
 
     // TODO: implement shell shards?
-    private void RefillTools() {
+    internal static void RefillTools() {
         try {
             var tools = Silksong::PlayerData.instance.Tools;
             if (tools == null) return;
@@ -110,7 +110,7 @@ public sealed class BenchModule : ModuleBase {
 
             RefreshToolHud();
         } catch (Exception e) {
-            LogError($"tool refill failed: {e.Message}");
+            Log.Error($"[Bench] tool refill failed: {e.Message}");
         }
     }
 }
