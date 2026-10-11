@@ -11,8 +11,8 @@ namespace HornetInHallownest.Modules;
 // Hornet's down-attack pogo vs HK objects. Two cross-game gaps, both on HeroDownAttack:
 //   - IsNonBounce: don't pogo off HK objects HK marks non-pogoable (they carry HK's NonBouncer, a different type than
 //     Silksong's, so her gate misses them, and she'd bounce off everything).
-//   - ContinueBounceTrigger: do give the big launch off HK BounceShroom/BigBouncer (her downspike only knows the normal
-//     rebound), mirroring HK's NailSlash branch.
+//   - ContinueBounceTrigger: do give the big launch off HK's BounceShroom (her downspike only knows the normal rebound),
+//     mirroring HK's NailSlash branch.
 public sealed class PogoModule : ModuleBase {
     public override string Id => "pogo";
 
@@ -108,12 +108,7 @@ public sealed class PogoModule : ModuleBase {
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
         if (hero && otherObj) {
             // Do the dedicated launch instead of orig's normal downspike QueueBounce (which would override the bigger
-            // SHROOM_BOUNCE_VELOCITY back down). A shroom/bouncer carries no DamageHero, so no damage handling is lost.
-            if (otherObj.GetComponent<BigBouncer>()) {
-                hero.BounceHigh();
-                return;
-            }
-
+            // SHROOM_BOUNCE_VELOCITY back down). A shroom carries no DamageHero, so no damage handling is lost.
             var shroom = otherObj.GetComponentInParent<BounceShroom>();
             if (shroom && shroom.active) {
                 // End the downspike first (else the stab keeps driving her velocity down): mirror DownspikeBounce's exit
