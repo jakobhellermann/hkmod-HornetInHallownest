@@ -82,6 +82,7 @@
   Rancid Eggs, Pale Ore and Dream Nail essence among Hornet's inventory items
 - Give Hornet her Hunter's Journal with the Knight's, and fill it with HK's entries and his kills
 - Fix Hornet's jump being cut short when a hit, such as a Cogfly's, lands on an HK enemy's armor
+- Show HK's inventory map in Hornet's map pane, with its area overview, zoom, markers and map key
 
 ## v0.4.0
 

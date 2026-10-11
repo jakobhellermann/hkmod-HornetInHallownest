@@ -1,24 +1,27 @@
 extern alias Silksong;
 extern alias SilksongPM;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
-using HutongGames.PlayMaker;
-using HutongGames.PlayMaker.Actions;
 using UnityEngine;
 using SHeroController = Silksong::HeroController;
 using SPlayerData = Silksong::PlayerData;
 using SInventoryPane = Silksong::InventoryPane;
+using SInventoryPaneBase = Silksong::InventoryPaneBase;
 using SInventoryPaneList = Silksong::InventoryPaneList;
-using SInventoryShortcutButtons = Silksong::GlobalEnums.InventoryShortcutButtons;
 
 namespace HornetInHallownest.Modules;
 
 // Hornet's own "Map Control" FSM runs the quick map (slow map walk, animations, double tap for the inventory map), but it
-// opens Silksong's map UI through EventRegister events. Gate it on HK's map and route those events to HK's map instead.
+// opens Silksong's map UI through EventRegister events. Gate it on HK's map and route the quick map's events to HK's
+// quick map. Her inventory's map pane runs HK's inventory map instead of Pharloom's.
 public sealed class QuickMapModule : ModuleBase {
+    private const string DoNotClose = "Do Not Close";
+    private const string InSubMenu = "In Sub Menu";
+    private const string AllowPaneSwapping = "Allow Pane Swapping";
+    private const string MarkerMenuState = "Marker Select Menu";
+
     // Silksong EventRegister event -> HK's quick map FSM event
     private static readonly Dictionary<int, string> quickMapEvents = new() {
         { "OPEN QUICK MAP".GetHashCode(), "OPEN QUICK MAP" },
@@ -26,164 +29,204 @@ public sealed class QuickMapModule : ModuleBase {
         { "CLOSE QUICK MAP INSTANT".GetHashCode(), "CLOSE QUICK MAP" }
     };
 
-    private static readonly int openInventoryMap = "OPEN INVENTORY MAP".GetHashCode();
+    // HK's map FSM state that moves past the map's edge -> Silksong's inventory event for that pane move
+    private static readonly Dictionary<string, string> paneMoves = new() {
+        ["Move Pane L"] = "MOVE PANE L",
+        ["Move Pane R"] = "MOVE PANE R"
+    };
 
-    private const int MapPaneIndex = (int)SInventoryPaneList.PaneTypes.Map;
-
-    // Set from the first pane move of a switch between the two inventories until the target one has opened. Pane moves in
-    // between are swallowed: a second switch started mid-way leaves both inventories open.
-    private bool switchingInventories;
+    private static GameMap? shownMap;
+    private static Vector3 hiddenMapPosition;
+    private static Vector3 hiddenMapScale;
+    private static GameObject? hkMapPane;
+    private static PlayMakerFSM? hkMapControl;
+    private static PlayMakerFSM? hkInventoryControl;
+    private static SilksongPM::PlayMakerFSM? inventoryControl;
+    private static GameObject? pharloomMap;
+    private static GameObject? wideMapCompass;
+    private static bool wasWideMapCompassActive;
+    private static bool isActivating;
+    private static bool isZoomShortcut;
+    private static bool shownAllowPaneSwapping;
 
     public override string Id => "quick-map";
+
+    public override bool RunWhilePaused => true;
 
     public override void Initialize() {
         Detour(typeof(SHeroController), "CanQuickMap", OnCanQuickMap, typeof(bool));
         Detour(typeof(Silksong::EventRegister), "SendEvent", OnSendEvent, typeof(int), typeof(GameObject));
         Detour(typeof(SInventoryPane), "get_IsAvailable", OnPaneIsAvailable);
-        Detour(typeof(SInventoryPaneList), "SetNextPane", OnSetNextPane, typeof(int), typeof(SInventoryPane));
-        Detour(typeof(SInventoryPaneList), "SetCurrentPane", OnSetCurrentPane, typeof(int), typeof(SInventoryPane));
-        Detour(typeof(ListenForPaneLeft), "OnUpdate", OnPaneLeft);
-        Detour(typeof(ListenForPaneRight), "OnUpdate", OnPaneRight);
+        Detour(typeof(SInventoryPane), nameof(SInventoryPane.PaneStart), OnPaneStart);
+        Detour(typeof(SInventoryPaneBase), nameof(SInventoryPaneBase.PaneEnd), OnPaneEnd);
+        Detour(typeof(SInventoryPaneList), nameof(SInventoryPaneList.OnClosingInventory), OnClosingInventory);
+        Detour(typeof(Silksong::InventoryPaneInput), "Update", OnPaneInputUpdate);
+        Detour(typeof(Silksong::InventoryMapManager), nameof(Silksong::InventoryMapManager.AutoZoomIn), OnAutoZoomIn);
+        Detour(typeof(Silksong::InventoryMapManager), nameof(Silksong::InventoryMapManager.ZoomOut), OnZoomOut);
     }
 
-    // Silksong's map pane only shows Pharloom and stays disabled. It's listed (pane icon) while HK's map is owned, but
-    // moving onto it switches to HK's inventory on the map instead, and paging off HK's map switches back.
+    protected override void OnDeinitialize() => HideHkMap();
+
+    // HK's map listens for its input only while HK isn't paused, and Hornet's inventory pauses HK, so its input events
+    // come from here.
+    public override void HornetActiveUpdate(SHeroController hero) {
+        if (!shownMap) return;
+        if (isActivating) {
+            // The map's FSM ignores ACTIVATE until it has started, a frame after its pane first turns on.
+            if (hkMapControl!.ActiveStateName is "" or "Init") return;
+            if (hkMapControl.ActiveStateName == "Inactive") hkMapControl.SendEvent("ACTIVATE");
+            isActivating = false;
+        }
+
+        if (isZoomShortcut) {
+            // Activating selects the current area, which MAP ZOOM zooms into.
+            isZoomShortcut = false;
+            hkMapControl!.SendEvent("MAP ZOOM");
+        }
+
+        // While zoomed in, HK's map holds its inventory open (Do Not Close) and takes Cancel. Hornet's inventory keeps
+        // only Cancel from closing it then (In Sub Menu), and stops pane moves only for the marker menu, which cycles
+        // markers on the pane buttons. Pharloom's map FSM still sets Do Not Close as it zooms on the quick map shortcut.
+        var variables = inventoryControl!.FsmVariables;
+        variables.GetFsmBool(DoNotClose).Value = false;
+        variables.GetFsmBool(InSubMenu).Value = hkInventoryControl!.FsmVariables.GetFsmBool(DoNotClose).Value;
+        variables.GetFsmBool(AllowPaneSwapping).Value =
+            shownAllowPaneSwapping && hkMapControl!.ActiveStateName != MarkerMenuState;
+
+        var input = InputHandler.Instance.inputActions;
+        if (input.dreamNail.WasPressed) MapKey()?.SendEvent("ACTION");
+        var uiEvent = Platform.Current.GetMenuAction(input, true) switch {
+            Platform.MenuActions.Submit => "UI CONFIRM",
+            Platform.MenuActions.Cancel => "UI CANCEL",
+            _ when input.left.WasPressed => "UI LEFT",
+            _ when input.right.WasPressed => "UI RIGHT",
+            _ when input.up.WasPressed => "UI UP",
+            _ when input.down.WasPressed => "UI DOWN",
+            _ => null
+        };
+        if (uiEvent != null) hkMapControl!.SendEvent(uiEvent);
+
+        if (!paneMoves.TryGetValue(hkMapControl!.ActiveStateName, out var paneMove)) return;
+        hkMapControl.SendEvent("CANCEL");
+        inventoryControl.SendEvent(paneMove);
+    }
+
+    // Pharloom's map would act on the same presses as HK's map.
+    private static void OnPaneInputUpdate(Action<Silksong::InventoryPaneInput> orig,
+        Silksong::InventoryPaneInput self) {
+        if (!shownMap || !IsMapPane(self)) orig(self);
+    }
+
+    // Pharloom's map stays at its wide view; the quick map shortcut that would zoom it in zooms HK's map instead.
+    private static void OnAutoZoomIn(Action<Silksong::InventoryMapManager> orig, Silksong::InventoryMapManager self) {
+        if (HeroSwitch.HornetActive) isZoomShortcut = true;
+        else orig(self);
+    }
+
+    private static void OnZoomOut(Action<Silksong::InventoryMapManager> orig, Silksong::InventoryMapManager self) {
+        if (!HeroSwitch.HornetActive) orig(self);
+    }
+
+    private static void OnClosingInventory(Action<SInventoryPaneList> orig, SInventoryPaneList self) {
+        orig(self);
+        HideHkMap();
+    }
+
+    // Silksong's map pane only shows Pharloom; it's listed while HK's map is owned.
     private static bool OnPaneIsAvailable(Func<SInventoryPane, bool> orig, SInventoryPane self) {
-        if (HeroSwitch.HornetActive && self.TryGetComponent<Silksong::InventoryMapManager>(out _))
-            return PlayerData.instance.hasMap;
+        if (HeroSwitch.HornetActive && IsMapPane(self)) return PlayerData.instance.hasMap;
         return orig(self);
     }
 
-    private SInventoryPane OnSetNextPane(Func<SInventoryPaneList, int, SInventoryPane, SInventoryPane> orig,
-        SInventoryPaneList self, int direction, SInventoryPane currentPane) {
-        if (!HeroSwitch.HornetActive) return orig(self, direction, currentPane);
-        if (switchingInventories) return CancelPaneMove(self, currentPane);
-        if (!PlayerData.instance.hasMap || StepToPane(self, self.GetPaneIndex(currentPane), direction) != MapPaneIndex)
-            return orig(self, direction, currentPane);
-
-        StartCoroutine(SwitchToHkInventoryMap(self));
-        return CancelPaneMove(self, currentPane);
+    private static void OnPaneStart(Action<SInventoryPane> orig, SInventoryPane self) {
+        orig(self);
+        if (HeroSwitch.HornetActive && IsMapPane(self)) ShowHkMap(self);
     }
 
-    // Direct moves onto the map, e.g. selecting its pane icon. Opening the inventory also lands here (with the last pane
-    // still current), so other indices must pass even mid-switch: that's how switching back opens the target pane.
-    private SInventoryPane OnSetCurrentPane(Func<SInventoryPaneList, int, SInventoryPane?, SInventoryPane> orig,
-        SInventoryPaneList self, int index, SInventoryPane? currentPane) {
-        if (!HeroSwitch.HornetActive || index != MapPaneIndex || !currentPane) return orig(self, index, currentPane);
-
-        if (!switchingInventories) StartCoroutine(SwitchToHkInventoryMap(self));
-        return CancelPaneMove(self, currentPane);
+    private static void OnPaneEnd(Action<SInventoryPaneBase> orig, SInventoryPaneBase self) {
+        orig(self);
+        if (IsMapPane(self)) HideHkMap();
     }
 
-    // Returning the current pane makes the FSM cancel the move. A move queued during a pane tween ("Queued Move L/R") is
-    // only cleared by the next tween, which a cancelled move never reaches: "Opened" would replay it every frame.
-    private static SInventoryPane CancelPaneMove(SInventoryPaneList list, SInventoryPane currentPane) {
-        var fsm = SilksongPM::PlayMakerFSM.FindFsmOnGameObject(list.gameObject, "Inventory Control");
-        if (fsm) {
-            fsm.FsmVariables.FindFsmBool("Queued Move L").Value = false;
-            fsm.FsmVariables.FindFsmBool("Queued Move R").Value = false;
-        }
+    private static bool IsMapPane(Component pane) => pane.TryGetComponent<Silksong::InventoryMapManager>(out _);
 
-        return currentPane;
+    private static void ShowHkMap(SInventoryPane pane) {
+        var map = GameManager.instance.gameMap ? GameManager.instance.gameMap.GetComponent<GameMap>() : null;
+        var mapPane = GameCameras.instance.hudCamera.transform.Find("Inventory/Map");
+        var paneList = pane.GetComponentInParent<SInventoryPaneList>();
+        if (!map || !mapPane || !paneList) return;
+
+        HideHkMap();
+        shownMap = map;
+        hiddenMapPosition = map.transform.localPosition;
+        hiddenMapScale = map.transform.localScale;
+        hkMapPane = mapPane.gameObject;
+        hkInventoryControl = FSMUtility.LocateFSM(mapPane.parent.gameObject, "Inventory Control");
+        inventoryControl = Silksong::FSMUtility.LocateFSM(paneList.gameObject, "Inventory Control");
+        shownAllowPaneSwapping = inventoryControl.FsmVariables.GetFsmBool(AllowPaneSwapping).Value;
+
+        // HK's inventory opens its map pane this way.
+        mapPane.localPosition = Vector3.zero;
+        hkMapPane.SetActive(true);
+        FSMUtility.SendEventToGameObject(hkMapPane, "UP");
+        var worldMap = mapPane.Find("World Map");
+        wideMapCompass = worldMap.Find("Wide Map/Compass Icon").gameObject;
+        wasWideMapCompassActive = wideMapCompass.activeSelf;
+        // HK shows it while Wayward Compass is on; the bool reads Hornet's Compass tool for her.
+        wideMapCompass.SetActive(PlayerData.instance.GetBool("equippedCharm_2"));
+        MapMarkerModule.SetWideMapCompass(wideMapCompass.transform, true);
+        // The zoom fades the area overview out, and only HK's zoom out brings it back.
+        FSMUtility.SendEventToGameObject(worldMap.Find("Wide Map").gameObject, "UP", true);
+        var arrows = worldMap.Find("Pan Arrows");
+        map.SetPanArrows(arrows.Find("Arrow U").gameObject, arrows.Find("Arrow D").gameObject,
+            arrows.Find("Arrow L").gameObject, arrows.Find("Arrow R").gameObject);
+        hkMapControl = FSMUtility.LocateFSM(worldMap.gameObject, "UI Control");
+        isActivating = true;
+
+        var pharloom = pane.transform.Find("World Map");
+        if (!pharloom) return;
+        pharloomMap = pharloom.gameObject;
+        pharloomMap.SetActive(false);
     }
 
-    private void OnPaneLeft(Action<ListenForPaneLeft> orig, ListenForPaneLeft self) {
-        if (!TryLeaveHkMap(self.Fsm, -1)) orig(self);
+    private static void HideHkMap() {
+        if (!shownMap) return;
+        // Hornet's inventory also closes mid-zoom (on damage), which HK's map never expects: undo what its zoom holds.
+        var worldMap = hkMapPane!.transform.Find("World Map");
+        if (hkMapControl!.ActiveStateName == MarkerMenuState)
+            worldMap.Find("Map Markers").GetComponent<MapMarkerMenu>().Close();
+        // Reset is where HK's zoom out ends: the zoom-in prompt and the inventory free to close.
+        if (hkInventoryControl!.FsmVariables.GetFsmBool(DoNotClose).Value) hkMapControl.SetState("Reset");
+        hkMapControl.SendEvent("PANE RESET");
+        FSMUtility.SendEventToGameObject(hkMapPane, "DOWN");
+        // Its fade group holds the HK inventory border's pane arrows, which stay on screen outside the inventory.
+        var borderFade = worldMap.GetComponent<FadeGroup>();
+        borderFade.InvokeMethod("DisableRenderers");
+        foreach (var arrow in borderFade.animators) arrow.GetComponent<MeshRenderer>().enabled = false;
+        MapMarkerModule.SetWideMapCompass(wideMapCompass!.transform, false);
+        wideMapCompass.SetActive(wasWideMapCompassActive);
+        var variables = inventoryControl!.FsmVariables;
+        variables.GetFsmBool(DoNotClose).Value = false;
+        variables.GetFsmBool(InSubMenu).Value = false;
+        variables.GetFsmBool(AllowPaneSwapping).Value = shownAllowPaneSwapping;
+        isZoomShortcut = false;
+        MapKey()?.SendEvent("MAP KEY DOWN");
+
+        iTween.Stop(shownMap.gameObject);
+        shownMap.StopPan();
+        shownMap.CloseQuickMap();
+        shownMap.transform.localPosition = hiddenMapPosition;
+        shownMap.transform.localScale = hiddenMapScale;
+        shownMap = null;
+        hkMapPane.SetActive(false);
+        if (pharloomMap) pharloomMap.SetActive(true);
+        pharloomMap = null;
     }
 
-    private void OnPaneRight(Action<ListenForPaneRight> orig, ListenForPaneRight self) {
-        if (!TryLeaveHkMap(self.Fsm, 1)) orig(self);
-    }
-
-    // True when the press is consumed: it leaves HK's map for Hornet's inventory, or a switch is already under way.
-    private bool TryLeaveHkMap(Fsm fsm, int direction) {
-        if (!HeroSwitch.HornetActive || GameManager.instance.isPaused) return false;
-        var inventory = GameManager.instance.inventoryFSM;
-        if (!inventory || fsm != inventory.Fsm) return false;
-        var actions = InputHandler.Instance.inputActions;
-        if (!(direction < 0 ? actions.paneLeft : actions.paneRight).WasPressed) return false;
-        if (switchingInventories) return true;
-        var currentPane = inventory.FsmVariables.FindFsmGameObject("Current Pane");
-        var mapPane = inventory.FsmVariables.FindFsmGameObject("Map Pane");
-        if (inventory.ActiveStateName != "Opened" || currentPane == null || mapPane == null || !currentPane.Value ||
-            currentPane.Value != mapPane.Value)
-            return false;
-
-        StartCoroutine(SwitchToHornetInventory(inventory, direction));
-        return true;
-    }
-
-    // InventoryPaneList.GetNextPane's walk from `index`, except that it stops at the map slot.
-    private static int StepToPane(SInventoryPaneList list, int index, int direction) {
-        var count = list.TotalPaneCount;
-        for (var i = 0; i < count; i++) {
-            index = (index + direction + count) % count;
-            if (index == MapPaneIndex) return index;
-            var pane = list.GetPane(index);
-            if (pane && list.InvokeMethod<bool>("IsPaneAvailable", pane, (SInventoryPaneList.PaneTypes)index))
-                return index;
-        }
-
-        return -1;
-    }
-
-    private IEnumerator SwitchToHkInventoryMap(SInventoryPaneList list) {
-        switchingInventories = true;
-        try {
-            var fsm = SilksongPM::PlayMakerFSM.FindFsmOnGameObject(list.gameObject, "Inventory Control");
-            if (!fsm) yield break;
-            yield return CloseInventory(() => fsm.ActiveStateName, () => fsm.SendEvent("CLOSE"));
-            var inventory = GameManager.instance.inventoryFSM;
-            if (fsm.ActiveStateName != "Closed" || !inventory) yield break;
-            inventory.SendEvent("OPEN INVENTORY MAP");
-            yield return WaitForState(() => inventory.ActiveStateName, "Opened");
-        } finally {
-            switchingInventories = false;
-        }
-    }
-
-    private IEnumerator SwitchToHornetInventory(PlayMakerFSM hkInventory, int direction) {
-        switchingInventories = true;
-        try {
-            // On the map HK's inventory holds "Do Not Close": CLOSE is refused, and the forced INVENTORY CANCEL stalls on
-            // the same check before it returns control to the hero.
-            yield return CloseInventory(() => hkInventory.ActiveStateName, () => {
-                hkInventory.FsmVariables.FindFsmBool("Do Not Close").Value = false;
-                hkInventory.SendEvent("CLOSE");
-            });
-            if (hkInventory.ActiveStateName != "Closed") yield break;
-
-            var list = typeof(SInventoryPaneList).GetFieldValue<SInventoryPaneList>("_instance");
-            if (!list) yield break;
-            var index = StepToPane(list, MapPaneIndex, direction);
-            if (index < 0 || index == MapPaneIndex) yield break;
-
-            // Opened like the inventory button: the "Inventory" shortcut opens the pane queued by SetNextOpen.
-            SInventoryPaneList.SetNextOpen(list.GetPane(index).name);
-            var fsm = SilksongPM::PlayMakerFSM.FindFsmOnGameObject(list.gameObject, "Inventory Control");
-            if (!fsm) yield break;
-            fsm.FsmVariables.FindFsmEnum("Button Shortcut").Value = SInventoryShortcutButtons.Inventory;
-            fsm.SendEvent("BUTTON PRESSED");
-            yield return WaitForState(() => fsm.ActiveStateName, "Opened");
-        } finally {
-            switchingInventories = false;
-        }
-    }
-
-    // A pane move pressed meanwhile takes the FSM out of "Opened", and a CLOSE arriving in any other state is dropped, so
-    // close again whenever it's back in "Opened".
-    private static IEnumerator CloseInventory(Func<string> activeState, Action close, float timeoutSeconds = 3f) {
-        var deadline = Time.unscaledTime + timeoutSeconds;
-        while (activeState() != "Closed" && Time.unscaledTime < deadline) {
-            if (activeState() == "Opened") close();
-            yield return null;
-        }
-    }
-
-    // In real time: the inventories pause the game, and their close animations last a fixed time, not a frame count.
-    private static IEnumerator WaitForState(Func<string> activeState, string state, float timeoutSeconds = 3f) {
-        var deadline = Time.unscaledTime + timeoutSeconds;
-        while (activeState() != state && Time.unscaledTime < deadline) yield return null;
+    // HK's map legend, which its inventory shows beside the zoomed-in map. It sits outside the inventory's map pane.
+    private static PlayMakerFSM? MapKey() {
+        var mapKey = GameCameras.instance ? GameCameras.instance.hudCamera.transform.Find("Inventory/Map Key") : null;
+        return mapKey ? FSMUtility.LocateFSM(mapKey.gameObject, "Control") : null;
     }
 
     // Silksong requires a Pharloom map (HasAnyMap); mapAllRooms short-circuits that check to HK's hasMap.
@@ -199,23 +242,14 @@ public sealed class QuickMapModule : ModuleBase {
     }
 
     private static void OnSendEvent(Action<int, GameObject> orig, int eventNameHash, GameObject excludeGameObject) {
-        if (!HeroSwitch.HornetActive) {
+        if (!HeroSwitch.HornetActive || !quickMapEvents.TryGetValue(eventNameHash, out var hkEvent)) {
             orig(eventNameHash, excludeGameObject);
             return;
         }
 
-        if (quickMapEvents.TryGetValue(eventNameHash, out var hkEvent)) {
-            var quickMap = GameCameras.instance ? GameCameras.instance.hudCamera.transform.Find("Quick Map") : null;
-            if (quickMap)
-                foreach (var fsm in quickMap.GetComponents<PlayMakerFSM>())
-                    fsm.SendEvent(hkEvent);
-        }
-        else if (eventNameHash == openInventoryMap) {
-            var inventory = GameManager.instance.inventoryFSM;
-            if (inventory) inventory.SendEvent("OPEN INVENTORY MAP");
-        }
-        else {
-            orig(eventNameHash, excludeGameObject);
-        }
+        var quickMap = GameCameras.instance ? GameCameras.instance.hudCamera.transform.Find("Quick Map") : null;
+        if (quickMap)
+            foreach (var fsm in quickMap.GetComponents<PlayMakerFSM>())
+                fsm.SendEvent(hkEvent);
     }
 }

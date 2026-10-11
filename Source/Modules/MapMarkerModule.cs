@@ -18,6 +18,7 @@ public sealed class MapMarkerModule : ModuleBase {
     ];
 
     private static GameObject? hornetCompass;
+    private static GameObject? hornetWideMapCompass;
     private static GameObject? cocoonMarker;
     private static string? compassScene;
 
@@ -41,6 +42,7 @@ public sealed class MapMarkerModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         if (hornetCompass) Object.Destroy(hornetCompass);
+        if (hornetWideMapCompass) Object.Destroy(hornetWideMapCompass);
         if (cocoonMarker) Object.Destroy(cocoonMarker);
     }
 
@@ -65,6 +67,19 @@ public sealed class MapMarkerModule : ModuleBase {
         if (!hornetCompass) return;
         knightHead.enabled = !HeroSwitch.HornetActive;
         hornetCompass.SetActive(HeroSwitch.HornetActive);
+    }
+
+    // The area overview of HK's inventory map marks the hero's area with the Knight's head.
+    internal static void SetWideMapCompass(Transform compassIcon, bool hornet) {
+        var knightHead = compassIcon.GetComponent<Renderer>();
+        if (!hornetWideMapCompass) {
+            hornetWideMapCompass = CloneMarker(CompassIconName, compassIcon, knightHead);
+            if (!hornetWideMapCompass) return;
+            hornetWideMapCompass.AddComponent<AlphaFollower>().Source = compassIcon.GetComponent<tk2dSprite>();
+        }
+
+        knightHead.enabled = !hornet;
+        hornetWideMapCompass.SetActive(hornet);
     }
 
     // The cocoon sits in the room's area so a quick map of another area hides it along with that area.
@@ -127,5 +142,22 @@ public sealed class MapMarkerModule : ModuleBase {
     private static Silksong::GameMap? SilksongMapPrefab() {
         var manager = Object.FindAnyObjectByType<Silksong::InventoryMapManager>(FindObjectsInactive.Include);
         return manager ? manager.GetFieldValue<Silksong::GameMap>("gameMapPrefab") : null;
+    }
+}
+
+// HK fades its map icons through the sprite's own color, which a marker cloned into one doesn't share.
+internal sealed class AlphaFollower : MonoBehaviour {
+    internal tk2dSprite? Source;
+    private tk2dBaseSprite[] sprites = [];
+
+    private void Awake() => sprites = GetComponentsInChildren<tk2dBaseSprite>(true);
+
+    private void LateUpdate() {
+        if (!Source) return;
+        foreach (var sprite in sprites) {
+            var color = sprite.color;
+            color.a = Source!.color.a;
+            sprite.color = color;
+        }
     }
 }
