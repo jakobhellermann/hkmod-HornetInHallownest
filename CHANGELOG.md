@@ -91,6 +91,8 @@
   its dream
 - Fix Hornet freezing mid-sprint or mid-Clawline, or getting her control back after a Crystal Heart dash, when a boss
   arena stops her for the boss's entrance
+- Fix the Knight's sprite showing instead of Hornet's wake-up when she arrives in some dreams, and her run being cut
+  short right after she gets up in a dream
 
 ## v0.4.0
 

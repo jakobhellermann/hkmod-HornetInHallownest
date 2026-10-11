@@ -509,19 +509,23 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     // HK's "Dream Entry" FSM hides the hero and plays a Knight sprite ("Knight Dream Arrival") before handing control
     // back, but Hornet's own EnterSceneDreamGate already accepts input, so she'd walk around unseen. Play Silksong's
-    // memory wake-up (Prostrate, then Prostrate Rise) on the same beats instead and hold her control until she's up.
+    // memory wake-up (Prostrate, then Prostrate Rise) on the same beats instead and hold her control until the FSM hands
+    // it back: that resets her to idle, cutting short a run she'd start once up, before the Knight's sprite ends.
     // Hall of Gods statue fights kneel the Knight instead, so she kneels and stands up from that.
+    private const string DreamEntryReturnState = "Return Control";
+
     private static readonly string[] dreamEntryKneelStates =
         ["Start Kneeling", "Pause Kneeling", "Wait for Transition"];
 
     private static readonly string[] dreamEntryFadeStates =
-        ["Start Fade", "Arrive Anim", "Wait for Anim", "Return Control"];
+        ["Start Fade", "Arrive Anim", "Wait for Anim", DreamEntryReturnState];
 
     private static readonly string[] dreamEntryArriveStates =
-        ["Arrive Anim", "Wait for Anim", "Return from Kneeling", "Return Control"];
+        ["Arrive Anim", "Wait for Anim", "Return from Kneeling", DreamEntryReturnState];
 
     private IEnumerator PlayDreamArrival(Silksong::HeroController hero) {
         var entry = GameObject.Find("Dream Entry");
+        if (!entry) entry = GameObject.Find("Dream Entry Grimm");
         var fsm = entry ? Array.Find(entry.GetComponents<PlayMakerFSM>(), f => f.FsmName == "Control") : null;
         var knightSprite = entry ? entry.transform.Find("Knight Dream Arrival") : null;
         if (!fsm || !knightSprite) yield break;
@@ -545,8 +549,7 @@ public sealed class SceneTransitionModule : ModuleBase {
                 yield return null;
 
             hero.AnimCtrl.PlayClipForced(kneeling ? "Abyss Kneel to Stand" : "Prostrate Rise");
-            var rise = hero.AnimCtrl.animator.CurrentClip;
-            while (rise != null && hero.AnimCtrl.animator.IsPlaying(rise) && Time.unscaledTime < deadline) {
+            while (fsm.ActiveStateName != DreamEntryReturnState && Time.unscaledTime < deadline) {
                 foreach (var knightRenderer in knightRenderers) knightRenderer.enabled = false;
                 yield return null;
             }
@@ -554,7 +557,7 @@ public sealed class SceneTransitionModule : ModuleBase {
             foreach (var knightRenderer in knightRenderers) knightRenderer.enabled = false;
         } finally {
             playingDreamArrival = false;
-            if (hero) {
+            if (hero && hero.controlReqlinquished) {
                 hero.RegainControl();
                 hero.StartAnimationControl();
             }
