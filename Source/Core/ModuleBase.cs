@@ -17,7 +17,9 @@ public abstract class ModuleBase {
 
     private readonly List<IDisposable> disposables = [];
 
-    internal static bool Paused => Time.timeScale == 0f;
+    // HK's hit-stop (FreezeMoment, such as a hit on armor) stops time too, but HK never pauses during one.
+    internal static bool Paused =>
+        Time.timeScale == 0f && !(GameManager.instance && GameManager.instance.TimeSlowed);
 
     public abstract string Id { get; }
 
