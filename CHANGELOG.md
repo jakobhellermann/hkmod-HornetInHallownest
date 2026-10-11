@@ -78,6 +78,8 @@
 - Drain Hornet's silk at the start of a Hall of Gods fight or a pantheon, where the Knight loses his soul
 - Give Hornet back the masks, silk and tools she spent in a dream boss's, Grey Prince Zote's or the Radiance's dream, a
   Hall of Gods fight or a pantheon, whether she wins or dies there
+- List the Knight's keys, Isma's Tear, Lumafly Lantern, Crystal Heart, Shade Cloak, Desolate Dive, map and quill, relics,
+  Rancid Eggs, Pale Ore and Dream Nail essence among Hornet's inventory items
 
 ## v0.4.0
 
