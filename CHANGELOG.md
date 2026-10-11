@@ -80,6 +80,7 @@
   Hall of Gods fight or a pantheon, whether she wins or dies there
 - List the Knight's keys, Isma's Tear, Lumafly Lantern, Crystal Heart, Shade Cloak, Desolate Dive, map and quill, relics,
   Rancid Eggs, Pale Ore and Dream Nail essence among Hornet's inventory items
+- Give Hornet her Hunter's Journal with the Knight's, and fill it with HK's entries and his kills
 
 ## v0.4.0
 
