@@ -27,9 +27,10 @@ internal sealed class KnightPresence : HeroPresence {
         // for input independently of HeroController.enabled and would fire on shared input; the rest target the PlayMaker
         // "Hero" global (repointed to Hornet) and would act on her. Remember only what we actually disabled, so restore
         // doesn't re-enable FSMs the game itself had off. The vignette's Darkness Control stays on: HK's scene setup
-        // darkens dark rooms through it, for both heroes.
+        // darkens dark rooms through it, for both heroes. So does Spawn Grimmchild, which spawns the Grimmchild at the
+        // "Hero" global, Hornet, while her Grimmchild tool is on.
         foreach (var fsm in go.GetComponentsInChildren<PlayMakerFSM>(true))
-            if (fsm.enabled && fsm != vignetteFsm) {
+            if (fsm.enabled && fsm != vignetteFsm && fsm.FsmName != "Spawn Grimmchild") {
                 fsm.enabled = false;
                 disabledByUs.Add(fsm);
             }

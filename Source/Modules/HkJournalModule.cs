@@ -6,12 +6,10 @@ using System.Linq;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
 using UnityEngine;
-using HkLanguage = TeamCherry.Localization.Language;
 using SEnemyJournalManager = Silksong::EnemyJournalManager;
 using SEnemyJournalRecord = Silksong::EnemyJournalRecord;
 using SJournalItemManager = Silksong::JournalItemManager;
 using SKillData = Silksong::EnemyJournalKillData.KillData;
-using SLanguage = SilksongLoc::TeamCherry.Localization.Language;
 using SLocalisedString = SilksongLoc::TeamCherry.Localization.LocalisedString;
 
 namespace HornetInHallownest.Modules;
@@ -19,8 +17,8 @@ namespace HornetInHallownest.Modules;
 // Hornet's Hunter's Journal is the Knight's: it opens once he holds HK's journal and lists HK's entries, in HK's order,
 // with his kills.
 public sealed class HkJournalModule : ModuleBase {
-    // Her records' text, answered from HK's own "Journal" sheet. Silksong has a "Journal" sheet of its own.
-    private const string HkJournalSheet = "HK Journal";
+    // Silksong has a "Journal" sheet of its own.
+    private const string HkJournalSheet = LanguageSyncModule.HkSheetPrefix + "Journal";
 
     private static readonly Dictionary<SEnemyJournalRecord, HkJournalEntry> entries = [];
     private static readonly List<SEnemyJournalRecord> records = [];
@@ -32,8 +30,6 @@ public sealed class HkJournalModule : ModuleBase {
         Detour(typeof(SJournalItemManager), "GetItems", OnGetItems);
         Detour(typeof(SEnemyJournalManager), nameof(SEnemyJournalManager.GetKillData), OnGetKillData);
         Detour(typeof(SEnemyJournalManager), nameof(SEnemyJournalManager.SetJournalSeen), OnSetJournalSeen);
-        Detour(typeof(SLanguage), nameof(SLanguage.Has), OnLanguageHas, typeof(string), typeof(string));
-        Detour(typeof(SLanguage), nameof(SLanguage.Get), OnLanguageGet, typeof(string), typeof(string));
     }
 
     protected override void OnDeinitialize() {
@@ -65,12 +61,6 @@ public sealed class HkJournalModule : ModuleBase {
             PlayerData.instance.SetBool("newData" + entry.PlayerDataName, false);
         else orig(record);
     }
-
-    private static bool OnLanguageHas(Func<string, string, bool> orig, string key, string sheetTitle) =>
-        sheetTitle == HkJournalSheet ? HkLanguage.Has(key, "Journal") : orig(key, sheetTitle);
-
-    private static string OnLanguageGet(Func<string, string, string> orig, string key, string sheetTitle) =>
-        sheetTitle == HkJournalSheet ? HkLanguage.Get(key, "Journal") : orig(key, sheetTitle);
 
     // HK counts an entry's kills down from the number its new save starts with.
     private static void CreateRecords() {

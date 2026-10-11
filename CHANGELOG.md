@@ -84,6 +84,8 @@
 - Fix Hornet's jump being cut short when a hit, such as a Cogfly's, lands on an HK enemy's armor
 - Show HK's inventory map in Hornet's map pane, with its area overview, zoom, markers and map key
 - Fix Hornet's pogo passing through the rising Garpedes in Deepnest instead of bouncing off them
+- Give Hornet the Grimmchild as a blue tool: worn, it follows her, collects the Troupe's flames and grows with the
+  ritual
 
 ## v0.4.0
 
