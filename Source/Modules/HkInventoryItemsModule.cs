@@ -1,4 +1,5 @@
 extern alias Silksong;
+extern alias SilksongLoc;
 using System;
 using System.Collections.Generic;
 using HornetInHallownest.Core;
@@ -6,6 +7,7 @@ using HornetInHallownest.Util;
 using UnityEngine;
 using HkLanguage = TeamCherry.Localization.Language;
 using SCollectableItem = Silksong::CollectableItem;
+using SLocalisedString = SilksongLoc::TeamCherry.Localization.LocalisedString;
 
 namespace HornetInHallownest.Modules;
 
@@ -105,10 +107,13 @@ internal sealed class HkCollectableItem : SCollectableItem {
     protected override int IsSeenIndex => -1;
 
     public override string GetDisplayName(ReadSource readSource) =>
-        HkLanguage.Get($"INV_NAME_{Info.TextKey(PlayerData.instance)}", Sheet);
+        Text("INV_NAME_");
 
-    public override string GetDescription(ReadSource readSource) =>
-        HkLanguage.Get($"INV_DESC_{Info.TextKey(PlayerData.instance)}", Sheet);
+    public override string GetDescription(ReadSource readSource) => Text("INV_DESC_");
+
+    // HK's text breaks lines with <br>, which only HK's text renderer reads.
+    private string Text(string prefix) =>
+        SLocalisedString.ReplaceTags(HkLanguage.Get(prefix + Info.TextKey(PlayerData.instance), Sheet));
 
     // HK's inventory keeps its sprites loaded, including the ones its FSMs swap in, such as the Shade Cloak's.
     public override Sprite GetIcon(ReadSource readSource) {
