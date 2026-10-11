@@ -89,6 +89,8 @@
 - Give Hornet plain Needolin from the start; the Dream Nail unlocks Elegy of the Deep (Needolin holding down), which
   stands in for the Dream Nail on dream entrances and dream bosses, while any song still drains a dreamer from inside
   its dream
+- Fix Hornet freezing mid-sprint or mid-Clawline, or getting her control back after a Crystal Heart dash, when a boss
+  arena stops her for the boss's entrance
 
 ## v0.4.0
 

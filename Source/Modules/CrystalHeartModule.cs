@@ -37,6 +37,7 @@ public sealed class CrystalHeartModule : ModuleBase {
     private static readonly string[] chargeEffects = ["SD Charge", "SD Charge Wall"];
 
     private bool superdashing;
+    private int controlVersion;
     private GameObject? effects;
 
     public override string Id => "crystal-heart";
@@ -72,6 +73,7 @@ public sealed class CrystalHeartModule : ModuleBase {
         var body = hero.GetComponent<Rigidbody2D>();
         var onWall = !hero.cState.onGround;
         hero.RelinquishControl();
+        controlVersion = SHeroController.ControlVersion;
         hero.StopAnimationControl();
         hero.AffectedByGravity(false);
         body.linearVelocity = Vector2.zero;
@@ -142,6 +144,7 @@ public sealed class CrystalHeartModule : ModuleBase {
                 while (!IsInterrupted(hero) && hero.cState.transitioning) yield return null;
                 if (IsInterrupted(hero)) break;
                 hero.RelinquishControl();
+                controlVersion = SHeroController.ControlVersion;
                 hero.StopAnimationControl();
                 hero.AffectedByGravity(false);
                 hero.AnimCtrl.PlayClipForced(FlightClip);
@@ -201,11 +204,13 @@ public sealed class CrystalHeartModule : ModuleBase {
         sprint.SetState("Run To WallBonk");
     }
 
-    private static bool IsInterrupted(SHeroController hero) =>
+    // Silksong counts every RelinquishControl, also one that finds her relinquished already, such as an arena's that
+    // stops her for its boss's entrance.
+    private bool IsInterrupted(SHeroController hero) =>
         !hero || !HeroSwitch.HornetActive || hero.cState.dead || hero.cState.hazardDeath ||
-        hero.cState.hazardRespawning || hero.cState.recoiling;
+        hero.cState.hazardRespawning || hero.cState.recoiling || SHeroController.ControlVersion != controlVersion;
 
-    // Damage, death and transitions take Hornet over themselves.
+    // Damage, death, transitions and arenas take Hornet over themselves.
     private void Finish(SHeroController hero) {
         superdashing = false;
         if (!hero) return;

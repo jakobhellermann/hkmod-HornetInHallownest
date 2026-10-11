@@ -69,6 +69,7 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     };
 
     private const float MaskHealInterval = 0.15f;
+    private const string RelinquishControl = "RelinquishControl";
 
     // HK's SpriteFlash runs one flash at a time, so each flash its FSMs send ends the repeating one before it, such as a
     // dream warrior's absorb flashing. Silksong's layers them.
@@ -96,6 +97,8 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
             Runtime.StartCoroutine(AddMask(hero, self.functionCall.IntParameter.Value));
             return;
         }
+
+        if (functionName == RelinquishControl) CancelMove(hornet);
 
         var flash = functionName.StartsWith("flash", StringComparison.OrdinalIgnoreCase)
             ? hornet.GetComponent<Silksong::SpriteFlash>()
@@ -142,7 +145,17 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
                 self.SetFieldValue("cachedMethodInfo", null);
         }
 
+        var hornet = HornetSpawner.HornetRoot;
+        if (self.methodName?.Value == RelinquishControl && hornet &&
+            self.Fsm.GetOwnerDefaultTarget(self.gameObject) == hornet)
+            CancelMove(hornet);
         orig(self);
+    }
+
+    // Without an FSM CANCEL first, her move ends itself under HK's RelinquishControl and gives her control back.
+    private static void CancelMove(GameObject hornet) {
+        if (hornet.TryGetComponent<Silksong::HeroController>(out var hero) && HeroBroadcastModule.IsInMove(hero))
+            HeroBroadcastModule.CancelMove(hero);
     }
 
     private bool DoCacheHook(Func<CallMethodProper, bool> orig, CallMethodProper self) {
