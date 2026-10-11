@@ -180,8 +180,8 @@ public sealed class ProgressionModule : ModuleBase {
         Earned("King's Idol", new Flag("foundTrinket3")),
         Earned("Arcane Egg", new Flag("foundTrinket4")),
         Earned("Seer 100", new Flag("dreamReward1")),
-        Earned("Seer 700", new Flag("dreamReward5")),
-        Earned("Seer 1800", new Flag("dreamReward9"))
+        Earned("Seer 300", new Flag("dreamReward3")),
+        Earned("Seer 500", new Flag("dreamReward4"))
     ];
 
     private static readonly HashSet<string> watchedFields = [
