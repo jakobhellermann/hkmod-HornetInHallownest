@@ -10,10 +10,7 @@
 - Show Hornet's own head for the map compass while playing as her, and mark her cocoon's room on the map
 - Fix the quick map not opening after Hornet's death until she sat on a bench or left the room
 - Fix Hornet's cocoon spawning inside a wall when she dies right next to it
-- Make Needolin enter a dream only once it has spent its first silk, like charging the Dream Nail, instead of right away
 - Make Sylphsong restore Hornet's silk while she rests at a bench, at the pace of Silksong's benches
-- Give Hornet plain Needolin from the start; the Dream Nail unlocks Elegy of the Deep (Needolin holding down), which
-  acts as the Dream Nail, while any song still drains a dreamer from inside its dream
 - Add Beastling Call (Needolin holding up), unlocked with the Dream Gate: it takes Hornet to the stag station the Stag
   waits at, wherever HK would let her set a Dream Gate
 - Show Hornet's Silksong UI in the language picked in HK instead of always in English
@@ -87,6 +84,11 @@
 - Give Hornet the Grimmchild as a blue tool: worn, it follows her, collects the Troupe's flames and grows with the
   ritual
 - Fix the screen staying black after Hornet defeats the Nightmare King and wakes up in Dirtmouth
+- Enter HK dreams with Elegy of the Deep like Silksong's memories: next to a dream's entrance the song costs no silk, then
+  holds Hornet playing while the camera closes in and the memory's effect plays, until she collapses into the dream
+- Give Hornet plain Needolin from the start; the Dream Nail unlocks Elegy of the Deep (Needolin holding down), which
+  stands in for the Dream Nail on dream entrances and dream bosses, while any song still drains a dreamer from inside
+  its dream
 
 ## v0.4.0
 
