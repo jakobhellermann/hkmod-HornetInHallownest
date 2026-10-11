@@ -277,8 +277,10 @@ public sealed class SceneTransitionModule : ModuleBase {
     private void ArmEntry(Scene from) {
         pendingSnap = true;
         // from.name is null when the previous scene was already unloaded (single-mode load, e.g. quit-to-menu); it's
-        // only a real dream exit when the departed scene is still loaded and named. Null -> not a dream.
-        dreamReturnPending = from.name?.StartsWith("Dream", StringComparison.Ordinal) ?? false;
+        // only a real dream exit when the departed scene is still loaded and named. Null -> not a dream. The Nightmare
+        // King's dream is the one not named "Dream...".
+        dreamReturnPending = from.name is { } departed &&
+                             (departed.StartsWith("Dream", StringComparison.Ordinal) || departed == "Grimm_Nightmare");
         fromMaskBreak = from.name == "Cutscene_Boss_Door";
         hkEntryFixed = false;
         cameraCaughtUp = false;
