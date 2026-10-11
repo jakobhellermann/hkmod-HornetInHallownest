@@ -135,7 +135,7 @@ Hornet opens the locked crest slots of her choice with Memory Lockets, earned fr
 - each charm notch beyond the first three;
 - Grubfather's rewards at 10, 16, 23, 31 and 38 grubs;
 - the first Wanderer's Journal, Hallownest Seal, King's Idol and Arcane Egg found;
-- the Seer's rewards at 100, 700 and 1800 Essence.
+- the Seer's rewards at 100, 300 and 500 Essence.
 
 ### Eva's upgrades
 
