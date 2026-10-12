@@ -18,6 +18,8 @@ namespace HornetInHallownest.Modules;
 public sealed class NeedolinDreamNailModule : ModuleBase {
     private const float Radius = 6f; // Needolin noise radius
     private const int HeroAttackLayer = 17; // HK's dream nail Hitbox layer
+    private const string DreamAttackTag = "Dream Attack";
+    internal const string DreamImpact = "DREAM IMPACT";
 
     // A Silksong memory waits 3.5 s of the Elegy in its range, takes Hornet after 1 s more, closes the camera in on her
     // for 4.7 s, then she collapses into it.
@@ -178,11 +180,17 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         return false;
     }
 
-    // A dream entrance is what the Dream Nail sends into a dream: its FSM starts the scene transition itself.
+    // A dream entrance is what the Dream Nail sends into a dream: its FSM takes the Dream Nail's hit and starts the scene
+    // transition itself. Doors start one too, and so does the hidden Knight's own Dream Nail FSM, which stays on Hornet.
     private static bool IsDreamEntrance(GameObject go) {
         if (dreamEntrances.TryGetValue(go, out var known)) return known;
-        var isEntrance = go.GetComponentsInParent<PlayMakerFSM>(true).Any(fsm =>
-            fsm.FsmStates.Any(state => state.ActionsLoaded && state.Actions.Any(a => a is BeginSceneTransition)));
+        var isEntrance = go.GetComponentsInParent<PlayMakerFSM>(true).Any(fsm => {
+            var actions = fsm.FsmStates.Where(state => state.ActionsLoaded).SelectMany(state => state.Actions)
+                .ToArray();
+            return actions.Any(a => a is BeginSceneTransition) &&
+                   (actions.Any(a => a is Trigger2dEvent { collideTag.Value: DreamAttackTag }) ||
+                    fsm.FsmStates.Any(state => state.Transitions.Any(t => t.EventName == DreamImpact)));
+        });
         dreamEntrances[go] = isEntrance;
         return isEntrance;
     }
@@ -259,7 +267,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
 
     private void EnsureHitbox(Silksong::HeroController hero) {
         if (hitboxGo) return;
-        hitboxGo = new GameObject("hp_needolin_dreamnail") { tag = "Dream Attack", layer = HeroAttackLayer };
+        hitboxGo = new GameObject("hp_needolin_dreamnail") { tag = DreamAttackTag, layer = HeroAttackLayer };
         hitboxGo.transform.SetParent(hero.transform, false);
         var c = hitboxGo.AddComponent<CircleCollider2D>();
         c.isTrigger = true;
@@ -273,5 +281,5 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
 // Port of HK's dream-nail "Send Event" FSM state, which is what dream entrances and dream bosses listen for.
 internal sealed class NeedolinHitbox : MonoBehaviour {
     private void OnTriggerEnter2D(Collider2D other) =>
-        FSMUtility.SendEventToGameObject(other.gameObject, "DREAM IMPACT");
+        FSMUtility.SendEventToGameObject(other.gameObject, NeedolinDreamNailModule.DreamImpact);
 }
