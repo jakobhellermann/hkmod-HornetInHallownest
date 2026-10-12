@@ -151,6 +151,7 @@
   Shaman Crest for all three spells upgraded instead of learned, and the Cogfly for Grimmchild's third form
 - Fix Hornet's inventory ignoring the arrows after a scene change cut off a reward's message, such as the Witch
   Crest's in the Lifeblood Core's room: the scene now waits until the message is dismissed
+- Fix the Witch Crest's message showing a missing-text placeholder above its name
 
 ## v0.4.0
 
