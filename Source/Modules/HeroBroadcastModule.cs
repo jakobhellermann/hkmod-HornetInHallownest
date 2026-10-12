@@ -90,13 +90,16 @@ public sealed class HeroBroadcastModule : ModuleBase {
     }
 
     // HK's arenas send FSM CANCEL, then RelinquishControl, expecting the hero stopped where she stands: the Knight's
-    // cancelled moves hand control back. Hornet's leave her relinquished in no_input, so her RelinquishControl skips her
-    // and her animator, handed back by the arena, plays nothing for no_input.
+    // cancelled moves hand control and animation back. Hornet's leave her relinquished in no_input, so her
+    // RelinquishControl skips her and her animator, handed back by the arena, plays nothing for no_input. Some, such as
+    // the Black Egg's door, never hand her animation back at all: her sprint stopped it.
     internal static void CancelMove(Silksong::HeroController hero) {
         var inMove = IsInMove(hero);
         foreach (var fsm in hero.gameObject.GetComponents<SilksongPM::PlayMakerFSM>())
             fsm.SendEvent(FsmCancel);
-        if (inMove && hero.controlReqlinquished) hero.RegainControl();
+        if (!inMove || !hero.controlReqlinquished) return;
+        hero.RegainControl();
+        hero.StartAnimationControl();
     }
 
     #region Roar facing
