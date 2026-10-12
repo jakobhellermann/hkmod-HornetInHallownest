@@ -1,6 +1,7 @@
 extern alias Silksong;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using GlobalEnums;
 using HornetInHallownest.Core;
@@ -42,6 +43,8 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     private string? dreamGate;
 
+    private static readonly HashSet<Silksong::UIMsgProxy> shownMsgs = [];
+
     public override string Id => "scene-transition";
 
     public override void Initialize() {
@@ -57,6 +60,7 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         USceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        shownMsgs.Clear();
         if (driverGo) {
             Object.Destroy(driverGo);
             driverGo = null;
@@ -69,6 +73,10 @@ public sealed class SceneTransitionModule : ModuleBase {
         // Fires at the start of a transition, before the unload. Silksong's GM never fires its own UnloadingLevel
         // (inactive), so after orig we relay the leave handshake and deparent her ourselves.
         Detour(typeof(GameManager), "BeginSceneTransition", OnBeginSceneTransition, typeof(GameManager.SceneLoadInfo));
+        Detour(typeof(GameManager), nameof(GameManager.ChangeToScene), OnChangeToScene);
+        Detour(typeof(Silksong::UIMsgProxy), nameof(Silksong::UIMsgProxy.SetIsInMsg), OnSetIsInMsg);
+        Detour(typeof(HutongGames.PlayMaker.Fsm), "SwitchState", OnSwitchState,
+            typeof(HutongGames.PlayMaker.FsmState));
 
         // Direct SceneManager.LoadScene[Async] is the path HK FSMs take via PlayMaker's LoadLevel (e.g. Stag), bypassing
         // BeginSceneTransition. LoadSceneParameters is a struct the Detour helper's GetMethod mis-binds on some Unity
@@ -90,10 +98,54 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     private void OnBeginSceneTransition(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self,
         GameManager.SceneLoadInfo info) {
+        if (DeferWhileMsgShown(() => OnBeginSceneTransition(orig, self, info))) return;
         orig(self, info);
         RelayLeaveScene(info);
         ArmDreamArrival(info);
         DeparentHero("scene transition");
+    }
+
+    private void OnChangeToScene(Action<GameManager, string, string, float> orig, GameManager self, string scene,
+        string gate, float pause) {
+        if (DeferWhileMsgShown(() => OnChangeToScene(orig, self, scene, gate, pause))) return;
+        orig(self, scene, gate, pause);
+    }
+
+    // Silksong's full-screen messages (a new crest, tool or skill) die with their scene, leaving the inventory's list
+    // input, pausing and pickups blocked for good, and HK can change scenes under one: the Lifeblood Core's room sends
+    // Hornet away as the Witch Crest's shows. The transition waits for it to be dismissed.
+    private static void OnSetIsInMsg(Action<Silksong::UIMsgProxy, bool> orig, Silksong::UIMsgProxy self, bool value) {
+        orig(self, value);
+        if (value) shownMsgs.Add(self);
+        else shownMsgs.Remove(self);
+    }
+
+    // The Lifeblood Core's pickup, in a dream, fades the screen to white on its way out, under its reward's message too.
+    // Its pause before the fade plays again until the message is dismissed.
+    private static void OnSwitchState(Action<HutongGames.PlayMaker.Fsm, HutongGames.PlayMaker.FsmState> orig,
+        HutongGames.PlayMaker.Fsm self, HutongGames.PlayMaker.FsmState to) {
+        if (self.Name == "Shiny Control" && to.Name == "Fade Out" && self.ActiveState is { Name: "Fade Pause" } pause) {
+            shownMsgs.RemoveWhere(msg => !msg);
+            if (shownMsgs.Count > 0) to = pause;
+        }
+
+        orig(self, to);
+    }
+
+    private bool DeferWhileMsgShown(Action transition) {
+        shownMsgs.RemoveWhere(msg => !msg);
+        if (shownMsgs.Count == 0) return false;
+        StartCoroutine(TransitionAfterMsgs(transition));
+        return true;
+    }
+
+    private static IEnumerator TransitionAfterMsgs(Action transition) {
+        do {
+            yield return null;
+            shownMsgs.RemoveWhere(msg => !msg);
+        } while (shownMsgs.Count > 0);
+
+        transition();
     }
 
     // Entering a scene clears the attack and downspike states (ResetMotion, ResetAttacks) but disarms a slash only while
