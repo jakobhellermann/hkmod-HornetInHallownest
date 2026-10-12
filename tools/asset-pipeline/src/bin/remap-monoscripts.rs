@@ -76,10 +76,14 @@ fn main() -> Result<()> {
 
     let mut bundle = BundleFileBuilder::unityfs(7, &target_unity_version(&version));
     bundle.add_file(CAB, Cursor::new(serialized))?;
-    let mut out = std::fs::File::create(OUT)?;
+    // HORNET_BUNDLE_OUT redirects the output dir (file name kept); the multi-version setup builds per-target copies.
+    let out_path = std::env::var("HORNET_BUNDLE_OUT")
+        .map(|d| format!("{d}/monoscripts.silksong.bundle"))
+        .unwrap_or_else(|_| OUT.to_string());
+    let mut out = std::fs::File::create(&out_path)?;
     bundle.write(&mut out, CompressionType::None)?; // uncompressed: loads fine, avoids needing the lz4hc feature
 
-    println!("remapped {remapped}/{total} MonoScripts -> Silksong.*; wrote {OUT}");
+    println!("remapped {remapped}/{total} MonoScripts -> Silksong.*; wrote {out_path}");
     std::mem::forget(env);
     Ok(())
 }
