@@ -95,6 +95,7 @@
   Knight's sprite
 - Fix Hornet freezing mid-sprint or mid-Clawline, or getting her control back after a Crystal Heart dash, when a boss
   arena or a cutscene, such as the Black Egg Temple's door, stops her
+- Show HK's completion rate in Hornet's inventory once it's unlocked
 
 ## v0.4.0
 

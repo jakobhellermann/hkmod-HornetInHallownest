@@ -77,7 +77,20 @@ public sealed class HkInventoryItemsModule : ModuleBase {
             }
 
         Silksong::CollectableItemManager.IncrementVersion();
+        ShowCompletion(self);
         return orig(self);
+    }
+
+    // HK shows its completion rate in the inventory once it's unlocked. Hornet's pane has Silksong's own, which its FSM
+    // fills only at start-up, from Silksong's PlayerData.
+    private static void ShowCompletion(Component pane) {
+        var text = pane.transform.Find("Text Completion");
+        var percentage = text ? text.Find("Percentage") : null;
+        if (!percentage) return;
+        var pd = PlayerData.instance;
+        text!.gameObject.SetActive(pd.unlockedCompletionRate);
+        if (pd.unlockedCompletionRate)
+            percentage.GetComponent<Silksong::TMProOld.TextMeshPro>().text = $"{pd.completionPercentage}%";
     }
 
     private static Silksong::CollectableItemList? MasterList() =>
