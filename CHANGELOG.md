@@ -93,6 +93,8 @@
   arena stops her for the boss's entrance
 - Fix the Knight's sprite showing instead of Hornet's wake-up when she arrives in some dreams, and her run being cut
   short right after she gets up in a dream
+- Fix Hornet walking around invisible in the Abyss's dream, and let her get up from the bone pile in place of the
+  Knight's sprite
 
 ## v0.4.0
 

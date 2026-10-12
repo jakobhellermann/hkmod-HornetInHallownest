@@ -526,6 +526,11 @@ public sealed class SceneTransitionModule : ModuleBase {
     private IEnumerator PlayDreamArrival(Silksong::HeroController hero) {
         var entry = GameObject.Find("Dream Entry");
         if (!entry) entry = GameObject.Find("Dream Entry Grimm");
+        if (!entry && GameObject.Find("Entry Cutscene") is { } cutscene) {
+            yield return PlayClimbOutArrival(hero, cutscene);
+            yield break;
+        }
+
         var fsm = entry ? Array.Find(entry.GetComponents<PlayMakerFSM>(), f => f.FsmName == "Control") : null;
         var knightSprite = entry ? entry.transform.Find("Knight Dream Arrival") : null;
         if (!fsm || !knightSprite) yield break;
@@ -564,6 +569,51 @@ public sealed class SceneTransitionModule : ModuleBase {
         }
     }
 
+    // The Abyss's dream hides the hero and has a Knight sprite ("Dummy") climb out of a bone pile over the player's
+    // inputs, then shows the hero and hands control back. She lies there from the first climb and gets up on the last.
+    private IEnumerator PlayClimbOutArrival(Silksong::HeroController hero, GameObject cutscene) {
+        var fsm = Array.Find(cutscene.GetComponents<PlayMakerFSM>(), f => f.FsmName == "Control");
+        var dummy = cutscene.transform.Find("Dummy");
+        if (!fsm || !dummy) yield break;
+
+        var dummyRenderer = dummy.GetComponent<MeshRenderer>();
+        playingDreamArrival = true;
+        try {
+            while (fsm && hero && fsm.ActiveStateName != "Climb 1" && fsm.ActiveStateName != "End") {
+                HoldArrival(hero);
+                yield return null;
+            }
+
+            var rising = false;
+            while (fsm && hero && fsm.ActiveStateName != "End") {
+                HoldArrival(hero);
+                dummyRenderer.enabled = false;
+                hero.GetComponent<MeshRenderer>().enabled = true;
+                if (!rising && fsm.ActiveStateName == "Climb 3") {
+                    rising = true;
+                    hero.AnimCtrl.PlayClipForced("Prostrate Rise");
+                }
+                else if (!rising && hero.AnimCtrl.animator.CurrentClip?.name != "Prostrate") {
+                    hero.AnimCtrl.PlayClipForced("Prostrate");
+                }
+
+                yield return null;
+            }
+        } finally {
+            playingDreamArrival = false;
+            if (hero && hero.controlReqlinquished) {
+                hero.RegainControl();
+                hero.StartAnimationControl();
+            }
+        }
+    }
+
+    // The arrival's own FSM or door entry hands her control and her animations back when it finishes.
+    private static void HoldArrival(Silksong::HeroController hero) {
+        if (!hero.controlReqlinquished || hero.acceptingInput) hero.RelinquishControl();
+        if (hero.AnimCtrl.controlEnabled) hero.StopAnimationControl();
+    }
+
     // Back at a Hall of Gods statue, from a dreamer's mask-break cutscene or in the Dream Nail's dream, HK's Knight-only
     // Dream Return FSM lays the Knight down and gets him up on the first input, broadcasting DREAM WAKE: the statue door
     // waits for it to finish its transition. The blankers fade out on the Knight's beat, once the door's own transition
@@ -580,7 +630,7 @@ public sealed class SceneTransitionModule : ModuleBase {
             while (Time.time < start + 1f || !(input.up.WasPressed || input.down.WasPressed || input.left.WasPressed ||
                                                input.right.WasPressed || input.attack.WasPressed ||
                                                input.jump.WasPressed)) {
-                Hold();
+                HoldArrival(hero);
                 if (hero.AnimCtrl.animator.CurrentClip?.name != "Prostrate") hero.AnimCtrl.PlayClipForced("Prostrate");
 
                 if (!faded && Time.time >= start + 0.5f) {
@@ -596,7 +646,7 @@ public sealed class SceneTransitionModule : ModuleBase {
             hero.AnimCtrl.PlayClipForced("Prostrate Rise");
             var rise = hero.AnimCtrl.animator.CurrentClip;
             while (rise != null && hero.AnimCtrl.animator.IsPlaying(rise)) {
-                Hold();
+                HoldArrival(hero);
                 yield return null;
             }
         } finally {
@@ -606,12 +656,6 @@ public sealed class SceneTransitionModule : ModuleBase {
                 hero.RegainControl();
                 hero.StartAnimationControl();
             }
-        }
-
-        // A dream return's own door entry hands her control and her animations back when it finishes.
-        void Hold() {
-            if (!hero.controlReqlinquished || hero.acceptingInput) hero.RelinquishControl();
-            if (hero.AnimCtrl.controlEnabled) hero.StopAnimationControl();
         }
     }
 
