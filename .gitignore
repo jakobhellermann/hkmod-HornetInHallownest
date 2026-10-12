@@ -6,6 +6,7 @@
 /tools/*/obj
 /tools/asset-pipeline/target
 /local-refs
+/local-refs-hk1578
 /HollowKnightPath.props
 /Source/lib/
 .DS_Store
