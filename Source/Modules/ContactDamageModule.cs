@@ -97,6 +97,11 @@ public sealed class ContactDamageModule : ModuleBase {
             return true;
         }
 
+        // pure vessel's dagger fan
+        if (t.name == "Shot HK Shadow(Clone)") {
+            return true;
+        }
+
         return false;
     }
 
