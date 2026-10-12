@@ -453,6 +453,14 @@ public sealed class ProgressionModule : ModuleBase {
             return;
         }
 
+        // Silksong forges the Witch Crest from the Cursed one under a message of its own, so the line its title prefix
+        // points at was never written. The other crests' prefix fits it.
+        var prefix = crest.ItemNamePrefix;
+        if (!SilksongLoc::TeamCherry.Localization.Language.Has(prefix.Key, prefix.Sheet))
+            crest.SetFieldValue("itemNamePrefix",
+                new SilksongLoc::TeamCherry.Localization.LocalisedString
+                    { Sheet = "Tools", Key = "UI_MSG_TITLE_CREST" });
+
         ShowHeldMsg(afterMsg => Silksong::ToolCrestUIMsg.Spawn(crest, prefab, afterMsg));
         // Silksong evolves the Hunter Crest with another message, titled with this line.
         RetitleMsg("UI_MSG_UPG_TITLE_CREST", "Prompts", "UI_MSG_HCOMBO_PREFIX");
