@@ -30,6 +30,8 @@
         <CiRefs>$(MSBuildProjectDirectory)/../ci-refs</CiRefs>
         <LocalRefs>$(MSBuildProjectDirectory)/../local-refs</LocalRefs>
         <AssetsDir>$(MSBuildProjectDirectory)/../Assets</AssetsDir>
+        <!-- Overridden per game version in HollowKnight.TargetFrameworks.props -->
+        <BundleDir Condition="'$(BundleDir)' == ''">$(AssetsDir)/bundles</BundleDir>
         <SilksongManaged Condition="!Exists('$(SilksongManaged)')">$(PkgSilksong_GameLibs)/ref/netstandard2.1</SilksongManaged>
         <RefsDir Condition="'$(RefsDir)' == '' And Exists('$(LocalRefs)/Silksong.Assembly-CSharp.dll')">$(LocalRefs)</RefsDir>
         <RefsDir Condition="'$(RefsDir)' == ''">$(CiRefs)/lib</RefsDir>
@@ -114,8 +116,8 @@
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <Copy SourceFiles="$(AssetsDir)/bundles/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <Copy SourceFiles="$(AssetsDir)/bundles/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="$(BundleDir)/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="$(BundleDir)/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
     </Target>
 
     <!-- Allowlist files for `dotnet publish` -->
@@ -125,7 +127,7 @@
         </ItemGroup>
         <Delete Files="@(PublishJunk)"/>
         <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PublishDir)"/>
-        <Copy SourceFiles="$(AssetsDir)/bundles/monoscripts.silksong.bundle;$(AssetsDir)/bundles/silksong-resources.bundle" DestinationFolder="$(PublishDir)"/>
+        <Copy SourceFiles="$(BundleDir)/monoscripts.silksong.bundle;$(BundleDir)/silksong-resources.bundle" DestinationFolder="$(PublishDir)"/>
 
         <!-- create zip for distribution -->
         <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(MSBuildProjectDirectory)/bin/$(Configuration)/HornetInHallownest.zip" Overwrite="true"/>

@@ -19,6 +19,11 @@
         <GameLibsPackageVersion>1.0.0</GameLibsPackageVersion>
         <TargetFrameworkIdentifier>.NETStandard</TargetFrameworkIdentifier>
         <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+        <!-- `make bundles-hk1578`: 2020.2-declared, tk2d/SharedUtils MonoScripts retargeted -->
+        <BundleDir>$(MSBuildThisFileDirectory)bundles-hk1578</BundleDir>
+        <!-- `make local-refs-hk1578`: prefixed + IL-downgraded Silksong compile refs -->
+        <RefsDir>$(MSBuildThisFileDirectory)local-refs-hk1578</RefsDir>
+        <SilksongManaged>$(MSBuildThisFileDirectory)local-refs-hk1578</SilksongManaged>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(HollowKnightVersion)' != ''">
