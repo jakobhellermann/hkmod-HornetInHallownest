@@ -97,6 +97,7 @@
   arena or a cutscene, such as the Black Egg Temple's door, stops her
 - Show HK's completion rate in Hornet's inventory once it's unlocked
 - Show the Delicate Flower in Hornet's inventory and break it when she takes damage, like the Knight's
+- Fix the rest bench in the middle of a pantheon not refilling Hornet's tools
 
 ## v0.4.0
 

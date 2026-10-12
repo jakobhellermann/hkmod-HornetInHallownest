@@ -116,13 +116,14 @@ public sealed class BenchModule : ModuleBase {
 
     private static bool FillTools() {
         try {
-            var tools = Silksong::PlayerData.instance.Tools;
-            if (tools == null) return false;
+            var pd = Silksong::PlayerData.instance;
+            if (pd.Tools == null) return false;
+            // Through PlayerData, which keeps a dream fight's tool uses apart: a pantheon's rest bench refills those.
             foreach (var tool in Silksong::ToolItemManager.GetUnlockedTools()) {
                 if (!tool) continue;
-                var data = tools.GetData(tool.name);
+                var data = pd.GetToolData(tool.name);
                 data.AmountLeft = Silksong::ToolItemManager.GetToolStorageAmount(tool);
-                tools.SetData(tool.name, data);
+                pd.SetToolData(tool.name, data);
             }
 
             return true;
