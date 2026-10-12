@@ -23,7 +23,10 @@
     <Reference Include="netstandard"><HintPath>$(HKRefs)/netstandard.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System"><HintPath>$(HKRefs)/System.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System.Core"><HintPath>$(HKRefs)/System.Core.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="GalaxyCSharp"><HintPath>$(HKRefs)/GalaxyCSharp.dll</HintPath><Private>false</Private></Reference>
+    <!-- GOG SDK: Steam depot installs of HK 1.5.78 ship no GalaxyCSharp.dll; fall back to another copy (e.g.
+         Silksong's, same assembly simple name). The runtime only resolves it when Galaxy code actually runs. -->
+    <Reference Include="GalaxyCSharp" Condition="Exists('$(HKRefs)/GalaxyCSharp.dll')"><HintPath>$(HKRefs)/GalaxyCSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GalaxyCSharp" Condition="!Exists('$(HKRefs)/GalaxyCSharp.dll') And '$(GalaxyCSharpFallback)' != ''"><HintPath>$(GalaxyCSharpFallback)</HintPath><Private>false</Private></Reference>
     <Reference Include="Assembly-CSharp"><HintPath>$(HKRefs)/Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(HKRefs)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(HKRefs)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>

@@ -1,12 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <Import Condition="Exists('../HollowKnightPath.props')" Project="../HollowKnightPath.props"/>
+    <Import Project="../HollowKnight.TargetFrameworks.props"/>
 
     <PropertyGroup>
-        <!-- The Unity 6 Hollow Knight ships netstandard 2.1; HK 1.5.78.11833 (Unity 2020.2.2f1) only ships 2.0,
-             and a 2.1 reference does not resolve there. The source compiles cleanly against both, so this defaults
-             to the lower bar; override with -p:HornetTargetFramework=netstandard2.1 for the Unity 6 host. -->
-        <HornetTargetFramework Condition="'$(HornetTargetFramework)' == ''">netstandard2.0</HornetTargetFramework>
-        <TargetFramework>$(HornetTargetFramework)</TargetFramework>
+        <!-- One assembly per game version, see HollowKnight.TargetFrameworks.props -->
+        <TargetFrameworks>hk1512620;hk1578</TargetFrameworks>
         <AssemblyTitle>HornetInHallownest</AssemblyTitle>
         <Version>0.4.0</Version>
         <DebugType>portable</DebugType>
@@ -33,7 +31,7 @@
         <LocalRefs>$(MSBuildProjectDirectory)/../local-refs</LocalRefs>
         <AssetsDir>$(MSBuildProjectDirectory)/../Assets</AssetsDir>
         <SilksongManaged Condition="!Exists('$(SilksongManaged)')">$(PkgSilksong_GameLibs)/ref/netstandard2.1</SilksongManaged>
-        <RefsDir Condition="Exists('$(LocalRefs)/Silksong.Assembly-CSharp.dll')">$(LocalRefs)</RefsDir>
+        <RefsDir Condition="'$(RefsDir)' == '' And Exists('$(LocalRefs)/Silksong.Assembly-CSharp.dll')">$(LocalRefs)</RefsDir>
         <RefsDir Condition="'$(RefsDir)' == ''">$(CiRefs)/lib</RefsDir>
 
         <!-- Shortens and anonymizes paths in debug symbols relative to the project directory. Breakpoints will not work, however. -->
@@ -61,13 +59,6 @@
 
 
     <ItemGroup>
-        <!-- Hollow Knight publicized game assemblies by default; the local game install when HollowKnightPath.props sets ManagedDir -->
-        <PackageReference
-                Include="HollowKnight.GameLibs"
-                Version="[1.0.1-hollowknight.1.5.12620.api78]"
-                PrivateAssets="all"
-                ExcludeAssets="$(ExcludeAssetsIfLocalReference)"
-        />
         <!-- File source for the silksong assemblies referenced below. ExcludeAssets=compile to prevent duplicates -->
         <PackageReference
                 Include="Silksong.GameLibs"
@@ -86,7 +77,8 @@
     </Target>
     <ItemGroup Condition="Exists('$(ManagedDir)')">
         <LocalReferences Include="Assembly-CSharp;PlayMaker;Mono.Cecil;MonoMod.RuntimeDetour;MonoMod.Utils;Newtonsoft.Json"/>
-        <LocalReferences Include="TeamCherry.Localization;TeamCherry.NestedFadeGroup;TeamCherry.SharedUtils;TeamCherry.TK2D;System.ValueTuple"/>
+        <!-- Only shipped from 1.5.12620 on; 1.5.78 compiles tk2d into Assembly-CSharp. -->
+        <LocalReferences Include="TeamCherry.Localization;TeamCherry.NestedFadeGroup;TeamCherry.SharedUtils;TeamCherry.TK2D;System.ValueTuple" Condition="'$(TargetFramework)' == 'hk1512620'"/>
         <LocalReferences Include="UnityEngine;UnityEngine.AnimationModule;UnityEngine.AssetBundleModule;UnityEngine.AudioModule;UnityEngine.CoreModule;UnityEngine.InputLegacyModule;UnityEngine.Physics2DModule;UnityEngine.ParticleSystemModule"/>
         <Reference Include="@(LocalReferences->'$(ManagedDir)/%(Identity).dll')" Private="false"/>
     </ItemGroup>

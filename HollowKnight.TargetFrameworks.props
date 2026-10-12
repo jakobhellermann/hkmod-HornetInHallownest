@@ -1,0 +1,39 @@
+<Project>
+    <!--
+    One assembly per game version:
+        alias      game version    framework       modding api
+        hk1512620  1.5.12620       netstandard2.1  78
+        hk1578     1.5.78.11833    netstandard2.0  77
+    -->
+
+    <PropertyGroup Condition="'$(TargetFramework)' == 'hk1512620'">
+        <HollowKnightVersion>1.5.12620</HollowKnightVersion>
+        <ModdingApiVersion>78</ModdingApiVersion>
+        <GameLibsPackageVersion>1.0.1</GameLibsPackageVersion>
+        <TargetFrameworkIdentifier>.NETStandard</TargetFrameworkIdentifier>
+        <TargetFrameworkVersion>v2.1</TargetFrameworkVersion>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFramework)' == 'hk1578'">
+        <HollowKnightVersion>1.5.78.11833</HollowKnightVersion>
+        <ModdingApiVersion>77</ModdingApiVersion>
+        <GameLibsPackageVersion>1.0.0</GameLibsPackageVersion>
+        <TargetFrameworkIdentifier>.NETStandard</TargetFrameworkIdentifier>
+        <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(HollowKnightVersion)' != ''">
+        <TargetFrameworkMoniker>$(TargetFrameworkIdentifier),Version=$(TargetFrameworkVersion)</TargetFrameworkMoniker>
+        <!-- define constant like HK1578 -->
+        <DefineConstants>$(DefineConstants);$(TargetFramework.ToUpper())</DefineConstants>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(HollowKnightVersion)' != ''">
+        <!-- NU1601: aliases sharing a framework collapse into one dependency group -->
+        <PackageReference Include="HollowKnight.GameLibs"
+                          Version="[$(GameLibsPackageVersion)-hollowknight.$(HollowKnightVersion).api$(ModdingApiVersion)]"
+                          PrivateAssets="all"
+                          NoWarn="NU1601"
+                          ExcludeAssets="$(ExcludeAssetsIfLocalReference)"/>
+    </ItemGroup>
+
+</Project>
