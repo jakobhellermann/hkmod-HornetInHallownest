@@ -4,9 +4,9 @@
     ".NETStandard,Version=v2.0": {
       "HollowKnight.GameLibs": {
         "type": "Direct",
-        "requested": "[1.0.1-hollowknight.1.5.12620.api78, 1.0.1-hollowknight.1.5.12620.api78]",
-        "resolved": "1.0.1-hollowknight.1.5.12620.api78",
-        "contentHash": "W7K85Z+JmLt7xJEj0UkwZcJSDnb8TwcHmHiesLVxtA6ieozyeGolSoZ1Rp8gNhJ1WmpCH1AHLACCnjVzPEKgDw=="
+        "requested": "[1.0.0-hollowknight.1.5.78.11833.api77, 1.0.0-hollowknight.1.5.78.11833.api77]",
+        "resolved": "1.0.0-hollowknight.1.5.78.11833.api77",
+        "contentHash": "KedtBHR8QuRAV/DOnGcfVyXUAmztOnI+qOSEdeHFzEgLQvEUgr4cpDaPwqOgUTjaZ6G2y58XONPsT+mvhCY1Eg=="
       },
       "Microsoft.Unity.Analyzers": {
         "type": "Direct",
@@ -33,6 +33,26 @@
         "type": "Transitive",
         "resolved": "1.1.0",
         "contentHash": "kz0PEW2lhqygehI/d6XsPCQzD7ff7gUJaVGPVETX611eadGsA3A877GdSlU0LRVMCTH/+P3o2iDTak+S08V2+A=="
+      }
+    },
+    ".NETStandard,Version=v2.1": {
+      "HollowKnight.GameLibs": {
+        "type": "Direct",
+        "requested": "[1.0.1-hollowknight.1.5.12620.api78, 1.0.1-hollowknight.1.5.12620.api78]",
+        "resolved": "1.0.1-hollowknight.1.5.12620.api78",
+        "contentHash": "W7K85Z+JmLt7xJEj0UkwZcJSDnb8TwcHmHiesLVxtA6ieozyeGolSoZ1Rp8gNhJ1WmpCH1AHLACCnjVzPEKgDw=="
+      },
+      "Microsoft.Unity.Analyzers": {
+        "type": "Direct",
+        "requested": "[1.26.0, )",
+        "resolved": "1.26.0",
+        "contentHash": "lU4QRpGxzwBGkDJs86Q18CwhiqigssQrItJFr+c1Ijra35Y/uTwV/bRiSIYcXSaWl9RsXCi6dqG4xVAXb9sCtQ=="
+      },
+      "Silksong.GameLibs": {
+        "type": "Direct",
+        "requested": "[1.2.0-silksong1.0.30000, 1.2.0-silksong1.0.30000]",
+        "resolved": "1.2.0-silksong1.0.30000",
+        "contentHash": "2JPRsmFO5dBwLeIHA3kLlEYtu4BQ0Swdp3E4+J35IQGEujW3npMPot83BvY9wd3N7/Ycy2IfWilWC7fx6Sa3bg=="
       }
     }
   }

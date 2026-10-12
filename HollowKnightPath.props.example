@@ -1,6 +1,17 @@
 <Project>
     <PropertyGroup>
-        <GamePath>/path/to/games/Hollow Knight</GamePath>
+        <!-- Optional. If set, only build one version -->
+        <TargetFramework>hk1512620</TargetFramework>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(TargetFramework)' == 'hk1578'">
+        <GamePath>/path/to/Hollow Knight-1.5.78.11833</GamePath>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFramework)' == 'hk1512620'">
+        <GamePath>/path/to/Hollow Knight</GamePath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(GamePath)' != ''">
         <ManagedDir>$(GamePath)/hollow_knight_Data/Managed</ManagedDir>
         <ModsDir>$(ManagedDir)/Mods</ModsDir>
     </PropertyGroup>
