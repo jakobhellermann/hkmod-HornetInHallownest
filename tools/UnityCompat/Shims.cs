@@ -17,6 +17,12 @@ public static class HornetCompat {
 
     public static T FindAnyObjectByType<T>() where T : Object => Object.FindObjectOfType<T>();
 
+    // ---- MonoBehaviour (Unity 6) -----------------------------------------------------------------------------
+
+    // Unity 6's MonoBehaviour.didAwake ("Awake has been called for this Behaviour"). The flag is set once Unity
+    // invokes Awake, so by the time player code can call it, it is already true.
+    public static bool MonoBehaviour_get_didAwake(MonoBehaviour self) => true;
+
     public static T[] FindObjectsByType<T>(FindObjectsSortMode sortMode) where T : Object
         => Object.FindObjectsOfType<T>();
 

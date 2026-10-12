@@ -91,6 +91,7 @@ var fieldToShim = new Dictionary<(string Type, string Field), string> {
 // (declaring type, member) -> static method on HornetCompat taking the receiver as its first parameter.
 var memberToShim = new Dictionary<(string Type, string Member), string> {
     [("UnityEngine.Object", "FindAnyObjectByType")] = "FindAnyObjectByType",
+    [("UnityEngine.MonoBehaviour", "get_didAwake")] = "MonoBehaviour_get_didAwake",
     [("UnityEngine.Object", "FindObjectsByType")] = "FindObjectsByType",
     [("UnityEngine.Component", "GetComponentInParent")] = "GetComponentInParent",
     [("UnityEngine.GameObject", "GetComponentInParent")] = "GetComponentInParent",
