@@ -136,6 +136,7 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         moduleHost.Add(new LifebloodModule());
         moduleHost.Add(new InventoryModule());
         moduleHost.Add(new HkInventoryItemsModule());
+        moduleHost.Add(new DelicateFlowerModule());
         moduleHost.Add(new HkJournalModule());
         moduleHost.Add(new DeathModule());
         moduleHost.Add(new HeroBroadcastModule());

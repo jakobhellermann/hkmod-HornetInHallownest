@@ -15,6 +15,11 @@ namespace HornetInHallownest.Modules;
 // inventory. Each reads the PlayerData, text and sprite HK's own inventory pane shows for it.
 public sealed class HkInventoryItemsModule : ModuleBase {
     private static readonly HkItemInfo[] itemInfos = [
+        new("XunFlower", pd => Has(pd is { hasXunFlower: true, xunFlowerGiven: false }),
+            pd => pd.xunFlowerBroken ? "FLOWER_BROKEN" : "FLOWER",
+            pd => pd.xunFlowerBroken ? "White_Flower_Half" : "White_Flower_Full",
+            DescriptionKey: pd =>
+                (pd.xunFlowerBroken ? "FLOWER_BROKEN" : "FLOWER") + (pd.extraFlowerAppear ? "_QG" : "")),
         new("SimpleKey", pd => pd.simpleKeys, _ => "SIMPLEKEY", _ => "inv_item__00014_graveyard_key", true),
         new("StoreKey", pd => Has(pd.hasSlykey), _ => "STOREKEY", _ => "inv_item__0002_storeroom_key"),
         // HK hides the Elegant Key while the Shopkeeper's Key is held.
@@ -104,7 +109,8 @@ internal sealed record HkItemInfo(
     Func<PlayerData, int> Amount,
     Func<PlayerData, string> TextKey,
     Func<PlayerData, string> SpriteName,
-    bool ShowsAmount = false);
+    bool ShowsAmount = false,
+    Func<PlayerData, string>? DescriptionKey = null);
 
 internal sealed class HkCollectableItem : SCollectableItem {
     private const string Sheet = "UI";
@@ -122,11 +128,12 @@ internal sealed class HkCollectableItem : SCollectableItem {
     public override string GetDisplayName(ReadSource readSource) =>
         Text("INV_NAME_");
 
-    public override string GetDescription(ReadSource readSource) => Text("INV_DESC_");
+    public override string GetDescription(ReadSource readSource) =>
+        Text("INV_DESC_", Info.DescriptionKey ?? Info.TextKey);
 
     // HK's text breaks lines with <br>, which only HK's text renderer reads.
-    private string Text(string prefix) =>
-        SLocalisedString.ReplaceTags(HkLanguage.Get(prefix + Info.TextKey(PlayerData.instance), Sheet));
+    private string Text(string prefix, Func<PlayerData, string>? key = null) =>
+        SLocalisedString.ReplaceTags(HkLanguage.Get(prefix + (key ?? Info.TextKey)(PlayerData.instance), Sheet));
 
     // HK's inventory keeps its sprites loaded, including the ones its FSMs swap in, such as the Shade Cloak's.
     public override Sprite GetIcon(ReadSource readSource) {

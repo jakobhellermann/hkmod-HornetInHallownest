@@ -96,6 +96,7 @@
 - Fix Hornet freezing mid-sprint or mid-Clawline, or getting her control back after a Crystal Heart dash, when a boss
   arena or a cutscene, such as the Black Egg Temple's door, stops her
 - Show HK's completion rate in Hornet's inventory once it's unlocked
+- Show the Delicate Flower in Hornet's inventory and break it when she takes damage, like the Knight's
 
 ## v0.4.0
 
