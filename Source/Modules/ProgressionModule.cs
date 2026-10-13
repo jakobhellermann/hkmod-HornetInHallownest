@@ -308,11 +308,17 @@ public sealed class ProgressionModule : ModuleBase {
         StartCoroutine(ApplyNextFrame());
     }
 
+    // HK sets some of these fields partway through a conversation, and a reward's screen would cover its box.
     private IEnumerator ApplyNextFrame() {
         yield return null;
+        while (HeroSwitch.HornetActive && IsDialogueShown()) yield return null;
         applyQueued = false;
         Apply(showPopups: HeroSwitch.HornetActive);
     }
+
+    private static bool IsDialogueShown() =>
+        UnityEngine.Object.FindObjectsByType<DialogueBox>(FindObjectsSortMode.None)
+            .Any(box => !box.GetFieldValue<bool>("hidden"));
 
     internal static void Apply(bool showPopups = false) {
         var pd = PlayerData.instance;
