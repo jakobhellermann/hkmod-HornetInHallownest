@@ -324,20 +324,31 @@ public sealed class ProgressionModule : ModuleBase {
 
         var earnedTools = ToolRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward).ToHashSet();
         if (!pd.bossRushMode) KeepOneSilkshot(earnedTools);
+        var upgrades = SToolItemManager.GetAllTools().Where(t => t && t.GetFieldValue<SToolItem>("getReplaces"))
+            .ToList();
+        var replaceableTools = upgrades.Select(t => t.GetFieldValue<SToolItem>("getReplaces")).ToHashSet();
+        var replacedTools = upgrades.Where(t => earnedTools.Contains(t.name))
+            .Select(t => t.GetFieldValue<SToolItem>("getReplaces")).ToHashSet();
         foreach (var tool in SToolItemManager.GetAllTools()) {
             if (!tool) continue;
             var earned = earnedTools.Contains(tool.name);
+            var replaced = replacedTools.Contains(tool);
             // A silk skill also counts as unlocked by its PlayerData flag, which PlayerDataSyncModule sets from the spell
             // before this runs.
             var skill = tool as Silksong::ToolItemSkill;
             if (earned && (!tool.IsUnlocked || (skill && !tool.SavedData.IsUnlocked))) {
                 // A silk skill is announced in place of HK's screen for its spell (skillScreens).
-                tool.Unlock(null, showPopups && !skill ? SToolItem.PopupFlags.ItemGet : SToolItem.PopupFlags.None);
+                tool.Unlock(null,
+                    showPopups && !skill && !replaced ? SToolItem.PopupFlags.ItemGet : SToolItem.PopupFlags.None);
                 MarkUnlocked(tool);
             }
             else if (!earned && tool.IsUnlocked) {
                 LockTool(tool);
             }
+
+            // Silksong hides a tool only when its upgrade is unlocked after it, and Hornet can earn the upgrade first.
+            if (earned && replaceableTools.Contains(tool) && tool.SavedData.IsHidden != replaced)
+                SetHidden(tool, replaced);
         }
 
         var earnedCrests = CrestRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward).ToHashSet();
@@ -403,6 +414,17 @@ public sealed class ProgressionModule : ModuleBase {
         var data = tool.SavedData;
         if (data.IsUnlocked) return;
         data.IsUnlocked = true;
+        tool.SavedData = data;
+    }
+
+    private static void SetHidden(SToolItem tool, bool hidden) {
+        if (hidden) {
+            tool.Lock();
+            return;
+        }
+
+        var data = tool.SavedData;
+        data.IsHidden = false;
         tool.SavedData = data;
     }
 
