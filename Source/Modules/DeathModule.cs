@@ -4,6 +4,8 @@ using GlobalEnums;
 using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
+using HutongGames.PlayMaker.Actions;
+using Modding;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
@@ -41,6 +43,10 @@ public sealed class DeathModule : ModuleBase {
         Detour(typeof(SHeroController), "GetHeroDeathPrefab", OnGetHeroDeathPrefab, typeof(bool), typeof(bool),
             typeof(bool));
         USceneManager.sceneLoaded += SpawnCocoon;
+        Detour(typeof(SHeroController), nameof(SHeroController.CocoonBroken), OnCocoonBroken, typeof(bool),
+            typeof(bool));
+        Detour(typeof(CreateObject), nameof(CreateObject.OnEnter), OnCreateObject);
+        ModHooks.SetPlayerStringHook += OnSetString;
 
         // HK hazard zones call HeroController.instance.TakeDamage on the inert Knight; ContactDamageBridge already routes
         // hazard damage to Hornet, so skip the Knight's while she's active.
@@ -68,6 +74,7 @@ public sealed class DeathModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         USceneManager.sceneLoaded -= SpawnCocoon;
+        ModHooks.SetPlayerStringHook -= OnSetString;
     }
 
     // HK's dream zones end in a dream return without a shade, so Hornet loses nothing there either.
@@ -89,12 +96,53 @@ public sealed class DeathModule : ModuleBase {
         spd.HeroCorpseScene = GameManager.instance.GetSceneNameString();
         spd.HeroCorpseMarkerGuid = null;
         spd.HeroDeathScenePos = hero.transform.position;
+        // Confessor Jiji finds and summons a lost shade by these. HK spawns its own shade only while soulLimited, which
+        // her death leaves alone, and which keeps a shade the Knight lost in them.
+        var pd = PlayerData.instance;
+        if (!pd.soulLimited) {
+            pd.shadeScene = spd.HeroCorpseScene;
+            pd.shadeMapZone = GameManager.instance.GetCurrentMapZone();
+            pd.shadePositionX = spd.HeroDeathScenePos.x;
+            pd.shadePositionY = spd.HeroDeathScenePos.y;
+        }
+
         spd.HeroCorpseMoneyPool = geo - keptGeo;
         spd.HeroCorpseType = SCocoonTypes.Normal;
         if (spd.IsAnyCursed) spd.HeroCorpseType |= SCocoonTypes.Cursed;
         if (SGameplay.DeadPurseTool.IsEquipped && spd.HeroCorpseMoneyPool >= 10)
             spd.HeroCorpseType |= SCocoonTypes.Rosaries;
         spd.IsSilkSpoolBroken = true;
+    }
+
+    private static void OnCocoonBroken(System.Action<SHeroController, bool, bool> orig, SHeroController self,
+        bool doAirPause, bool forceCanBind) {
+        orig(self, doAirPause, forceCanBind);
+        var pd = PlayerData.instance;
+        if (!HeroSwitch.HornetActive || pd.soulLimited) return;
+        pd.shadeScene = "None";
+        pd.shadeMapZone = "";
+    }
+
+    // Jiji moves the shade to her hut for a Rancid Egg, then summons it there.
+    private static string OnSetString(string name, string value) {
+        var spd = SPlayerData.instance;
+        var pd = PlayerData.instance;
+        if (name != nameof(PlayerData.shadeScene) || !HeroSwitch.HornetActive || pd.soulLimited || value == "None" ||
+            string.IsNullOrEmpty(spd.HeroCorpseScene)) return value;
+        spd.HeroCorpseScene = value;
+        spd.HeroDeathScenePos = new Vector2(pd.shadePositionX, pd.shadePositionY);
+        return value;
+    }
+
+    private static void OnCreateObject(System.Action<CreateObject> orig, CreateObject self) {
+        var prefab = self.gameObject.Value;
+        if (!HeroSwitch.HornetActive || PlayerData.instance.soulLimited || !prefab || prefab.name != "Hollow Shade") {
+            orig(self);
+            return;
+        }
+
+        SpawnCocoon(USceneManager.GetActiveScene(), LoadSceneMode.Single);
+        self.Finish();
     }
 
     private static void SpawnCocoon(Scene scene, LoadSceneMode mode) {

@@ -99,6 +99,7 @@
 - Show the Delicate Flower in Hornet's inventory and break it when she takes damage, like the Knight's
 - Fix the rest bench in the middle of a pantheon not refilling Hornet's tools
 - Let Hornet's shade dash pass through the Pure Vessel's dagger fan, like the Knight's
+- Let Confessor Jiji summon Hornet's cocoon to her hut for a Rancid Egg, like the Knight's shade
 
 ## v0.4.0
 
