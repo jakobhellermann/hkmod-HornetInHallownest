@@ -92,7 +92,6 @@ Plain Needolin is there from the start.
 | Voltvessels       | Uumuu defeated                                                                |
 | Flintslate        | Troupe Master Grimm defeated                                                  |
 | Plasmium Phial    | Lifeblood Heart                                                               |
-| Needle Phial      | Hiveblood                                                                     |
 | Flea Brew         | Quick Slash                                                                   |
 | Warding Bell      | Baldur Shell                                                                  |
 | Injector Band     | Quick Focus                                                                   |
@@ -104,16 +103,16 @@ Plain Needolin is there from the start.
 | Druid's Eyes      | Grubberfly's Elegy                                                            |
 | Memory Crystal    | Thorns of Agony                                                               |
 | Sawtooth Circlet  | Sharp Shadow                                                                  |
-| Claw Mirror       | Awoken Dream Nail                                                             |
-| Claw Mirrors      | Dreamshield                                                                   |
-| Egg of Flealia    | Spell Twister                                                                 |
+| Claw Mirror       | Dreamshield                                                                   |
+| Claw Mirrors      | Awoken Dream Nail                                                             |
+| Egg of Flealia    | Flukenest                                                                     |
 | Fractured Mask    | Fragile Heart                                                                 |
 | Longclaw          | Longnail                                                                      |
 | Pin Badge         | Nailmaster's Glory                                                            |
 | Pollip Pouch      | Spore Shroom                                                                  |
 | Quick Sling       | Shaman Stone                                                                  |
 | Wispfire Lantern  | Any dream warrior defeated                                                    |
-| Volt Filament     | Flukenest                                                                     |
+| Volt Filament     | Spell Twister                                                                 |
 | Snitch Pick       | The Collector defeated                                                        |
 | Compass           | Wayward Compass                                                               |
 | Magnetite Brooch  | Gathering Swarm                                                               |
@@ -122,11 +121,13 @@ Plain Needolin is there from the start.
 | Ascendant's Grip  | Crystal Guardian defeated                                                     |
 | Weighted Belt     | Steady Body                                                                   |
 | Barbed Bracelet   | Fury of the Fallen                                                            |
-| Magnetite Dice    | Stalwart Shell                                                                |
+| Magnetite Dice    | Carefree Melody                                                               |
 | Thief's Mark      | Fragile Greed                                                                 |
 | Dead Bug's Purse  | Confessor Jiji summoning the shade                                            |
 | Spider Strings    | Dream Wielder                                                                 |
 | Shell Satchel     | Weaversong                                                                    |
+
+Hornet doesn't get the Needle Phial.
 
 ### Memory Lockets
 

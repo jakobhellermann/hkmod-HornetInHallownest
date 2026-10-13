@@ -82,7 +82,6 @@ public sealed class ProgressionModule : ModuleBase {
         Earned("Lightning Rod", new Flag("killedMegaJellyfish")), // Uumuu
         Earned("Flintstone", new Flag("killedGrimm")), // Troupe Master Grimm
         Earned("Lifeblood Syringe", Charm(8)), // Lifeblood Heart
-        Earned("Extractor", Charm(29)), // Hiveblood
         Earned("Flea Brew", Charm(32)), // Quick Slash
 
         Earned("Silk Spear", new Flag("fireballLevel", 1)),
@@ -102,9 +101,9 @@ public sealed class ProgressionModule : ModuleBase {
         Earned("Mosscreep Tool 2", Charm(35)), // Grubberfly's Elegy
         Earned("Revenge Crystal", Charm(12)), // Thorns of Agony
         Earned("Brolly Spike", Charm(16)), // Sharp Shadow
-        Earned("Dazzle Bind", new Flag("dreamNailUpgraded")),
-        Earned("Dazzle Bind Upgraded", Charm(38)), // Dreamshield
-        Earned("Flea Charm", Charm(33)), // Spell Twister
+        Earned("Dazzle Bind", Charm(38)), // Dreamshield
+        Earned("Dazzle Bind Upgraded", new Flag("dreamNailUpgraded")),
+        Earned("Flea Charm", Charm(11)), // Flukenest
         Earned("Fractured Mask", Charm(23)), // Fragile Heart
         Earned("Longneedle", Charm(18)), // Longnail
         Earned("Pinstress Tool", Charm(26)), // Nailmaster's Glory
@@ -115,7 +114,7 @@ public sealed class ProgressionModule : ModuleBase {
             new Flag("killedGhostMarmu"), new Flag("killedGhostNoEyes"), new Flag("killedGhostGalien"),
             new Flag("killedGhostMarkoth")
         ], AnyFlag: true),
-        Earned("Zap Imbuement", Charm(11)), // Flukenest
+        Earned("Zap Imbuement", Charm(33)), // Spell Twister
         Earned("Thief Claw", new Flag("collectorDefeated")),
 
         Earned("Compass", Charm(2)), // Wayward Compass
@@ -125,7 +124,7 @@ public sealed class ProgressionModule : ModuleBase {
         Earned("Wallcling", new Flag("defeatedMegaBeamMiner")), // Crystal Guardian
         Earned("Weighted Anklet", Charm(14)), // Steady Body
         Earned("Barbed Wire", Charm(6)), // Fury of the Fallen
-        Earned("Magnetite Dice", Charm(4)), // Stalwart Shell
+        Earned("Magnetite Dice", new Flag("grimmChildLevel", 5)), // Carefree Melody
         Earned("Thief Charm", Charm(24)), // Fragile Greed
         Earned("Dead Mans Purse", new Flag("jijiShadeOffered")),
         Earned("Musician Charm", Charm(30)), // Dream Wielder
