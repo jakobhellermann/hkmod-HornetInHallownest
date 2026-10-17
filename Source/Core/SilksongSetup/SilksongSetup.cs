@@ -4,7 +4,7 @@ using System.Linq;
 using HornetInHallownest.Util;
 using Newtonsoft.Json.Linq;
 
-namespace HornetInHallownest.Core;
+namespace HornetInHallownest.Core.SilksongSetup;
 
 // Ensure that the game is ready for loading silksong addressables:
 // - Prefixed `Silksong.*.dll`s need to be installed in the `Managed/` folder
