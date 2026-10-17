@@ -26,6 +26,7 @@ internal sealed class UnityDowngrader {
     private static readonly Dictionary<string, (string Namespace, string Name)> typeRenames = new() {
         ["UnityEngine.PhysicsMaterial"] = ("UnityEngine", "PhysicMaterial"),
         ["UnityEngine.UI.InputField/EndEditEvent"] = ("", "SubmitEvent"),
+        ["System.MemoryExtensions"] = ("System", "SpanExtensions"),
     };
 
     // A nested type can't be added to a host type, so these become top-level shim types in UnityEngine.Compat.
@@ -49,6 +50,7 @@ internal sealed class UnityDowngrader {
         [("UnityEngine.Rigidbody", "get_angularDamping")] = "get_angularDrag",
         [("UnityEngine.Rigidbody", "set_angularDamping")] = "set_angularDrag",
         [("UnityEngine.Collider2D", "Overlap")] = "OverlapCollider",
+        [("System.SpanExtensions", "AsSpan")] = "AsReadOnlySpan",
     };
 
     // ldfld/stfld have the same stack shape as a static call taking the receiver first.
@@ -170,9 +172,11 @@ internal sealed class UnityDowngrader {
         // Returns the type references nobody defines; the module is left half-rewritten if there are any.
         public List<string> Run() {
             RebindToHostVersions();
-            RenameTypes();
+            // The shim is written against the host's API; it only needs its references rehomed.
+            var isShim = module.Assembly.Name.Name == d.shim.Name;
+            if (!isShim) RenameTypes();
             var unresolved = RehomeTypeReferences().Concat(RehomeAttributeTypeArguments()).Distinct().ToList();
-            if (unresolved.Count > 0) return unresolved;
+            if (unresolved.Count > 0 || isShim) return unresolved;
             RewriteMembers();
             FlattenDefaultInterfaceMethods();
             return unresolved;

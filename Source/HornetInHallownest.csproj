@@ -118,8 +118,6 @@
         <Exec Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongAssemblyBuilder&quot; -- --hk &quot;$(ManagedDir)&quot; --silksong &quot;$(SilksongManaged)&quot; $(ShimArg) --out &quot;$(LocalRefs)&quot;"/>
     </Target>
 
-    <Target Name="GetManagedDir" Returns="$(ManagedDir)"/>
-
     <!-- HK 1.5.78: Build UnityCompat into mod's managed/ folder, which is installed in SilksongSetup -->
     <Target Name="BuildUnityCompat" BeforeTargets="BeforeBuild" Condition="'$(TargetFramework)' == 'hk1578'">
         <MSBuild Projects="../UnityCompat/UnityCompat.csproj" Targets="Restore" Properties="MSBuildRestoreSessionId=$([System.Guid]::NewGuid())" RemoveProperties="TargetFramework"/>

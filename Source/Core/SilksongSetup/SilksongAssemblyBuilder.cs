@@ -19,7 +19,12 @@ internal static class SilksongAssemblyBuilder {
             .Where(f => !installed.Contains(Path.GetFileNameWithoutExtension(f)))
             .ToList();
 
-        using var resolver = new StrictAssemblyResolver(hostFiles);
+        // Shipped next to the shim, which references them.
+        var shimDeps = shimPath == null
+            ? []
+            : SilksongAssemblies.ShimFiles.Where(n => n != SilksongAssemblies.Shim)
+                .Select(n => $"{Path.GetDirectoryName(shimPath)}/{n}.dll").ToList();
+        using var resolver = new StrictAssemblyResolver(hostFiles.Concat(shimDeps));
         var prefixed = SilksongAssemblies.PrefixInputs.Select(n => resolver.Read($"{silksongManaged}/{n}.dll")).ToList();
         AssemblyPrefixer.Prefix(SilksongAssemblies.Prefix, prefixed);
         Directory.CreateDirectory(outDir);
@@ -32,15 +37,14 @@ internal static class SilksongAssemblyBuilder {
         }
 
         var shim = resolver.Read(shimPath);
-        var all = prefixed.Concat(deps.Select(n => resolver.Read($"{silksongManaged}/{n}.dll"))).ToList();
-        foreach (var asm in all.Append(shim)) resolver.Register(asm);
+        // The shim is downgraded too: it is compiled against reference assemblies, not against the host.
+        var all = prefixed.Concat(deps.Select(n => resolver.Read($"{silksongManaged}/{n}.dll"))).Append(shim).ToList();
+        foreach (var asm in all) resolver.Register(asm);
 
         var host = hostFiles.Select(f => resolver.Resolve(new AssemblyNameReference(Path.GetFileNameWithoutExtension(f), null)));
         new UnityDowngrader(host, shim, log).Downgrade(all);
 
         foreach (var asm in all) asm.Write($"{outDir}/{asm.Name.Name}.dll");
-        var shimDir = Path.GetDirectoryName(shimPath)!;
-        foreach (var name in SilksongAssemblies.ShimFiles)
-            File.Copy($"{shimDir}/{name}.dll", $"{outDir}/{name}.dll", overwrite: true);
+        foreach (var dep in shimDeps) File.Copy(dep, $"{outDir}/{Path.GetFileName(dep)}", overwrite: true);
     }
 }
