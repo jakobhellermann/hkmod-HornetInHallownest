@@ -1,4 +1,7 @@
 <Solution>
     <Project Path="Source/HornetInHallownest.csproj"/>
-    <Project Path="UnityCompat/UnityCompat.csproj"/>
+    <!-- Built by the mod project's hk1578 build -->
+    <Project Path="UnityCompat/UnityCompat.csproj">
+        <Build Project="false"/>
+    </Project>
 </Solution>
