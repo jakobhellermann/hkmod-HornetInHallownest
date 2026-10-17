@@ -117,6 +117,9 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         var hk = PlayerData.instance;
         int fragments = (mpReserveMax ?? hk.MPReserveMax) / 33 * 3 + (vesselFragments ?? hk.vesselFragments);
         ss.silkMax = 9 + fragments;
+        // A cocoon broken at the base 9 silk leaves the spool broken, and Silksong mends it only on a later load
+        // (GameManager.FixUpSaveState), once there is more silk and no cocoon left.
+        if (ss.silkMax > 9 && string.IsNullOrEmpty(ss.HeroCorpseScene)) ss.IsSilkSpoolBroken = false;
     }
 
     private static bool OnSetBool(string name, bool orig) {
