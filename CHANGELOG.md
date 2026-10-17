@@ -156,6 +156,7 @@
 - Remind Hornet after she earns Desolate Dive that her dash while holding down breaks the floors it breaks
 - Announce Needle Strike and each Silk Heart Hornet earns with Silksong's own messages: the first nail art's in place of
   HK's nail art screen, then a Silk Heart for the second and third nail art and the Shade Cloak
+- Announce Hornet's Hunter's Journal with Silksong's journal message when she gets it
 
 ## v0.4.0
 
