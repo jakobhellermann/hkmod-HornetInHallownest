@@ -1,10 +1,11 @@
 extern alias Silksong;
-extern alias SilksongPM;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
+using HutongGames.PlayMaker;
 using HutongGames.PlayMaker.Actions;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -14,16 +15,16 @@ using SInputHandler = Silksong::InputHandler;
 namespace HornetInHallownest.Modules;
 
 public sealed class CrystalHeartModule : ModuleBase {
-    private const float ChargeTime = 0.8f;
     private const float Speed = 30f;
     private const float CancelDelay = 0.2f;
-    private const float WallBonkSpeed = 11.75f;
-    private const float AirBrakeTime = 0.54f;
-    private const float AirBrakeDeceleration = 0.9f;
-    private const string GroundChargeClip = "Abyss Kneel";
-    private const string AirBrakeClip = "Harpoon Catch";
+    private const float KickUpHeight = 0.25f;
+    private const float KickUpSpeed = 7f;
+    private const float Deceleration = 0.85f;
+    private const float FlightEffectsRise = 0.5f;
+    private const string ChargeClip = "Silk Charge Antic Zap";
     private const string WallChargeClip = "Wall Cling";
-    private const string FlightClip = "Harpoon Dash";
+    private const string FlightClip = "Silk Charge Zap";
+    private const string BrakeClip = "Silk Charge Recover Zap";
     private const string EffectsName = "Crystal Heart Effects";
 
     private static readonly string[] effectPaths = [
@@ -35,8 +36,11 @@ public sealed class CrystalHeartModule : ModuleBase {
     ];
 
     private static readonly string[] chargeEffects = ["SD Charge", "SD Charge Wall"];
+    private static readonly string[] flightEffects = ["SD Burst", "SD Burst Glow", "SD Trail", "SuperDash Damage"];
 
+    private static readonly Dictionary<tk2dSpriteAnimationClip, tk2dSpriteAnimationClip> loopedClips = [];
     private bool superdashing;
+    private bool airSuperdashUsed;
     private int controlVersion;
     private GameObject? effects;
 
@@ -52,6 +56,7 @@ public sealed class CrystalHeartModule : ModuleBase {
     }
 
     private void OnLookForQueueInput(Action<SHeroController> orig, SHeroController self) {
+        if (self.cState.onGround || OnWall(self)) airSuperdashUsed = false;
         if (!superdashing && CanStart(self)) StartCoroutine(Superdash(self, Input(self)));
         orig(self);
     }
@@ -59,61 +64,82 @@ public sealed class CrystalHeartModule : ModuleBase {
     private bool OnCanHarpoonDash(Func<SHeroController, bool> orig, SHeroController self) =>
         !superdashing && orig(self);
 
-    private static bool CanStart(SHeroController hero) {
+    // One superdash per jump: chained in the air, they would carry her across any gap.
+    private bool CanStart(SHeroController hero) {
         if (!HeroSwitch.HornetActive || hero != HornetSpawner.Hornet || !PlayerData.instance.hasSuperDash) return false;
         var actions = Input(hero).inputActions;
         return actions.SuperDash.WasPressed && actions.Up.IsPressed && !actions.Down.IsPressed &&
-               (hero.cState.onGround || hero.cState.wallSliding || hero.cState.wallClinging) && hero.CanHarpoonDash();
+               !airSuperdashUsed && hero.CanHarpoonDash();
     }
+
+    private static bool OnWall(SHeroController hero) => hero.cState.wallSliding || hero.cState.wallClinging;
 
     private static SInputHandler Input(SHeroController hero) => hero.GetFieldValue<SInputHandler>("inputHandler")!;
 
     private IEnumerator Superdash(SHeroController hero, SInputHandler input) {
         superdashing = true;
         var body = hero.GetComponent<Rigidbody2D>();
-        var onWall = !hero.cState.onGround;
+        var onWall = OnWall(hero);
+        if (!onWall && !hero.cState.onGround) airSuperdashUsed = true;
+        // Like her Clawline, it cuts short her sprint and its recovery, which would otherwise let go of her mid-superdash.
+        Silksong::EventRegister.SendEvent(Silksong::EventRegisterEvents.FsmCancel);
         hero.RelinquishControl();
         controlVersion = SHeroController.ControlVersion;
         hero.StopAnimationControl();
         hero.AffectedByGravity(false);
-        body.linearVelocity = Vector2.zero;
-        hero.AnimCtrl.PlayClipForced(onWall ? WallChargeClip : GroundChargeClip);
+        // Drawn after her silk charge, Silksong's Sharpdart: a hop off the ground and slowing down through its wind-up.
+        if (onWall) {
+            body.linearVelocity = Vector2.zero;
+            hero.AnimCtrl.PlayClipForced(WallChargeClip);
+        }
+        else {
+            if (hero.cState.onGround) {
+                // The hop only pushes her up further when the lift alone leaves her on the ground, such as on a slope.
+                hero.transform.Translate(0f, KickUpHeight, 0f, Space.World);
+                if (hero.CheckTouchingGround())
+                    body.linearVelocity = new Vector2(body.linearVelocity.x, KickUpSpeed);
+            }
+
+            hero.AnimCtrl.PlayClipForced(ChargeClip);
+        }
+
         var fx = EnsureEffects(hero);
         var chargeEffect = onWall ? "SD Charge Wall" : "SD Charge";
         PlayMakerFSM.BroadcastEvent(onWall ? "SUPERDASH CHARGING W" : "SUPERDASH CHARGING G");
         SendTo(fx, chargeEffect, "UP");
         SendTo(fx, "SD Charge Glow", "UP");
         Play(fx, chargeEffect, "SD Fx Charge");
-        KnightSound("SuperDash Charge", play: true);
+        SetKnightLoop("SuperDash Charge", playing: true);
         Rumble(focus: true, charged: false);
         Shake("FocusRumble");
 
-        var charged = false;
-        for (var time = 0f; input.inputActions.SuperDash.IsPressed && !IsInterrupted(hero); time += Time.deltaTime) {
-            if (!charged && time >= ChargeTime) {
-                charged = true;
-                PlayMakerFSM.BroadcastEvent("SUPERDASH READY");
-                KnightClip(onWall ? "Wall Charged" : "Ground Charged");
-                Rumble(focus: false, charged: true);
-                Shake("AverageShake");
-                Activate(fx, "SD Bling", true);
-                Play(fx, "SD Bling", "SD Fx Bling");
-                if (!onWall) Activate(fx, "SD Sharp Flash", true);
-            }
-
-            body.linearVelocity = Vector2.zero;
-            yield return null;
+        // She launches once the wind-up has played, with no holding it and no letting go to cancel.
+        var chargeTime = Duration(hero, ChargeClip);
+        for (var time = 0f; time < chargeTime && !IsInterrupted(hero); time += Time.fixedDeltaTime) {
+            yield return new WaitForFixedUpdate();
+            if (IsInterrupted(hero)) break;
+            if (onWall) body.linearVelocity = Vector2.zero;
+            else body.linearVelocity *= Deceleration;
         }
 
-        KnightSound("SuperDash Charge", play: false);
+        SetKnightLoop("SuperDash Charge", playing: false);
         SendTo(fx, chargeEffect, "DOWN");
         SendTo(fx, "SD Charge Glow", "DOWN");
+        // Their faders leave them drawn after fading them out, and their looping clips' frames bring them back faintly.
+        foreach (var name in chargeEffects) Draw(fx, name, false);
         Rumble(focus: false, charged: false);
-        if (!charged || IsInterrupted(hero)) {
+        if (IsInterrupted(hero)) {
             PlayMakerFSM.BroadcastEvent("SUPERDASH CANCEL");
             Finish(hero);
             yield break;
         }
+
+        PlayMakerFSM.BroadcastEvent("SUPERDASH READY");
+        KnightClip(onWall ? "Wall Charged" : "Ground Charged");
+        Shake("AverageShake");
+        Activate(fx, "SD Bling", true);
+        Play(fx, "SD Bling", "SD Fx Bling");
+        if (!onWall) Activate(fx, "SD Sharp Flash", true);
 
         // Hornet faces a wall she clings to.
         var faceRight = onWall
@@ -122,9 +148,10 @@ public sealed class CrystalHeartModule : ModuleBase {
         if (faceRight) hero.FaceRight();
         else hero.FaceLeft();
         var direction = faceRight ? 1f : -1f;
-        hero.AnimCtrl.PlayClipForced(FlightClip);
+        PlayFlight(hero);
         PlayMakerFSM.BroadcastEvent("SUPERDASH BLAST");
         KnightClip("Dash Start");
+        KnightVibration("Dash Start");
         KnightRandomClip("Dash Start");
         Shake("SuperDashShake");
         Activate(fx, "SD Burst", true);
@@ -132,7 +159,7 @@ public sealed class CrystalHeartModule : ModuleBase {
         Activate(fx, "SD Trail", true);
         Play(fx, "SD Trail", "SD Trail");
         Activate(fx, "SuperDash Damage", true);
-        KnightSound("SuperDashing", play: true);
+        SetKnightLoop("SuperDashing", playing: true);
         body.linearVelocity = new Vector2(direction * Speed, 0f);
 
         // Per frame, not per physics step: a jump or harpoon press lasts one frame.
@@ -147,7 +174,7 @@ public sealed class CrystalHeartModule : ModuleBase {
                 controlVersion = SHeroController.ControlVersion;
                 hero.StopAnimationControl();
                 hero.AffectedByGravity(false);
-                hero.AnimCtrl.PlayClipForced(FlightClip);
+                PlayFlight(hero);
                 body.linearVelocity = new Vector2(direction * Speed, 0f);
                 continue;
             }
@@ -166,42 +193,56 @@ public sealed class CrystalHeartModule : ModuleBase {
         PlayMakerFSM.BroadcastEvent("SUPERDASH END");
         Play(fx, "SD Trail", "SD Trail End");
         Activate(fx, "SuperDash Damage", false);
-        KnightSound("SuperDashing", play: false);
+        SetKnightLoop("SuperDashing", playing: false);
         if (!hitWall && !IsInterrupted(hero)) {
             KnightClip("Air Cancel");
+            KnightVibration("Air Cancel");
             Activate(fx, "SD Break", true);
             Shake("EnemyKillShake");
-            hero.AnimCtrl.PlayClipForced(AirBrakeClip);
-            for (var time = 0f; time < AirBrakeTime; time += Time.fixedDeltaTime) {
+            // The jump that stops her would be taken the moment she's let go, as a jump or, held, her float.
+            hero.ResetInputQueues();
+            hero.ClearJumpInputState();
+            input.GetWasButtonPressedQueued(Silksong::GlobalEnums.HeroActionButton.JUMP, consume: true);
+            hero.AnimCtrl.PlayClipForced(BrakeClip);
+            // Sharpdart slows from 44 to about 27 through this clip; flying at 30, she keeps her speed instead.
+            var brakeTime = Duration(hero, BrakeClip);
+            for (var time = 0f; time < brakeTime; time += Time.fixedDeltaTime) {
                 yield return new WaitForFixedUpdate();
                 if (IsInterrupted(hero)) break;
-                body.linearVelocity *= AirBrakeDeceleration;
             }
+
+            // Like Sharpdart's end, she's let go at once with the speed she has left, falling through Silk Charge End.
+            Finish(hero);
+            if (hero && !IsInterrupted(hero)) hero.SilkChargeEnd();
+            yield break;
         }
 
         // A scene load can replace Hornet mid-flight, destroying the body.
         if (body) body.linearVelocity = Vector2.zero;
+        // Into a wall she clings to it, as from her silk charge; it gives her control back itself.
         if (hitWall && !IsInterrupted(hero)) {
             superdashing = false;
             hero.AffectedByGravity(true);
-            Bonk(hero, direction);
-            yield break;
+            if (hero.TryFsmCancelToWallSlide()) yield break;
         }
 
         Finish(hero);
     }
 
-    // Her sprint's own wall bonk gives her control back after it.
-    private static void Bonk(SHeroController hero, float direction) {
-        var sprint = hero.GetComponents<SilksongPM::PlayMakerFSM>().FirstOrDefault(fsm => fsm.FsmName == "Sprint");
-        if (!sprint) {
-            hero.StartAnimationControl();
-            hero.RegainControl();
-            return;
-        }
+    private static float Duration(SHeroController hero, string clipName) =>
+        hero.AnimCtrl.animator.GetClipByName(clipName) is { } clip ? clip.frames.Length / clip.fps : 0f;
 
-        sprint.FsmVariables.GetFsmFloat("Sprint Speed Crt").Value = direction * WallBonkSpeed;
-        sprint.SetState("Run To WallBonk");
+    // Sharpdart's flight lasts one play of its clip; a superdash flies on until stopped, so the clip loops.
+    private static void PlayFlight(SHeroController hero) {
+        var animator = hero.AnimCtrl.animator;
+        var clip = animator.GetClipByName(FlightClip);
+        if (clip == null) return;
+        if (!loopedClips.TryGetValue(clip, out var looped))
+            loopedClips[clip] = looped = new tk2dSpriteAnimationClip {
+                name = clip.name, fps = clip.fps, frames = clip.frames, loopStart = clip.loopStart,
+                wrapMode = tk2dSpriteAnimationClip.WrapMode.LoopSection
+            };
+        animator.Play(looped);
     }
 
     // Silksong counts every RelinquishControl, also one that finds her relinquished already, such as an arena's that
@@ -216,8 +257,9 @@ public sealed class CrystalHeartModule : ModuleBase {
         if (!hero) return;
         hero.AffectedByGravity(true);
         if (IsInterrupted(hero)) return;
-        hero.StartAnimationControl();
+        // Taking control back finds out whether she's on the ground, which picks the animation to go on with.
         hero.RegainControl();
+        hero.StartAnimationControlToIdle();
     }
 
     // The Knight's effects stay hidden and their FSMs off while Hornet plays (KnightPresence).
@@ -235,14 +277,22 @@ public sealed class CrystalHeartModule : ModuleBase {
             var copy = Object.Instantiate(source.gameObject, effects.transform, false);
             copy.name = source.name;
             copy.transform.localPosition = knight.transform.InverseTransformPoint(source.position);
+            // They're drawn around the Knight's flying body, which sits lower over his feet than her zap's.
+            if (Array.IndexOf(flightEffects, copy.name) >= 0)
+                copy.transform.localPosition += Vector3.up * FlightEffectsRise;
             foreach (var fsm in copy.GetComponentsInChildren<PlayMakerFSM>(true)) fsm.enabled = true;
             // The charge effects' faders draw them from UP on. Drawn earlier, the one a superdash doesn't charge with
             // loops its default clip, whose frames undo the fader's fade.
-            var drawn = Array.IndexOf(chargeEffects, copy.name) < 0;
-            foreach (var renderer in copy.GetComponentsInChildren<Renderer>(true)) renderer.enabled = drawn;
+            Draw(effects, copy.name, Array.IndexOf(chargeEffects, copy.name) < 0);
         }
 
         return effects;
+    }
+
+    private static void Draw(GameObject? fx, string child, bool drawn) {
+        var effect = fx ? fx.transform.Find(child) : null;
+        if (!effect) return;
+        foreach (var renderer in effect.GetComponentsInChildren<Renderer>(true)) renderer.enabled = drawn;
     }
 
     private static void Shake(string shakeEvent) {
@@ -281,33 +331,52 @@ public sealed class CrystalHeartModule : ModuleBase {
     // The one-shot sounds of the Knight's superdash live only in his Superdash FSM's states. The Knight's own audio
     // source stays silent while Hornet plays, so they go through his superdash sound's.
     private static void KnightClip(string state) {
-        var knight = HeroController.UnsafeInstance;
-        var fsm = knight ? knight.GetComponents<PlayMakerFSM>().FirstOrDefault(f => f.FsmName == "Superdash") : null;
-        var clip = fsm
-            ? fsm.Fsm.GetState(state)?.Actions.OfType<AudioPlay>()
-                .Select(action => action.oneShotClip.Value as AudioClip).FirstOrDefault(c => c)
-            : null;
-        var source = knight ? knight.transform.Find("Sounds/SuperDash Charge")?.GetComponent<AudioSource>() : null;
+        var clip = KnightState(state)?.Actions.OfType<AudioPlay>()
+            .Select(action => action.oneShotClip.Value as AudioClip).FirstOrDefault(c => c);
+        var source = KnightSounds("SuperDash Charge")?.GetComponent<AudioSource>();
         if (clip && source) source.PlayOneShot(clip);
     }
 
     private static void KnightRandomClip(string state) {
-        var knight = HeroController.UnsafeInstance;
-        var fsm = knight ? knight.GetComponents<PlayMakerFSM>().FirstOrDefault(f => f.FsmName == "Superdash") : null;
-        var clips = fsm
-            ? fsm.Fsm.GetState(state)?.Actions.OfType<AudioPlayRandom>().FirstOrDefault()?.audioClips
-            : null;
-        var source = knight ? knight.transform.Find("Sounds/SuperDash Charge")?.GetComponent<AudioSource>() : null;
+        var clips = KnightState(state)?.Actions.OfType<AudioPlayRandom>().FirstOrDefault()?.audioClips;
+        var source = KnightSounds("SuperDash Charge")?.GetComponent<AudioSource>();
         if (clips is not { Length: > 0 } || !source) return;
         var clip = clips[UnityEngine.Random.Range(0, clips.Length)];
         if (clip) source.PlayOneShot(clip);
     }
 
-    private static void KnightSound(string child, bool play) {
+    // The superdash's one-shot rumbles live in the same states.
+    private static void KnightVibration(string state) {
+        if (KnightState(state)?.Actions.OfType<PlayVibration>().FirstOrDefault() is not { } vibration) return;
+        VibrationManager.PlayVibrationClipOneShot(VibrationData.Create(
+            (LowFidelityVibrations)vibration.lowFidelityVibration.Value,
+            vibration.highFidelityVibration.Value as TextAsset, vibration.gamepadVibration.Value as GamepadVibration));
+    }
+
+    private static FsmState? KnightState(string state) {
         var knight = HeroController.UnsafeInstance;
-        var source = knight ? knight.transform.Find("Sounds/" + child)?.GetComponent<AudioSource>() : null;
-        if (!source) return;
-        if (play) source.Play();
-        else source.Stop();
+        var fsm = knight ? knight.GetComponents<PlayMakerFSM>().FirstOrDefault(f => f.FsmName == "Superdash") : null;
+        return fsm ? fsm.Fsm.GetState(state) : null;
+    }
+
+    // His looping charge and flight sounds each carry the rumble that goes with them.
+    private static void SetKnightLoop(string child, bool playing) {
+        var sounds = KnightSounds(child);
+        if (!sounds) return;
+        var source = sounds.GetComponent<AudioSource>();
+        var vibration = sounds.GetComponent<VibrationPlayer>();
+        if (playing) {
+            if (source) source.Play();
+            if (vibration) vibration.Play();
+        }
+        else {
+            if (source) source.Stop();
+            if (vibration) vibration.Stop();
+        }
+    }
+
+    private static Transform? KnightSounds(string child) {
+        var knight = HeroController.UnsafeInstance;
+        return knight ? knight.transform.Find("Sounds/" + child) : null;
     }
 }
