@@ -30,11 +30,12 @@ public sealed class HornetSpawner : ModuleBase {
         get {
             if (field != null) return field;
             SilksongAddressables.EnsureMounted();
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var op = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet");
             op.WaitForCompletion();
             if (op.Status != AsyncOperationStatus.Succeeded)
                 throw new InvalidOperationException("loading Hero_Hornet via Addressables failed", op.OperationException);
-            Log.Debug("[spawn] Hero_Hornet loaded via Addressables");
+            Log.Debug($"[spawn] Hero_Hornet loaded via Addressables in {stopwatch.ElapsedMilliseconds} ms");
             return field = op.Result;
         }
     }

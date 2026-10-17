@@ -23,7 +23,7 @@ if [ ! -f "$MGR/TeamCherry.Localization.dll" ]; then
     deps+=(
         TeamCherry.SharedUtils TeamCherry.Cinematics TeamCherry.BuildBot Unity.InputSystem com.rlabrecque.steamworks.net
         SharpDX SharpDX.DirectInput XGamingRuntime # only from Windows Silksong builds
-        HornetInHallownest.UnityCompat
+        HornetInHallownest.UnityCompat AssetsTools.NET
     )
 fi
 

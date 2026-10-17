@@ -11,7 +11,7 @@ internal static class SilksongAssemblies {
     internal const string Shim = "HornetInHallownest.UnityCompat";
 
     // The shim and its dependencies, shipped side by side.
-    internal static readonly string[] ShimFiles = [Shim];
+    internal static readonly string[] ShimFiles = [Shim, "AssetsTools.NET"];
 
     // Silksong assemblies HK lacks, installed under their own name.
     internal static readonly string[] Deps = [

@@ -25,9 +25,6 @@ path = "src/bin/repack-resources.rs"
 name = "recontainer"
 path = "src/bin/recontainer.rs"
 
-[[bin]]
-name = "convert-aa"
-path = "src/bin/convert-aa.rs"
 
 [[bin]]
 name = "retarget-monoscripts"
@@ -37,6 +34,3 @@ path = "src/bin/retarget-monoscripts.rs"
 name = "dump-objects"
 path = "src/bin/dump-objects.rs"
 
-[[bin]]
-name = "fix-discrete-curves"
-path = "src/bin/fix-discrete-curves.rs"

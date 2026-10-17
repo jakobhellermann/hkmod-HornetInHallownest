@@ -59,6 +59,11 @@ internal sealed class UnityDowngrader {
     // Only applied when the host lacks the exact overload; instance members get the receiver as first parameter.
     private static readonly Dictionary<(string Type, string Member), string> memberToShim = BuildMemberToShim();
 
+    // Redirected even though the host has them: Unity 2020.2 can't read Unity 6 asset bundles.
+    private static readonly Dictionary<(string Type, string Member), string> memberAlwaysToShim = new() {
+        [("UnityEngine.AssetBundle", "LoadFromFileAsync")] = "AssetBundle_LoadFromFileAsync",
+    };
+
     private static Dictionary<(string Type, string Member), string> BuildMemberToShim() {
         var map = new Dictionary<(string Type, string Member), string> {
             [("UnityEngine.Object", "FindAnyObjectByType")] = "FindAnyObjectByType",
@@ -310,7 +315,8 @@ internal sealed class UnityDowngrader {
                 Changes++;
                 return;
             }
-            if (!memberToShim.TryGetValue(key, out var shimName) || ResolvesMethod(method)) return;
+            if (!memberAlwaysToShim.TryGetValue(key, out var shimName)
+                && (!memberToShim.TryGetValue(key, out shimName) || ResolvesMethod(method))) return;
 
             if (!d.shimMethodOwner.TryGetValue(shimName, out var owner))
                 throw new InvalidOperationException($"shim method {shimName} missing");
