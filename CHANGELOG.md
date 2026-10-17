@@ -152,6 +152,9 @@
 - Fix Hornet's inventory ignoring the arrows after a scene change cut off a reward's message, such as the Witch
   Crest's in the Lifeblood Core's room: the scene now waits until the message is dismissed
 - Fix the Witch Crest's message showing a missing-text placeholder above its name
+- Show Hornet's reward messages one after another instead of over each other, each holding her still, and her Memory
+  Locket pop-up after them
+- Hold Hornet's rewards until a conversation or cutscene she's in ends, and until she leaves a Colosseum trial
 
 ## v0.4.0
 

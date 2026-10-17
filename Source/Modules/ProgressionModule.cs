@@ -42,7 +42,13 @@ public sealed class ProgressionModule : ModuleBase {
     private const string CharmBenchMsgDown = "CHARM MSG DOWN";
     private static readonly string[] silkshots = ["WebShot Weaver", "WebShot Forge", "WebShot Architect"];
     private static readonly string[] hkItemMsgFsms = ["Relic Msg", "Journal Msg"];
+
+    private static readonly string[] colosseumTrials =
+        ["Room_Colosseum_Bronze", "Room_Colosseum_Silver", "Room_Colosseum_Gold"];
+
     private static readonly HashSet<Fsm> shownHkItemMsgs = [];
+    private static readonly Queue<(Action<Action> Spawn, Action? AfterMsg)> heldMsgs = new();
+    private static bool isHeldMsgShown;
     private const string GetItemMsgEnd = "GET ITEM MSG END";
     private const string MemoryLocket = "Crest Socket Unlocker";
     private const string PromptsBundle = "prompts_assets_all.bundle";
@@ -212,6 +218,8 @@ public sealed class ProgressionModule : ModuleBase {
         ModHooks.SetPlayerBoolHook -= OnSetBool;
         ModHooks.SetPlayerIntHook -= OnSetInt;
         shownHkItemMsgs.Clear();
+        heldMsgs.Clear();
+        isHeldMsgShown = false;
         Silksong::UIMsgPopupBaseBase.MinYPos = float.MinValue;
     }
 
@@ -308,17 +316,23 @@ public sealed class ProgressionModule : ModuleBase {
         StartCoroutine(ApplyNextFrame());
     }
 
-    // HK sets some of these fields partway through a conversation, and a reward's screen would cover its box.
+    // HK sets some of these fields partway through a conversation or a cutscene, and a reward's screen would cover it.
+    // Both hold Hornet until they end, even between the boxes of a conversation. A Colosseum trial fills the Hunter's
+    // Journal as it goes, and the Hunter Crest's evolution screen would stop the fight.
     private IEnumerator ApplyNextFrame() {
         yield return null;
-        while (HeroSwitch.HornetActive && IsDialogueShown()) yield return null;
+        while (HeroSwitch.HornetActive && ShouldHoldRewards()) yield return null;
         applyQueued = false;
         Apply(showPopups: HeroSwitch.HornetActive);
     }
 
-    private static bool IsDialogueShown() =>
-        UnityEngine.Object.FindObjectsByType<DialogueBox>(FindObjectsSortMode.None)
-            .Any(box => !box.GetFieldValue<bool>("hidden"));
+    private static bool ShouldHoldRewards() {
+        var hero = HornetSpawner.Hornet;
+        return (hero && hero.controlReqlinquished) ||
+               UnityEngine.Object.FindObjectsByType<DialogueBox>(FindObjectsSortMode.None)
+                   .Any(box => !box.GetFieldValue<bool>("hidden")) ||
+               colosseumTrials.Contains(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+    }
 
     internal static void Apply(bool showPopups = false) {
         var pd = PlayerData.instance;
@@ -369,7 +383,6 @@ public sealed class ProgressionModule : ModuleBase {
         }
 
         if (!earnedCrests.Contains(ss.CurrentCrestID)) SToolItemManager.SetEquippedCrest(StartingCrest);
-        GrantMemoryLockets(pd, ss, showPopups);
 
         var notches = pd.GetInt("charmSlots");
         var extraBlueSlot = notches >= ExtraBlueSlotNotches;
@@ -385,6 +398,8 @@ public sealed class ProgressionModule : ModuleBase {
         if (showPopups && sylphsong && !ss.HasBoundCrestUpgrader)
             ShowPowerUpMsg(Silksong::PowerUpGetMsg.PowerUps.EvaHeal);
         ss.HasBoundCrestUpgrader = sylphsong;
+        // Last, so that its pop-up queues behind the full-screen messages above.
+        GrantMemoryLockets(pd, ss, showPopups);
 
         BenchModule.RefreshToolHud();
     }
@@ -458,7 +473,9 @@ public sealed class ProgressionModule : ModuleBase {
         var data = ss.Collectables.GetData(MemoryLocket);
         var heldLockets = Math.Max(0, EarnedMemoryLockets(pd) - openedSlots);
         if (showPopups && heldLockets > data.Amount) {
-            Silksong::CollectableItemManager.GetItemByName(MemoryLocket).Collect(heldLockets - data.Amount);
+            var newLockets = heldLockets - data.Amount;
+            ShowAfterHeldMsgs(() =>
+                Silksong::CollectableItemManager.GetItemByName(MemoryLocket).Collect(newLockets));
             return;
         }
 
@@ -488,9 +505,11 @@ public sealed class ProgressionModule : ModuleBase {
                 new SilksongLoc::TeamCherry.Localization.LocalisedString
                     { Sheet = "Tools", Key = "UI_MSG_TITLE_CREST" });
 
-        ShowHeldMsg(afterMsg => Silksong::ToolCrestUIMsg.Spawn(crest, prefab, afterMsg));
-        // Silksong evolves the Hunter Crest with another message, titled with this line.
-        RetitleMsg("UI_MSG_UPG_TITLE_CREST", "Prompts", "UI_MSG_HCOMBO_PREFIX");
+        ShowHeldMsg(afterMsg => {
+            Silksong::ToolCrestUIMsg.Spawn(crest, prefab, afterMsg);
+            // Silksong evolves the Hunter Crest with another message, titled with this line.
+            RetitleMsg("UI_MSG_UPG_TITLE_CREST", "Prompts", "UI_MSG_HCOMBO_PREFIX");
+        });
     }
 
     // Some of these message prefabs have a title pointing at a line missing from Silksong's text; Silksong itself fills
@@ -505,8 +524,10 @@ public sealed class ProgressionModule : ModuleBase {
     private static void ShowExtraSlotMsg(Silksong::ToolItemType slotType, int slotNumber) {
         var prefab = LoadPromptPrefab(ExtraSlotMsgPath);
         if (!prefab) return;
-        ShowHeldMsg(afterMsg => Silksong::ExtraToolSlotUIMsg.Spawn(slotType, prefab, afterMsg));
-        RetitleMsg("UI_MSG_TITLE_EXTRASLOT_PREFIX", "Tools", $"UI_MSG_TITLE_EXTRASLOT_PREFIX_{slotNumber}");
+        ShowHeldMsg(afterMsg => {
+            Silksong::ExtraToolSlotUIMsg.Spawn(slotType, prefab, afterMsg);
+            RetitleMsg("UI_MSG_TITLE_EXTRASLOT_PREFIX", "Tools", $"UI_MSG_TITLE_EXTRASLOT_PREFIX_{slotNumber}");
+        });
     }
 
     // Given an end callback, the skill and power-up messages leave bringing the HUD back to it.
@@ -566,14 +587,37 @@ public sealed class ProgressionModule : ModuleBase {
         }, afterMsg);
     }
 
-    // A cutscene that already holds her lets her go itself, and expects her animation to stay its own until then.
+    // Rewards earned together would open their screens in the same frame, one over the other.
     private static void ShowHeldMsg(Action<Action> spawn, Action? afterMsg = null) {
+        heldMsgs.Enqueue((spawn, afterMsg));
+        if (!isHeldMsgShown) ShowNextHeldMsg();
+    }
+
+    // A pop-up opened under a full-screen message is gone by the time the message closes.
+    private static void ShowAfterHeldMsgs(Action show) {
+        if (!isHeldMsgShown) {
+            show();
+            return;
+        }
+
+        heldMsgs.Enqueue((end => {
+            show();
+            end();
+        }, null));
+    }
+
+    // A cutscene that already holds her lets her go itself, and expects her animation to stay its own until then.
+    private static void ShowNextHeldMsg() {
+        isHeldMsgShown = heldMsgs.Count > 0;
+        if (!isHeldMsgShown) return;
+        var (spawn, afterMsg) = heldMsgs.Dequeue();
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
         if (hero && hero.controlReqlinquished) hero = null;
         if (hero) hero.RelinquishControl();
         spawn(() => {
             if (hero) hero.RegainControl();
             afterMsg?.Invoke();
+            ShowNextHeldMsg();
         });
     }
 
