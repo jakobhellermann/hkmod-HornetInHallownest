@@ -117,6 +117,7 @@ Plain Needolin is there from the start.
 | Wispfire Lantern  | Any dream warrior defeated                                                    |
 | Volt Filament     | Spell Twister                                                                 |
 | Snitch Pick       | The Collector defeated                                                        |
+| Grimmchild        | Grimmchild                                                                    |
 | Compass           | Wayward Compass                                                               |
 | Magnetite Brooch  | Gathering Swarm                                                               |
 | Silkspeed Anklets | Sprintmaster                                                                  |
