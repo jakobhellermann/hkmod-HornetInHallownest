@@ -29,13 +29,14 @@ public sealed class AnimationRemapModule : ModuleBase {
         ["Look At King"] = "Idle"
     };
 
-    // Elderbug takes the Delicate Flower from the hero's hands, the Collector's Map and Isma's Tear lie at her height, and
-    // the web trap drops her with no get-up after.
+    // Elderbug takes the Delicate Flower from the hero's hands, the Collector's Map and Isma's Tear lie at her height, she
+    // kneels to lay the flower on the mantis grave, and the web trap drops her with no get-up after.
     private static readonly Dictionary<(string Scene, string Clip), string> sceneClipMap = new() {
         [("Town", "Collect SD 1")] = "Collect Stand 1",
         [("Ruins2_11", "Collect SD 1")] = "Collect Stand 1",
         [("Waterways_13", "Collect SD 1")] = "Collect Stand 1",
         [("Waterways_13", "Collect Acid")] = "Collect Stand 2",
+        [("Fungus3_49", "Dreamer Land")] = "Abyss Kneel",
         [("Deepnest_Spider_Town", "DJ Get Land")] = "HardLand"
     };
 

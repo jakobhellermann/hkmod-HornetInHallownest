@@ -114,6 +114,7 @@
 - Play Silksong's failed call when Hornet's Beastling Call can't reach the Stag, instead of a song that plays on with no
   answer
 - Let Hornet pick up Isma's Tear standing instead of crouching
+- Make Hornet kneel to lay the Delicate Flower on the Traitor Lord's child's grave instead of playing her hurt pose
 
 ## v0.4.0
 
