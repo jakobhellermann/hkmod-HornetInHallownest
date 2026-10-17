@@ -43,13 +43,6 @@ namespace System {
         public static float Log(float x) => (float)Math.Log(x);
         public static float Sign(float x) => Math.Sign(x);
     }
-
-    // .NET Standard 2.1 span helpers. Only the string overload is reached (ResourceManager's dynamic-string reader).
-    public static class MemoryExtensions {
-        // Copies: aliasing the string's storage needs span internals Unity 2020.2 doesn't expose.
-        public static ReadOnlySpan<char> AsSpan(this string value)
-            => value == null ? default : new ReadOnlySpan<char>(value.ToCharArray());
-    }
 }
 
 namespace System.Buffers {
