@@ -47,9 +47,21 @@ public static class HornetCompat {
     public static AssetBundleUnloadOperation AssetBundle_UnloadAsync(AssetBundle self, bool unloadAllLoadedObjects) {
         // 2020.2 only has the blocking Unload. Doing it synchronously and handing back an already-finished
         // operation preserves ResourceManager's release path; the caller only ever awaits completion.
+        var stream = UnityFsBundles.TakeStream(self);
         self.Unload(unloadAllLoadedObjects);
+        stream?.Dispose();
         return new AssetBundleUnloadOperation();
     }
+
+    // Always redirected: Unity 6 bundles need translating (see UnityFsBundles).
+    public static AssetBundleCreateRequest AssetBundle_LoadFromFileAsync(string path) =>
+        UnityFsBundles.LoadFromFileAsync(path, 0, 0);
+
+    public static AssetBundleCreateRequest AssetBundle_LoadFromFileAsync(string path, uint crc) =>
+        UnityFsBundles.LoadFromFileAsync(path, crc, 0);
+
+    public static AssetBundleCreateRequest AssetBundle_LoadFromFileAsync(string path, uint crc, ulong offset) =>
+        UnityFsBundles.LoadFromFileAsync(path, crc, offset);
 
     public static bool DownloadHandlerAssetBundle_get_autoLoadAssetBundle(DownloadHandlerAssetBundle self) => true;
     public static void DownloadHandlerAssetBundle_set_autoLoadAssetBundle(DownloadHandlerAssetBundle self, bool value) { }

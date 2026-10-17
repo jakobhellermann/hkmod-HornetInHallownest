@@ -20,6 +20,10 @@
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Reads Unity 6 AnimationClips via the bundles' embedded typetrees (see DiscreteCurvePatches) -->
+    <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="netstandard"><HintPath>$(HKRefs)/netstandard.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System"><HintPath>$(HKRefs)/System.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="System.Core"><HintPath>$(HKRefs)/System.Core.dll</HintPath><Private>false</Private></Reference>
