@@ -1,4 +1,5 @@
 using HornetInHallownest.Core;
+using HornetInHallownest.Core.SilksongSetup;
 
 // Rewrite assembly identities to start with <prefix>, rewriting cross-references between them. See AssemblyPrefixer.
 // Usage: SilksongPrefixer <prefix> <outDir> --managed <dir> <in1.dll> <in2.dll> ...
@@ -18,7 +19,14 @@ for (var i = 2; i < args.Length; i++) {
 }
 managed ??= Path.GetDirectoryName(Path.GetFullPath(inputs[0]))!;
 
-AssemblyPrefixer.Prefix(prefix, managed, inputs, outDir);
-foreach (var input in inputs)
-    Console.WriteLine($"prefixed {Path.GetFileName(input)} -> {outDir}");
+using var resolver = new StrictAssemblyResolver(Directory.GetFiles(managed, "*.dll"));
+var asms = inputs.Select(resolver.Read).ToList();
+AssemblyPrefixer.Prefix(prefix, asms);
+Directory.CreateDirectory(outDir);
+// Cross-references between the renamed assemblies have to resolve while writing.
+foreach (var asm in asms) resolver.Register(asm);
+foreach (var asm in asms) {
+    asm.Write(Path.Combine(outDir, asm.Name.Name + ".dll"));
+    Console.WriteLine($"prefixed -> {asm.Name.Name}");
+}
 return 0;
