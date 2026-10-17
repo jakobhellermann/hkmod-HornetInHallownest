@@ -26,6 +26,9 @@ The changelog can be found in [CHANGELOG.md](./CHANGELOG.md).
 Hornet earns her Silksong kit through Hollow Knight's progress. Progress made as either hero counts for both; masks,
 mask shards and geo are shared outright.
 
+<details>
+<summary>What earns what (spoilers)</summary>
+
 ### Abilities
 
 | Hollow Knight                                   | Hornet                                                      |
@@ -150,6 +153,8 @@ Hornet opens the locked crest slots of her choice with Memory Lockets, earned fr
 
 A Godseeker save starts Hornet with her whole kit: Silk Soar, every crest and tool, all three Silkshots, every Memory
 Locket and Sylphsong.
+
+</details>
 
 ## Requirements
 
