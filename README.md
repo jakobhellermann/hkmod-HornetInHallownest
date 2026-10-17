@@ -23,7 +23,8 @@ The changelog can be found in [CHANGELOG.md](./CHANGELOG.md).
 
 ## Ability Sync
 
-Most abilities from Hollow Knight are automatically granted, e.g. `Vengeful Spirit` -> `Silkspear`, `Dreamnail` -> `Needolin`.
+Most abilities from Hollow Knight are automatically granted, e.g. `Vengeful Spirit` -> `Silkspear`, `Dreamnail` -> `Elegy of the Deep`
+(Needolin holding down). Plain Needolin is there from the start.
 The full list of mapping can be in [this google sheet](https://docs.google.com/spreadsheets/d/1V3tq-4Mp1XaV8E_Dwz7N1Tk0cHRW7SyeBtjGcvBrrHg).
 
 Currently, all crests and tools are automatically granted.
