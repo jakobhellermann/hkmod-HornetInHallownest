@@ -1,7 +1,6 @@
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
 using Modding;
@@ -24,9 +23,11 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         ["hasDreamGate"] = (ss, v) => ss.UnlockedFastTravelTeleport = v, // Beastling Call (Needolin + up)
         // Silk Soar; Godseeker mode starts with every ability but has no King's Brand to earn it with
         ["hasKingsBrand"] = (ss, v) => ss.hasSuperJump = v || PlayerData.instance.bossRushMode,
+        // HK's 3 nail arts + Shade Cloak -> Hornet charge attack + silk-heart regen tiers (see RecomputeArts).
         ["hasCyclone"] = (ss, v) => RecomputeArts(ss, cyclone: v),
         ["hasDashSlash"] = (ss, v) => RecomputeArts(ss, dashSlash: v),
-        ["hasUpwardSlash"] = (ss, v) => RecomputeArts(ss, greatSlash: v) // Great Slash
+        ["hasUpwardSlash"] = (ss, v) => RecomputeArts(ss, greatSlash: v), // Great Slash
+        ["hasShadowDash"] = (ss, v) => RecomputeArts(ss, shadeCloak: v) // Shade Cloak
     };
 
     private static readonly Dictionary<string, Action<SPlayerData, int>> ints = new() {
@@ -45,7 +46,6 @@ public sealed class PlayerDataSyncModule : ModuleBase {
             }
 
             if (v >= 2) ss.hasSilkCharge = true; // Sharpdart
-            RecomputeSilkHearts(ss, fireball: v);
         },
         ["quakeLevel"] = (ss, v) => {
             // Cross Stitch
@@ -55,7 +55,6 @@ public sealed class PlayerDataSyncModule : ModuleBase {
             }
 
             if (v >= 2) ss.hasSilkBomb = true; // Rune Rage
-            RecomputeSilkHearts(ss, quake: v);
         },
         ["screamLevel"] = (ss, v) => {
             // Thread Storm
@@ -65,7 +64,6 @@ public sealed class PlayerDataSyncModule : ModuleBase {
             }
 
             if (v >= 2) ss.hasSilkBossNeedle = true; // Pale Nails
-            RecomputeSilkHearts(ss, scream: v);
         },
         // mask capacity (not current HP)
         ["maxHealthBase"] = (ss, v) => {
@@ -98,22 +96,17 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         ss.hasNeedolin = true;
     }
 
-    // Params override HK PD for the field being set right now (the SetBool hook fires before the write, so HK PD is stale
-    // for that one); null => read HK.
+    // HK's 3 nail arts + Shade Cloak fill Hornet's leftover unlocks: 1st art -> charge attack; the rest (2nd art, 3rd
+    // art, Shade Cloak) each add a silk-heart regen tier (silkRegenMax 0-3). Params override HK PD for the field being set
+    // right now (the SetBool hook fires before the write, so HK PD is stale for that one); null => read HK.
     private static void RecomputeArts(SPlayerData ss, bool? cyclone = null, bool? dashSlash = null,
-        bool? greatSlash = null) {
+        bool? greatSlash = null, bool? shadeCloak = null) {
         var hk = PlayerData.instance;
-        ss.hasChargeSlash = (cyclone ?? hk.hasCyclone) || (dashSlash ?? hk.hasDashSlash) ||
-                            (greatSlash ?? hk.hasUpwardSlash); // Needle Strike (charge attack)
-    }
-
-    // HK's spells -> Silk Hearts (silkRegenMax).
-    private static void RecomputeSilkHearts(SPlayerData ss, int? fireball = null, int? quake = null,
-        int? scream = null) {
-        var hk = PlayerData.instance;
-        int[] spells = [fireball ?? hk.fireballLevel, quake ?? hk.quakeLevel, scream ?? hk.screamLevel];
-        ss.silkRegenMax = (spells.Any(level => level >= 1) ? 1 : 0) + (spells.All(level => level >= 1) ? 1 : 0) +
-                          (spells.Any(level => level >= 2) ? 1 : 0);
+        var arts = ((cyclone ?? hk.hasCyclone) ? 1 : 0)
+                   + ((dashSlash ?? hk.hasDashSlash) ? 1 : 0)
+                   + ((greatSlash ?? hk.hasUpwardSlash) ? 1 : 0);
+        ss.hasChargeSlash = arts >= 1; // Needle Strike (charge attack)
+        ss.silkRegenMax = (arts >= 2 ? 1 : 0) + (arts >= 3 ? 1 : 0) + ((shadeCloak ?? hk.hasShadowDash) ? 1 : 0);
     }
 
     // Soul vessel -> silk spools. Both full vessels (MPReserveMax, +33 each) and loose fragments

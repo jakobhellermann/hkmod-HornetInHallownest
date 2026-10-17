@@ -56,6 +56,12 @@ public sealed class ProgressionModule : ModuleBase {
     private const string ExtraSlotMsgPath = "Assets/Prefabs/UI/Messages/Extra Tool Slot UI Msg.prefab";
     private const string SkillMsgPath = "Assets/Prefabs/UI/Hornet UI/Silk_Skill_Get_Prompt.prefab";
     private const string ItemMsgPath = "Assets/Prefabs/UI/Messages/UI Msg Get Item.prefab";
+    private const string SilkHeartItem = "SilkHeart";
+    private const string SilkHeartIcon = "prompt_silkheart";
+    private const string SilkHeartState = "Set Silk Heart";
+    private const string NeedleStrikeItem = "ChargeSlash";
+    private const string NeedleStrikeIcon = "prompt_nail_art";
+    private const string NailArtItemPrefix = "NA ";
     private const string PromptIconsBundle = "atlases_assets_assets/sprites/_atlases/prompts.spriteatlas.bundle";
     private const string PromptIconsPath = "Assets/Sprites/_Atlases/Prompts.spriteatlas";
 
@@ -192,8 +198,12 @@ public sealed class ProgressionModule : ModuleBase {
     private static readonly HashSet<string> watchedFields = [
         .. ToolRules.Concat(CrestRules).Concat(LocketRules).Append(SylphsongRule).SelectMany(r => r.Flags)
             .Select(f => f.Field),
-        "charmSlots"
+        "charmSlots", "hasCyclone", "hasDashSlash", "hasUpwardSlash", "hasShadowDash"
     ];
+
+    // PlayerDataSyncModule grants Needle Strike and the Silk Hearts as HK sets them; these are the ones already announced.
+    private static bool isNeedleStrikeAnnounced;
+    private static int announcedSilkHearts;
 
     private bool applyQueued;
 
@@ -279,7 +289,7 @@ public sealed class ProgressionModule : ModuleBase {
 
     private static void OnCreateUIMsgGetItem(Action<CreateUIMsgGetItem> orig, CreateUIMsgGetItem self) {
         var item = FindLaterAction<SetFsmString>(self, setItem => setItem.variableName.Value == "Item")?.setValue.Value;
-        if (HeroSwitch.HornetActive && HasHornetScreen(item)) {
+        if (HeroSwitch.HornetActive && (HasHornetScreen(item) || IsNailArt(item))) {
             var fsm = self.Fsm;
             ShowHornetScreen(item!, () => {
                 fsm.Event(GetItemMsgEnd);
@@ -305,8 +315,12 @@ public sealed class ProgressionModule : ModuleBase {
         item != null &&
         (powerUpScreens.ContainsKey(item) || skillScreens.ContainsKey(item) || itemScreens.ContainsKey(item));
 
+    private static bool IsNailArt(string? item) =>
+        item?.StartsWith(NailArtItemPrefix, StringComparison.Ordinal) == true;
+
     private static void ShowHornetScreen(string item, Action afterMsg) {
-        if (powerUpScreens.TryGetValue(item, out var powerUp)) ShowPowerUpMsg(powerUp, afterMsg);
+        if (IsNailArt(item)) ShowNailArtMsg(afterMsg);
+        else if (powerUpScreens.TryGetValue(item, out var powerUp)) ShowPowerUpMsg(powerUp, afterMsg);
         else if (itemScreens.TryGetValue(item, out var itemScreen))
             ShowItemMsg(itemScreen.Item, itemScreen.Icon, afterMsg);
         else ShowSkillMsg(SToolItemManager.GetToolByName(skillScreens[item]) as Silksong::ToolItemSkill, afterMsg);
@@ -401,6 +415,15 @@ public sealed class ProgressionModule : ModuleBase {
         if (showPopups && sylphsong && !ss.HasBoundCrestUpgrader)
             ShowPowerUpMsg(Silksong::PowerUpGetMsg.PowerUps.EvaHeal);
         ss.HasBoundCrestUpgrader = sylphsong;
+        if (showPopups) {
+            if (ss.hasChargeSlash && !isNeedleStrikeAnnounced)
+                ShowItemMsg(NeedleStrikeItem, NeedleStrikeIcon, () => { });
+            for (var i = announcedSilkHearts; i < ss.silkRegenMax; i++)
+                ShowItemMsg(SilkHeartItem, SilkHeartIcon, () => { });
+        }
+
+        isNeedleStrikeAnnounced = ss.hasChargeSlash;
+        announcedSilkHearts = ss.silkRegenMax;
         // Last, so that its pop-up queues behind the full-screen messages above.
         GrantMemoryLockets(pd, ss, showPopups);
 
@@ -533,6 +556,23 @@ public sealed class ProgressionModule : ModuleBase {
         });
     }
 
+    // Hornet has no nail arts: the first one HK teaches her is her Needle Strike, the next two each a Silk Heart, which
+    // PlayerDataSyncModule granted when HK set the art.
+    private static void ShowNailArtMsg(Action afterMsg) {
+        var ss = SPlayerData.instance;
+        if (ss.hasChargeSlash && !isNeedleStrikeAnnounced) {
+            isNeedleStrikeAnnounced = true;
+            ShowItemMsg(NeedleStrikeItem, NeedleStrikeIcon, afterMsg);
+        }
+        else if (ss.silkRegenMax > announcedSilkHearts) {
+            announcedSilkHearts++;
+            ShowItemMsg(SilkHeartItem, SilkHeartIcon, afterMsg);
+        }
+        else {
+            afterMsg();
+        }
+    }
+
     // Given an end callback, the skill and power-up messages leave bringing the HUD back to it.
     private static void ShowSkillMsg(Silksong::ToolItemSkill? skill, Action? afterMsg = null) {
         var prefab = LoadPromptPrefab(SkillMsgPath);
@@ -580,8 +620,14 @@ public sealed class ProgressionModule : ModuleBase {
             if (msg.transform.Find("Icon") is { } iconSlot)
                 iconSlot.GetComponent<SpriteRenderer>().sprite = LoadPromptIcon(icon);
             msg.SetActive(true);
-            msg.GetComponents<SilksongPM::PlayMakerFSM>().First(fsm => fsm.FsmName == "Msg Control").FsmVariables
-                .FindFsmString("Item").Value = item;
+            var control = msg.GetComponents<SilksongPM::PlayMakerFSM>().First(fsm => fsm.FsmName == "Msg Control");
+            control.FsmVariables.FindFsmString("Item").Value = item;
+            // Silksong shows its Silk Heart message before granting the heart, and skips it once Hornet has one;
+            // PlayerDataSyncModule has granted it by now.
+            if (item == SilkHeartItem)
+                foreach (var test in control.Fsm.GetState(SilkHeartState).Actions
+                             .OfType<Silksong::HutongGames.PlayMaker.Actions.PlayerDataVariableTest>())
+                    test.Enabled = false;
             Silksong::EventRegister.GetRegisterGuaranteed(msg, GetItemMsgEnd).ReceivedEvent += () => {
                 UnityEngine.Object.Destroy(msg);
                 Silksong::GameCameras.instance.HUDIn();

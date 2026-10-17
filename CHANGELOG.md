@@ -125,8 +125,6 @@
 - Leave out HK's charm message when Hornet picks up a charm, so it doesn't overlap the message for her reward
 - Announce Sylphsong with Silksong's full-screen skill message when Hornet earns it
 - Fix the Hunter Crest's evolution message showing a raw text key as its title
-- Give Hornet her Silk Hearts for HK's spells: the first spell, all three, and the first one upgraded, instead of for
-  nail arts and the Shade Cloak
 - Give Hornet only one Silkshot, from the first dreamer she defeats, like Silksong's one-of-three choice
 - Announce Eva's extra blue and yellow tool slots with Silksong's full-screen message when Hornet earns them
 - Announce the silk skills Hornet earns with Silksong's full-screen skill message, in place of HK's spell screen
@@ -156,6 +154,8 @@
   Locket pop-up after them
 - Hold Hornet's rewards until a conversation or cutscene she's in ends, and until she leaves a Colosseum trial
 - Remind Hornet after she earns Desolate Dive that her dash while holding down breaks the floors it breaks
+- Announce Needle Strike and each Silk Heart Hornet earns with Silksong's own messages: the first nail art's in place of
+  HK's nail art screen, then a Silk Heart for the second and third nail art and the Shade Cloak
 
 ## v0.4.0
 
