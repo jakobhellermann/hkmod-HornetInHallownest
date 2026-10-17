@@ -177,7 +177,8 @@ public sealed class ProgressionModule : ModuleBase {
     private static readonly Dictionary<string, (string Item, string Icon)> itemScreens = new() {
         ["Double Jump"] = ("Double Jump", "Hornet_Double_Jump_Prompt"), // Faydown Cloak
         ["Dream Nail"] = ("Memory Melody", "deep_melody_prompts"), // Elegy of the Deep
-        ["Dreamgate"] = ("Bellbeast Melody", "bellbeast_melody_prompts") // Beastling Call
+        ["Dreamgate"] = ("Bellbeast Melody", "bellbeast_melody_prompts"), // Beastling Call
+        ["Journal"] = ("Journal", "Journal_Prompt")
     };
 
     internal static readonly Rule[] LocketRules = [
