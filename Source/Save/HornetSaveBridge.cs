@@ -27,7 +27,9 @@ public sealed class HornetSaveBridge : ModuleBase {
     private static string? pendingPlayerData;
     private static bool? pendingHornetActive;
 
-    private static void OnNewGame() => Silksong::PlayerData.CreateNewSingleton(false);
+    private static void OnNewGame() {
+        SilksongBootstrap.RecreatePlayerData();
+    }
 
     private static JsonSerializerSettings BuildSettings() {
         var s = new JsonSerializerSettings {
@@ -65,6 +67,7 @@ public sealed class HornetSaveBridge : ModuleBase {
         if (pendingPlayerData != null)
             try {
                 JsonConvert.PopulateObject(pendingPlayerData, spd, SaveSettings);
+                SilksongBootstrap.ApplyPlayerDataInvariants(spd);
                 // HK PD owns the synced progression; the snapshot's copy can be stale. Masks picked up as Hornet before
                 // upgrades reached HK PD exist only in the snapshot, so carry them over before re-syncing.
                 var hk = PlayerData.instance;
