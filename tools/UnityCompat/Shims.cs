@@ -126,17 +126,6 @@ public static class HornetCompat {
     public static void tk2dSprite_MoveKeywords(tk2dSprite self, tk2dSprite target) { }
     public static void tk2dSprite_SetFloat(tk2dSprite self, int nameId, float value) { }
 
-    // ---- GOG Galaxy (newer SDK in Silksong than HK ships) --------------------------------------------------
-    //
-    // HK's GalaxyCSharp has Shutdown(); Silksong calls ShutdownEx(ShutdownParams). Delegating to the plain
-    // Shutdown keeps application exit working, ignoring the preserve-static-data hint.
-    public static void GalaxyInstance_ShutdownEx(global::Galaxy.Api.ShutdownParams parameters) {
-        // HK's overload takes unloadModule; Silksong's preserveStaticData is the inverse intent, so unload only
-        // when the caller did not ask for static data to be preserved.
-        try { global::Galaxy.Api.GalaxyInstance.Shutdown(!(parameters?.preserveStaticData ?? false)); }
-        catch { /* already torn down */ }
-    }
-
     // ---- Mathf (Unity 2022.2) -------------------------------------------------------------------------------
 
     public static float PerlinNoise1D(float x) => Mathf.PerlinNoise(x, 0f);

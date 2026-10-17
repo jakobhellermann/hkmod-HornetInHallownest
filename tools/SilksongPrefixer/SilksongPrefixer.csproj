@@ -12,5 +12,6 @@
   <ItemGroup>
     <!-- Shared with the mod's setup code -->
     <Compile Include="../../Source/Core/AssemblyPrefixer.cs" Link="AssemblyPrefixer.cs" />
+    <Compile Include="../../Source/Core/SilksongSetup/StrictAssemblyResolver.cs" Link="StrictAssemblyResolver.cs" />
   </ItemGroup>
 </Project>

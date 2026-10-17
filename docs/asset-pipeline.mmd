@@ -7,12 +7,13 @@ flowchart TB
         B1 -->|"make bundles-hk1578"| B2ch["monoscripts.silksong.bundle, silksong-resources.bundle for 2020.2"]:::hk1578
         B2b -->|"dotnet publish"| B3["mod zip"]
         B2h --> B3
+        B2s["UnityCompat -> managed/"]:::hk1578 --> B3
         B2c --> B3
         B2ch --> B3
     end
     subgraph Setup["Offline setup (player's machine)"]
         direction TB
-        S1["Silksong install (1.0.30000)"] -->|"make silksong-hk1578"| S2["silksong-hk1578/: downgraded Managed + UnityCompat"]:::hk1578
+        S1["Silksong install (1.0.30000)"] -->|"make silksong-hk1578"| S2["silksong-hk1578/: Silksong Managed"]:::hk1578
         S1 -->|"make aa-hk1578 (7.5 GB)"| S3["silksong-hk1578/: converted aa"]:::hk1578
     end
     subgraph RT["In game"]
@@ -20,7 +21,7 @@ flowchart TB
         subgraph First["first start"]
             R5["copy Silksong-only DLLs into Managed"] --> R6["prefix Silksong assemblies -> Managed/Silksong.*"]
             R5b["copy UnityCompat into Managed"]:::hk1578 --> R6
-            R6 --> R6b["retarget tk2d refs to HK's Assembly-CSharp"]:::hk1578
+            R6 --> R6b["downgrade to Unity 2020.2"]:::hk1578
             R6b --> R7["register Silksong.* in ScriptingAssemblies.json -> restart HK"]
             R6 -->|"1.5.12620"| R7
         end

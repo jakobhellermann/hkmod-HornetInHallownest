@@ -92,6 +92,38 @@ namespace UnityEngine.Pool {
         public void Clear() => inner.Clear();
         public void Dispose() => inner.Dispose();
     }
+
+    public struct PooledObject<T> : IDisposable where T : class {
+        private readonly T value;
+        private readonly IObjectPool<T> pool;
+
+        internal PooledObject(T value, IObjectPool<T> pool) {
+            this.value = value;
+            this.pool = pool;
+        }
+
+        void IDisposable.Dispose() => pool.Release(value);
+    }
+
+    public class CollectionPool<TCollection, TItem> where TCollection : class, ICollection<TItem>, new() {
+        private static readonly ObjectPool<TCollection> pool = new ObjectPool<TCollection>(() => new TCollection(), null, c => c.Clear());
+
+        public static TCollection Get() => pool.Get();
+
+        public static PooledObject<TCollection> Get(out TCollection value) {
+            value = pool.Get();
+            return new PooledObject<TCollection>(value, pool);
+        }
+
+        public static void Release(TCollection toRelease) => pool.Release(toRelease);
+    }
+}
+
+namespace UnityEngine.EventSystems {
+    // Unity 2021.1 UGUI; HK's EventSystem never dispatches it.
+    public interface IPointerMoveHandler : IEventSystemHandler {
+        void OnPointerMove(PointerEventData eventData);
+    }
 }
 
 namespace UnityEngine {
@@ -165,14 +197,4 @@ namespace UnityEngine.Compat {
     public delegate void Tk2dAnimationCompletedDelegate(tk2dSpriteAnimator animator, tk2dSpriteAnimationClip clip);
     public delegate void Tk2dAnimationEventDelegate(tk2dSpriteAnimator animator, tk2dSpriteAnimationClip clip, int frame);
     public delegate void Tk2dAnimationChangedDelegate(tk2dSpriteAnimator animator, tk2dSpriteAnimationClip previousClip, tk2dSpriteAnimationClip newClip);
-}
-
-namespace Galaxy.Api {
-    // Silksong links a newer GOG Galaxy SDK than Hollow Knight 1.5.78 ships: its GalaxyInstance has ShutdownEx
-    // (taking ShutdownParams) where HK's only has Shutdown(). Reached once, at application shutdown.
-    public class ShutdownParams {
-        public ShutdownParams() { }
-        public ShutdownParams(bool preserveStaticData) => this.preserveStaticData = preserveStaticData;
-        public bool preserveStaticData { get; set; }
-    }
 }
