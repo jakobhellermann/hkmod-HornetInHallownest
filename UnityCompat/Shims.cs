@@ -3,10 +3,11 @@
 // ReSharper disable CheckNamespace InconsistentNaming
 using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using UnityEngine.Networking;
 using UnityEngine.Video;
 
-namespace UnityEngine.Compat {
+namespace UnityEngine.Compat;
 
 public static class HornetCompat {
 
@@ -144,5 +145,4 @@ public static class HornetCompat {
     public static bool VideoPlayer_get_canSetTimeUpdateMode(VideoPlayer self) => false;
     public static VideoTimeUpdateMode VideoPlayer_get_timeUpdateMode(VideoPlayer self) => VideoTimeUpdateMode.GameTime;
     public static void VideoPlayer_set_timeUpdateMode(VideoPlayer self, VideoTimeUpdateMode mode) { }
-}
 }
