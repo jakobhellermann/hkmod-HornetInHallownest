@@ -119,6 +119,9 @@
         <MSBuild Projects="../tools/UnityCompat/UnityCompat.csproj" Targets="Build" Properties="$(UnityCompatProperties)" RemoveProperties="TargetFramework">
             <Output TaskParameter="TargetOutputs" ItemName="ManagedInstallFile"/>
         </MSBuild>
+        <ItemGroup>
+            <ManagedInstallFile Include="@(ManagedInstallFile->'%(RootDir)%(Directory)AssetsTools.NET.dll')"/>
+        </ItemGroup>
     </Target>
 
     <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(ModsDir)' != '' And Exists('$(ModsDir)')">
