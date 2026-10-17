@@ -108,6 +108,7 @@
   Hornet after a flight
 - Make Elegy of the Deep wake Whispering Roots and other dream-reactive objects after as long a song as a dream's
   entrance takes, instead of at its first silk drain
+- Show Hornet's Dream Nail essence on her HUD, under her rosaries, when she collects it
 
 ## v0.4.0
 

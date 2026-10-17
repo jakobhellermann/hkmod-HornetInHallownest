@@ -470,8 +470,9 @@ internal static class GameCamerasBootstrap {
             }
             else {
                 disabledHudFsms ??= new HashSet<PlayMakerFSM>();
+                // Hornet's essence counter shows and hides on the states of HK's.
                 foreach (var fsm in hk.hudCanvas.GetComponentsInChildren<PlayMakerFSM>(true))
-                    if (fsm.enabled) {
+                    if (fsm.enabled && !EssenceCounterModule.IsHkCounter(fsm)) {
                         fsm.enabled = false;
                         disabledHudFsms.Add(fsm);
                     }
