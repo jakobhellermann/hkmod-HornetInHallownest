@@ -5,6 +5,14 @@
     <RollForward>Major</RollForward>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
-  <ItemGroup><PackageReference Include="Mono.Cecil" Version="0.11.6" /></ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Shared with the mod's setup code -->
+    <Compile Include="../../Source/Core/AssemblyPrefixer.cs" Link="AssemblyPrefixer.cs" />
+    <Compile Include="../../Source/Core/SilksongSetup/*.cs" Exclude="../../Source/Core/SilksongSetup/SilksongSetup.cs" LinkBase="SilksongSetup" />
+  </ItemGroup>
 </Project>
