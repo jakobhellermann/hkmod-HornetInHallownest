@@ -1,7 +1,6 @@
 // .NET Standard 2.1 BCL surface missing from Unity 2020.2's mscorlib, types under their original namespaces.
 // ReSharper disable CheckNamespace
 using System;
-using System.Collections.Generic;
 
 namespace System {
     // .NET Standard 2.1. Nothing persists these values, so the algorithm doesn't need to match.
