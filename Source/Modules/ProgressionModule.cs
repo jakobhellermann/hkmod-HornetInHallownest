@@ -281,7 +281,10 @@ public sealed class ProgressionModule : ModuleBase {
         var item = FindLaterAction<SetFsmString>(self, setItem => setItem.variableName.Value == "Item")?.setValue.Value;
         if (HeroSwitch.HornetActive && HasHornetScreen(item)) {
             var fsm = self.Fsm;
-            ShowHornetScreen(item!, () => fsm.Event(GetItemMsgEnd));
+            ShowHornetScreen(item!, () => {
+                fsm.Event(GetItemMsgEnd);
+                if (item == "Quake") ControlReminderModule.ShowFloorBreakReminder();
+            });
             self.Finish();
             return;
         }
