@@ -1,0 +1,22 @@
+flowchart TB
+    subgraph Dev["Build time"]
+        direction TB
+        B1["Silksong install (1.0.30000)"] -->|"make ci-refs"| B2b["Silksong.* prefixed stubs"]
+        B1 -->|"make remap-monoscripts + make repack-resources"| B2c["monoscripts.silksong.bundle, silksong-resources.bundle"]
+        B2b -->|"dotnet publish"| B3["mod zip"]
+        B2c --> B3
+    end
+    subgraph RT["In game"]
+        direction TB
+        subgraph First["first start"]
+            R5["copy Silksong-only DLLs into Managed"] --> R6["prefix Silksong assemblies -> Managed/Silksong.*"]
+            R6 --> R7["register Silksong.* in ScriptingAssemblies.json -> restart HK"]
+        end
+        R8["mount the user's Silksong aa catalog directly"]
+        R9["monoscripts.silksong.bundle replaces Silksong's *_monoscripts.bundle"]
+        R10["Resources.Load served from silksong-resources.bundle"]
+        First --> R8
+        R8 --> R9
+        First --> R10
+    end
+    B3 -->|"unzip into Managed/Mods"| RT
