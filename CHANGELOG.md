@@ -106,6 +106,8 @@
   clings to
 - Fix the controller not vibrating through the Crystal Heart's charge and flight, and its charge streaks staying behind
   Hornet after a flight
+- Make Elegy of the Deep wake Whispering Roots and other dream-reactive objects after as long a song as a dream's
+  entrance takes, instead of at its first silk drain
 
 ## v0.4.0
 

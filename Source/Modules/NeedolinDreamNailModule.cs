@@ -61,7 +61,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
     private Collider2D? collider;
     private bool wasPerforming;
     private bool wasPlayingElegy;
-    private int silkAtStart;
+    private float elegyStartTime;
     private bool impactArmed;
     private float rangeEntryTime = -1f;
     private readonly object inputBlocker = new();
@@ -137,7 +137,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
             impactArmed = true;
             StartCoroutine(EnterDream(hero));
         }
-        else if (Silksong::PlayerData.instance.silk < silkAtStart) {
+        else if (Time.time >= elegyStartTime + DreamEnterDelay) {
             ArmImpact();
         }
     }
@@ -163,7 +163,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         }
 
         EnsureHitbox(hero);
-        silkAtStart = Silksong::PlayerData.instance.silk;
+        elegyStartTime = Time.time;
         dreamEntrances.Clear();
     }
 
