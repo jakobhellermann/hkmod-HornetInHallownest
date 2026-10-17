@@ -174,6 +174,8 @@ public sealed class CrystalHeartModule : ModuleBase {
                 controlVersion = SHeroController.ControlVersion;
                 hero.StopAnimationControl();
                 hero.AffectedByGravity(false);
+                // A side entrance stands her on the floor; she flies on at the height of a launch from the ground.
+                if (hero.CheckTouchingGround()) hero.transform.Translate(0f, KickUpHeight, 0f, Space.World);
                 PlayFlight(hero);
                 body.linearVelocity = new Vector2(direction * Speed, 0f);
                 continue;
