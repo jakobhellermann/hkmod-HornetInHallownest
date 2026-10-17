@@ -79,6 +79,9 @@ namespace UnityEngine.Compat {
 
     // BCL members with no Unity 2020.2 counterpart, receiver as first parameter (see HornetCompat).
     public static class BclCompat {
+        // string.Contains(char) — .NET Standard 2.1.
+        public static bool String_Contains(string self, char value) => self.IndexOf(value) >= 0;
+
         // string.Contains(char/string, StringComparison) — .NET Core 2.1.
         public static bool String_Contains(string self, char value, StringComparison comparisonType)
             => self != null && self.IndexOf(value.ToString(), comparisonType) >= 0;
@@ -90,7 +93,10 @@ namespace UnityEngine.Compat {
         public static string[] String_Split(string self, char separator, StringSplitOptions options)
             => self?.Split(new[] { separator }, options);
 
-        // string.TrimStart(char) — .NET Standard 2.1 (2.0 only has the params overload).
+        // string.TrimStart() — .NET Standard 2.1 (2.0 only has the params overload).
+        public static string String_TrimStart(string self) => self.TrimStart();
+
+        // string.TrimStart(char) — .NET Standard 2.1.
         public static string String_TrimStart(string self, char trimChar) => self?.TrimStart(trimChar);
 
         // string.Create<TState>(int, TState, SpanAction<char, TState>) — .NET Standard 2.1.
