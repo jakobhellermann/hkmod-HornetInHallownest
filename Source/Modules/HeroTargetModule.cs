@@ -74,7 +74,7 @@ public sealed class HeroTargetModule : ModuleBase {
     private static readonly string[] heroVarNames = ["Hero", "Hero Obj", "Hero Object"];
 
     private static void SyncLocalHeroVars(GameObject hero) {
-        foreach (var fsm in UnityEngine.Object.FindObjectsOfType<PlayMakerFSM>()) {
+        foreach (var fsm in UnityApi.FindAll<PlayMakerFSM>()) {
             var vars = fsm.FsmVariables;
             if (vars == null) continue;
             foreach (var name in heroVarNames) {

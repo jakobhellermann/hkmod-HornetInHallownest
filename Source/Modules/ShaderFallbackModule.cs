@@ -48,13 +48,13 @@ public sealed class ShaderFallbackModule : ModuleBase {
         // are released again before Hornet spawns, and a bundle that's gone from GetAllLoadedAssetBundles would leave
         // its shaders looking like HK's own (they report isSupported, so nothing else would catch them).
         Detour(typeof(UnityEngine.ResourceManagement.ResourceProviders.AssetBundleResource), "GetAssetBundle",
-            (System.Func<System.Func<UnityEngine.ResourceManagement.ResourceProviders.AssetBundleResource, AssetBundle>,
-                UnityEngine.ResourceManagement.ResourceProviders.AssetBundleResource, AssetBundle>)OnGetAssetBundle);
+            (System.Func<System.Func<UnityEngine.ResourceManagement.ResourceProviders.AssetBundleResource, AssetBundle?>,
+                UnityEngine.ResourceManagement.ResourceProviders.AssetBundleResource, AssetBundle?>)OnGetAssetBundle);
         sweep = StartCoroutine(Sweep());
     }
 
-    private AssetBundle OnGetAssetBundle(
-        System.Func<UnityEngine.ResourceManagement.ResourceProviders.AssetBundleResource, AssetBundle> orig,
+    private AssetBundle? OnGetAssetBundle(
+        System.Func<UnityEngine.ResourceManagement.ResourceProviders.AssetBundleResource, AssetBundle?> orig,
         UnityEngine.ResourceManagement.ResourceProviders.AssetBundleResource self) {
         var bundle = orig(self);
         if (bundle && ScanBundle(bundle)) {

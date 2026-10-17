@@ -227,7 +227,7 @@ public sealed class DeathModule : ModuleBase {
         if (hero.TryGetComponent<Rigidbody2D>(out var rb)) {
             rb.bodyType = RigidbodyType2D.Dynamic;
             rb.simulated = true;
-            rb.velocity = Vector2.zero;
+            rb.SetVelocity(Vector2.zero);
         }
 
         var cs = hero.cState;

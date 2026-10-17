@@ -2,6 +2,7 @@ extern alias Silksong;
 using System;
 using System.Collections.Generic;
 using HornetInHallownest.Core;
+using HornetInHallownest.Util;
 using UnityEngine;
 using Object = UnityEngine.Object;
 using SHeroController = Silksong::HeroController;
@@ -66,7 +67,7 @@ public sealed class BreakableFloorModule : ModuleBase {
         quaking = true;
         floors.Clear();
         floorCols.Clear();
-        foreach (var fsm in Object.FindObjectsOfType<PlayMakerFSM>()) {
+        foreach (var fsm in UnityApi.FindAll<PlayMakerFSM>()) {
             if (fsm && fsm.FsmName == "quake_floor") {
                 fsm.SendEvent("QUAKE FALL START");
                 floors.Add(fsm);
