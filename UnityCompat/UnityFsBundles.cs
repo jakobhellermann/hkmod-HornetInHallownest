@@ -10,7 +10,7 @@ using System.Linq;
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 
-namespace UnityEngine.Compat {
+namespace UnityEngine.Compat;
 
 internal static class UnityFsBundles {
     // Streams have to stay open until their bundle is unloaded.
@@ -36,8 +36,8 @@ internal static class UnityFsBundles {
         patchTime.Stop();
         if (patches.Count > 0)
             Debug.Log($"[UnityCompat] {Path.GetFileName(path)}: {patches.Count} discrete curve patches in " +
-                      $"{(patchTime.Elapsed - started).TotalMilliseconds:F0} ms (so far {translatedBundles} bundles, " +
-                      $"{patchTime.Elapsed.TotalMilliseconds:F0} ms computing patches)");
+                $"{(patchTime.Elapsed - started).TotalMilliseconds:F0} ms (so far {translatedBundles} bundles, " +
+                $"{patchTime.Elapsed.TotalMilliseconds:F0} ms computing patches)");
 
         var stream = new UnityFsDowngradeStream(file, header, Application.unityVersion, patches);
         var request = AssetBundle.LoadFromStreamAsync(stream, crc);
@@ -250,6 +250,4 @@ internal sealed class UnityFsDowngradeStream : Stream {
         if (disposing) file.Dispose();
         base.Dispose(disposing);
     }
-}
-
 }

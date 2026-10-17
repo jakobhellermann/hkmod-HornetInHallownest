@@ -4,6 +4,8 @@
 /Source/LocalConfig.props
 /tools/*/bin
 /tools/*/obj
+/UnityCompat/bin
+/UnityCompat/obj
 /local-refs
 /HollowKnightPath.props
 /local-refs-hk1578
