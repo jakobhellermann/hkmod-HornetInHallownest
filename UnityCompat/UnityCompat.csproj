@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Types and members Silksong's Unity 6 IL needs but HK 1.5.78 lacks; UnityDowngrader retargets references here -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <!-- Compiled against HK's own mscorlib, which has Span<T> unlike the netstandard2.0 reference assemblies -->
+    <DisableStandardFrameworkResolution>true</DisableStandardFrameworkResolution>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
+    <AssemblyName>HornetInHallownest.UnityCompat</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <NoWarn>CS0436;CS0649</NoWarn>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- See DiscreteCurvePatches -->
+    <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
+  </ItemGroup>
+  <!-- HK 1.5.78's Managed folder, as configured for the mod's hk1578 build -->
+  <Target Name="ResolveHollowKnightReferences" BeforeTargets="ResolveAssemblyReferences">
+    <MSBuild Projects="../Source/HornetInHallownest.csproj" Targets="GetManagedDir" Properties="TargetFramework=hk1578">
+      <Output TaskParameter="TargetOutputs" PropertyName="HKRefs"/>
+    </MSBuild>
+    <Error Condition="!Exists('$(HKRefs)')" Text="UnityCompat is compiled against HK 1.5.78's Managed folder; set GamePath for hk1578 in HollowKnightPath.props."/>
+    <ItemGroup>
+      <HollowKnightReference Include="mscorlib;netstandard;System;System.Core;Assembly-CSharp;UnityEngine;UnityEngine.CoreModule;UnityEngine.Physics2DModule;UnityEngine.PhysicsModule;UnityEngine.VideoModule;UnityEngine.AssetBundleModule;UnityEngine.UnityWebRequestModule;UnityEngine.UnityWebRequestAssetBundleModule;UnityEngine.UI"/>
+      <Reference Include="@(HollowKnightReference)" HintPath="$(HKRefs)/%(Identity).dll" Private="false"/>
+    </ItemGroup>
+  </Target>
+</Project>
