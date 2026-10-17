@@ -101,6 +101,7 @@
 - Let Hornet's shade dash pass through the Pure Vessel's dagger fan, like the Knight's
 - Let Confessor Jiji summon Hornet's cocoon to her hut for a Rancid Egg, like the Knight's shade
 - Fix Hornet's silk spool staying broken after she recovers her cocoon with no extra silk and then grows the spool
+- Fix the controller never vibrating for Hornet's own moves, such as her sprint, dashes and landings
 
 ## v0.4.0
 
