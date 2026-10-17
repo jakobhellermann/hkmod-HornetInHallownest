@@ -25,7 +25,7 @@ internal static class HudRefresh {
 
     private static void SendToHealthDisplays(string evt) {
         // Re-enable the self-disabled (EnableFsmSelf(false)) FSMs first, so the event reaches masks parked in Idle/Inactive.
-        foreach (var f in Object.FindObjectsByType<SilksongPM::PlayMakerFSM>(FindObjectsSortMode.None))
+        foreach (var f in UnityApi.FindAll<SilksongPM::PlayMakerFSM>())
             if (string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase))
                 try {
                     Behaviour b = f;
@@ -48,7 +48,7 @@ internal static class HudRefresh {
     // Hiding this HUD disables the bind orb frame, which drops its appeared state and its crest routine (the Hunter
     // meter), and only Silksong's own HUD appear brings them back. Forget the drawn crest so the current one is redrawn.
     internal static void RefreshBindOrbFrame() {
-        var frame = Object.FindAnyObjectByType<Silksong::BindOrbHudFrame>();
+        var frame = UnityApi.FindAny<Silksong::BindOrbHudFrame>();
         if (!frame) return;
         frame.SetFieldValue("currentFrameCrest", null);
         frame.SetFieldValue("currentFrameAnims", null);

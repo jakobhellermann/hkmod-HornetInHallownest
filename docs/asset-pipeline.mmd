@@ -1,0 +1,34 @@
+flowchart TB
+    subgraph Dev["Build time"]
+        direction TB
+        B1["Silksong install (1.0.30000)"] -->|"make ci-refs"| B2b["Silksong.* prefixed stubs (+ hk1578)"]
+        B1 -->|"make remap-monoscripts + make repack-resources"| B2c["monoscripts.silksong.bundle, silksong-resources.bundle (+ hk1578)"]
+        B2s["UnityCompat + AssetsTools.NET -> managed/"]:::hk1578
+        B2b -->|"dotnet publish"| B3["mod zip"]
+        B2c --> B3
+        B2s --> B3
+    end
+    subgraph RT["In game"]
+        direction TB
+        subgraph First["first start"]
+            R5["copy Silksong-only DLLs into Managed"] --> R6["prefix Silksong assemblies -> Managed/Silksong.*"]
+            R5b["copy UnityCompat + AssetsTools.NET into Managed"]:::hk1578 --> R6
+            R6 --> R6b["downgrade to Unity 2020.2"]:::hk1578
+            R6b --> R7["register Silksong.* in ScriptingAssemblies.json -> restart HK"]
+            R6 -->|"1.5.12620"| R7
+        end
+        R8["mount the user's Silksong aa catalog directly"]
+        R8b["stream original bundles with compatibility patches"]:::hk1578
+        R9["monoscripts.silksong.bundle replaces Silksong's *_monoscripts.bundle"]
+        R10["Resources.Load served from silksong-resources.bundle"]
+        R11["replace Unity 6 shaders with HK / generic ones"]:::hk1578
+        First --> R8
+        R8 --> R9
+        R8 --> R8b
+        First --> R11
+        First --> R10
+    end
+    B3 -->|"unzip into Managed/Mods"| RT
+    L["dashed: HK 1.5.78 only"]:::hk1578
+
+    classDef hk1578 stroke-dasharray: 5 5

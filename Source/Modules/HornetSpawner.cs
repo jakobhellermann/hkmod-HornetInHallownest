@@ -7,6 +7,7 @@ using HornetInHallownest.Save;
 using HornetInHallownest.Util;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 using ToolItemManager = Silksong::ToolItemManager;
@@ -25,13 +26,17 @@ public sealed class HornetSpawner : ModuleBase {
 
     // Load via Addressables (not manual LoadFromFile): it owns the full dependency closure, so the game's own runtime
     // loads (GameManager.EnsureGlobalPool -> "GlobalPool") reuse those bundles instead of double-loading.
-    internal static GameObject? HeroPrefab {
+    internal static GameObject HeroPrefab {
         get {
-            if (field) return field;
+            if (field != null) return field;
             SilksongAddressables.EnsureMounted();
-            field = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet").WaitForCompletion();
-            if (field) Log.Debug("[HornetSpawner] Hero_Hornet loaded via Addressables");
-            return field;
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var op = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet");
+            op.WaitForCompletion();
+            if (op.Status != AsyncOperationStatus.Succeeded)
+                throw new InvalidOperationException("loading Hero_Hornet via Addressables failed", op.OperationException);
+            Log.Debug($"[spawn] Hero_Hornet loaded via Addressables in {stopwatch.ElapsedMilliseconds} ms");
+            return field = op.Result;
         }
     }
 
@@ -123,7 +128,6 @@ public sealed class HornetSpawner : ModuleBase {
     // ReSharper disable once MemberCanBePrivate.Global, UnusedMethodReturnValue.Global
     internal static bool Spawn() {
         var prefab = HeroPrefab;
-        if (!prefab) return false;
         GlobalsBootstrap.Ensure();
         // Minimal instance so ManagerSingleton<InteractManager>.Instance stops FindAnyObjectByType-scanning the whole scene
         // on every access. HeroController.CanNailCharge reads it 3x/frame, which tanks performance.

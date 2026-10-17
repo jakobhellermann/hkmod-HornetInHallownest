@@ -79,7 +79,9 @@ public sealed class InputModule : ModuleBase {
         menuButtons.Slots[0].AddBinding(new DeviceBindingSource(InputControlType.Action3));
         menuButtons.Slots[1].AddBinding(new DeviceBindingSource(InputControlType.Action4));
 
-        // Rebuild when HK's bindings change.
+        // Rebuild when HK's bindings change. HK loads its keyboard bindings in InputHandler.Start, which can run after
+        // this (the 1.5.78 Modding API initializes mods from InputHandler's own Awake).
+        Detour(typeof(InputHandler), "MapKeyboardLayoutFromGameSettings", OnBindingsChanged);
         Detour(typeof(InputHandler), nameof(InputHandler.MapControllerButtons), OnMapControllerButtons);
         Detour(typeof(InputHandler), nameof(InputHandler.SendKeyBindingsToGameSettings), OnBindingsChanged);
         Detour(typeof(InputHandler), nameof(InputHandler.RemapUIButtons), OnBindingsChanged);
@@ -144,8 +146,10 @@ public sealed class InputModule : ModuleBase {
         for (int i = 0; i < overridable.Length; i++) {
             var def = overridable[i];
             string? bind = def.Setting(Settings);
-            if (bind == null && def is { SnapshotKey: true, Hk: not null } && hk != null)
-                bind = KeybindUtil.GetKeyOrMouseBinding(def.Hk(hk)).ToString();
+            if (bind == null && def is { SnapshotKey: true, Hk: not null } && hk != null) {
+                var snapshot = KeybindUtil.GetKeyOrMouseBinding(def.Hk(hk));
+                if (!InputHandler.KeyOrMouseBinding.IsNone(snapshot)) bind = snapshot.ToString();
+            }
             if (bind == null) continue; // mirrored action or no bind
             if (KeybindUtil.ParseBinding(bind) is not { } parsed) {
                 LogError($"unparseable keybind '{bind}'");

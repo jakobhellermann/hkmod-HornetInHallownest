@@ -4,6 +4,7 @@ using System.Collections;
 using System.Reflection;
 using GlobalEnums;
 using HornetInHallownest.Core;
+using HornetInHallownest.Util;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -57,6 +58,10 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         USceneManager.activeSceneChanged -= OnActiveSceneChanged;
+#if HK1578
+        if (knightAwaitingPosition != null) knightAwaitingPosition.heroInPosition -= OnKnightInPosition;
+        knightAwaitingPosition = null;
+#endif
         if (driverGo) {
             Object.Destroy(driverGo);
             driverGo = null;
@@ -149,9 +154,14 @@ public sealed class SceneTransitionModule : ModuleBase {
         // redirects it), so Hornet's never runs. Flag it; Tick positions her and runs hers.
         Detour(typeof(HeroController), "EnterSceneDreamGate", OnEnterSceneDreamGate);
 
+#if HK1512620
         // Scene FSMs waiting on heroInPosition (WaitForHeroInPosition) read the hero's position right in the handler,
         // before Tick walks Hornet in: Ruins1_31's lift wall keeps its room masked unless she's already left of it.
         Detour(typeof(HeroController), "SendHeroInPosition", OnSendHeroInPosition, typeof(bool));
+#else
+        // Same for HK 1.5.78, which raises heroInPosition inline.
+        Detour(typeof(HeroController), "LeaveScene", OnKnightLeaveScene, typeof(GatePosition?));
+#endif
 
         // Scene FSMs ask the "Hero" var (Hornet) which gate it entered by, e.g. the Hall of Gods statue doors that slide
         // the HUD back in after a boss. HK enters the scene on the Knight; Hornet's own entry gate is stale or unset.
@@ -186,10 +196,28 @@ public sealed class SceneTransitionModule : ModuleBase {
             Silksong::PlayerData.instance.SetHazardRespawn(marker.transform.position, marker.respawnFacingRight);
     }
 
+#if HK1512620
     private void OnSendHeroInPosition(Action<HeroController, bool> orig, HeroController self, bool forceDirect) {
         if (HeroSwitch.HornetActive && !liftArrivalPending) SnapHornetToKnight(self);
         orig(self, forceDirect);
     }
+#else
+    private HeroController? knightAwaitingPosition;
+
+    private void OnKnightLeaveScene(Action<HeroController, GatePosition?> orig, HeroController self, GatePosition? gate) {
+        orig(self, gate);
+        self.heroInPosition -= OnKnightInPosition;
+        self.heroInPosition += OnKnightInPosition;
+        knightAwaitingPosition = self;
+    }
+
+    private void OnKnightInPosition(bool forceDirect) {
+        var knight = knightAwaitingPosition!;
+        knight.heroInPosition -= OnKnightInPosition;
+        knightAwaitingPosition = null;
+        if (HeroSwitch.HornetActive && !liftArrivalPending) SnapHornetToKnight(knight);
+    }
+#endif
 
     private static string OnGetEntryGateName(Func<Silksong::HeroController, string> orig,
         Silksong::HeroController self) {
@@ -384,7 +412,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (!hornet) return;
         hornet.transform.position = knight.transform.position;
         var rb = hornet.GetComponent<Rigidbody2D>();
-        if (rb && rb.simulated) rb.linearVelocity = Vector2.zero;
+        if (rb && rb.simulated) rb.SetVelocity(Vector2.zero);
     }
 
     // Catch the render camera up to the hero on entry. HK's DoPositionToHero should snap it, but races our out-of-band
@@ -660,7 +688,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (tp) pos += (Vector3)tp.entryOffset;
         hornet.transform.position = pos;
         var rb = hornet.GetComponent<Rigidbody2D>();
-        if (rb && rb.simulated) rb.linearVelocity = Vector2.zero;
+        if (rb && rb.simulated) rb.SetVelocity(Vector2.zero);
         LogDebug($"same-scene re-entry: placed Hornet at gate '{dreamGate}' {pos}");
     }
 

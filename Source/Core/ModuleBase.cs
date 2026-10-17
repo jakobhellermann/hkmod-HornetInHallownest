@@ -19,6 +19,9 @@ public abstract class ModuleBase {
 
     internal static bool Paused => Time.timeScale == 0f;
 
+    // Pass as Detour's paramTypes to hook the parameterless overload of an overloaded method.
+    protected static readonly Type[] NoParams = new Type[0];
+
     public abstract string Id { get; }
 
     // Whether HornetActiveUpdate should run while the game is paused
@@ -67,7 +70,8 @@ public abstract class ModuleBase {
 
     protected Hook Detour<TDelegate>(Type type, string method, TDelegate hook, params Type[] paramTypes)
         where TDelegate : Delegate {
-        var mi = paramTypes.Length > 0
+        // An empty params array means "the only method with this name"; NoParams is told apart by reference.
+        var mi = paramTypes.Length > 0 || ReferenceEquals(paramTypes, NoParams)
             ? type.GetMethod(method, AllMethods, null, paramTypes, null)
             : type.GetMethod(method, AllMethods);
         if (mi == null) throw new MissingMethodException(type.FullName, method);

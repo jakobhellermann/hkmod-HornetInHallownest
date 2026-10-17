@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Types and members Silksong's Unity 6 IL needs but HK 1.5.78 lacks; UnityDowngrader retargets references here -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>HornetInHallownest.UnityCompat</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <NoWarn>CS0436;CS0649</NoWarn>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- See DiscreteCurvePatches -->
+    <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
+    <PackageReference Include="HollowKnight.GameLibs" Version="[1.0.0-hollowknight.1.5.78.11833.api77]" PrivateAssets="all" />
+    <!-- Span<T> for compiling only: UnityDowngrader points these references at HK's mscorlib, which has it -->
+    <PackageReference Include="System.Memory" Version="4.5.5" IncludeAssets="compile" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

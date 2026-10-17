@@ -19,9 +19,16 @@ public sealed class HeroSfxModule : ModuleBase {
     public override string Id => "hero-sfx";
 
     public override void Initialize() {
+#if HK1578
+        // Unity 2020's PlayHelper/PlayOneShotHelper are internal calls; hook the public wrappers instead.
+        Detour(typeof(AudioSource), "Play", OnPlayNoDelay, NoParams);
+        Detour(typeof(AudioSource), "Play", OnPlay, typeof(ulong));
+        Detour(typeof(AudioSource), "PlayOneShot", OnPlayOneShot, typeof(AudioClip), typeof(float));
+#else
         Detour(typeof(AudioSource), "PlayHelper", OnPlay, typeof(AudioSource), typeof(ulong));
         Detour(typeof(AudioSource), "PlayOneShotHelper", OnPlayOneShot, typeof(AudioSource), typeof(AudioClip),
             typeof(float));
+#endif
         // Some pool objects like double damage audio don't go through PlayActive but set playOnAwake.
         Detour(typeof(Silksong::ObjectPool), "Spawn", OnSpawn,
             typeof(GameObject), typeof(Transform), typeof(Vector3), typeof(Quaternion), typeof(bool));
@@ -70,6 +77,13 @@ public sealed class HeroSfxModule : ModuleBase {
         Normalize(source);
         orig(source, delay);
     }
+
+#if HK1578
+    private void OnPlayNoDelay(Action<AudioSource> orig, AudioSource source) {
+        Normalize(source);
+        orig(source);
+    }
+#endif
 
     private void OnPlayOneShot(Action<AudioSource, AudioClip, float> orig, AudioSource source, AudioClip clip,
         float volumeScale) {

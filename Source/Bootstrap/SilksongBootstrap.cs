@@ -26,23 +26,43 @@ internal static class SilksongBootstrap {
     // happens (its GO is inactive, so InputHandler.Update doesn't run) — e.g. clearing ForceDreamNailRePress.
     internal static Silksong::InputHandler? Handler { get; private set; }
 
+    // Hornet-only values for a fresh Silksong PlayerData.
+    // abilities/nailUpgrades are seeded from the Knight's progression at spawn (PlayerDataSync).
+    private static void ApplyNewPlayerDataDefaults(Silksong::PlayerData pd) {
+        pd.silkMax = 9; // silk resource so silk-cost abilities can fire
+        pd.silk = 9;
+        pd.IsSilkSpoolBroken = false;
+        pd.silkSpecialLevel = 1;
+        // The HUD Health FSM enables one mask renderer per health; 0 default -> no masks shown. Grant a full bar.
+        pd.maxHealth = 5;
+        pd.health = 5;
+        // Equip a valid crest so GetCrestByName resolves (-> nail-art crestConfig). Fresh PD skips [DefaultValue("Hunter")].
+        if (string.IsNullOrEmpty(pd.CurrentCrestID)) pd.CurrentCrestID = "Hunter";
+        
+        ApplyPlayerDataInvariants(pd);
+    }
+
+    // Create a fresh PlayerData.
+    internal static void RecreatePlayerData() {
+        Silksong::PlayerData.CreateNewSingleton(false);
+        
+        var pd = Silksong::PlayerData.instance;
+        ApplyNewPlayerDataDefaults(pd);
+        if (bootstrapGm != null) bootstrapGm.playerData = pd;
+    }
+
+    // Apply settings to player data should always hold.
+    internal static void ApplyPlayerDataInvariants(Silksong::PlayerData pd) {
+        // health_display FSM self-shows HP only once bindCutscenePlayed
+        pd.bindCutscenePlayed = true;
+    }
+
     internal static void Ensure() {
         if (done) return;
         done = true;
         try {
-            // Abilities/nailUpgrades are seeded from the Knight's progression at spawn (PlayerDataSync); Hornet-only bits here.
             var pd = Silksong::PlayerData.instance;
-            pd.silkMax = 9; // silk resource so silk-cost abilities can fire
-            pd.silk = 9;
-            pd.IsSilkSpoolBroken = false;
-            pd.silkSpecialLevel = 1;
-            // The HUD Health FSM enables one mask renderer per health; 0 default -> no masks shown. Grant a full bar.
-            pd.maxHealth = 5;
-            pd.health = 5;
-            // health_display FSM self-shows HP only once bindCutscenePlayed is set (the game sets it after the intro we skip).
-            pd.bindCutscenePlayed = true;
-            // Equip a valid crest so GetCrestByName resolves (-> nail-art crestConfig). Fresh PD skips [DefaultValue("Hunter")].
-            if (string.IsNullOrEmpty(pd.CurrentCrestID)) pd.CurrentCrestID = "Hunter";
+            ApplyNewPlayerDataDefaults(pd);
 
             gmGo = new GameObject("Silksong_GameManager");
             gmGo.SetActive(false); // inactive => GameManager/InputHandler Awake never runs

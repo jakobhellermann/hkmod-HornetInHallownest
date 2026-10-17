@@ -19,12 +19,16 @@ jobs:
           dotnet-version: "10.x"
 
       - name: Build zip
-        run: dotnet publish Source/HornetInHallownest.csproj -c Release
+        run: dotnet publish Source/HornetInHallownest.csproj -c Release -f hk1512620
+
+      # Not distributed yet
+      - name: Build hk1578
+        run: dotnet build Source/HornetInHallownest.csproj -c Release -f hk1578
 
       - uses: actions/upload-artifact@v7
         with:
           name: HornetInHallownest
-          path: Source/bin/Release/netstandard2.1/publish/
+          path: Source/bin/Release/hk1512620/publish/
 
       - name: Nightly release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

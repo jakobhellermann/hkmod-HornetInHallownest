@@ -55,7 +55,7 @@ public sealed class BenchModule : ModuleBase {
         if (!HeroSwitch.HornetActive) return;
         var pd = PlayerData.instance;
         if (!pd.atBench) return;
-        foreach (var fsm in UnityEngine.Object.FindObjectsByType<PlayMakerFSM>(UnityEngine.FindObjectsSortMode.None)) {
+        foreach (var fsm in UnityApi.FindAll<PlayMakerFSM>()) {
             if (fsm.FsmName != "Bench Control" || fsm.ActiveStateName is "Idle" or "Inert" or "") continue;
             fsm.enabled = false; // RestartOnEnable -> Init -> Check Start State -> Idle
             fsm.enabled = true;

@@ -1,0 +1,190 @@
+// Unity 6 types with no Unity 2020.2 counterpart, under their original namespaces.
+// ReSharper disable CheckNamespace
+using System;
+using System.Collections.Generic;
+
+namespace UnityEngine {
+    // Unity 2022.2 Object.FindObjectsByType selectors.
+    public enum FindObjectsInactive { Exclude, Include }
+    public enum FindObjectsSortMode { None, InstanceID }
+
+    // Unity 2022.2 Resolution.refreshRateRatio. 2020.2 exposes an int `refreshRate` instead.
+    public struct RefreshRate : IEquatable<RefreshRate> {
+        public uint numerator;
+        public uint denominator;
+        public double value => denominator == 0 ? 0 : (double)numerator / denominator;
+        public bool Equals(RefreshRate other) => numerator == other.numerator && denominator == other.denominator;
+        public override bool Equals(object obj) => obj is RefreshRate r && Equals(r);
+        public override int GetHashCode() => (int)(numerator ^ denominator);
+        public override string ToString() => value.ToString("0.##");
+    }
+}
+
+namespace UnityEngine.Pool {
+    // Unity 2021 pooling API.
+    public interface IObjectPool<T> where T : class {
+        int CountInactive { get; }
+        T Get();
+        void Release(T element);
+        void Clear();
+    }
+
+    public class ObjectPool<T> : IObjectPool<T>, IDisposable where T : class {
+        private readonly Stack<T> stack = new Stack<T>();
+        private readonly Func<T> createFunc;
+        private readonly Action<T> actionOnGet;
+        private readonly Action<T> actionOnRelease;
+        private readonly Action<T> actionOnDestroy;
+        private readonly int maxSize;
+        private readonly bool collectionCheck;
+
+        public ObjectPool(Func<T> createFunc, Action<T> actionOnGet = null, Action<T> actionOnRelease = null,
+                          Action<T> actionOnDestroy = null, bool collectionCheck = true,
+                          int defaultCapacity = 10, int maxSize = 10000) {
+            this.createFunc = createFunc ?? throw new ArgumentNullException(nameof(createFunc));
+            this.actionOnGet = actionOnGet;
+            this.actionOnRelease = actionOnRelease;
+            this.actionOnDestroy = actionOnDestroy;
+            this.collectionCheck = collectionCheck;
+            this.maxSize = maxSize < 1 ? 1 : maxSize;
+        }
+
+        public int CountInactive => stack.Count;
+        public int CountActive { get; private set; }
+        public int CountAll => CountInactive + CountActive;
+
+        public T Get() {
+            var item = stack.Count == 0 ? createFunc() : stack.Pop();
+            CountActive++;
+            actionOnGet?.Invoke(item);
+            return item;
+        }
+
+        public void Release(T element) {
+            if (collectionCheck && stack.Count > 0 && stack.Contains(element)) return;
+            CountActive--;
+            actionOnRelease?.Invoke(element);
+            if (stack.Count < maxSize) stack.Push(element);
+            else actionOnDestroy?.Invoke(element);
+        }
+
+        public void Clear() {
+            if (actionOnDestroy != null)
+                foreach (var item in stack) actionOnDestroy(item);
+            stack.Clear();
+            CountActive = 0;
+        }
+
+        public void Dispose() => Clear();
+    }
+
+    // Unity's LinkedPool has different internals but the same contract; back it with the same store.
+    public class LinkedPool<T> : IObjectPool<T>, IDisposable where T : class {
+        private readonly ObjectPool<T> inner;
+        public LinkedPool(Func<T> createFunc, Action<T> actionOnGet = null, Action<T> actionOnRelease = null,
+                          Action<T> actionOnDestroy = null, bool collectionCheck = true, int maxSize = 10000)
+            => inner = new ObjectPool<T>(createFunc, actionOnGet, actionOnRelease, actionOnDestroy, collectionCheck, 10, maxSize);
+        public int CountInactive => inner.CountInactive;
+        public T Get() => inner.Get();
+        public void Release(T element) => inner.Release(element);
+        public void Clear() => inner.Clear();
+        public void Dispose() => inner.Dispose();
+    }
+
+    public struct PooledObject<T> : IDisposable where T : class {
+        private readonly T value;
+        private readonly IObjectPool<T> pool;
+
+        internal PooledObject(T value, IObjectPool<T> pool) {
+            this.value = value;
+            this.pool = pool;
+        }
+
+        void IDisposable.Dispose() => pool.Release(value);
+    }
+
+    public class CollectionPool<TCollection, TItem> where TCollection : class, ICollection<TItem>, new() {
+        private static readonly ObjectPool<TCollection> pool = new ObjectPool<TCollection>(() => new TCollection(), null, c => c.Clear());
+
+        public static TCollection Get() => pool.Get();
+
+        public static PooledObject<TCollection> Get(out TCollection value) {
+            value = pool.Get();
+            return new PooledObject<TCollection>(value, pool);
+        }
+
+        public static void Release(TCollection toRelease) => pool.Release(toRelease);
+    }
+}
+
+namespace UnityEngine.EventSystems {
+    // Unity 2021.1 UGUI; HK's EventSystem never dispatches it.
+    public interface IPointerMoveHandler : IEventSystemHandler {
+        void OnPointerMove(PointerEventData eventData);
+    }
+}
+
+namespace UnityEngine {
+    // Unity 2021's AssetBundle.UnloadAsync result; the shim unloads synchronously, so it's always done.
+    public class AssetBundleUnloadOperation : CustomYieldInstruction {
+        public override bool keepWaiting => false;
+        public void WaitForCompletion() { }
+    }
+}
+
+namespace UnityEngine.Video {
+    // Unity 2022.1 VideoPlayer.timeUpdateMode.
+    public enum VideoTimeUpdateMode { DSPTime, GameTime, UnscaledGameTime }
+}
+
+namespace UnityEngine.UIElements {
+    // UIElements (Unity 2021+), only used by Silksong's debug UI: presence-only stubs.
+    public class VisualElement { }
+    public class VisualTreeAsset : ScriptableObject { }
+    public class PanelSettings : ScriptableObject {
+        public float scale { get; set; }
+    }
+    public class UIDocument : MonoBehaviour {
+        public PanelSettings panelSettings { get; set; }
+        public VisualTreeAsset visualTreeAsset { get; set; }
+        public VisualElement rootVisualElement { get; } = new VisualElement();
+    }
+}
+
+// Silksong's tk2d addition, missing from HK 1.5.78's tk2d.
+public static class Tk2dGlobalEvents {
+    public interface IListener {
+        void ColliderUpdated(UnityEngine.GameObject gameObject);
+        void TilemapChunkCreated(UnityEngine.Transform grandChild);
+        bool IsFrozenCameraRendering();
+    }
+
+    private static readonly System.Collections.Generic.List<IListener> listeners = new System.Collections.Generic.List<IListener>();
+
+    public static void AddListener(IListener listener) {
+        if (listener != null && !listeners.Contains(listener)) listeners.Add(listener);
+    }
+
+    public static void RemoveListener(IListener listener) => listeners.Remove(listener);
+
+    public static void ColliderUpdated(UnityEngine.GameObject gameObject) {
+        for (var i = 0; i < listeners.Count; i++) listeners[i].ColliderUpdated(gameObject);
+    }
+
+    public static void TilemapChunkCreated(UnityEngine.Transform grandChild) {
+        for (var i = 0; i < listeners.Count; i++) listeners[i].TilemapChunkCreated(grandChild);
+    }
+
+    public static bool IsFrozenCameraRendering() {
+        for (var i = 0; i < listeners.Count; i++)
+            if (listeners[i].IsFrozenCameraRendering()) return true;
+        return false;
+    }
+}
+
+namespace UnityEngine.Compat {
+    // Nested in Silksong's tk2dSpriteAnimator; UnityDowngrader un-nests references onto these.
+    public delegate void Tk2dAnimationCompletedDelegate(tk2dSpriteAnimator animator, tk2dSpriteAnimationClip clip);
+    public delegate void Tk2dAnimationEventDelegate(tk2dSpriteAnimator animator, tk2dSpriteAnimationClip clip, int frame);
+    public delegate void Tk2dAnimationChangedDelegate(tk2dSpriteAnimator animator, tk2dSpriteAnimationClip previousClip, tk2dSpriteAnimationClip newClip);
+}
