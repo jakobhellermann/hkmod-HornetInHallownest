@@ -3,6 +3,7 @@ using System;
 using System.Reflection;
 using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
+using HornetInHallownest.Core.SilksongSetup;
 using HornetInHallownest.Modules;
 using HornetInHallownest.Save;
 using Modding;
