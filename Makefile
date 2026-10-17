@@ -34,18 +34,15 @@ local-refs:
 ci-refs: local-refs
 	rm -rf $(CI_REFS)
 	mkdir -p $(CI_REFS)/lib $(CI_REFS)/hk1578
-	refasmer --omit-non-api-members true -O $(CI_REFS)/lib $(LOCAL_REFS)/*.dll
+	refasmer --omit-non-api-members true -O $(CI_REFS)/lib $(LOCAL_REFS)/Silksong.*.dll
 	refasmer --omit-non-api-members true -O $(CI_REFS)/hk1578 $(LOCAL_REFS_1578)/Silksong.*.dll \
 	  $(addprefix $(LOCAL_REFS_1578)/,Unity.Addressables.dll Unity.ResourceManager.dll Newtonsoft.Json.UnityConverters.dll)
 
 # Rebuild monoscripts bundle, rewriting m_AssemblyName -> Silksong.*. HK 1.5.78 keeps tk2d in its Assembly-CSharp.
 remap-monoscripts:
 	cd $(PIPELINE) && cargo run --release --bin remap-monoscripts
-	cd $(PIPELINE) && TARGET_UNITY_VERSION=$(UNITY1578) HORNET_BUNDLE_OUT="$(BUNDLES_1578)" cargo run --release --bin remap-monoscripts
-	cd $(PIPELINE) && cargo run --release --bin retarget-monoscripts -- \
-	  "$(BUNDLES_1578)/monoscripts.silksong.bundle" "$(BUNDLES_1578)/.retarget.tmp" \
-	  "TeamCherry.TK2D=Assembly-CSharp" "TeamCherry.SharedUtils=Silksong.TeamCherry.SharedUtils"
-	mv "$(BUNDLES_1578)/.retarget.tmp" "$(BUNDLES_1578)/monoscripts.silksong.bundle"
+	cd $(PIPELINE) && TARGET_UNITY_VERSION=$(UNITY1578) HORNET_BUNDLE_OUT="$(BUNDLES_1578)" cargo run --release --bin remap-monoscripts -- \
+	  TeamCherry.TK2D=Assembly-CSharp TeamCherry.SharedUtils=Silksong.TeamCherry.SharedUtils
 
 # Repack Silksong's resources.assets -> silksong-resources.bundle assetbundle
 repack-resources:

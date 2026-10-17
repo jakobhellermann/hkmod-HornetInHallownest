@@ -104,17 +104,18 @@
         </Reference>
     </ItemGroup>
 
-    <!-- Generate full local-refs/Silksong.*.dll from the Silksong install for local referencing -->
+    <!-- Generate full local-refs/Silksong.*.dll from the Silksong install for local referencing, like the in-game setup -->
     <Target Name="GenerateLocalRefs" DependsOnTargets="BuildUnityCompat">
         <Error Condition="!Exists('$(SilksongManaged)')" Text="Silksong not found at $(SilksongManaged)"/>
+        <Error Condition="!Exists('$(ManagedDir)')" Text="Hollow Knight not found at $(ManagedDir)"/>
         <ItemGroup>
-            <PrefixInput Include="Assembly-CSharp;Assembly-CSharp-firstpass;PlayMaker;ConditionalExpression;TeamCherry.NestedFadeGroup;TeamCherry.Localization;TeamCherry.SharedUtils"/>
             <StaleRef Include="$(LocalRefs)/*.dll"/>
         </ItemGroup>
         <Delete Files="@(StaleRef)"/>
-        <Exec Condition="'$(TargetFramework)' != 'hk1578'" Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongPrefixer&quot; -- Silksong &quot;$(LocalRefs)&quot; --managed &quot;$(SilksongManaged)&quot; @(PrefixInput->'&quot;$(SilksongManaged)/%(Identity).dll&quot;', ' ')"/>
-        <!-- HK 1.5.78: the same prefix + downgrade the in-game setup runs -->
-        <Exec Condition="'$(TargetFramework)' == 'hk1578'" Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/UnityDowngrader&quot; -- --hk &quot;$(ManagedDir)&quot; --silksong &quot;$(SilksongManaged)&quot; --shim &quot;@(UnityCompatAssembly)&quot; --out &quot;$(LocalRefs)&quot;"/>
+        <PropertyGroup>
+            <ShimArg Condition="'$(TargetFramework)' == 'hk1578'">--shim &quot;@(UnityCompatAssembly)&quot;</ShimArg>
+        </PropertyGroup>
+        <Exec Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongAssemblyBuilder&quot; -- --hk &quot;$(ManagedDir)&quot; --silksong &quot;$(SilksongManaged)&quot; $(ShimArg) --out &quot;$(LocalRefs)&quot;"/>
     </Target>
 
     <!-- HK 1.5.78: Build UnityCompat shim into mod's managed/ folder, which is installed in SilksongSetup -->

@@ -1,16 +1,10 @@
-// Base-class-library surface that .NET Standard 2.1 has and Unity 2020.2's profile does not.
-//
-// Silksong's assemblies were compiled against netstandard2.1, so they reference BCL members that simply are not in
-// Hollow Knight 1.5.78's mscorlib. Each one throws MissingMethodException the instant its caller is JITted — which
-// is how Addressables died on string.Contains(char, StringComparison) while merely mounting the catalog.
-//
-// Types here deliberately reuse the real namespaces; UnityDowngrader repoints the references at this assembly.
+// .NET Standard 2.1 BCL surface missing from Unity 2020.2's mscorlib, types under their original namespaces.
 // ReSharper disable CheckNamespace
 using System;
 using System.Collections.Generic;
 
 namespace System {
-    // .NET Standard 2.1. Algorithm does not need to match the real one — nothing persists these values.
+    // .NET Standard 2.1. Nothing persists these values, so the algorithm doesn't need to match.
     public struct HashCode {
         private int current;
 
@@ -53,8 +47,7 @@ namespace System {
 
     // .NET Standard 2.1 span helpers. Only the string overload is reached (ResourceManager's dynamic-string reader).
     public static class MemoryExtensions {
-        // Copies rather than aliasing the string's storage: a zero-copy version needs unsafe span construction that
-        // Unity 2020.2 does not expose. Read-only use sites, so only the allocation differs.
+        // Copies: aliasing the string's storage needs span internals Unity 2020.2 doesn't expose.
         public static ReadOnlySpan<char> AsSpan(this string value)
             => value == null ? default : new ReadOnlySpan<char>(value.ToCharArray());
     }
@@ -65,7 +58,7 @@ namespace System.Buffers {
 }
 
 namespace System.Diagnostics.CodeAnalysis {
-    // Nullability annotations. Metadata-only — present so type resolution succeeds.
+    // Nullability annotations.
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.ReturnValue)]
     public sealed class AllowNullAttribute : Attribute { }
 
@@ -85,8 +78,7 @@ namespace System.Diagnostics.CodeAnalysis {
 namespace UnityEngine.Compat {
     using System.Buffers;
 
-    // Instance/static BCL members with no Unity 2020.2 counterpart. Shapes mirror the originals so UnityDowngrader
-    // can swap the call target without touching surrounding IL (receiver becomes parameter 0).
+    // BCL members with no Unity 2020.2 counterpart, receiver as first parameter (see HornetCompat).
     public static class BclCompat {
         // string.Contains(char/string, StringComparison) — .NET Core 2.1.
         public static bool String_Contains(string self, char value, StringComparison comparisonType)
@@ -114,8 +106,7 @@ namespace UnityEngine.Compat {
         public static TimeSpan TimeSpan_Multiply(TimeSpan self, double factor)
             => TimeSpan.FromTicks((long)(self.Ticks * factor));
 
-        // ArraySegment<T>.Empty — .NET Standard 2.1. Static on a generic type, so the downgrader instantiates this
-        // over the original's type argument.
+        // ArraySegment<T>.Empty — .NET Standard 2.1.
         public static ArraySegment<T> ArraySegment_Empty<T>() => new ArraySegment<T>(new T[0]);
     }
 }
