@@ -70,24 +70,11 @@ public abstract class ModuleBase {
 
     protected Hook Detour<TDelegate>(Type type, string method, TDelegate hook, params Type[] paramTypes)
         where TDelegate : Delegate {
-        // NoParams (by reference) selects the parameterless overload explicitly; an empty params array means "the only
-        // method with this name". (Not Type.EmptyTypes: that is the same shared empty array `params` passes.)
+        // An empty params array means "the only method with this name"; NoParams is told apart by reference.
         var mi = paramTypes.Length > 0 || ReferenceEquals(paramTypes, NoParams)
             ? type.GetMethod(method, AllMethods, null, paramTypes, null)
             : type.GetMethod(method, AllMethods);
         if (mi == null) throw new MissingMethodException(type.FullName, method);
         return Track(new Hook(mi, hook));
-    }
-
-    // Detour that may be unavailable on this Unity version (e.g. a method that is a native internal call on Unity 2020,
-    // which MonoMod can't hook): logs and returns null instead of failing the whole module.
-    protected Hook? TryDetour<TDelegate>(Type type, string method, TDelegate hook, params Type[] paramTypes)
-        where TDelegate : Delegate {
-        try {
-            return Detour(type, method, hook, paramTypes);
-        } catch (Exception e) when (e is NotSupportedException or MissingMethodException) {
-            LogDebug($"detour {type.Name}.{method} unavailable here ({e.Message}); skipped");
-            return null;
-        }
     }
 }

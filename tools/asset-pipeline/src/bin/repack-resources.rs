@@ -222,7 +222,6 @@ fn main() -> Result<()> {
     let declared = target_unity_version(&version);
     let mut bundle = BundleFileBuilder::unityfs(7, &declared);
     bundle.add_file("CAB-silksongresources", Cursor::new(serialized))?;
-    // HORNET_BUNDLE_OUT redirects the output dir (file name kept); the multi-version setup builds per-target copies.
     let out_path = std::env::var("HORNET_BUNDLE_OUT")
         .map(|d| format!("{d}/silksong-resources.bundle"))
         .unwrap_or_else(|_| OUT.to_string());
