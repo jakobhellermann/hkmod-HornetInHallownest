@@ -72,7 +72,7 @@ public sealed class CurrencyModule : ModuleBase {
         // pins render visibility, so without it the counter can stay in its out-parent (HudCamera) over the health HUD.
         SCurrencyCounter.Show(SCurrencyType.Money, setStackVisible: true);
 
-        foreach (var c in Object.FindObjectsOfType<SCurrencyCounter>()) {
+        foreach (var c in UnityApi.FindAll<SCurrencyCounter>()) {
             if (c.GetFieldValue<SCurrencyType>("currencyType") != SCurrencyType.Money) continue;
 
             // The icon is a separate FSM (RestartOnEnable) that hides in its Init state until APPEAR, so it vanishes on

@@ -54,7 +54,7 @@ public sealed class HitBridgeModule : ModuleBase {
     private static void OnActiveSceneChanged(UScene from, UScene to) => AddTinkEffectMirrorsInScene();
 
     private static void AddTinkEffectMirrorsInScene() {
-        foreach (var tink in Object.FindObjectsOfType<TinkEffect>()) {
+        foreach (var tink in UnityApi.FindAll<TinkEffect>()) {
             var go = tink.gameObject;
             if (!go.TryGetComponent<HkTinkBridge>(out _)) go.AddComponent<HkTinkBridge>();
         }

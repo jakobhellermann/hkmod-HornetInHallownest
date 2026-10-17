@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using GlobalEnums;
 using HornetInHallownest.Core;
+using HornetInHallownest.Util;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -484,7 +485,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (!hornet) return;
         hornet.transform.position = knight.transform.position;
         var rb = hornet.GetComponent<Rigidbody2D>();
-        if (rb && rb.simulated) rb.velocity = Vector2.zero;
+        if (rb && rb.simulated) rb.SetVelocity(Vector2.zero);
     }
 
     // Catch the render camera up to the hero on entry. HK's DoPositionToHero should snap it, but races our out-of-band
@@ -823,7 +824,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (tp) pos += (Vector3)tp.entryOffset;
         hornet.transform.position = pos;
         var rb = hornet.GetComponent<Rigidbody2D>();
-        if (rb && rb.simulated) rb.velocity = Vector2.zero;
+        if (rb && rb.simulated) rb.SetVelocity(Vector2.zero);
         LogDebug($"same-scene re-entry: placed Hornet at gate '{dreamGate}' {pos}");
     }
 

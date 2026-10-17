@@ -221,7 +221,7 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
     }
 
     private static IEnumerable<GameObject> AllGameObjects() {
-        return Object.FindObjectsOfType<GameObject>(true);
+        return UnityApi.FindAll<GameObject>(true);
     }
 
     private static IEnumerable<GameObject> SiblingsOf(GameObject go) {
