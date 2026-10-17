@@ -5,9 +5,14 @@ using GlobalEnums;
 using HornetInHallownest.Core;
 using HutongGames.PlayMaker;
 using Modding;
-using TMProOld;
 using UnityEngine;
+#if HK1578
+using TMPro;
+using HkLanguage = Language.Language;
+#else
+using TMProOld;
 using HkLanguage = TeamCherry.Localization.Language;
+#endif
 using SLanguage = SilksongLoc::TeamCherry.Localization.Language;
 
 namespace HornetInHallownest.Modules;

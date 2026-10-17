@@ -3,9 +3,14 @@ using System;
 using System.Linq;
 using HornetInHallownest.Core;
 using HutongGames.PlayMaker.Actions;
-using TMProOld;
 using UnityEngine;
+#if HK1578
+using TMPro;
+using HkLanguage = Language.Language;
+#else
+using TMProOld;
 using HkLanguage = TeamCherry.Localization.Language;
+#endif
 using Object = UnityEngine.Object;
 using SHeroController = Silksong::HeroController;
 

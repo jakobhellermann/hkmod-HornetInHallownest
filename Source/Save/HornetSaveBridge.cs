@@ -34,9 +34,13 @@ public sealed class HornetSaveBridge : ModuleBase {
         if (HornetSpawner.Hornet) Resync();
     }
 
-    private static JsonSerializerSettings ResetSettings => field ??= new JsonSerializerSettings(SaveSettings) {
-        ObjectCreationHandling = ObjectCreationHandling.Replace
-    };
+    private static JsonSerializerSettings ResetSettings => field ??= BuildResetSettings();
+
+    private static JsonSerializerSettings BuildResetSettings() {
+        var s = BuildSettings();
+        s.ObjectCreationHandling = ObjectCreationHandling.Replace;
+        return s;
+    }
 
     private static JsonSerializerSettings BuildSettings() {
         var s = new JsonSerializerSettings {

@@ -17,7 +17,11 @@ public sealed class LifebloodModule : ModuleBase {
 
     public override void Initialize() {
         // TODO: less specific hook?
+#if HK1578
+        Detour(typeof(EventRegister), "SendEvent", OnSendEvent, typeof(string));
+#else
         Detour(typeof(EventRegister), "SendEvent", OnSendEvent, typeof(string), typeof(GameObject));
+#endif
     }
 
     protected override void OnDeinitialize() {
@@ -35,8 +39,19 @@ public sealed class LifebloodModule : ModuleBase {
 
     // Relay: HK's ScuttlerControl fires "ADD BLUE HEALTH" on HK's bus; Hornet's FSM is registered for the same event on
     // Silksong's bus, so mirror the signal there and let the FSM grant with its own logic.
+#if HK1578
+    private void OnSendEvent(Action<string> orig, string name) {
+        orig(name);
+        Relay(name);
+    }
+#else
     private void OnSendEvent(Action<string, GameObject> orig, string name, GameObject exclude) {
         orig(name, exclude);
+        Relay(name);
+    }
+#endif
+
+    private void Relay(string name) {
         if (name != AddEvent || !HeroSwitch.HornetActive) return;
         try {
             Silksong::EventRegister.SendEvent(AddEvent);
