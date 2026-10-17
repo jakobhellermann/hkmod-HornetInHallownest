@@ -111,7 +111,7 @@ public sealed class DeathModule : ModuleBase {
     // The cocoon has no Addressables key of its own; it ships in Hero_Hornet's bundle.
     private static bool LoadCocoonPrefab() {
         if (cocoonPrefab) return true;
-        if (!HornetSpawner.HeroPrefab) return false;
+        _ = HornetSpawner.HeroPrefab; // loads the bundle
         foreach (var bundle in AssetBundle.GetAllLoadedAssetBundles())
             if (bundle.Contains(CocoonPrefabPath)) {
                 cocoonPrefab = bundle.LoadAsset<GameObject>(CocoonPrefabPath);
