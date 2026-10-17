@@ -33,7 +33,16 @@ fn remap_assembly(a: &str) -> Option<String> {
     .then(|| format!("Silksong.{base}"))
 }
 
+// usage: remap-monoscripts [<from-asm>=<to-asm>...], mappings taking precedence over the Silksong.* prefixing
 fn main() -> Result<()> {
+    let overrides: Vec<(String, String)> = std::env::args()
+        .skip(1)
+        .map(|m| {
+            m.split_once('=')
+                .map(|(a, b)| (a.to_string(), b.to_string()))
+                .with_context(|| format!("mapping '{m}' must be <from>=<to>"))
+        })
+        .collect::<Result<_>>()?;
     let env = find_game("silksong")?.context("silksong not found")?;
     let files = env.load_all_serialized_files()?;
     let key = files
@@ -59,7 +68,12 @@ fn main() -> Result<()> {
             ClassId::MonoScript => {
                 total += 1;
                 let mut ms = obj.cast::<MonoScript>().read()?;
-                if let Some(new_asm) = remap_assembly(&ms.m_AssemblyName) {
+                let new_asm = overrides
+                    .iter()
+                    .find(|(from, _)| *from == ms.m_AssemblyName)
+                    .map(|(_, to)| to.clone())
+                    .or_else(|| remap_assembly(&ms.m_AssemblyName));
+                if let Some(new_asm) = new_asm {
                     // Assembly-only rename (matches SilksongPrefixer): m_Namespace/m_ClassName stay intact so name-based
                     // resolution keeps working.
                     ms.m_AssemblyName = new_asm;
@@ -76,7 +90,6 @@ fn main() -> Result<()> {
 
     let mut bundle = BundleFileBuilder::unityfs(7, &target_unity_version(&version));
     bundle.add_file(CAB, Cursor::new(serialized))?;
-    // HORNET_BUNDLE_OUT redirects the output dir (file name kept); the multi-version setup builds per-target copies.
     let out_path = std::env::var("HORNET_BUNDLE_OUT")
         .map(|d| format!("{d}/monoscripts.silksong.bundle"))
         .unwrap_or_else(|_| OUT.to_string());

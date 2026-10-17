@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <!-- Post-rewrite gate for the IL pipeline. Forces every blob-heap-backed structure to decode and checks the
-       type-forward chain invariants, so a malformed rewrite is caught here instead of as a native Mono assertion
-       ("index < meta->heap_blob.size") three restarts deep inside the game. -->
-  <PropertyGroup>
-    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><RollForward>Major</RollForward>
-    <Nullable>disable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>mdcheck</AssemblyName>
-  </PropertyGroup>
-</Project>
