@@ -40,7 +40,7 @@ mask shards and geo are shared outright.
 | Any nail art                                    | Needle Strike                                               |
 | Nail upgrades                                   | Nail upgrades, tool pouch and crafting kit upgrades         |
 | Soul vessels and vessel fragments               | Silk spool: +1 silk per vessel fragment                     |
-| Vengeful Spirit, Desolate Dive, Howling Wraiths | Silk Hearts: one for the first spell, one for all three, one for the first upgraded spell |
+| Second and third nail art, Shade Cloak          | A Silk Heart each                                           |
 
 Plain Needolin is there from the start.
 
