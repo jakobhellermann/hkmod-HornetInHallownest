@@ -12,45 +12,21 @@ namespace HornetInHallownest.Core.SilksongSetup;
 // - Other required silksong DLLs need to be copied to `Managed/
 // The setup will be on first install performed whenever the version behind the silksong path changes.
 internal static class SilksongSetup {
-    // Unmodified assemblies HK lacks: copy as is
-    private static readonly string[] deps = [
-        "Unity.Addressables",
-        "Unity.ResourceManager",
-        "Unity.Profiling.Core",
-        "Unity.Mathematics",
-        "Unity.Burst",
-        "Unity.Burst.Unsafe",               // Unity.Burst has a hard reference to it
-        "Newtonsoft.Json.UnityConverters",
-        "TeamCherry.Splines",
-        "Coffee.SoftMaskForUGUI",
-        // Reachable from the prefixed Silksong assemblies. Computed as a transitive closure over the assembly
-        // scopes their type references actually name, NOT guessed: everything reachable that the host does not
-        // already ship has to be on the probe path, or the first type that touches it fails to load.
-        "TeamCherry.SharedUtils",           // TeamCherry.Splines -> (unprefixed) SharedUtils
-        "TeamCherry.Cinematics",
-        "TeamCherry.BuildBot",
-        "Unity.InputSystem",
-        "SharpDX",
-        "SharpDX.DirectInput",
-        "com.rlabrecque.steamworks.net",
-        // Only present on hosts older than Silksong's Unity (see tools/setup-hk178.sh).
-        "HornetInHallownest.UnityCompat"    // Unity 6 + netstandard2.1 API surface 2020.2 lacks
+#if HK1578
+    private static string[] Deps => [
+        ..SilksongAssemblies.Deps, ..SilksongAssemblies.Hk1578Deps,
+        ..SilksongAssemblies.PresentIn(Paths.SilksongManagedDir, SilksongAssemblies.Hk1578PlatformDeps),
     ];
-
-    private const string Prefix = "Silksong";
-
-    // Silksong assemblies containing the types conflicting with HK: Copied as prefixed Silksong.*
-    private static readonly string[] prefixInputs = [
-        "Assembly-CSharp",
-        "Assembly-CSharp-firstpass",
-        "PlayMaker",
-        "ConditionalExpression",
-        "TeamCherry.NestedFadeGroup",
-        "TeamCherry.Localization",
-        "TeamCherry.SharedUtils"
-    ];
-
-    private static readonly string[] prefixed = [..prefixInputs.Select(n => AssemblyPrefixer.PrefixedName(Prefix, n))];
+    private static string[] Installed => [..Deps, ..SilksongAssemblies.Prefixed, ..SilksongAssemblies.ShimFiles];
+    // Everything a previous install may have left, whichever Silksong build it came from.
+    private static string[] Removable => [..Installed, ..SilksongAssemblies.Hk1578PlatformDeps];
+    private static string? ShimPath => Paths.ModFile($"managed/{SilksongAssemblies.Shim}.dll");
+#else
+    private static string[] Deps => SilksongAssemblies.Deps;
+    private static string[] Installed => [..Deps, ..SilksongAssemblies.Prefixed];
+    private static string[] Removable => Installed;
+    private static string? ShimPath => null;
+#endif
 
     // True if already installed, false if actions were taken and a restart is needed.
     internal static bool EnsureInstalled() {
@@ -65,33 +41,25 @@ internal static class SilksongSetup {
         if (install.IsCurrent(fingerprint)) return false;
 
         install.Reinstall(fingerprint);
-        Log.Info($"[SilksongSetup] installed {deps.Length} deps + {prefixed.Length} prefixed Silksong assemblies into Managed");
+        Log.Info($"[SilksongSetup] installed {Installed.Length} Silksong assemblies into Managed");
         return true;
     }
 
     // Keeping track of files installed in the `Managed` dir.
     private sealed class InstalledFiles(string managed) {
         private const string FingerprintFile = "Silksong.support.fingerprint";
-        private static readonly string[] files = [..deps.Concat(prefixed).Select(n => $"{n}.dll")];
 
         public bool IsCurrent(string fingerprint) =>
-            ReadOrNull($"{managed}/{FingerprintFile}") == fingerprint && files.All(f => File.Exists($"{managed}/{f}"));
+            ReadOrNull($"{managed}/{FingerprintFile}") == fingerprint && Installed.All(n => File.Exists($"{managed}/{n}.dll"));
 
         public void Reinstall(string fingerprint) {
             Clean();
-            // Entries absent from the Silksong install (e.g. HornetInHallownest.UnityCompat, only added on hosts
-            // older than Silksong's Unity) are skipped rather than failing the install.
-            foreach (var name in deps) {
-                var src = $"{Paths.SilksongManagedDir}/{name}.dll";
-                if (File.Exists(src)) File.Copy(src, $"{managed}/{name}.dll");
-            }
-            AssemblyPrefixer.Prefix(Prefix, Paths.SilksongManagedDir,
-                prefixInputs.Select(n => $"{Paths.SilksongManagedDir}/{n}.dll"), managed);
+            SilksongAssemblyBuilder.Build(Paths.SilksongManagedDir, managed, Deps, ShimPath, managed, Log.Debug);
             File.WriteAllText($"{managed}/{FingerprintFile}", fingerprint);
         }
 
         private void Clean() {
-            foreach (var name in deps) Remove($"{managed}/{name}.dll");
+            foreach (var name in Removable) Remove($"{managed}/{name}.dll");
             foreach (var path in Directory.GetFiles(managed, "Silksong.*.dll")) Remove(path);
         }
 
@@ -119,8 +87,25 @@ internal static class SilksongSetup {
 
     private static string FingerprintGameVersion() {
         var bootConfig = $"{Directory.GetParent(Paths.SilksongManagedDir)!.FullName}/boot.config";
-        return File.ReadAllText(bootConfig);
+        var fingerprint = $"{File.ReadAllText(bootConfig)}\nmod {typeof(SilksongSetup).Assembly.GetName().Version}";
+#if HK1578
+        fingerprint += $"\nshim {ShimHash()}";
+#endif
+        return fingerprint;
     }
+
+#if HK1578
+    // A changed shim needs a reinstall even when the mod version stays the same.
+    private static string ShimHash() {
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        foreach (var name in SilksongAssemblies.ShimFiles) {
+            var bytes = File.ReadAllBytes(Paths.ModFile($"managed/{name}.dll"));
+            sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
+        }
+        sha.TransformFinalBlock([], 0, 0);
+        return BitConverter.ToString(sha.Hash).Replace("-", "");
+    }
+#endif
 
     // Register prefixed assemblies for `[Serializable]` type resolution.
     private static bool RegisterForSerialization(string path) {
@@ -132,7 +117,7 @@ internal static class SilksongSetup {
         var hadOurs = names.Any(IsOurs);
         for (var i = names.Count - 1; i >= 0; i--)
             if (IsOurs(names[i])) { names.RemoveAt(i); types.RemoveAt(i); }
-        foreach (var name in prefixed) {
+        foreach (var name in SilksongAssemblies.Prefixed) {
             names.Add($"{name}.dll");
             types.Add(16); // MonoBehaviour/serialized-type flag
         }
@@ -143,9 +128,9 @@ internal static class SilksongSetup {
         // Snapshot the vanilla file the first time we touch it.
         if (!hadOurs) File.Copy(path, $"{path}.hornetbak", overwrite: true);
         File.WriteAllText(path, updated);
-        Log.Info($"[SilksongSetup] registered {prefixed.Length} assemblies in ScriptingAssemblies.json");
+        Log.Info($"[SilksongSetup] registered {SilksongAssemblies.Prefixed.Length} assemblies in ScriptingAssemblies.json");
         return true;
 
-        static bool IsOurs(JToken name) => ((string?)name)?.StartsWith($"{Prefix}.") == true;
+        static bool IsOurs(JToken name) => ((string?)name)?.StartsWith($"{SilksongAssemblies.Prefix}.") == true;
     }
 }
