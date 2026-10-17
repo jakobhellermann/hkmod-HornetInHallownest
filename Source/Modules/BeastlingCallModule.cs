@@ -44,11 +44,14 @@ public sealed class BeastlingCallModule : ModuleBase {
         return position >= 0 && position < stationScenes.Length ? stationScenes[position] : null;
     }
 
-    // Silksong's own limits are all about Pharloom's scenes.
-    private static bool OnIsTeleportBlocked(Func<SCheckIsTeleportBlocked, bool> orig, SCheckIsTeleportBlocked self) {
-        if (!HeroSwitch.HornetActive) return orig(self);
+    // Silksong's own limits are all about Pharloom's scenes. A blocked call plays on with no reaction, so Hornet's limits
+    // fail it where Silksong finds no room for the Bell Beast, which plays Silksong's whole failed call.
+    private static bool OnIsTeleportBlocked(Func<SCheckIsTeleportBlocked, bool> orig, SCheckIsTeleportBlocked self) =>
+        !HeroSwitch.HornetActive && orig(self);
+
+    private static bool CanCallStag() {
         var station = StationScene();
-        return station == null || station == GameManager.instance.sceneName || !IsDreamGateAllowed();
+        return station != null && station != GameManager.instance.sceneName && IsDreamGateAllowed();
     }
 
     // Replaces Silksong's search for room to land the Bell Beast's children with HK's Dream Gate check: floor right under
@@ -63,7 +66,7 @@ public sealed class BeastlingCallModule : ModuleBase {
 
         var feet = new Vector2(body.bounds.center.x, body.bounds.min.y + FootRayLift);
         var floor = Physics2D.Raycast(feet, Vector2.down, FootRayLength, terrainMask);
-        var clear = floor.collider &&
+        var clear = CanCallStag() && floor.collider &&
                     Physics2D.Raycast(feet + Vector2.left * FootOffset, Vector2.down, FootRayLength, terrainMask) &&
                     Physics2D.Raycast(feet + Vector2.right * FootOffset, Vector2.down, FootRayLength, terrainMask);
         self.StoreGroundPos.Value = clear ? floor.point : Vector2.zero;

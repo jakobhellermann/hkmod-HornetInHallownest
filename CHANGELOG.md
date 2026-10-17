@@ -111,6 +111,8 @@
 - Show Hornet's Dream Nail essence on her HUD, under her rosaries, when she collects it
 - Fix Hornet's Crystal Heart flight carrying on along the floor after a side room change, where any bump stopped it:
   she flies on at the height of a launch from the ground
+- Play Silksong's failed call when Hornet's Beastling Call can't reach the Stag, instead of a song that plays on with no
+  answer
 
 ## v0.4.0
 
