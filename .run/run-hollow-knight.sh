@@ -8,11 +8,15 @@ if [ "$(uname)" = Darwin ]; then
     exec "$macos/Hollow Knight"
 else
     # cd so that steam_appid.txt is respected
-    dir="$HOME/.local/share/Steam/steamapps/common/Hollow Knight"
+    dir="${HK_GAME_DIR:-$HOME/.local/share/Steam/steamapps/common/Hollow Knight}"
     cd "$dir"
+    # An empty DISPLAY makes Unity run natively on Wayland; players older than Unity 2022.2 can't and need X11.
+    if grep -q -a wl_display_connect "$dir/UnityPlayer.so"; then
+        export DISPLAY=
+    fi
     if [ -x "$dir/run.sh" ]; then
-        exec env DISPLAY= "$dir/run.sh"
+        exec "$dir/run.sh"
     else
-        exec env DISPLAY= "$dir/hollow_knight.x86_64"
+        exec "$dir/hollow_knight.x86_64"
     fi
 fi
