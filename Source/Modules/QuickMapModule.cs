@@ -95,7 +95,8 @@ public sealed class QuickMapModule : ModuleBase {
 
         var input = InputHandler.Instance.inputActions;
         if (input.dreamNail.WasPressed) MapKey()?.SendEvent("ACTION");
-        var uiEvent = Platform.Current.GetMenuAction(input, true) switch {
+        var uiEvent = Platform.Current.GetMenuAction(input.menuSubmit.WasPressed, input.menuCancel.WasPressed,
+            input.jump.WasPressed, false, input.cast.WasPressed) switch {
             Platform.MenuActions.Submit => "UI CONFIRM",
             Platform.MenuActions.Cancel => "UI CANCEL",
             _ when input.left.WasPressed => "UI LEFT",

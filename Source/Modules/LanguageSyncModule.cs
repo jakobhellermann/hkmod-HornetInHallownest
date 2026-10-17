@@ -1,8 +1,13 @@
 extern alias SilksongLoc;
 using System;
 using HornetInHallownest.Core;
+#if HK1578
+using Language;
+using HkLanguage = Language.Language;
+#else
 using TeamCherry.Localization;
 using HkLanguage = TeamCherry.Localization.Language;
+#endif
 using SLanguage = SilksongLoc::TeamCherry.Localization.Language;
 
 namespace HornetInHallownest.Modules;

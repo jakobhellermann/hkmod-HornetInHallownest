@@ -134,7 +134,9 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         moduleHost.Add(new EssenceCounterModule());
         moduleHost.Add(new FsmLookupModule());
         moduleHost.Add(new HeroSfxModule());
+#if HK1512620
         moduleHost.Add(new VibrationBridgeModule());
+#endif
         moduleHost.Add(new HitBridgeModule());
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());
