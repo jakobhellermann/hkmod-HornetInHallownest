@@ -1,5 +1,4 @@
-// Unity 6 types with no Unity 2020.2 counterpart. Namespaces deliberately mirror Unity's so the retargeted
-// references read naturally in a decompiler; only the assembly identity differs.
+// Unity 6 types with no Unity 2020.2 counterpart, under their original namespaces.
 // ReSharper disable CheckNamespace
 using System;
 using System.Collections.Generic;
@@ -22,8 +21,7 @@ namespace UnityEngine {
 }
 
 namespace UnityEngine.Pool {
-    // Unity 2021 pooling package. Hornet's code pools effects/projectiles; a straightforward Stack-backed
-    // implementation preserves the observable behaviour (Get/Release/Clear + counters).
+    // Unity 2021 pooling API.
     public interface IObjectPool<T> where T : class {
         int CountInactive { get; }
         T Get();
@@ -127,11 +125,9 @@ namespace UnityEngine.EventSystems {
 }
 
 namespace UnityEngine {
-    // Unity 2021's AssetBundle.UnloadAsync return type. 2020.2 unloads synchronously, so instances handed out by
-    // the shim represent already-completed work.
+    // Unity 2021's AssetBundle.UnloadAsync result; the shim unloads synchronously, so it's always done.
     public class AssetBundleUnloadOperation : CustomYieldInstruction {
         public override bool keepWaiting => false;
-        // ResourceManager awaits the unload synchronously; the work already happened in the shim.
         public void WaitForCompletion() { }
     }
 }
@@ -142,9 +138,7 @@ namespace UnityEngine.Video {
 }
 
 namespace UnityEngine.UIElements {
-    // Silksong drives its debug/dev UI through UIElements (Unity 2021+). Hornet never exercises it inside
-    // Hallownest, so these are presence-only stubs: enough for type resolution and member binding at JIT time,
-    // with no behaviour behind them.
+    // UIElements (Unity 2021+), only used by Silksong's debug UI: presence-only stubs.
     public class VisualElement { }
     public class VisualTreeAsset : ScriptableObject { }
     public class PanelSettings : ScriptableObject {
@@ -157,9 +151,7 @@ namespace UnityEngine.UIElements {
     }
 }
 
-// Silksong-era tk2d addition with no counterpart in Hollow Knight 1.5.78's (older) in-Assembly-CSharp tk2d, so the
-// TeamCherry.TK2D facade cannot forward it. Silksong's Tk2dGlobalEventListener implements IListener and the engine
-// broadcasts through here; a faithful listener registry keeps that wiring intact.
+// Silksong's tk2d addition, missing from HK 1.5.78's tk2d.
 public static class Tk2dGlobalEvents {
     public interface IListener {
         void ColliderUpdated(UnityEngine.GameObject gameObject);
@@ -191,9 +183,7 @@ public static class Tk2dGlobalEvents {
 }
 
 namespace UnityEngine.Compat {
-    // Silksong's tk2dSpriteAnimator declares these as types nested inside the animator. HK 1.5.78's tk2d has no
-    // such members, and nested types cannot be added to a forwarded type, so UnityDowngrader un-nests references
-    // to them onto these top-level equivalents. Signatures are copied exactly.
+    // Nested in Silksong's tk2dSpriteAnimator; UnityDowngrader un-nests references onto these.
     public delegate void Tk2dAnimationCompletedDelegate(tk2dSpriteAnimator animator, tk2dSpriteAnimationClip clip);
     public delegate void Tk2dAnimationEventDelegate(tk2dSpriteAnimator animator, tk2dSpriteAnimationClip clip, int frame);
     public delegate void Tk2dAnimationChangedDelegate(tk2dSpriteAnimator animator, tk2dSpriteAnimationClip previousClip, tk2dSpriteAnimationClip newClip);

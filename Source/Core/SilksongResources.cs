@@ -11,11 +11,7 @@ internal static class SilksongResources {
     private static AssetBundle? bundle;
     private static string ResourcesBundlePath => Paths.ModFile("silksong-resources.bundle");
 
-    // Unity's own interception point for Resources.Load, rather than a native detour on Resources.Load itself.
-    // Resources.Load(string, Type) is a 9-instruction forwarder to ResourcesAPI.ActiveAPI.Load; MonoMod cannot
-    // reliably patch something that small (on HK 1.5.78 the detour dies inside DetourNativeX86Platform.Apply with
-    // a NullReferenceException, i.e. no native entry to write to). overrideAPI is a public, supported setter and
-    // exists identically on both Unity generations, so this is the better mechanism on either host.
+    // Unity's supported override point for Resources.Load; a MonoMod detour of Resources.Load fails on Unity 2020.
     private sealed class Api : ResourcesAPI {
         protected override Object? Load(string path, Type systemTypeInstance) => Detour(Base, path, systemTypeInstance);
 

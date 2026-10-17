@@ -1,26 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Types + call targets that Silksong's Unity 6 IL needs but Hollow Knight 1.5.78.11833 (Unity 2020.2.2f1)
-       doesn't have. UnityDowngrader retargets the missing references here. See tools/UnityDowngrader. -->
+  <!-- Types and members Silksong's Unity 6 IL needs but HK 1.5.78 lacks; UnityDowngrader retargets references here -->
   <PropertyGroup>
-    <!-- Compiled against Hollow Knight's OWN BCL rather than reference assemblies. This shim exists to supply
-         types the host lacks (HashCode, MathF, SpanAction) while SHARING the ones it has (Span<T>, ReadOnlySpan<T>,
-         which live in Unity's mscorlib but are absent from the netstandard 2.0 reference surface). Referencing a
-         NuGet System.Memory instead would define a second, incompatible Span identity. -->
+    <!-- Compiled against HK's own mscorlib, which has Span<T> unlike the netstandard2.0 reference assemblies -->
     <TargetFramework>net472</TargetFramework>
-    <!-- Resolve mscorlib/System/System.Core from the GAME's Managed dir, not from reference assemblies. Without
-         this MSBuild silently prefers the net472 reference-assembly package, whose mscorlib has no Span<T>. -->
     <FrameworkPathOverride>$(HKRefs)</FrameworkPathOverride>
     <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
     <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
     <AssemblyName>HornetInHallownest.UnityCompat</AssemblyName>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>CS0436;CS0649</NoWarn>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Reads Unity 6 AnimationClips via the bundles' embedded typetrees (see DiscreteCurvePatches) -->
+    <!-- See DiscreteCurvePatches -->
     <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
   </ItemGroup>
   <ItemGroup>
