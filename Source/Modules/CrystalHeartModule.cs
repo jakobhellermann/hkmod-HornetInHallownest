@@ -96,7 +96,7 @@ public sealed class CrystalHeartModule : ModuleBase {
         hero.AffectedByGravity(false);
         // Drawn after her silk charge, Silksong's Sharpdart: a hop off the ground and slowing down through its wind-up.
         if (onWall) {
-            body.linearVelocity = Vector2.zero;
+            body.SetVelocity(Vector2.zero);
             hero.AnimCtrl.PlayClipForced(WallChargeClip);
         }
         else {
@@ -104,7 +104,7 @@ public sealed class CrystalHeartModule : ModuleBase {
                 // The hop only pushes her up further when the lift alone leaves her on the ground, such as on a slope.
                 hero.transform.Translate(0f, KickUpHeight, 0f, Space.World);
                 if (hero.CheckTouchingGround())
-                    body.linearVelocity = new Vector2(body.linearVelocity.x, KickUpSpeed);
+                    body.SetVelocity(new Vector2(body.GetVelocity().x, KickUpSpeed));
             }
 
             hero.AnimCtrl.PlayClipForced(ChargeClip);
@@ -125,8 +125,8 @@ public sealed class CrystalHeartModule : ModuleBase {
         for (var time = 0f; time < chargeTime && !IsInterrupted(hero); time += Time.fixedDeltaTime) {
             yield return new WaitForFixedUpdate();
             if (IsInterrupted(hero)) break;
-            if (onWall) body.linearVelocity = Vector2.zero;
-            else body.linearVelocity *= Deceleration;
+            if (onWall) body.SetVelocity(Vector2.zero);
+            else body.SetVelocity(body.GetVelocity() * Deceleration);
         }
 
         SetKnightLoop("SuperDash Charge", playing: false);
@@ -167,7 +167,7 @@ public sealed class CrystalHeartModule : ModuleBase {
         Play(fx, "SD Trail", "SD Trail");
         Activate(fx, "SuperDash Damage", true);
         SetKnightLoop("SuperDashing", playing: true);
-        body.linearVelocity = new Vector2(direction * Speed, 0f);
+        body.SetVelocity(new Vector2(direction * Speed, 0f));
 
         // Per frame, not per physics step: a jump or harpoon press lasts one frame.
         var hitWall = false;
@@ -184,11 +184,11 @@ public sealed class CrystalHeartModule : ModuleBase {
                 // A side entrance stands her on the floor; she flies on at the height of a launch from the ground.
                 if (hero.CheckTouchingGround()) hero.transform.Translate(0f, KickUpHeight, 0f, Space.World);
                 PlayFlight(hero);
-                body.linearVelocity = new Vector2(direction * Speed, 0f);
+                body.SetVelocity(new Vector2(direction * Speed, 0f));
                 continue;
             }
 
-            if (Mathf.Abs(body.linearVelocity.x) < Speed / 2) {
+            if (Mathf.Abs(body.GetVelocity().x) < Speed / 2) {
                 hitWall = true;
                 break;
             }
@@ -196,7 +196,7 @@ public sealed class CrystalHeartModule : ModuleBase {
             if (time >= CancelDelay &&
                 (input.inputActions.Jump.WasPressed || input.inputActions.SuperDash.WasPressed))
                 break;
-            body.linearVelocity = new Vector2(direction * Speed, 0f);
+            body.SetVelocity(new Vector2(direction * Speed, 0f));
         }
 
         PlayMakerFSM.BroadcastEvent("SUPERDASH END");
@@ -227,7 +227,7 @@ public sealed class CrystalHeartModule : ModuleBase {
         }
 
         // A scene load can replace Hornet mid-flight, destroying the body.
-        if (body) body.linearVelocity = Vector2.zero;
+        if (body) body.SetVelocity(Vector2.zero);
         // Into a wall she clings to it, as from her silk charge; it gives her control back itself.
         if (hitWall && !IsInterrupted(hero)) {
             superdashing = false;

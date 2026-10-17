@@ -130,7 +130,7 @@ public sealed class PogoModule : ModuleBase {
         if (!knight) return;
         var body = hero.GetComponent<Rigidbody2D>();
         var velocity = knight.SHROOM_BOUNCE_VELOCITY * Mathf.Sqrt(hero.DEFAULT_GRAVITY / knight.DEFAULT_GRAVITY);
-        body.linearVelocity = new Vector2(body.linearVelocity.x, velocity);
+        body.SetVelocity(new Vector2(body.GetVelocity().x, velocity));
     }
 
     // Shroom squish anim + particles. Guarded: BounceLarge touches GameCameras.instance.cameraShakeFSM, which may be

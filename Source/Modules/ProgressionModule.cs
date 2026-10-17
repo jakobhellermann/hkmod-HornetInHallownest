@@ -348,7 +348,7 @@ public sealed class ProgressionModule : ModuleBase {
     private static bool ShouldHoldRewards() {
         var hero = HornetSpawner.Hornet;
         return (hero && hero.controlReqlinquished) ||
-               UnityEngine.Object.FindObjectsByType<DialogueBox>(FindObjectsSortMode.None)
+               UnityApi.FindAll<DialogueBox>()
                    .Any(box => !box.GetFieldValue<bool>("hidden")) ||
                colosseumTrials.Contains(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }
@@ -360,13 +360,13 @@ public sealed class ProgressionModule : ModuleBase {
         ss.SeenToolGetPrompt = true;
         ss.SeenToolWeaponGetPrompt = true;
 
-        var earnedTools = ToolRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward).ToHashSet();
+        var earnedTools = new HashSet<string>(ToolRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward));
         if (!pd.bossRushMode) KeepOneSilkshot(earnedTools);
         var upgrades = SToolItemManager.GetAllTools().Where(t => t && t.GetFieldValue<SToolItem>("getReplaces"))
             .ToList();
-        var replaceableTools = upgrades.Select(t => t.GetFieldValue<SToolItem>("getReplaces")).ToHashSet();
-        var replacedTools = upgrades.Where(t => earnedTools.Contains(t.name))
-            .Select(t => t.GetFieldValue<SToolItem>("getReplaces")).ToHashSet();
+        var replaceableTools = new HashSet<SToolItem?>(upgrades.Select(t => t.GetFieldValue<SToolItem>("getReplaces")));
+        var replacedTools = new HashSet<SToolItem?>(upgrades.Where(t => earnedTools.Contains(t.name))
+            .Select(t => t.GetFieldValue<SToolItem>("getReplaces")));
         foreach (var tool in SToolItemManager.GetAllTools()) {
             if (!tool) continue;
             var earned = earnedTools.Contains(tool.name);
@@ -389,7 +389,7 @@ public sealed class ProgressionModule : ModuleBase {
                 SetHidden(tool, replaced);
         }
 
-        var earnedCrests = CrestRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward).ToHashSet();
+        var earnedCrests = new HashSet<string>(CrestRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward));
         foreach (var crest in SToolItemManager.GetAllCrests()) {
             if (!crest) continue;
             if (earnedCrests.Contains(crest.name) && !crest.IsUnlocked && !IsSuperseded(crest)) {
@@ -543,8 +543,7 @@ public sealed class ProgressionModule : ModuleBase {
     // Some of these message prefabs have a title pointing at a line missing from Silksong's text; Silksong itself fills
     // that title in from the message that shows them.
     private static void RetitleMsg(string missingKey, string sheet, string key) {
-        foreach (var title in UnityEngine.Object.FindObjectsByType<Silksong::SetTextMeshProGameText>(
-                     FindObjectsSortMode.None))
+        foreach (var title in UnityApi.FindAll<Silksong::SetTextMeshProGameText>())
             if (title.Text.Key == missingKey)
                 title.Text = new SilksongLoc::TeamCherry.Localization.LocalisedString { Sheet = sheet, Key = key };
     }

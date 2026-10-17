@@ -10,6 +10,8 @@
         <DebugType>portable</DebugType>
         <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
+        <!-- Unity 2020 lacks UnityEngine.Object's nullability annotations -->
+        <Nullable Condition="'$(TargetFramework)' == 'hk1578'">annotations</Nullable>
         <EnableNETAnalyzers>True</EnableNETAnalyzers>
         <AnalysisMode>recommended</AnalysisMode>
 

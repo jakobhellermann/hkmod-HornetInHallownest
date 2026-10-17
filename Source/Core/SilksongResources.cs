@@ -17,7 +17,7 @@ internal static class SilksongResources {
     // a NullReferenceException, i.e. no native entry to write to). overrideAPI is a public, supported setter and
     // exists identically on both Unity generations, so this is the better mechanism on either host.
     private sealed class Api : ResourcesAPI {
-        protected override Object Load(string path, Type systemTypeInstance) => Detour(Base, path, systemTypeInstance);
+        protected override Object? Load(string path, Type systemTypeInstance) => Detour(Base, path, systemTypeInstance);
 
         // `base.Load` cannot be converted to a delegate directly, so route through an instance method.
         private Object Base(string path, Type? systemTypeInstance) => base.Load(path, systemTypeInstance);
