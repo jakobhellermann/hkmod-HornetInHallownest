@@ -28,13 +28,17 @@
 
         <!-- Assembly references: Use full local-refs when present, otherwise fall back to committed stubs for CI -->
         <CiRefs>$(MSBuildProjectDirectory)/../ci-refs</CiRefs>
-        <LocalRefs>$(MSBuildProjectDirectory)/../local-refs</LocalRefs>
+        <CiRefsLib Condition="'$(CiRefsLib)' == ''">$(CiRefs)/lib</CiRefsLib>
+        <LocalRefs Condition="'$(LocalRefs)' == ''">$(MSBuildProjectDirectory)/../local-refs</LocalRefs>
         <AssetsDir>$(MSBuildProjectDirectory)/../Assets</AssetsDir>
         <!-- Overridden per game version in HollowKnight.TargetFrameworks.props -->
         <BundleDir Condition="'$(BundleDir)' == ''">$(AssetsDir)/bundles</BundleDir>
         <SilksongManaged Condition="!Exists('$(SilksongManaged)')">$(PkgSilksong_GameLibs)/ref/netstandard2.1</SilksongManaged>
         <RefsDir Condition="'$(RefsDir)' == '' And Exists('$(LocalRefs)/Silksong.Assembly-CSharp.dll')">$(LocalRefs)</RefsDir>
-        <RefsDir Condition="'$(RefsDir)' == ''">$(CiRefs)/lib</RefsDir>
+        <RefsDir Condition="'$(RefsDir)' == ''">$(CiRefsLib)</RefsDir>
+        <!-- Silksong-only assemblies referenced directly; HK 1.5.78 needs the downgraded copies from its refs -->
+        <SilksongDeps Condition="'$(TargetFramework)' == 'hk1578'">$(RefsDir)</SilksongDeps>
+        <SilksongDeps Condition="'$(SilksongDeps)' == ''">$(SilksongManaged)</SilksongDeps>
 
         <!-- Shortens and anonymizes paths in debug symbols relative to the project directory. Breakpoints will not work, however. -->
         <PathMap Condition="'$(Configuration)' == 'Release'">$(MSBuildProjectDirectory)=/</PathMap>
@@ -88,25 +92,27 @@
     <ItemGroup>
         <!-- Referenced directly from the silksong Managed dir, so that dotnet build works without relying on mod setup -->
         <Reference Include="Newtonsoft.Json.UnityConverters" Private="false">
-            <HintPath>$(SilksongManaged)/Newtonsoft.Json.UnityConverters.dll</HintPath>
+            <HintPath>$(SilksongDeps)/Newtonsoft.Json.UnityConverters.dll</HintPath>
         </Reference>
         <Reference Include="Unity.Addressables" Private="false">
-            <HintPath>$(SilksongManaged)/Unity.Addressables.dll</HintPath>
+            <HintPath>$(SilksongDeps)/Unity.Addressables.dll</HintPath>
         </Reference>
         <Reference Include="Unity.ResourceManager" Private="false">
-            <HintPath>$(SilksongManaged)/Unity.ResourceManager.dll</HintPath>
+            <HintPath>$(SilksongDeps)/Unity.ResourceManager.dll</HintPath>
         </Reference>
     </ItemGroup>
 
     <!-- Generate full local-refs/Silksong.*.dll from the Silksong install for local referencing -->
-    <Target Name="GenerateLocalRefs">
+    <Target Name="GenerateLocalRefs" DependsOnTargets="BuildUnityCompat">
         <Error Condition="!Exists('$(SilksongManaged)')" Text="Silksong not found at $(SilksongManaged)"/>
         <ItemGroup>
             <PrefixInput Include="Assembly-CSharp;Assembly-CSharp-firstpass;PlayMaker;ConditionalExpression;TeamCherry.NestedFadeGroup;TeamCherry.Localization;TeamCherry.SharedUtils"/>
             <StaleRef Include="$(LocalRefs)/*.dll"/>
         </ItemGroup>
         <Delete Files="@(StaleRef)"/>
-        <Exec Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongPrefixer&quot; -- Silksong &quot;$(LocalRefs)&quot; --managed &quot;$(SilksongManaged)&quot; @(PrefixInput->'&quot;$(SilksongManaged)/%(Identity).dll&quot;', ' ')"/>
+        <Exec Condition="'$(TargetFramework)' != 'hk1578'" Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongPrefixer&quot; -- Silksong &quot;$(LocalRefs)&quot; --managed &quot;$(SilksongManaged)&quot; @(PrefixInput->'&quot;$(SilksongManaged)/%(Identity).dll&quot;', ' ')"/>
+        <!-- HK 1.5.78: the same prefix + downgrade the in-game setup runs -->
+        <Exec Condition="'$(TargetFramework)' == 'hk1578'" Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/UnityDowngrader&quot; -- --hk &quot;$(ManagedDir)&quot; --silksong &quot;$(SilksongManaged)&quot; --shim &quot;@(UnityCompatAssembly)&quot; --out &quot;$(LocalRefs)&quot;"/>
     </Target>
 
     <!-- HK 1.5.78: Build UnityCompat shim into mod's managed/ folder, which is installed in SilksongSetup -->
@@ -117,10 +123,10 @@
         </PropertyGroup>
         <MSBuild Projects="../tools/UnityCompat/UnityCompat.csproj" Targets="Restore" Properties="$(UnityCompatProperties);MSBuildRestoreSessionId=$([System.Guid]::NewGuid())" RemoveProperties="TargetFramework"/>
         <MSBuild Projects="../tools/UnityCompat/UnityCompat.csproj" Targets="Build" Properties="$(UnityCompatProperties)" RemoveProperties="TargetFramework">
-            <Output TaskParameter="TargetOutputs" ItemName="ManagedInstallFile"/>
+            <Output TaskParameter="TargetOutputs" ItemName="UnityCompatAssembly"/>
         </MSBuild>
         <ItemGroup>
-            <ManagedInstallFile Include="@(ManagedInstallFile->'%(RootDir)%(Directory)AssetsTools.NET.dll')"/>
+            <ManagedInstallFile Include="@(UnityCompatAssembly);@(UnityCompatAssembly->'%(RootDir)%(Directory)AssetsTools.NET.dll')"/>
         </ItemGroup>
     </Target>
 
