@@ -1,15 +1,12 @@
 flowchart TB
     subgraph Dev["Build time"]
         direction TB
-        B1["Silksong install (1.0.30000)"] -->|"make ci-refs"| B2b["Silksong.* prefixed stubs"]
-        B1 -->|"make local-refs-hk1578"| B2h["Silksong.* prefixed + downgraded"]:::hk1578
-        B1 -->|"make remap-monoscripts + make repack-resources"| B2c["monoscripts.silksong.bundle, silksong-resources.bundle"]
-        B1 -->|"make bundles-hk1578"| B2ch["monoscripts.silksong.bundle, silksong-resources.bundle for 2020.2"]:::hk1578
+        B1["Silksong install (1.0.30000)"] -->|"make ci-refs"| B2b["Silksong.* prefixed stubs (+ hk1578)"]
+        B1 -->|"make remap-monoscripts + make repack-resources"| B2c["monoscripts.silksong.bundle, silksong-resources.bundle (+ hk1578)"]
+        B2s["UnityCompat + AssetsTools.NET -> managed/"]:::hk1578
         B2b -->|"dotnet publish"| B3["mod zip"]
-        B2h --> B3
-        B2s["UnityCompat + AssetsTools.NET -> managed/"]:::hk1578 --> B3
         B2c --> B3
-        B2ch --> B3
+        B2s --> B3
     end
     subgraph RT["In game"]
         direction TB
