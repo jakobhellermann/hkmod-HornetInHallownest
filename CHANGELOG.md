@@ -155,6 +155,7 @@
 - Show Hornet's reward messages one after another instead of over each other, each holding her still, and her Memory
   Locket pop-up after them
 - Hold Hornet's rewards until a conversation or cutscene she's in ends, and until she leaves a Colosseum trial
+- Remind Hornet after she earns Desolate Dive that her dash while holding down breaks the floors it breaks
 
 ## v0.4.0
 

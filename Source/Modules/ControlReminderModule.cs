@@ -5,7 +5,9 @@ using GlobalEnums;
 using HornetInHallownest.Core;
 using HutongGames.PlayMaker;
 using Modding;
+using TMProOld;
 using UnityEngine;
+using HkLanguage = TeamCherry.Localization.Language;
 using SLanguage = SilksongLoc::TeamCherry.Localization.Language;
 
 namespace HornetInHallownest.Modules;
@@ -26,7 +28,21 @@ public sealed class ControlReminderModule : ModuleBase {
         ["PROMPT_DREAMNAIL"] = "PROMPT_NEEDOLIN"
     };
 
+    private const string FloorBreakPromptKey = "GET_QUAKE_1";
+    private const float TwoLineBackboardHeight = 1.8f;
+    private static bool isFloorBreakPending;
+    private static Vector3? backboardScale;
+
     public override string Id => "control-reminder";
+
+    // Hornet breaks Desolate Dive floors with her down-dash, which the Silk Skill screen she gets for the spell doesn't
+    // teach. HK's dash reminder shows it, with the line from HK's Desolate Dive screen.
+    internal static void ShowFloorBreakReminder() {
+        isFloorBreakPending = true;
+        PlayMakerFSM.BroadcastEvent("REMINDER DASH");
+        // A reminder already up ignores the event, and the next dash reminder would carry this line instead.
+        isFloorBreakPending = false;
+    }
 
     public override void Initialize() {
         ModHooks.LanguageGetHook += OnLanguageGet;
@@ -47,6 +63,20 @@ public sealed class ControlReminderModule : ModuleBase {
         if (self is not { Name: "Display", GameObjectName: "Control Reminder" }) return;
         var reminder = self.GameObject.transform;
         switch (to.Name) {
+            case "Dash" when isFloorBreakPending:
+                isFloorBreakPending = false;
+                if (reminder.Find("Text") is { } text && text.TryGetComponent<TextMeshPro>(out var textMesh))
+                    textMesh.text = SplitInTwoLines(HkLanguage.Get(FloorBreakPromptKey, PromptsSheet));
+                if (reminder.Find("Backboard") is { } board) {
+                    backboardScale ??= board.localScale;
+                    board.localScale = Vector3.Scale(backboardScale.Value, new Vector3(1f, TwoLineBackboardHeight, 1f));
+                }
+
+                break;
+            case "Idle" when backboardScale != null:
+                if (reminder.Find("Backboard") is { } shared) shared.localScale = backboardScale.Value;
+                backboardScale = null;
+                break;
             case "Superdash":
                 PlaceDirectionButton(reminder, "ActionButton Up", HeroSwitch.HornetActive);
                 break;
@@ -75,6 +105,15 @@ public sealed class ControlReminderModule : ModuleBase {
                 cast.TryGetComponent<ActionButtonIcon>(out var icon) &&
                 icon.action != action)
                 icon.SetAction(action.Value);
+    }
+
+    // At the space nearest the middle; a line in a language without spaces stays whole.
+    private static string SplitInTwoLines(string line) {
+        var middle = line.Length / 2;
+        var before = line.LastIndexOf(' ', middle);
+        var after = line.IndexOf(' ', middle);
+        var split = before < 0 ? after : after < 0 || middle - before <= after - middle ? before : after;
+        return split < 0 ? line : line.Substring(0, split) + "\n" + line.Substring(split + 1);
     }
 
     private static void PlaceDirectionButton(Transform reminder, string name, bool besideAction) {
