@@ -218,7 +218,7 @@ public sealed class HornetSpawner : ModuleBase {
     private const float KnightHeight = 1.28f; // HK Knight terrain-collider height
     private const float HornetHeight = 2.08f; // Hornet's native Silksong terrain-collider height
 
-    private const float
+    internal const float
         FeetBottomLocalY = -1.55f; // collider bottom in hero-local Y (her sprite feet); both anchor here
 
     // Hornet's terrain collider (col2d), cached at spawn. Single source of truth for her body height (read live so

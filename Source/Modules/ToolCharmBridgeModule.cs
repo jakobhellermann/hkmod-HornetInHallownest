@@ -139,11 +139,9 @@ internal sealed class GrimmchildTool : SToolItem {
 
     private static SLocalisedString Text(string key) => new() { Sheet = Sheet, Key = key };
 
-    // HK's charm pane sets the icon list's instance as it wakes, and it may not have yet.
-    private static Sprite CharmIcon() {
-        var icons = CharmIconList.Instance
-            ? CharmIconList.Instance
-            : Resources.FindObjectsOfTypeAll<CharmIconList>().FirstOrDefault();
-        return icons ? icons.GetSprite(40) : null!;
-    }
+    private static CharmIconList? charmIcons;
+
+    // HK's charm pane sets CharmIconList.Instance only once it wakes.
+    private static Sprite CharmIcon() =>
+        (charmIcons ??= Resources.FindObjectsOfTypeAll<CharmIconList>().First()).GetSprite(40);
 }

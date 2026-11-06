@@ -57,6 +57,11 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
     private static GameObject? enterEffect;
     private static readonly Collider2D[] overlaps = new Collider2D[128];
 
+    // What the Dream Nail hitbox can touch, which a dream entrance has to.
+    private static readonly ContactFilter2D entranceFilter = new() {
+        useTriggers = true, useLayerMask = true, layerMask = Physics2D.GetLayerCollisionMask(HeroAttackLayer)
+    };
+
     private GameObject? hitboxGo;
     private Collider2D? collider;
     private bool wasPerforming;
@@ -73,7 +78,11 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
 
     public override void Initialize() {
         Detour(typeof(Fsm), "SwitchState", OnSwitchState, typeof(FsmState));
+        UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
+
+    private static void OnActiveSceneChanged(UnityEngine.SceneManagement.Scene from,
+        UnityEngine.SceneManagement.Scene to) => dreamEntrances.Clear();
 
     private static void OnSwitchState(Action<Fsm, FsmState> orig, Fsm self, FsmState to) {
         orig(self, to);
@@ -101,6 +110,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         wasPlayingElegy = false;
         impactArmed = false;
         SetMemoryInRange(false);
+        UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         dreamEntrances.Clear();
         if (zoomedCamera) zoomedCamera!.SetFovOffset(0f, 0f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
         zoomedCamera = null;
@@ -164,7 +174,6 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
 
         EnsureHitbox(hero);
         elegyStartTime = Time.time;
-        dreamEntrances.Clear();
     }
 
     private static void SetMemoryInRange(bool inRange) {
@@ -173,7 +182,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
     }
 
     private static bool IsDreamEntranceInRange(Vector2 position) {
-        var count = Physics2D.OverlapCircle(position, Radius, new ContactFilter2D().NoFilter(), overlaps);
+        var count = Physics2D.OverlapCircle(position, Radius, entranceFilter, overlaps);
         for (var i = 0; i < count; i++)
             if (overlaps[i] && IsDreamEntrance(overlaps[i].gameObject))
                 return true;

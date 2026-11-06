@@ -42,7 +42,7 @@ public sealed class SceneFixesModule : ModuleBase {
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode) {
         screamGet = scene.name == "Abyss_12" ? FindScreamGetFsm() : null;
         blizzardRescue = scene.name == "Deepnest_East_12" ? FindBlizzardRescueFsm() : null;
-        pathOfPainEnd = scene.name == "White_Palace_20" ? GameObject.Find("End Scene") : null;
+        FindPathOfPainEnd(scene.name == "White_Palace_20");
         inShamanTemple = scene.name == "Crossroads_ShamanTemple";
         inAbyssCore = scene.name == "Abyss_06_Core";
 
@@ -211,16 +211,22 @@ public sealed class SceneFixesModule : ModuleBase {
 
     #region Path of Pain end
 
-    private GameObject? pathOfPainEnd;
+    private PlayMakerFSM? pathOfPainConvo;
+    private Transform? pathOfPainKing;
+
+    private void FindPathOfPainEnd(bool inScene) {
+        pathOfPainConvo = null;
+        if (!inScene) return;
+        var end = GameObject.Find("End Scene");
+        pathOfPainConvo = end.GetComponents<PlayMakerFSM>().First(fsm => fsm.FsmName == "Conversation Control");
+        pathOfPainKing = end.transform.Find("initial_loop/End Scene King");
+    }
 
     // The Knight's clip looks up at the King wherever he stands, but the NPC turn before it faces the hero to the middle
     // of the scene, away from the King when she comes from his side.
     private void FaceKingAtPathOfPainEnd(Silksong::HeroController hero) {
-        if (!pathOfPainEnd) return;
-        var convo = pathOfPainEnd!.GetComponents<PlayMakerFSM>()
-            .FirstOrDefault(fsm => fsm.FsmName == "Conversation Control");
-        var king = pathOfPainEnd.transform.Find("initial_loop/End Scene King");
-        if (!convo || convo.ActiveStateName != "Hero Anim" || !king) return;
+        if (pathOfPainConvo is null || pathOfPainConvo.ActiveStateName != "Hero Anim") return;
+        var king = pathOfPainKing!;
         var kingRight = king.position.x > hero.transform.position.x;
         if (kingRight == hero.cState.facingRight) return;
         if (kingRight) hero.FaceRight();

@@ -20,6 +20,7 @@ public sealed class EssenceCounterModule : ModuleBase {
     private static Component? fade;
     private static Silksong::TextBridge? text;
     private static Silksong::CurrencyCounterIcon? icon;
+    private static Fsm? hkCounterFsm;
 
     public override string Id => "essence-counter";
 
@@ -41,7 +42,7 @@ public sealed class EssenceCounterModule : ModuleBase {
 
     private static void OnSwitchState(Action<Fsm, FsmState> orig, Fsm self, FsmState to) {
         orig(self, to);
-        if (self.Name != "Control" || self.GameObjectName != "Dream Nail" || !HeroSwitch.HornetActive) return;
+        if (!HeroSwitch.HornetActive || self.Name != "Control" || !ReferenceEquals(self, HkCounterFsm())) return;
         switch (to.Name) {
             case "Activate":
             case "Anim":
@@ -55,6 +56,9 @@ public sealed class EssenceCounterModule : ModuleBase {
                 break;
         }
     }
+
+    private static Fsm HkCounterFsm() =>
+        hkCounterFsm ??= GameCameras.instance.hudCanvas.GetComponentsInChildren<PlayMakerFSM>(true).First(IsHkCounter).Fsm;
 
     private static void Show(GameObject hkCounter) {
         if (!counter && !Build(hkCounter)) return;

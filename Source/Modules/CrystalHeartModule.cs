@@ -74,7 +74,14 @@ public sealed class CrystalHeartModule : ModuleBase {
 
     private static bool OnWall(SHeroController hero) => hero.cState.wallSliding || hero.cState.wallClinging;
 
-    private static SInputHandler Input(SHeroController hero) => hero.GetFieldValue<SInputHandler>("inputHandler")!;
+    private static SHeroController? inputHero;
+    private static SInputHandler inputHandler = null!;
+
+    private static SInputHandler Input(SHeroController hero) {
+        if (ReferenceEquals(hero, inputHero)) return inputHandler;
+        inputHero = hero;
+        return inputHandler = hero.GetFieldValue<SInputHandler>("inputHandler")!;
+    }
 
     private IEnumerator Superdash(SHeroController hero, SInputHandler input) {
         superdashing = true;

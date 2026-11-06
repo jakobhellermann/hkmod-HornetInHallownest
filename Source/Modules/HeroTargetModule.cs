@@ -54,7 +54,7 @@ public sealed class HeroTargetModule : ModuleBase {
     // rests FeetDelta lower above a floor than Hornet's.
     private static void OnGetPosition(Action<GetPosition> orig, GetPosition self) {
         orig(self);
-        if (!IsHornet(self.Fsm.GetOwnerDefaultTarget(self.gameObject))) return;
+        if (!HeroSwitch.HornetActive || !IsHornet(self.Fsm.GetOwnerDefaultTarget(self.gameObject))) return;
         var delta = FeetDelta();
         self.vector.Value -= new Vector3(0f, delta, 0f);
         self.y.Value -= delta;
@@ -62,7 +62,7 @@ public sealed class HeroTargetModule : ModuleBase {
 
     private static void OnGetPosition2D(Action<GetPosition2D> orig, GetPosition2D self) {
         orig(self);
-        if (!IsHornet(self.Fsm.GetOwnerDefaultTarget(self.gameObject))) return;
+        if (!HeroSwitch.HornetActive || !IsHornet(self.Fsm.GetOwnerDefaultTarget(self.gameObject))) return;
         var delta = FeetDelta();
         self.vector.Value -= new Vector2(0f, delta);
         self.y.Value -= delta;
@@ -70,6 +70,7 @@ public sealed class HeroTargetModule : ModuleBase {
 
     private static void OnSetPosition(Action<SetPosition> orig, SetPosition self) {
         orig(self);
+        if (!HeroSwitch.HornetActive) return;
         var target = self.Fsm.GetOwnerDefaultTarget(self.gameObject);
         if ((self.vector.IsNone && self.y.IsNone) || !IsHornet(target)) return;
         target.transform.position += new Vector3(0f, FeetDelta(), 0f);
@@ -77,24 +78,23 @@ public sealed class HeroTargetModule : ModuleBase {
 
     private static void OnSetPositionToObject(Action<SetPositionToObject> orig, SetPositionToObject self) {
         orig(self);
+        if (!HeroSwitch.HornetActive) return;
         var target = self.Fsm.GetOwnerDefaultTarget(self.gameObject);
         if (!target) return;
         if (IsHornet(target)) target.transform.position += new Vector3(0f, FeetDelta(), 0f);
         else if (IsHornet(self.targetObject.Value)) target.transform.position -= new Vector3(0f, FeetDelta(), 0f);
     }
 
-    private static bool IsHornet(GameObject? go) =>
-        go && HeroSwitch.HornetActive && go == HornetSpawner.HornetRoot;
+    private static bool IsHornet(GameObject? go) => go == HornetSpawner.HornetRoot;
 
-    // How much higher Hornet's origin rests on a floor than the Knight's.
-    internal static float FeetDelta() {
-        var hornetCol = HornetSpawner.TerrainCollider;
-        var knight = HeroController.UnsafeInstance;
-        var knightCol = knight != null ? knight.GetComponent<BoxCollider2D>() : null;
-        if (hornetCol == null || knightCol == null) return 0f;
-        var hornetBottom = hornetCol.offset.y - hornetCol.size.y / 2f;
-        var knightBottom = knightCol.offset.y - knightCol.size.y / 2f;
-        return knightBottom - hornetBottom;
+    private static float? feetDelta;
+
+    // How much higher Hornet's origin rests on a floor than the Knight's
+    internal static float FeetDelta() => feetDelta ??= KnightFeetBottom() - HornetSpawner.FeetBottomLocalY;
+
+    private static float KnightFeetBottom() {
+        var knightCol = HeroController.instance.GetComponent<BoxCollider2D>();
+        return knightCol.offset.y - knightCol.size.y / 2f;
     }
 
     #endregion

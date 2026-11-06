@@ -41,10 +41,7 @@ public sealed class BreakableFloorModule : ModuleBase {
             return;
         }
 
-        // TODO: perf
-        var body = hero.GetComponent<BoxCollider2D>();
-        if (!body) return;
-        var hb = body.bounds;
+        var hb = HornetSpawner.TerrainCollider!.bounds;
         for (var i = 0; i < floors.Count; i++)
             if (floors[i] && floorCols[i] && floorCols[i].bounds.Intersects(hb))
                 floors[i].SendEvent("DESTROY");

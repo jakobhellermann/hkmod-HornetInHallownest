@@ -577,6 +577,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (!fsm || !dummy) yield break;
 
         var dummyRenderer = dummy.GetComponent<MeshRenderer>();
+        var heroRenderer = hero.GetComponent<MeshRenderer>();
         playingDreamArrival = true;
         try {
             while (fsm && hero && fsm.ActiveStateName != "Climb 1" && fsm.ActiveStateName != "End") {
@@ -588,7 +589,7 @@ public sealed class SceneTransitionModule : ModuleBase {
             while (fsm && hero && fsm.ActiveStateName != "End") {
                 HoldArrival(hero);
                 dummyRenderer.enabled = false;
-                hero.GetComponent<MeshRenderer>().enabled = true;
+                heroRenderer.enabled = true;
                 if (!rising && fsm.ActiveStateName == "Climb 3") {
                     rising = true;
                     hero.AnimCtrl.PlayClipForced("Prostrate Rise");

@@ -93,8 +93,9 @@ public sealed class KnightStandInModule : ModuleBase {
             var color = sprite ? sprite.color : Color.white;
             if (sprite) sprite.color = Color.clear;
             heroShown = false;
+            var heroRenderer = hero.GetComponent<MeshRenderer>();
             while (standIn && IsShown() && hero && !heroShown && (hero.controlReqlinquished || !hero.acceptingInput)) {
-                hero.GetComponent<MeshRenderer>().enabled = true;
+                heroRenderer.enabled = true;
                 if (!standIn.IsChildOf(hero.transform)) {
                     // A Knight sprite faces left at a positive x scale.
                     if (standIn.lossyScale.x < 0f != hero.cState.facingRight) {

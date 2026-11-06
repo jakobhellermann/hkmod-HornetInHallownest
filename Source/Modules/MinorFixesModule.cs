@@ -35,9 +35,15 @@ public sealed class MinorFixesModule : ModuleBase {
     // Above any ledge top Hornet's vault or clamber accepts (at most 0.94 over her head).
     private const float ClamberLandingHeight = 1.2f;
 
+    private static readonly int haloEndState = Animator.StringToHash("End");
+
     private static readonly RaycastHit2D[] wallHits = new RaycastHit2D[10];
     private static readonly List<(Rect Bounds, Vector2[] Points)> terrainOutlines = [];
-    private static Scene outlinesScene;
+    private static readonly Dictionary<Collider2D, bool> ignoresHero = [];
+    private static SBumpCheck? bumpCheck;
+    private static Collider2D bumpCollider = null!;
+    private static Rigidbody2D bumpBody = null!;
+    private static LayerMask bumpGroundMask;
     private MonoBehaviour? host;
 
     public override string Id => "minor-fixes";
@@ -53,6 +59,15 @@ public sealed class MinorFixesModule : ModuleBase {
         Detour(typeof(SBumpCheck), nameof(SBumpCheck.CheckForBump), (CheckForBumpHook)OnCheckForBump);
         Detour(typeof(Silksong::NoClamberRegion), "get_IsClamberBlocked", OnIsClamberBlocked);
         Detour(typeof(SFsm), "SwitchState", OnSilksongSwitchState, typeof(SFsmState));
+        USceneManager.activeSceneChanged += OnActiveSceneChanged;
+        CollectTerrainOutlines(USceneManager.GetActiveScene());
+    }
+
+    protected override void OnDeinitialize() => USceneManager.activeSceneChanged -= OnActiveSceneChanged;
+
+    private static void OnActiveSceneChanged(Scene from, Scene to) {
+        ignoresHero.Clear();
+        CollectTerrainOutlines(to);
     }
 
     // A bind interrupted by damage goes through "Cancel All", which, unlike finishing it ("Shaman End?") or cancelling it
@@ -62,7 +77,7 @@ public sealed class MinorFixesModule : ModuleBase {
         if (self.Name != "Bind" || to.Name != "Cancel All") return;
         var halo = self.GameObject.transform.Find("Bind Effects/shaman_focus_halo");
         if (!halo || !halo.gameObject.activeSelf || !halo.TryGetComponent<Animator>(out var animator)) return;
-        if (!animator.GetCurrentAnimatorStateInfo(0).IsName("End")) animator.Play("End");
+        if (animator.GetCurrentAnimatorStateInfo(0).shortNameHash != haloEndState) animator.Play(haloEndState);
     }
 
     #region Sprint + cutscene RelinquishControl
@@ -114,11 +129,16 @@ public sealed class MinorFixesModule : ModuleBase {
         orig(self, side, out hitBump, out hitWall, out hitHighWall);
         if (!hitWall || side is not (SCollisionSide.left or SCollisionSide.right)) return;
 
-        var bounds = self.GetFieldValue<Collider2D>("collider")!.bounds;
-        var body = self.GetFieldValue<Rigidbody2D>("body")!;
-        var filter = new ContactFilter2D {
-            useTriggers = false, useLayerMask = true, layerMask = self.GetFieldValue<LayerMask>("groundMask")
-        };
+        if (!ReferenceEquals(self, bumpCheck)) {
+            bumpCheck = self;
+            bumpCollider = self.GetFieldValue<Collider2D>("collider")!;
+            bumpBody = self.GetFieldValue<Rigidbody2D>("body")!;
+            bumpGroundMask = self.GetFieldValue<LayerMask>("groundMask");
+        }
+
+        var bounds = bumpCollider.bounds;
+        var body = bumpBody;
+        var filter = new ContactFilter2D { useTriggers = false, useLayerMask = true, layerMask = bumpGroundMask };
         var right = side == SCollisionSide.right;
         var x = right ? bounds.max.x - 0.1f : bounds.min.x + 0.1f;
         var direction = right ? Vector2.right : Vector2.left;
@@ -132,9 +152,8 @@ public sealed class MinorFixesModule : ModuleBase {
     // tops a wall, Hornet's vault and clamber rays find nothing past the wall and would carry her into the rock.
     private static bool OnIsClamberBlocked(Func<bool> orig) {
         if (orig()) return true;
-        var hero = HornetSpawner.Hornet;
-        if (!hero) return false;
-        var bounds = hero.GetComponent<Collider2D>().bounds;
+        var hero = HornetSpawner.Hornet!;
+        var bounds = HornetSpawner.TerrainCollider!.bounds;
         var ahead = hero.cState.facingRight ? bounds.max.x + bounds.extents.x : bounds.min.x - bounds.extents.x;
         return IsInsideTerrain(new Vector2(ahead, bounds.max.y + ClamberLandingHeight));
     }
@@ -142,7 +161,7 @@ public sealed class MinorFixesModule : ModuleBase {
     // Even-odd over the closed terrain outlines, so an open room inside a chunk's outline counts as open.
     private static bool IsInsideTerrain(Vector2 point) {
         var inside = false;
-        foreach (var (bounds, points) in TerrainOutlines()) {
+        foreach (var (bounds, points) in terrainOutlines) {
             if (!bounds.Contains(point)) continue;
             for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
                 if (points[i].y > point.y != points[j].y > point.y &&
@@ -154,12 +173,10 @@ public sealed class MinorFixesModule : ModuleBase {
         return inside;
     }
 
-    private static List<(Rect Bounds, Vector2[] Points)> TerrainOutlines() {
-        var scene = USceneManager.GetActiveScene();
-        if (scene == outlinesScene) return terrainOutlines;
-        outlinesScene = scene;
+    private static void CollectTerrainOutlines(Scene scene) {
         terrainOutlines.Clear();
-        foreach (var edge in Object.FindObjectsByType<EdgeCollider2D>(FindObjectsSortMode.None)) {
+        foreach (var root in scene.GetRootGameObjects())
+        foreach (var edge in root.GetComponentsInChildren<EdgeCollider2D>(true)) {
             var local = edge.points;
             if (edge.gameObject.layer != (int)PhysLayers.TERRAIN || local.Length < 4 || local[0] != local[^1]) continue;
             var points = local.Select(p => (Vector2)edge.transform.TransformPoint(p + edge.offset)).ToArray();
@@ -167,15 +184,19 @@ public sealed class MinorFixesModule : ModuleBase {
             var max = new Vector2(points.Max(p => p.x), points.Max(p => p.y));
             terrainOutlines.Add((new Rect(min, max - min), points));
         }
-
-        return terrainOutlines;
     }
 
     private static bool HitsWall(Vector2 origin, Vector2 direction, ContactFilter2D filter, float distance) {
         var count = Physics2D.Raycast(origin, direction, filter, wallHits, distance);
         for (var i = 0; i < count; i++)
-            if (!wallHits[i].collider.GetComponent<IgnoreHeroCollision>())
+            if (!IgnoresHero(wallHits[i].collider))
                 return true;
         return false;
+    }
+
+    private static bool IgnoresHero(Collider2D collider) {
+        if (!ignoresHero.TryGetValue(collider, out var ignores))
+            ignoresHero[collider] = ignores = collider.GetComponent<IgnoreHeroCollision>();
+        return ignores;
     }
 }
