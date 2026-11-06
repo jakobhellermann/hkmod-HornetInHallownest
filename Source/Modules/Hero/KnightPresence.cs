@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using HornetInHallownest.Util;
 using UnityEngine;
 
 namespace HornetInHallownest.Modules.Hero;
@@ -17,6 +18,8 @@ internal sealed class KnightPresence : HeroPresence {
         Transform? vignette = null;
         Renderer? heroLight = null;
         if (go.TryGetComponent<HeroController>(out var hk)) {
+            // Only HK FallCheck cancels rumble
+            hk.InvokeMethod("CancelFallEffects");
             hk.enabled = false;
             vignetteFsm = hk.vignetteFSM;
             vignette = hk.vignette ? hk.vignette.transform : null;
