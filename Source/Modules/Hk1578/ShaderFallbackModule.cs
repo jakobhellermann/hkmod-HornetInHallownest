@@ -97,14 +97,15 @@ public sealed class ShaderFallbackModule : ModuleBase {
             return;
         }
 
-        var replacement = IsMaskingShader(name) ? Find("Sprites/Default") : GenericReplacement(name);
+        var masking = IsMaskingShader(name) || IsDarknessCutout(mat);
+        var replacement = masking ? Find("Sprites/Default") : GenericReplacement(name);
         if (!replacement) {
             LogErrorOnce($"shader:{name}", $"no replacement for Silksong shader '{name}' (material '{mat.name}')");
             return;
         }
 
         mat.shader = replacement;
-        if (IsMaskingShader(name)) {
+        if (masking) {
             // Masks only make sense with their stencil/blend logic; with a plain sprite shader they'd be solid shapes.
             mat.color = Color.clear;
             LogInfoOnce($"shader:{name}", $"masking shader '{name}' (material '{mat.name}') has no HK counterpart -> " +
@@ -182,6 +183,9 @@ public sealed class ShaderFallbackModule : ModuleBase {
     }
 
     private static bool IsMaskingShader(string name) => ContainsAny(name, "Darkness", "Blackout", "Masked", "Mask");
+
+    // The DarknessCameraEffect is only implemented in HK 1.5.12620, not 1.5.78
+    private static bool IsDarknessCutout(Material mat) => ContainsAny(mat.name, "Darkness-Cutout");
 
     private static bool ContainsAny(string s, params string[] parts) {
         foreach (var p in parts)
