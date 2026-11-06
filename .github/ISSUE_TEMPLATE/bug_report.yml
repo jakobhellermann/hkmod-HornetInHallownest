@@ -1,0 +1,25 @@
+name: Bug report
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce, if possible
+
+  - type: textarea
+    id: modlog
+    attributes:
+      label: ModLog
+      description: |
+        Drag and drop `ModLog.txt` here. It is in the same folder as your save files:
+        - Windows: `%APPDATA%\..\LocalLow\Team Cherry\Hollow Knight\`
+        - MacOS: `~/Library/Application Support/unity.Team Cherry.Hollow Knight/`
+        - Linux: `~/.config/unity3d/Team Cherry/Hollow Knight/`
+    validations:
+      required: true
