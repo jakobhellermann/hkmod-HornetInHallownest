@@ -8,6 +8,9 @@ public sealed class HornetGlobalSettings {
     public string? SilksongPath;
 
     public InputSettings Controls = new();
+    
+    // New games start on Hornet instead of the Knight.
+    public bool StartAsHornet = true;
 
     // When true, switching will keep both the Knight and Hornet active and controllable, however only the "primary"
     // target will be able to interact, get targeted by enemies, show HUD, etc.

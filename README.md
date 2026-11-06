@@ -83,6 +83,7 @@ The config file can be found as `HornetInHallownest.GlobalSettings.json` in
     "OpenTools": "L",
     "SwitchHero": "F5"
   },
+  "StartAsHornet": true,
   "BothActive": false # experimental
 }
 ```

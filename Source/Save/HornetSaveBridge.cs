@@ -15,8 +15,8 @@ namespace HornetInHallownest.Save;
 public sealed class HornetSaveBridge : ModuleBase {
     public override string Id => "save-bridge";
 
-    public override void Initialize() => ModHooks.NewGameHook += ResetPlayerData;
-    protected override void OnDeinitialize() => ModHooks.NewGameHook -= ResetPlayerData;
+    public override void Initialize() => ModHooks.NewGameHook += OnNewGame;
+    protected override void OnDeinitialize() => ModHooks.NewGameHook -= OnNewGame;
 
     // Matches Silksong's PlayerData serializer
     private static JsonSerializerSettings SaveSettings => field ??= BuildSettings();
@@ -58,6 +58,9 @@ public sealed class HornetSaveBridge : ModuleBase {
             HornetActive = HeroSwitch.HornetActive
         };
     }
+
+    private static void OnNewGame() =>
+        Stash(new HornetSaveData { HornetActive = HornetInHallownest.LoadedInstance!.GlobalSettings.StartAsHornet });
 
     // The API stashes a new HornetSaveData, without PlayerData, when the main menu loads, and nothing else for a slot
     // saved without the mod.
