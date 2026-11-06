@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using HornetInHallownest.Core;
 
 namespace HornetInHallownest.Modules;
@@ -40,6 +41,14 @@ public sealed class AnimationRemapModule : ModuleBase {
         [("Deepnest_Spider_Town", "DJ Get Land")] = "HardLand"
     };
 
+    // Replace clips that don't fit into the scene. In King's Pass, hornets super hard land goes on for way too long.
+    private static readonly Dictionary<(string Scene, string Clip), string> hornetSceneClipOverrides = new() {
+        [("Tutorial_01", "Super Hard Land")] = "FallToProstrate",
+        [("Tutorial_01", "Collect Normal 3")] = "Prostrate Rise"
+    };
+
+    private static readonly HashSet<string> overriddenClips = [..hornetSceneClipOverrides.Keys.Select(k => k.Clip)];
+
     // These clips are looping, but the orig HK clip play expects an animation finished event.
     // Send it manually when the animation first loops.
     private static readonly HashSet<string> loopingClips = ["Challenge Strong"];
@@ -61,6 +70,13 @@ public sealed class AnimationRemapModule : ModuleBase {
             followUpMap.TryGetValue((playing.name, name), out var followUp) &&
             self.GetClipByName(followUp) is not null) {
             orig(self, followUp);
+            return;
+        }
+
+        if (self && overriddenClips.Contains(name) && HornetSpawner.Hornet is { } hornet &&
+            self.gameObject == hornet.gameObject &&
+            hornetSceneClipOverrides.TryGetValue((UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, name), out var overridden)) {
+            orig(self, overridden);
             return;
         }
 
