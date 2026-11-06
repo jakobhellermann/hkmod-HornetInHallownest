@@ -171,15 +171,6 @@ In order to avoid redistributing assets from Silksong, the mod requires an insta
 
 **Older versions of Silksong:** Currently untested, but I'd like to support all of them
 
-### macOS on Apple Silicon
-
-HornetInHallownest requires Hollow Knight to run under Rosetta on Apple Silicon Macs.
-If running through Steam, set the game's launch options to:
-```sh
-/bin/sh -c 'exec /usr/bin/arch -x86_64 "$0/Contents/MacOS/Hollow Knight" "$@"' %command%
-```
-If you are running it manually, enable `Open using Rosetta` in Finder (right-click Hollow Knight.app -> Get Info).
-
 ## Config
 
 The config file can be found as `HornetInHallownest.GlobalSettings.json` in
