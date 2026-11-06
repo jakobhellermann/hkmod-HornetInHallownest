@@ -2,6 +2,10 @@
 
 ## _Unreleased_
 
+## v0.5.0
+
+- Start as hornet by default in new saves. Can be turned off in the config options.
+- Fix kings's pass fall animation looking wrong for hornet
 - Fix a new game showing tools and items Hornet had in the game played before it
 - Fix a down attack carried through a room transition staying armed and pogoing off the first thing Hornet touches
 - Fix Hornet's masks never appearing in a new game

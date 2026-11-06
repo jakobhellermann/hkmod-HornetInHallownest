@@ -8,7 +8,7 @@ By Jakob Hellermann (`@dubi steinkek`) and Planet_Xplorer
 
 ## Status
 
-Playable with some bugs, currently ready for playtesting.
+Getting close to release 👀
 
 Right now the mod is only playable on the latest Hollow Knight version (1.5.12620, released 2026) with this branch of the modding API: https://github.com/hk-modding/api/pull/164.
 The download for the mod and the modding API can be found in the [releases tab](https://github.com/jakobhellermann/hkmod-HornetInHallownest/releases/latest).
@@ -161,13 +161,11 @@ Locket and Sylphsong.
 
 In order to avoid redistributing assets from Silksong, the mod requires an installation of Silksong next to the Hollow Knight installation. Alternatively you can specify the path in the configuration, see below.
 
-**TODO**: currently some assemblies are redistributed still, they should be reused from silksong as well.
-
 | Hollow Knight  | Silksong version    |
 | -------------- | ------------------- |
 | 1.5.12620      | 1.0.30000           |
 
-**Older versions of Hollow Knight:** Currently unsupported
+**Older versions of Hollow Knight:** Currently unsupported, but work in progress. Expect to hear more soon.
 
 **Older versions of Silksong:** Currently untested, but I'd like to support all of them
 
