@@ -141,7 +141,7 @@ public sealed class MapMarkerModule : ModuleBase {
     }
 
     private static Silksong::GameMap? SilksongMapPrefab() {
-        var manager = Object.FindAnyObjectByType<Silksong::InventoryMapManager>(FindObjectsInactive.Include);
+        var manager = UnityApi.FindAny<Silksong::InventoryMapManager>(includeInactive: true);
         return manager ? manager.GetFieldValue<Silksong::GameMap>("gameMapPrefab") : null;
     }
 }

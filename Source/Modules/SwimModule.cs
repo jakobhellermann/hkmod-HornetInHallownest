@@ -52,7 +52,7 @@ public sealed class SwimModule : ModuleBase {
         if (!hero || hero.transitionState != HeroTransitionState.WAITING_TO_TRANSITION) return;
         graceTimer = GracePeriod;
         if (floatingInWater) return;
-        if (hero.Body.linearVelocity.y > 0f) return;
+        if (hero.Body.GetVelocity().y > 0f) return;
         if (water)
             SuppressRegionFsm(region); // stop HK's water FSM (Hero->Hornet via global var) from repositioning her
         Enter(hero, region, offset);

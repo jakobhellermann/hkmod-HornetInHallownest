@@ -1,3 +1,4 @@
+#if HK1512620
 extern alias Silksong;
 using System;
 using System.Collections.Generic;
@@ -143,3 +144,4 @@ public sealed class VibrationBridgeModule : ModuleBase {
         public override void Stop() => inner.Stop();
     }
 }
+#endif

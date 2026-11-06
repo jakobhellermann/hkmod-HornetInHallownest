@@ -12,9 +12,15 @@ public sealed class GameObjectLookupModule : ModuleBase {
     public override string Id => "unity-lookup";
 
     public override void Initialize() {
+#if HK1578
+        // GameObject.CompareTag / FindGameObjectWithTag are internal calls on Unity 2020; hook the managed entry points.
+        Detour(typeof(Component), "CompareTag", OnComponentCompareTag, typeof(string));
+        Detour(typeof(GameObject), "FindWithTag", OnFindWithTag, typeof(string));
+#else
         Detour(typeof(GameObject), "CompareTag", OnCompareTag, typeof(string));
-        Detour(typeof(GameObject), "GetComponent", OnGetComponent, typeof(string));
         Detour(typeof(GameObject), "FindGameObjectWithTag", OnFindWithTag, typeof(string));
+#endif
+        Detour(typeof(GameObject), "GetComponent", OnGetComponent, typeof(string));
     }
 
     private static bool OnCompareTag(Func<GameObject, string, bool> orig, GameObject self, string tag) {
@@ -25,6 +31,12 @@ public sealed class GameObjectLookupModule : ModuleBase {
 
         return orig(self, tag);
     }
+
+#if HK1578
+    private static bool OnComponentCompareTag(Func<Component, string, bool> orig, Component self, string tag) {
+        return tag == RecoilerTag || orig(self, tag);
+    }
+#endif
 
     // A string GetComponent resolves to the HK type only, so it misses Hornet's Silksong component. Fall back to a
     // by-name scan of the object's own components.

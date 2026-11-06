@@ -71,7 +71,9 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
     private float rangeEntryTime = -1f;
     private readonly object inputBlocker = new();
     private string? enteringScene;
+#if HK1512620
     private ForceCameraAspect? zoomedCamera;
+#endif
     private static string? drainEndScene;
 
     public override string Id => "needolin-dreamnail";
@@ -112,8 +114,10 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         SetMemoryInRange(false);
         UnityEngine.SceneManagement.SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         dreamEntrances.Clear();
+#if HK1512620
         if (zoomedCamera) zoomedCamera!.SetFovOffset(0f, 0f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
         zoomedCamera = null;
+#endif
         enteringScene = null;
     }
 
@@ -253,16 +257,21 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
     private void EndDreamEntry(Silksong::HeroController hero) {
         enteringScene = null;
         hero.RemoveInputBlocker(inputBlocker);
+#if HK1512620
         if (zoomedCamera) zoomedCamera!.SetFovOffset(0f, 0f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
         zoomedCamera = null;
+#endif
     }
 
     private void ZoomCamera(float offset, float time) {
+        // HK 1.5.78's camera has no FOV offset.
+#if HK1512620
         var cameras = GameCameras.instance;
         var camera = cameras ? cameras.tk2dCam.GetComponent<ForceCameraAspect>() : null;
         if (!camera) return;
         zoomedCamera = camera;
         camera.SetFovOffset(offset, time, AnimationCurve.EaseInOut(0f, 0f, 1f, 1f));
+#endif
     }
 
     private void ArmImpact() {

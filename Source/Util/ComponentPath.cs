@@ -41,7 +41,7 @@ public sealed class Field(string name, int? index = null) {
     }
 
     public override int GetHashCode() {
-        return HashCode.Combine(Name, Index);
+        return (Name, Index).GetHashCode();
     }
 }
 
@@ -75,7 +75,7 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
     }
 
     public override int GetHashCode() {
-        return HashCode.Combine(Segments.Count, Component);
+        return (Segments.Count, Component).GetHashCode();
     }
 
     /// Parse a [ComponentPath]. Throws [FormatException] on malformed input.
@@ -221,7 +221,7 @@ public sealed class ComponentPath(IReadOnlyList<Field> segments, Field? componen
     }
 
     private static IEnumerable<GameObject> AllGameObjects() {
-        return Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        return UnityApi.FindAll<GameObject>(true);
     }
 
     private static IEnumerable<GameObject> SiblingsOf(GameObject go) {
