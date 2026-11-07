@@ -118,6 +118,10 @@ internal static class GameCamerasBootstrap {
                 blur++;
             }
 
+            // Full-screen overlay used by Silksong's scene Remaskers, unused
+            foreach (var m in inst.GetComponentsInChildren<Silksong::MaskerBlackout>(true))
+                m.gameObject.SetActive(false);
+
 #if HK1578
             // Their shaders are unsupported on Unity 2020: OnEnable disables them again and OnDisable NullRefs.
             foreach (var e in inst.GetComponentsInChildren<Silksong::UnityStandardAssets.ImageEffects.PostEffectsBase>(true))
