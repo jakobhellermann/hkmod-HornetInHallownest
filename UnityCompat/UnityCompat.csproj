@@ -6,6 +6,7 @@
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <NoWarn>CS0436;CS0649</NoWarn>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <!-- Dont let a commit hash lead to reinstalls in SilksongSetup -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>

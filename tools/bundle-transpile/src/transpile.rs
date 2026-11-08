@@ -6,12 +6,26 @@ use rabex::files::bundlefile::{BundleFileReader, CompressionType, ExtractionConf
 use rabex::typetree::typetree_cache::sync::TypeTreeCache;
 
 use anyhow::Result;
+use rabex::objects::ClassId;
+
+#[derive(serde::Deserialize)]
+#[allow(non_snake_case)]
+struct ShaderName {
+    m_ParsedForm: ParsedFormName,
+}
+
+#[derive(serde::Deserialize)]
+#[allow(non_snake_case)]
+struct ParsedFormName {
+    m_Name: String,
+}
 
 pub fn transpile(
     bundle: &Path,
     from_version: &UnityVersion,
     to_version: &UnityVersion,
 ) -> Result<Vec<u8>> {
+    let bundle_name = bundle.file_name().unwrap_or_default().display().to_string();
     let bundle = Cursor::new(std::fs::read(bundle)?);
     let bundle = BundleFileReader::from_reader(
         bundle,
@@ -31,6 +45,12 @@ pub fn transpile(
         Some(&to_version),
         |name, rewrite| {
             dbg!(name);
+            for info in rewrite.source.objects() {
+                if info.m_ClassID == ClassId::Shader {
+                    let shader: ShaderName = rewrite.source.read(info)?;
+                    eprintln!("[shader] {bundle_name} {name} {} {}", info.m_PathID, shader.m_ParsedForm.m_Name);
+                }
+            }
 
             let retarget = rabex_convert::retarget::Retarget {
                 to: to_version.clone(),

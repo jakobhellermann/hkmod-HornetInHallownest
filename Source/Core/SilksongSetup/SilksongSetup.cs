@@ -23,12 +23,14 @@ internal static class SilksongSetup {
         [..Installed, ..SilksongAssemblies.Hk1578PlatformDeps, ..SilksongAssemblies.ObsoleteShimFiles];
     private static string? ShimPath => Paths.ModFile($"managed/{SilksongAssemblies.Shim}.dll");
     private static string[] ShimRefs => [Paths.ModFile($"{SilksongAssemblies.RepackerBindings}.dll")];
+    private static string[] NativeFiles => SilksongAssemblies.ShimNativeFiles;
 #else
     private static string[] Deps => SilksongAssemblies.Deps;
     private static string[] Installed => [..Deps, ..SilksongAssemblies.Prefixed];
     private static string[] Removable => Installed;
     private static string? ShimPath => null;
     private static string[] ShimRefs => [];
+    private static string[] NativeFiles => [];
 #endif
 
     // True if already installed, false if actions were taken and a restart is needed.
@@ -54,16 +56,19 @@ internal static class SilksongSetup {
         private const string FingerprintFile = "Silksong.support.fingerprint";
 
         public bool IsCurrent(string fingerprint) =>
-            ReadOrNull($"{managed}/{FingerprintFile}") == fingerprint && Installed.All(n => File.Exists($"{managed}/{n}.dll"));
+            ReadOrNull($"{managed}/{FingerprintFile}") == fingerprint && Installed.All(n => File.Exists($"{managed}/{n}.dll"))
+            && NativeFiles.All(n => File.Exists($"{managed}/{n}"));
 
         public void Reinstall(string fingerprint) {
             Clean();
             SilksongAssemblyBuilder.Build(Paths.SilksongManagedDir, managed, Deps, ShimPath, ShimRefs, managed, Log.Debug);
+            foreach (var name in NativeFiles) File.Copy(Paths.ModFile($"managed/{name}"), $"{managed}/{name}", overwrite: true);
             File.WriteAllText($"{managed}/{FingerprintFile}", fingerprint);
         }
 
         private void Clean() {
             foreach (var name in Removable) Remove($"{managed}/{name}.dll");
+            foreach (var name in NativeFiles) Remove($"{managed}/{name}");
             foreach (var path in Directory.GetFiles(managed, "Silksong.*.dll")) Remove(path);
         }
 
@@ -102,8 +107,12 @@ internal static class SilksongSetup {
     // A changed shim needs a reinstall even when the mod version stays the same.
     private static string ShimHash() {
         using var sha = System.Security.Cryptography.SHA256.Create();
-        var bytes = File.ReadAllBytes(Paths.ModFile($"managed/{SilksongAssemblies.Shim}.dll"));
-        return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "");
+        foreach (var file in NativeFiles.Prepend($"{SilksongAssemblies.Shim}.dll")) {
+            var bytes = File.ReadAllBytes(Paths.ModFile($"managed/{file}"));
+            sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
+        }
+        sha.TransformFinalBlock([], 0, 0);
+        return BitConverter.ToString(sha.Hash).Replace("-", "");
     }
 #endif
 

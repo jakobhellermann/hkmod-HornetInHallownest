@@ -144,6 +144,24 @@
         </ItemGroup>
     </Target>
 
+    <!-- HK 1.5.78: Native bundle transpiler P/Invoked by UnityCompat, installed into Managed next to it -->
+    <Target Name="BuildBundleTranspile" BeforeTargets="BeforeBuild" Condition="'$(TargetFramework)' == 'hk1578'">
+        <PropertyGroup>
+            <BundleTranspileManifest>$(MSBuildProjectDirectory)/../tools/bundle-transpile/Cargo.toml</BundleTranspileManifest>
+        </PropertyGroup>
+        <Exec Command="cargo build --release --manifest-path &quot;$(BundleTranspileManifest)&quot;"/>
+        <!-- The target dir can be relocated by cargo config, so ask cargo for it -->
+        <Exec Command="cargo metadata --format-version 1 --no-deps --manifest-path &quot;$(BundleTranspileManifest)&quot;" ConsoleToMSBuild="true" StandardOutputImportance="low">
+            <Output TaskParameter="ConsoleOutput" PropertyName="BundleTranspileMetadata"/>
+        </Exec>
+        <PropertyGroup>
+            <BundleTranspileTargetDir>$([System.Text.RegularExpressions.Regex]::Match($(BundleTranspileMetadata), '"target_directory":"([^"]*)"').Groups[1].Value.Replace('\\', '/'))</BundleTranspileTargetDir>
+        </PropertyGroup>
+        <ItemGroup>
+            <ManagedInstallFile Include="$(BundleTranspileTargetDir)/release/libbundle_transpile.so"/>
+        </ItemGroup>
+    </Target>
+
     <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(ModsDir)' != '' And Exists('$(ModsDir)')">
         <PropertyGroup>
             <CopyDir>$(ModsDir)/HornetInHallownest</CopyDir>

@@ -16,6 +16,9 @@ internal static class SilksongAssemblies {
     // Installed next to the shim by v1.0.0.
     internal static readonly string[] ObsoleteShimFiles = ["AssetsTools.NET"];
 
+    // Native libraries the shim P/Invokes, shipped next to it.
+    internal static readonly string[] ShimNativeFiles = ["libbundle_transpile.so"];
+
     // Silksong assemblies HK lacks, installed under their own name.
     internal static readonly string[] Deps = [
         "Unity.Addressables",
