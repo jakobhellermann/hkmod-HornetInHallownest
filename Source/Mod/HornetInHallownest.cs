@@ -118,9 +118,6 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         HeroSwitch.Install();
 
         InputModule.Settings = globalSettings.Controls; // apply the loaded key bindings before the module reads them
-#if HK1578
-        moduleHost.Add(new ShaderFallbackModule()); // first: snapshots HK's shaders before any Silksong content loads
-#endif
         moduleHost.Add(new InputModule()); // before any module reads input actions
         moduleHost.Add(new PlayerLoopModule());
         moduleHost.Add(new LanguageSyncModule());

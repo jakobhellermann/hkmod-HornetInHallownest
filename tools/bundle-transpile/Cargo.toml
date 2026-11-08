@@ -1,0 +1,24 @@
+[package]
+name = "bundle-transpile"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rabex = { version = "0.2", default-features = false, features = ["embed-tpk"] }
+rabex-convert = { git = "https://github.com/jakobhellermann/rabex-env", branch = "convert" }
+rabex-shader = { git = "https://github.com/jakobhellermann/rabex-env", branch = "convert" }
+rabex-shader-convert = { git = "https://github.com/jakobhellermann/rabex-env", branch = "convert" }
+anyhow = "1.0"
+
+[patch.crates-io]
+rabex = { path = "/home/jakob/dev/unity/RustyAssetBundleEXtractor" }
+[patch."https://github.com/jakobhellermann/rabex-env"]
+rabex-convert = { path = "/home/jakob/dev/unity/rabex-env/crates/rabex-convert" }
+rabex-shader = { path = "/home/jakob/dev/unity/rabex-env/crates/rabex-shader" }
+rabex-shader-convert = { path = "/home/jakob/dev/unity/rabex-env/crates/rabex-shader-convert" }
+
+[build-dependencies]
+csbindgen = "1.9"
