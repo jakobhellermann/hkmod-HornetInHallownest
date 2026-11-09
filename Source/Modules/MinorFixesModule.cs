@@ -49,7 +49,7 @@ public sealed class MinorFixesModule : ModuleBase {
     public override string Id => "minor-fixes";
 
     public override void Initialize() {
-        host = Object.FindAnyObjectByType<HornetRuntime>();
+        host = UnityApi.FindAny<HornetRuntime>();
         Detour(typeof(MonoBehaviour), "StartCoroutine", OnStartCoroutine, typeof(IEnumerator));
         Detour(typeof(Silksong::GameManager), "FreezeMoment", OnFreezeMoment, typeof(SFreeze), typeof(Action));
         Detour(typeof(Silksong::HeroController), "RelinquishControl", OnRelinquishControl);
@@ -142,7 +142,7 @@ public sealed class MinorFixesModule : ModuleBase {
         var right = side == SCollisionSide.right;
         var x = right ? bounds.max.x - 0.1f : bounds.min.x + 0.1f;
         var direction = right ? Vector2.right : Vector2.left;
-        var distance = 0.13f + Mathf.Abs(body.linearVelocity.x * Time.deltaTime);
+        var distance = 0.13f + Mathf.Abs(body.GetVelocity().x * Time.deltaTime);
         var highY = bounds.max.y + Physics2D.defaultContactOffset * 2f + 0.001f;
         hitHighWall = HitsWall(new Vector2(x, highY), direction, filter, distance);
         hitWall = hitHighWall || HitsWall(new Vector2(x, bounds.min.y + 0.2f), direction, filter, distance);
@@ -178,7 +178,7 @@ public sealed class MinorFixesModule : ModuleBase {
         foreach (var root in scene.GetRootGameObjects())
         foreach (var edge in root.GetComponentsInChildren<EdgeCollider2D>(true)) {
             var local = edge.points;
-            if (edge.gameObject.layer != (int)PhysLayers.TERRAIN || local.Length < 4 || local[0] != local[^1]) continue;
+            if (edge.gameObject.layer != (int)PhysLayers.TERRAIN || local.Length < 4 || local[0] != local[local.Length - 1]) continue;
             var points = local.Select(p => (Vector2)edge.transform.TransformPoint(p + edge.offset)).ToArray();
             var min = new Vector2(points.Min(p => p.x), points.Min(p => p.y));
             var max = new Vector2(points.Max(p => p.x), points.Max(p => p.y));

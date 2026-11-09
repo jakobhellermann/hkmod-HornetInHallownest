@@ -5,7 +5,11 @@ using System.Collections.Generic;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
 using UnityEngine;
+#if HK1578
+using HkLanguage = Language.Language;
+#else
 using HkLanguage = TeamCherry.Localization.Language;
+#endif
 using SCollectableItem = Silksong::CollectableItem;
 using SLocalisedString = SilksongLoc::TeamCherry.Localization.LocalisedString;
 
@@ -140,7 +144,7 @@ internal sealed class HkCollectableItem : SCollectableItem {
         if (spritesByName == null) {
             spritesByName = [];
             foreach (var sprite in Resources.FindObjectsOfTypeAll<Sprite>())
-                spritesByName.TryAdd(sprite.name, sprite);
+                if (!spritesByName.ContainsKey(sprite.name)) spritesByName[sprite.name] = sprite;
         }
 
         return spritesByName.TryGetValue(Info.SpriteName(PlayerData.instance), out var found) ? found : null!;

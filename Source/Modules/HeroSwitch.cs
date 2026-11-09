@@ -65,7 +65,7 @@ internal static class HeroSwitch {
         if (!hornetGo || !knightGo) return;
         knightGo.transform.position = hornetGo.transform.position;
         var rb = knightGo.GetComponent<Rigidbody2D>();
-        if (rb && rb.simulated) rb.linearVelocity = Vector2.zero;
+        if (rb && rb.simulated) rb.SetVelocity(Vector2.zero);
     }
 
     // The dev server routes on the debug branch also call Toggle and return its result.
@@ -105,7 +105,7 @@ internal static class HeroSwitch {
             if (newT && oldT && newT != oldT) {
                 newT.position = oldT.position;
                 var rb = newT.GetComponent<Rigidbody2D>();
-                if (rb && rb.simulated) rb.linearVelocity = Vector2.zero;
+                if (rb && rb.simulated) rb.SetVelocity(Vector2.zero);
             }
         }
 

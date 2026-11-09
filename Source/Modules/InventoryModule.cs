@@ -16,20 +16,51 @@ public sealed class InventoryModule : ModuleBase {
     public override string Id => "inventory";
 
     // HK's own inventory, which Hornet reaches through its map shortcut (double-tapping quick map).
+#if HK1512620
     internal static bool HkInventoryOpen { get; private set; }
+#else
+    private static PlayMakerFSM? hkInventoryFsm;
+    private static HutongGames.PlayMaker.FsmBool? hkInventoryFsmOpen;
+
+    // HK 1.5.78's inventory FSM tracks being open only in its own "Open" variable.
+    internal static bool HkInventoryOpen {
+        get {
+            var gm = GameManager.UnsafeInstance;
+            if (gm == null || gm.inventoryFSM == null) return false;
+            if (gm.inventoryFSM != hkInventoryFsm) {
+                hkInventoryFsm = gm.inventoryFSM;
+                hkInventoryFsmOpen = hkInventoryFsm.FsmVariables.GetFsmBool("Open");
+            }
+            return hkInventoryFsmOpen!.Value;
+        }
+    }
+#endif
 
     public override void Initialize() {
         Detour(typeof(Silksong::GameManager), "SetIsInventoryOpen", OnSetInventoryOpen);
+#if HK1512620
         Detour(typeof(GameManager), "SetIsInventoryOpen", OnSetHkInventoryOpen);
+#else
+        // Silksong's frozen-camera view (a blurred snapshot sized from its own, disabled camera) can't render on Unity
+        // 2020. The world is paused anyway, so skip it and let the game keep rendering behind the inventory.
+        Detour(typeof(Silksong::DisplayFrozenCamera), "Freeze",
+            (Action<Action<Silksong::DisplayFrozenCamera>, Silksong::DisplayFrozenCamera>)((_, _) => { }));
+        Detour(typeof(Silksong::DisplayFrozenCamera), "Unfreeze",
+            (Action<Action<Silksong::DisplayFrozenCamera>, Silksong::DisplayFrozenCamera>)((_, _) => { }));
+#endif
     }
 
+#if HK1512620
     private static void OnSetHkInventoryOpen(Action<GameManager, bool> orig, GameManager self, bool value) {
         HkInventoryOpen = value;
         orig(self, value);
     }
+#endif
 
     protected override void OnDeinitialize() {
+#if HK1512620
         HkInventoryOpen = false;
+#endif
         // A hot-reload with the inventory open leaves the world frozen, HK's main camera off (DisplayFrozenCamera.Freeze)
         // and isInventoryOpen stuck (-> IsPaused -> CanInput false -> hero stuck).
         if (Time.timeScale == 0f) Time.timeScale = prevTimeScale;

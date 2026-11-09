@@ -3,7 +3,11 @@ using System;
 using System.Reflection;
 using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
+using HornetInHallownest.Core.SilksongSetup;
 using HornetInHallownest.Modules;
+#if HK1578
+using HornetInHallownest.Modules.Hk1578;
+#endif
 using HornetInHallownest.Save;
 using Modding;
 using UnityEngine;
@@ -105,6 +109,10 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         var host = playgroundHost.AddComponent<HornetRuntime>();
         ModuleBase.Runtime = host;
 
+#if HK1578
+        ShaderFallbackModule.SnapshotHostShaders(); // before any Silksong content loads
+#endif
+
         // must run before any silksong code attempts to access addressables, since one failure permanently poisons the addressables somehow
         SilksongAddressables.EnsureMounted();
         SilksongResources.Install();
@@ -121,6 +129,11 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         moduleHost.Add(new PogoModule());
         moduleHost.Add(new AnimationRemapModule());
         moduleHost.Add(new MinorFixesModule());
+#if HK1578
+        moduleHost.Add(new AnimatorSafetyModule());
+        moduleHost.Add(new GateFacingModule());
+        moduleHost.Add(new ShaderFallbackModule());
+#endif
         moduleHost.Add(new PlayerDataSyncModule());
         moduleHost.Add(new ProgressionModule());
         moduleHost.Add(new ToolCharmBridgeModule());
@@ -128,7 +141,9 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         moduleHost.Add(new EssenceCounterModule());
         moduleHost.Add(new FsmLookupModule());
         moduleHost.Add(new HeroSfxModule());
+#if HK1512620
         moduleHost.Add(new VibrationBridgeModule());
+#endif
         moduleHost.Add(new HitBridgeModule());
         moduleHost.Add(new GameObjectLookupModule());
         moduleHost.Add(new ConveyorModule());

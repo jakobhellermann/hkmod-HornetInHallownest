@@ -71,3 +71,11 @@ pub fn find_game(name_filter: &str) -> Result<Option<Environment>> {
 
     Ok(Some(env))
 }
+
+/// TARGET_UNITY_VERSION, else the source version: Unity refuses bundles declaring a different engine version.
+pub fn target_unity_version(source: &rabex::UnityVersion) -> rabex::UnityVersion {
+    match std::env::var("TARGET_UNITY_VERSION") {
+        Ok(v) if !v.trim().is_empty() => v.trim().parse().expect("invalid TARGET_UNITY_VERSION"),
+        _ => source.clone(),
+    }
+}

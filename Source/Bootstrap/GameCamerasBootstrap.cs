@@ -118,6 +118,16 @@ internal static class GameCamerasBootstrap {
                 blur++;
             }
 
+            // Full-screen overlay used by Silksong's scene Remaskers, unused
+            foreach (var m in inst.GetComponentsInChildren<Silksong::MaskerBlackout>(true))
+                m.gameObject.SetActive(false);
+
+#if HK1578
+            // Their shaders are unsupported on Unity 2020: OnEnable disables them again and OnDisable NullRefs.
+            foreach (var e in inst.GetComponentsInChildren<Silksong::UnityStandardAssets.ImageEffects.PostEffectsBase>(true))
+                e.enabled = false;
+#endif
+
             // UIManager singleton the HUD FSMs deref during Awake/Start, before activation (PlayerData/GlobalSettings
             // already seeded earlier in SpawnReal).
             UIManagerBootstrap.Ensure();
@@ -160,7 +170,7 @@ internal static class GameCamerasBootstrap {
         foreach (var mso in root.GetComponentsInChildren<Silksong::MeshSortingOrder>(true)) {
             var id = (int)(layerIdF.GetValue(mso) ?? 0);
             if (SortingLayer.IsValid(id)) continue;
-            var hkId = SortingLayer.NameToID(ssSortingLayerNames.GetValueOrDefault(id, "HUD"));
+            var hkId = SortingLayer.NameToID(ssSortingLayerNames.TryGetValue(id, out var nm) ? nm : "HUD");
             layerIdF.SetValue(mso, hkId);
             var rend = mso.GetComponent<MeshRenderer>();
             if (rend != null) rend.sortingLayerID = hkId;
@@ -234,8 +244,7 @@ internal static class GameCamerasBootstrap {
         // Awakes log "...button skins before the Input Handler is ready". Call SetupRefs directly on the inactive rig's
         // instances (gm.inputHandler is already wired; SetupRefs only sets ih + subscribes an event).
         try {
-            var skins = Object.FindObjectsByType<Silksong::UIButtonSkins>(
-                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var skins = UnityApi.FindAll<Silksong::UIButtonSkins>(true);
             foreach (var s in skins) s.InvokeMethod("SetupRefs");
             Log.Debug($"[HUD] wired UIButtonSkins.ih on {skins.Length} instance(s) before HUD activation");
         } catch (Exception e) {
