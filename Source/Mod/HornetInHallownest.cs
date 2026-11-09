@@ -131,6 +131,7 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         moduleHost.Add(new MinorFixesModule());
 #if HK1578
         moduleHost.Add(new AnimatorSafetyModule());
+        moduleHost.Add(new GateFacingModule());
         moduleHost.Add(new ShaderFallbackModule());
 #endif
         moduleHost.Add(new PlayerDataSyncModule());
