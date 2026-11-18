@@ -32,7 +32,7 @@ internal sealed class HkmpLink : IHkmpLink {
     private Silksong::HeroController? trackedHornet;
     private tk2dSpriteAnimator? hornetAnimator;
     private tk2dSpriteAnimation? hornetLibrary;
-    private Transform[] localEffects = [];
+    private EffectObject[] localEffects = [];
     private EffectState?[] sentEffects = [];
     private readonly Dictionary<tk2dSpriteAnimator, int> animatorTargets = new(ReferenceComparer<tk2dSpriteAnimator>.Instance);
 
@@ -95,7 +95,7 @@ internal sealed class HkmpLink : IHkmpLink {
         animatorTargets.Clear();
         animatorTargets[animator] = 0;
         for (var i = 0; i < localEffects.Length; i++)
-            if (localEffects[i].GetComponent<tk2dSpriteAnimator>() is { } effectAnimator)
+            if (localEffects[i].Animator is { } effectAnimator)
                 animatorTargets[effectAnimator] = i + 1;
     }
 
@@ -167,7 +167,7 @@ internal sealed class HkmpLink : IHkmpLink {
             }
         }
 
-        var payload = new BitWriter(38).Write(address.library, 32).Write((uint)target, 6).ToArray();
+        var payload = new BitWriter(42).Write(address.library, 32).Write((uint)target, 10).ToArray();
         internals.SendAnimationEntry((ushort)(HornetClipBase + address.index), frame, payload);
     }
 
@@ -189,7 +189,7 @@ internal sealed class HkmpLink : IHkmpLink {
 
         var reader = new BitReader(payload!);
         var fingerprint = reader.Read(32);
-        var target = (int)reader.Read(6);
+        var target = (int)reader.Read(10);
         if (!librariesByFingerprint.TryGetValue(fingerprint, out var library)) {
             // A peer on another Silksong build misses on every clip: index at most once per scene for it.
             if (missingFingerprints.Contains(fingerprint)) return true;
