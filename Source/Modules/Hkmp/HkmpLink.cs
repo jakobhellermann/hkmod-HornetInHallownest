@@ -1,8 +1,8 @@
 #if HK1578
 extern alias Silksong;
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Hkmp.Api.Client;
 using HornetInHallownest.Util;
 using MonoMod.RuntimeDetour;
@@ -14,8 +14,12 @@ namespace HornetInHallownest.Modules.Hkmp;
 // Send hornet animation clips as HKMP animation updates with ids past the HK clip enum, ignored by vanilla HKMP clients.
 // Draw remote hornets using HKMP's player object with hornets' library.
 internal sealed class HkmpLink : IHkmpLink {
-    // id = HornetClipBase + index of the clip in its library, payload = that library's fingerprint.
+    // id = HornetClipBase + index of the clip in its library, payload = library fingerprint and the animator
+    // (0 = Hornet, n = effect entry n - 1).
     private const int HornetClipBase = 0xC000;
+
+    // id = EffectBase + effect entry, payload = EffectState.
+    private const int EffectBase = 0xF000;
 
     // HKMP's "Username" object sits 1.25 above the Knight's pivot; Hornet is taller.
     private const string UsernameObjectName = "Username";
@@ -28,6 +32,9 @@ internal sealed class HkmpLink : IHkmpLink {
     private Silksong::HeroController? trackedHornet;
     private tk2dSpriteAnimator? hornetAnimator;
     private tk2dSpriteAnimation? hornetLibrary;
+    private Transform[] localEffects = [];
+    private EffectState?[] sentEffects = [];
+    private readonly Dictionary<tk2dSpriteAnimator, int> animatorTargets = new(ReferenceComparer<tk2dSpriteAnimator>.Instance);
 
     private readonly Dictionary<tk2dSpriteAnimationClip, (uint library, ushort index)> clipAddresses = new();
     private readonly Dictionary<uint, tk2dSpriteAnimation> librariesByFingerprint = new();
@@ -61,19 +68,19 @@ internal sealed class HkmpLink : IHkmpLink {
         if (!internals.Connected || HeroSwitch.BothActive) return;
         internals.PublishLocalHero(hero.transform);
         FollowOwnName(hero.transform);
+        SendEffectChanges(hero.transform);
     }
 
     public void HornetToggled(bool active) {
-        if (!active) ReleaseOwnName();
-        if (!internals.Connected) return;
         // A switch resumes the incoming hero's animator without playing a clip, so nothing would be sent until she moves.
         if (!active) {
-            internals.SendKnightClip();
+            ReleaseOwnName();
+            if (internals.Connected) internals.SendKnightClip();
             return;
         }
 
         TrackLocalHornet(HornetSpawner.Hornet!);
-        SendCurrentClip();
+        if (internals.Connected) ResendHornetState();
     }
 
     private void TrackLocalHornet(Silksong::HeroController hero) {
@@ -82,6 +89,23 @@ internal sealed class HkmpLink : IHkmpLink {
         var animator = hero.GetComponent<tk2dSpriteAnimator>();
         hornetAnimator = animator;
         hornetLibrary = animator.Library;
+
+        localEffects = HornetEffects.Resolve(hero.transform);
+        sentEffects = new EffectState?[localEffects.Length];
+        animatorTargets.Clear();
+        animatorTargets[animator] = 0;
+        for (var i = 0; i < localEffects.Length; i++)
+            if (localEffects[i].GetComponent<tk2dSpriteAnimator>() is { } effectAnimator)
+                animatorTargets[effectAnimator] = i + 1;
+    }
+
+    private void SendEffectChanges(Transform hero) {
+        for (var i = 0; i < localEffects.Length; i++) {
+            var state = EffectState.Capture(localEffects[i], hero);
+            if (sentEffects[i] == state) continue;
+            sentEffects[i] = state;
+            internals.SendAnimationEntry((ushort)(EffectBase + i), 0, state.Encode());
+        }
     }
 
     private void FollowOwnName(Transform hero) {
@@ -110,7 +134,7 @@ internal sealed class HkmpLink : IHkmpLink {
 
     private void OnAnimatorPlay(Action<tk2dSpriteAnimator, tk2dSpriteAnimationClip?, float, float> orig,
         tk2dSpriteAnimator self, tk2dSpriteAnimationClip? clip, float clipStartTime, float overrideFps) {
-        if (!ReferenceEquals(self, hornetAnimator) || clip == null) {
+        if (clip == null || !animatorTargets.TryGetValue(self, out var target)) {
             orig(self, clip, clipStartTime, overrideFps);
             return;
         }
@@ -118,20 +142,22 @@ internal sealed class HkmpLink : IHkmpLink {
         var restarts = clipStartTime != 0f || !self.IsPlaying(clip);
         orig(self, clip, clipStartTime, overrideFps);
         if (restarts && HeroSwitch.HornetActive && internals.Connected)
-            SendClip(clip, (int)(clipStartTime * (overrideFps > 0f ? overrideFps : clip.fps)));
+            SendClip(clip, (int)(clipStartTime * (overrideFps > 0f ? overrideFps : clip.fps)), target);
     }
 
     private void OnPlayerEnterScene(IClientPlayer player) {
         // A player who just appeared in our scene (or whose scene we entered) only knows the Knight's clip.
-        if (HeroSwitch.HornetActive) SendCurrentClip();
+        if (HeroSwitch.HornetActive) ResendHornetState();
     }
 
-    private void SendCurrentClip() {
+    // The current clip now, the effects with the next HornetActiveUpdate.
+    private void ResendHornetState() {
         var animator = hornetAnimator;
-        if (animator && animator!.CurrentClip is { } clip) SendClip(clip, animator.CurrentFrame);
+        if (animator && animator!.CurrentClip is { } clip) SendClip(clip, animator.CurrentFrame, 0);
+        Array.Clear(sentEffects, 0, sentEffects.Length);
     }
 
-    private void SendClip(tk2dSpriteAnimationClip clip, int frame) {
+    private void SendClip(tk2dSpriteAnimationClip clip, int frame, int target) {
         if (!clipAddresses.TryGetValue(clip, out var address)) {
             IndexLoadedLibraries();
             if (!clipAddresses.TryGetValue(clip, out address)) {
@@ -141,7 +167,8 @@ internal sealed class HkmpLink : IHkmpLink {
             }
         }
 
-        internals.SendAnimationEntry((ushort)(HornetClipBase + address.index), frame, ToBits(address.library));
+        var payload = new BitWriter(38).Write(address.library, 32).Write((uint)target, 6).ToArray();
+        internals.SendAnimationEntry((ushort)(HornetClipBase + address.index), frame, payload);
     }
 
     private bool OnAnimationEntry(ushort playerId, int id, int frame, bool[]? payload) {
@@ -150,7 +177,19 @@ internal sealed class HkmpLink : IHkmpLink {
             return false;
         }
 
-        var fingerprint = FromBits(payload!);
+        var remote = RemoteHornetFor(playerId);
+        if (id >= EffectBase) {
+            var entry = id - EffectBase;
+            if (entry >= HornetEffects.Entries.Length)
+                Log.ErrorOnce($"hkmp-effect:{entry}", $"[hkmp] player {playerId} sent unknown effect {entry} (different mod version?)");
+            else
+                remote.Effects.Apply(entry, EffectState.Decode(payload!));
+            return true;
+        }
+
+        var reader = new BitReader(payload!);
+        var fingerprint = reader.Read(32);
+        var target = (int)reader.Read(6);
         if (!librariesByFingerprint.TryGetValue(fingerprint, out var library)) {
             // A peer on another Silksong build misses on every clip: index at most once per scene for it.
             if (missingFingerprints.Contains(fingerprint)) return true;
@@ -163,18 +202,23 @@ internal sealed class HkmpLink : IHkmpLink {
             }
         }
 
-        if (!remoteHornets.TryGetValue(playerId, out var remote)) {
-            var player = api.ClientManager.GetPlayer(playerId);
-            var animator = player.PlayerObject.GetComponent<tk2dSpriteAnimator>();
-            var name = player.PlayerContainer.transform.Find(UsernameObjectName);
-            remote = new RemoteHornet(player.PlayerObject, animator, animator.Library, name, name.localPosition);
-            remoteHornets[playerId] = remote;
-            animator.Library = HornetLibrary();
-            name.localPosition = new Vector3(name.localPosition.x, HornetNameHeight, name.localPosition.z);
-        }
-
-        remote.Animator.PlayFromFrame(library.clips[id - HornetClipBase], frame);
+        var targetAnimator = target == 0 ? remote.Animator : remote.Effects.Animator(target - 1)!;
+        targetAnimator.PlayFromFrame(library.clips[id - HornetClipBase], frame);
         return true;
+    }
+
+    private RemoteHornet RemoteHornetFor(ushort playerId) {
+        if (remoteHornets.TryGetValue(playerId, out var remote)) return remote;
+
+        var player = api.ClientManager.GetPlayer(playerId);
+        var animator = player.PlayerObject.GetComponent<tk2dSpriteAnimator>();
+        var name = player.PlayerContainer.transform.Find(UsernameObjectName);
+        var effects = new RemoteEffects(player.PlayerObject.transform, HornetSpawner.HeroPrefab.transform);
+        remote = new RemoteHornet(player.PlayerObject, animator, animator.Library, name, name.localPosition, effects);
+        remoteHornets[playerId] = remote;
+        animator.Library = HornetLibrary();
+        name.localPosition = new Vector3(name.localPosition.x, HornetNameHeight, name.localPosition.z);
+        return remote;
     }
 
     private void ForgetMissingLibraries(Scene from, Scene to) => missingFingerprints.Clear();
@@ -220,25 +264,11 @@ internal sealed class HkmpLink : IHkmpLink {
         
         if (remote.Animator) remote.Animator.Library = remote.KnightLibrary;
         if (remote.Name) remote.Name.localPosition = remote.NameLocalPosition;
+        remote.Effects.Destroy();
     }
 
     private void RestoreAllKnights() {
         foreach (var id in new List<ushort>(remoteHornets.Keys)) RestoreKnight(id);
-    }
-
-    private static bool[] ToBits(uint value) {
-        // HKMP mis-serializes effect info whose length is a multiple of 8 (or one short of it), shifting the rest of
-        // the packet: pad to 33.
-        // https://github.com/Extremelyd1/HKMP/blob/f7c35d96f84c3d7b671fc4283795a07b4df97227/HKMP/Networking/Packet/Data/PlayerUpdate.cs#L127
-        var bits = new bool[33];
-        new BitArray([(int)value]).CopyTo(bits, 0);
-        return bits;
-    }
-
-    private static uint FromBits(bool[] bits) {
-        var value = new int[2];
-        new BitArray(bits).CopyTo(value, 0);
-        return (uint)value[0];
     }
 
     public void Dispose() {
@@ -258,6 +288,13 @@ internal sealed class HkmpLink : IHkmpLink {
         tk2dSpriteAnimator Animator,
         tk2dSpriteAnimation KnightLibrary,
         Transform Name,
-        Vector3 NameLocalPosition);
+        Vector3 NameLocalPosition,
+        RemoteEffects Effects);
+
+    private sealed class ReferenceComparer<T> : IEqualityComparer<T> where T : class {
+        internal static readonly ReferenceComparer<T> Instance = new();
+        public bool Equals(T? x, T? y) => ReferenceEquals(x, y);
+        public int GetHashCode(T obj) => RuntimeHelpers.GetHashCode(obj);
+    }
 }
 #endif
