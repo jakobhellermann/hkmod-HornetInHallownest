@@ -227,13 +227,16 @@ internal sealed class HkmpLink : IHkmpLink {
     }
 
     private static bool[] ToBits(uint value) {
-        var bits = new bool[32];
+        // HKMP mis-serializes effect info whose length is a multiple of 8 (or one short of it), shifting the rest of
+        // the packet: pad to 33.
+        // https://github.com/Extremelyd1/HKMP/blob/f7c35d96f84c3d7b671fc4283795a07b4df97227/HKMP/Networking/Packet/Data/PlayerUpdate.cs#L127
+        var bits = new bool[33];
         new BitArray([(int)value]).CopyTo(bits, 0);
         return bits;
     }
 
     private static uint FromBits(bool[] bits) {
-        var value = new int[1];
+        var value = new int[2];
         new BitArray(bits).CopyTo(value, 0);
         return (uint)value[0];
     }
