@@ -65,6 +65,13 @@
         </Reference>
     </ItemGroup>
 
+    <ItemGroup Condition="'$(TargetFramework)' == 'hk1578'">
+        <!-- Optional dependency: only touched when the HKMP mod is loaded -->
+        <Reference Include="HKMP" Private="false">
+            <HintPath>$(RefsDir)/HKMP.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+
 
     <ItemGroup>
         <!-- File source for the silksong assemblies referenced below. ExcludeAssets=compile to prevent duplicates -->
@@ -116,6 +123,8 @@
             <ShimArg Condition="'$(TargetFramework)' == 'hk1578'">--shim &quot;@(UnityCompatAssembly)&quot;</ShimArg>
         </PropertyGroup>
         <Exec Command="dotnet run -c Release --project &quot;$(MSBuildProjectDirectory)/../tools/SilksongAssemblyBuilder&quot; -- --hk &quot;$(ManagedDir)&quot; --silksong &quot;$(SilksongManaged)&quot; $(ShimArg) --out &quot;$(LocalRefs)&quot;"/>
+        <Error Condition="'$(TargetFramework)' == 'hk1578' And !Exists('$(ModsDir)/HKMP/HKMP.dll')" Text="HKMP not installed at $(ModsDir)/HKMP"/>
+        <Copy Condition="'$(TargetFramework)' == 'hk1578'" SourceFiles="$(ModsDir)/HKMP/HKMP.dll;$(ModsDir)/HKMP/HKMP.xml" DestinationFolder="$(LocalRefs)"/>
     </Target>
 
     <!-- HK 1.5.78: Build UnityCompat into mod's managed/ folder, which is installed in SilksongSetup -->

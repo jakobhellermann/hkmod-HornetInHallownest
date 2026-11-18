@@ -172,6 +172,9 @@ public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, IL
         moduleHost.Add(new SceneTransitionModule());
         moduleHost.Add(new HornetSaveBridge());
         moduleHost.Add(new HornetSpawner());
+#if HK1578
+        moduleHost.Add(new Modules.Hkmp.HkmpModule());
+#endif
         moduleHost.InitializeAll();
 
         initialized = true;

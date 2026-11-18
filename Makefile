@@ -36,7 +36,7 @@ ci-refs: local-refs
 	mkdir -p $(CI_REFS)/lib $(CI_REFS)/hk1578
 	refasmer --omit-non-api-members true -O $(CI_REFS)/lib $(LOCAL_REFS)/Silksong.*.dll
 	refasmer --omit-non-api-members true -O $(CI_REFS)/hk1578 $(LOCAL_REFS_1578)/Silksong.*.dll \
-	  $(addprefix $(LOCAL_REFS_1578)/,Unity.Addressables.dll Unity.ResourceManager.dll Newtonsoft.Json.UnityConverters.dll)
+	  $(addprefix $(LOCAL_REFS_1578)/,Unity.Addressables.dll Unity.ResourceManager.dll Newtonsoft.Json.UnityConverters.dll HKMP.dll)
 
 # Rebuild monoscripts bundle, rewriting m_AssemblyName -> Silksong.*. HK 1.5.78 keeps tk2d in its Assembly-CSharp.
 remap-monoscripts:
