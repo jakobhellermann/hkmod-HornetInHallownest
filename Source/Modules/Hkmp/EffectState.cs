@@ -5,6 +5,7 @@ namespace HornetInHallownest.Modules.Hkmp;
 
 internal readonly record struct EffectState(
     bool Active,
+    bool Visible,
     bool Detached,
     short X,
     short Y,
@@ -12,13 +13,16 @@ internal readonly record struct EffectState(
     ushort Rotation,
     short ScaleX,
     short ScaleY) {
-    private const int PayloadBits = 1 + 1 + 3 * 16 + RotationBits + 2 * 16;
+    private const int PayloadBits = 3 + 3 * 16 + RotationBits + 2 * 16;
     private const int RotationBits = 10;
     private const float PositionStep = 1f / 64;
     private const float ScaleStep = 1f / 256;
 
-    internal static EffectState Capture(Transform effect, Transform hero) {
+    internal static EffectState Capture(EffectObject effectObject, Transform hero) {
+        var effect = effectObject.Transform;
         if (!effect.gameObject.activeSelf) return default;
+        // Nail slashes stay active and toggle their renderer.
+        var visible = !effectObject.Renderer || effectObject.Renderer!.enabled;
 
         var detached = !effect.IsChildOf(hero);
         Vector3 position;
@@ -35,14 +39,14 @@ internal readonly record struct EffectState(
             scale = new Vector2(effect.lossyScale.x / heroScale.x, effect.lossyScale.y / heroScale.y);
         }
 
-        return new EffectState(true, detached,
+        return new EffectState(true, visible, detached,
             Quantize(position.x, PositionStep), Quantize(position.y, PositionStep), Quantize(position.z, PositionStep),
             (ushort)(Mathf.RoundToInt(rotation / 360f * (1 << RotationBits)) & ((1 << RotationBits) - 1)),
             Quantize(scale.x, ScaleStep), Quantize(scale.y, ScaleStep));
     }
 
     internal bool[] Encode() => new BitWriter(PayloadBits)
-        .Write(Active).Write(Detached)
+        .Write(Active).Write(Visible).Write(Detached)
         .Write((ushort)X, 16).Write((ushort)Y, 16).Write((ushort)Z, 16)
         .Write(Rotation, RotationBits)
         .Write((ushort)ScaleX, 16).Write((ushort)ScaleY, 16)
@@ -50,13 +54,14 @@ internal readonly record struct EffectState(
 
     internal static EffectState Decode(bool[] payload) {
         var r = new BitReader(payload);
-        return new EffectState(r.ReadBool(), r.ReadBool(),
+        return new EffectState(r.ReadBool(), r.ReadBool(), r.ReadBool(),
             (short)r.Read(16), (short)r.Read(16), (short)r.Read(16),
             (ushort)r.Read(RotationBits),
             (short)r.Read(16), (short)r.Read(16));
     }
 
-    internal void Apply(Transform clone, Transform playerObject) {
+    internal void Apply(EffectObject cloneObject, Transform playerObject) {
+        var clone = cloneObject.Transform;
         if (!Active) {
             clone.gameObject.SetActive(false);
             return;
@@ -75,6 +80,7 @@ internal readonly record struct EffectState(
 
         var parentScale = clone.parent.lossyScale;
         clone.localScale = new Vector3(scale.x / parentScale.x, scale.y / parentScale.y, clone.localScale.z);
+        if (cloneObject.Renderer) cloneObject.Renderer!.enabled = Visible;
         clone.gameObject.SetActive(true);
     }
 
