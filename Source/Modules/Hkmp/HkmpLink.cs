@@ -18,6 +18,9 @@ internal sealed class HkmpLink : IHkmpLink {
     // (0 = Hornet, n = effect entry n - 1).
     private const int HornetClipBase = 0xC000;
 
+    // payload = whether Hornet's own sprite is shown (off during tool animations like silkshot)
+    private const int BodyVisibleId = 0xE000;
+
     // id = EffectBase + effect entry, payload = EffectState.
     private const int EffectBase = 0xF000;
 
@@ -31,6 +34,8 @@ internal sealed class HkmpLink : IHkmpLink {
 
     private Silksong::HeroController? trackedHornet;
     private tk2dSpriteAnimator? hornetAnimator;
+    private MeshRenderer? hornetBody;
+    private bool? sentBodyVisible;
     private tk2dSpriteAnimation? hornetLibrary;
     private EffectObject[] localEffects = [];
     private EffectState?[] sentEffects = [];
@@ -68,7 +73,7 @@ internal sealed class HkmpLink : IHkmpLink {
         if (!internals.Connected || HeroSwitch.BothActive) return;
         internals.PublishLocalHero(hero.transform);
         FollowOwnName(hero.transform);
-        SendEffectChanges(hero.transform);
+        SendStateChanges(hero.transform);
     }
 
     public void HornetToggled(bool active) {
@@ -89,6 +94,8 @@ internal sealed class HkmpLink : IHkmpLink {
         var animator = hero.GetComponent<tk2dSpriteAnimator>();
         hornetAnimator = animator;
         hornetLibrary = animator.Library;
+        hornetBody = hero.GetComponent<MeshRenderer>();
+        sentBodyVisible = null;
 
         localEffects = HornetEffects.Resolve(hero.transform);
         sentEffects = new EffectState?[localEffects.Length];
@@ -99,7 +106,13 @@ internal sealed class HkmpLink : IHkmpLink {
                 animatorTargets[effectAnimator] = i + 1;
     }
 
-    private void SendEffectChanges(Transform hero) {
+    private void SendStateChanges(Transform hero) {
+        var bodyVisible = hornetBody!.enabled;
+        if (sentBodyVisible != bodyVisible) {
+            sentBodyVisible = bodyVisible;
+            internals.SendAnimationEntry(BodyVisibleId, 0, new BitWriter(1).Write(bodyVisible).ToArray());
+        }
+
         for (var i = 0; i < localEffects.Length; i++) {
             var state = EffectState.Capture(localEffects[i], hero);
             if (sentEffects[i] == state) continue;
@@ -150,11 +163,12 @@ internal sealed class HkmpLink : IHkmpLink {
         if (HeroSwitch.HornetActive) ResendHornetState();
     }
 
-    // The current clip now, the effects with the next HornetActiveUpdate.
+    // The current clip now, body visibility and effects with the next HornetActiveUpdate.
     private void ResendHornetState() {
         var animator = hornetAnimator;
         if (animator && animator!.CurrentClip is { } clip) SendClip(clip, animator.CurrentFrame, 0);
         Array.Clear(sentEffects, 0, sentEffects.Length);
+        sentBodyVisible = null;
     }
 
     private void SendClip(tk2dSpriteAnimationClip clip, int frame, int target) {
@@ -187,6 +201,11 @@ internal sealed class HkmpLink : IHkmpLink {
             return true;
         }
 
+        if (id == BodyVisibleId) {
+            remote.Body.enabled = new BitReader(payload!).ReadBool();
+            return true;
+        }
+
         var reader = new BitReader(payload!);
         var fingerprint = reader.Read(32);
         var target = (int)reader.Read(10);
@@ -214,7 +233,8 @@ internal sealed class HkmpLink : IHkmpLink {
         var animator = player.PlayerObject.GetComponent<tk2dSpriteAnimator>();
         var name = player.PlayerContainer.transform.Find(UsernameObjectName);
         var effects = new RemoteEffects(player.PlayerObject.transform, HornetSpawner.HeroPrefab.transform);
-        remote = new RemoteHornet(player.PlayerObject, animator, animator.Library, name, name.localPosition, effects);
+        remote = new RemoteHornet(player.PlayerObject, animator, animator.Library, player.PlayerObject.GetComponent<MeshRenderer>(),
+            name, name.localPosition, effects);
         remoteHornets[playerId] = remote;
         animator.Library = HornetLibrary();
         name.localPosition = new Vector3(name.localPosition.x, HornetNameHeight, name.localPosition.z);
@@ -263,6 +283,7 @@ internal sealed class HkmpLink : IHkmpLink {
         remoteHornets.Remove(playerId);
         
         if (remote.Animator) remote.Animator.Library = remote.KnightLibrary;
+        if (remote.Body) remote.Body.enabled = true;
         if (remote.Name) remote.Name.localPosition = remote.NameLocalPosition;
         remote.Effects.Destroy();
     }
@@ -287,6 +308,7 @@ internal sealed class HkmpLink : IHkmpLink {
         GameObject PlayerObject,
         tk2dSpriteAnimator Animator,
         tk2dSpriteAnimation KnightLibrary,
+        MeshRenderer Body,
         Transform Name,
         Vector3 NameLocalPosition,
         RemoteEffects Effects);
