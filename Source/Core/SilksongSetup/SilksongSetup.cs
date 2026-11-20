@@ -17,9 +17,10 @@ internal static class SilksongSetup {
         ..SilksongAssemblies.Deps, ..SilksongAssemblies.Hk1578Deps,
         ..SilksongAssemblies.PresentIn(Paths.SilksongManagedDir, SilksongAssemblies.Hk1578PlatformDeps),
     ];
-    private static string[] Installed => [..Deps, ..SilksongAssemblies.Prefixed, ..SilksongAssemblies.ShimFiles];
+    private static string[] Installed => [..Deps, ..SilksongAssemblies.Prefixed, SilksongAssemblies.Shim];
     // Everything a previous install may have left, whichever Silksong build it came from.
-    private static string[] Removable => [..Installed, ..SilksongAssemblies.Hk1578PlatformDeps];
+    private static string[] Removable =>
+        [..Installed, ..SilksongAssemblies.Hk1578PlatformDeps, ..SilksongAssemblies.ObsoleteShimFiles];
     private static string? ShimPath => Paths.ModFile($"managed/{SilksongAssemblies.Shim}.dll");
     private static string[] ShimRefs => [Paths.ModFile($"{SilksongAssemblies.RepackerBindings}.dll")];
 #else
@@ -100,12 +101,8 @@ internal static class SilksongSetup {
     // A changed shim needs a reinstall even when the mod version stays the same.
     private static string ShimHash() {
         using var sha = System.Security.Cryptography.SHA256.Create();
-        foreach (var name in SilksongAssemblies.ShimFiles) {
-            var bytes = File.ReadAllBytes(Paths.ModFile($"managed/{name}.dll"));
-            sha.TransformBlock(bytes, 0, bytes.Length, null, 0);
-        }
-        sha.TransformFinalBlock([], 0, 0);
-        return BitConverter.ToString(sha.Hash).Replace("-", "");
+        var bytes = File.ReadAllBytes(Paths.ModFile($"managed/{SilksongAssemblies.Shim}.dll"));
+        return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "");
     }
 #endif
 

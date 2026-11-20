@@ -10,11 +10,11 @@ internal static class SilksongAssemblies {
     // Unity 6 API surface Unity 2020.2 lacks; only installed on HK 1.5.78.
     internal const string Shim = "HornetInHallownest.UnityCompat";
 
-    // The shim and its dependencies, shipped side by side.
-    internal static readonly string[] ShimFiles = [Shim, "AssetsTools.NET"];
-
     // Shipped next to the mod, as HK's Managed holds the modding API's own older unityscenerepacker under the same name.
     internal const string RepackerBindings = "UnitySceneRepacker.Bindings";
+
+    // Installed next to the shim by v1.0.0.
+    internal static readonly string[] ObsoleteShimFiles = ["AssetsTools.NET"];
 
     // Silksong assemblies HK lacks, installed under their own name.
     internal static readonly string[] Deps = [

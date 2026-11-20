@@ -45,7 +45,7 @@ When silksong assemblies are copied into HK, `UnityDowngrader` will go ahead and
 Silksong addressables contain embedded typetrees, so for the most part the resources can be load by unity in the old version. We just need to change the header version of the Bundles from v8 to v7.
 However, animation curves are stored in a slightly different way, leading to crashes at runtime. Since the changes don't change the length of the data, they can be performed in place.
 
-In order to prevent copying the gigabytes of assetbundles, they are rewritten on the fly using `AssetsTools.NET` in [UnityFsBundles](./UnityCompat/UnityFsBundles).
+In order to prevent copying the gigabytes of assetbundles, they are read on the fly through unity-scene-repacker as v7, with the patches applied, in [UnityFsBundles](./UnityCompat/UnityFsBundles).
 
 **Shaders**:
 
