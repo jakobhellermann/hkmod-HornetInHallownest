@@ -32,9 +32,6 @@
         <CiRefs>$(MSBuildProjectDirectory)/../ci-refs</CiRefs>
         <CiRefsLib Condition="'$(CiRefsLib)' == ''">$(CiRefs)/lib</CiRefsLib>
         <LocalRefs Condition="'$(LocalRefs)' == ''">$(MSBuildProjectDirectory)/../local-refs</LocalRefs>
-        <AssetsDir>$(MSBuildProjectDirectory)/../Assets</AssetsDir>
-        <!-- Overridden per game version in HollowKnight.TargetFrameworks.props -->
-        <BundleDir Condition="'$(BundleDir)' == ''">$(AssetsDir)/bundles</BundleDir>
         <SilksongManaged Condition="!Exists('$(SilksongManaged)')">$(PkgSilksong_GameLibs)/ref/netstandard2.1</SilksongManaged>
         <RefsDir Condition="'$(RefsDir)' == '' And Exists('$(LocalRefs)/Silksong.Assembly-CSharp.dll')">$(LocalRefs)</RefsDir>
         <RefsDir Condition="'$(RefsDir)' == ''">$(CiRefsLib)</RefsDir>
@@ -154,8 +151,6 @@
         <Message Importance="high" Text="copying $(TargetPath) to $(CopyDir) ..."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <Copy SourceFiles="$(BundleDir)/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
-        <Copy SourceFiles="$(BundleDir)/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="@(ManagedInstallFile)" DestinationFolder="$(CopyDir)/managed" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="@(ModFile)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
     </Target>
@@ -167,7 +162,6 @@
         </ItemGroup>
         <Delete Files="@(PublishJunk)"/>
         <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PublishDir)"/>
-        <Copy SourceFiles="$(BundleDir)/monoscripts.silksong.bundle;$(BundleDir)/silksong-resources.bundle" DestinationFolder="$(PublishDir)"/>
         <Copy SourceFiles="@(ManagedInstallFile)" DestinationFolder="$(PublishDir)/managed"/>
         <Copy SourceFiles="@(ModFile)" DestinationFolder="$(PublishDir)"/>
 
