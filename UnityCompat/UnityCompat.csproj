@@ -12,8 +12,6 @@
     <EnableSourceLink>false</EnableSourceLink>
   </PropertyGroup>
   <ItemGroup>
-    <!-- AssetBundleHeader for UnityFsDowngradeStream -->
-    <PackageReference Include="AssetsTools.NET" Version="3.0.4" />
     <PackageReference Include="unityscenerepacker" Version="5.3.0" />
     <PackageReference Include="HollowKnight.GameLibs" Version="[1.0.0-hollowknight.1.5.78.11833.api77]" PrivateAssets="all" />
     <!-- Span<T> for compiling only: UnityDowngrader points these references at HK's mscorlib, which has it -->

@@ -14,17 +14,12 @@ internal static class SilksongAssemblyBuilder {
         // A previous install may still sit in the host's folder; it must not count as the host.
         var installed = new HashSet<string>(SilksongAssemblies.Deps.Concat(SilksongAssemblies.Hk1578Deps)
             .Concat(SilksongAssemblies.Hk1578PlatformDeps).Concat(SilksongAssemblies.Prefixed)
-            .Concat(SilksongAssemblies.ShimFiles));
+            .Append(SilksongAssemblies.Shim));
         var hostFiles = Directory.GetFiles(hostManaged, "*.dll")
             .Where(f => !installed.Contains(Path.GetFileNameWithoutExtension(f)))
             .ToList();
 
-        // Shipped next to the shim, which references them.
-        var shimDeps = shimPath == null
-            ? []
-            : SilksongAssemblies.ShimFiles.Where(n => n != SilksongAssemblies.Shim)
-                .Select(n => $"{Path.GetDirectoryName(shimPath)}/{n}.dll").ToList();
-        using var resolver = new StrictAssemblyResolver(hostFiles.Concat(shimDeps).Concat(shimRefs));
+        using var resolver = new StrictAssemblyResolver(hostFiles.Concat(shimRefs));
         var prefixed = SilksongAssemblies.PrefixInputs.Select(n => resolver.Read($"{silksongManaged}/{n}.dll")).ToList();
         AssemblyPrefixer.Prefix(SilksongAssemblies.Prefix, prefixed);
         Directory.CreateDirectory(outDir);
@@ -45,6 +40,5 @@ internal static class SilksongAssemblyBuilder {
         new UnityDowngrader(host, shim, log).Downgrade(all);
 
         foreach (var asm in all) asm.Write($"{outDir}/{asm.Name.Name}.dll");
-        foreach (var dep in shimDeps) File.Copy(dep, $"{outDir}/{Path.GetFileName(dep)}", overwrite: true);
     }
 }
