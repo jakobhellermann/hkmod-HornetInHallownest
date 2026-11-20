@@ -88,7 +88,7 @@ internal static class DiscreteCurvePatches {
                 for (var i = 0; i < info.DirectoryInfos.Count; i++) {
                     var entry = info.DirectoryInfos[i];
                     if ((entry.Flags & SerializedFileFlag) == 0) continue;
-                    var assets = manager.LoadAssetsFileFromBundle(bundle, i);
+                    var assets = LoadBuffered(manager, bundle, entry, path);
                     foreach (var clip in assets.file.GetAssetsOfType(AssetClassID.AnimationClip)) {
                         var patch = Patch(manager, assets, clip);
                         if (patch != null) patches.Add(new BytePatch(entry.Offset + patch.Value.Offset, patch.Value.Bytes));
@@ -100,6 +100,15 @@ internal static class DiscreteCurvePatches {
         }
         patches.Sort((a, b) => a.Offset.CompareTo(b.Offset));
         return patches;
+    }
+
+    // Parsing straight from the bundle stream costs a seek per small read, about 25x slower than from memory.
+    private static AssetsFileInstance LoadBuffered(AssetsManager manager, BundleFileInstance bundle, AssetBundleDirectoryInfo entry,
+        string path) {
+        var reader = bundle.file.DataReader;
+        reader.Position = entry.Offset;
+        var data = reader.ReadBytes((int)entry.DecompressedSize);
+        return manager.LoadAssetsFile(new MemoryStream(data), $"{path}/{entry.Name}", false);
     }
 
     // Offset relative to the serialized file.
