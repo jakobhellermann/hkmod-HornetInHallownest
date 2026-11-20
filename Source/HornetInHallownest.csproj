@@ -136,7 +136,7 @@
             <Output TaskParameter="TargetOutputs" ItemName="UnityCompatAssembly"/>
         </MSBuild>
         <ItemGroup>
-            <ManagedInstallFile Include="@(UnityCompatAssembly);@(UnityCompatAssembly->'%(RootDir)%(Directory)AssetsTools.NET.dll')"/>
+            <ManagedInstallFile Include="@(UnityCompatAssembly)"/>
         </ItemGroup>
     </Target>
 
