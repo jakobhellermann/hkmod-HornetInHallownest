@@ -1,22 +1,17 @@
-PIPELINE   := $(CURDIR)/tools/asset-pipeline
 LOCAL_REFS := $(CURDIR)/local-refs
 LOCAL_REFS_1578 := $(CURDIR)/local-refs-hk1578
-BUNDLES_1578    := $(CURDIR)/Assets/bundles-hk1578
-UNITY1578       := 2020.2.2f1
 
 CI_REFS := $(CURDIR)/ci-refs
 
 # assembly-publicizer targets .NET 6
 export DOTNET_ROLL_FORWARD := Major
 
-.PHONY: local-refs ci-refs remap-monoscripts repack-resources docs help
+.PHONY: local-refs ci-refs docs help
 
 help:
 	@echo "HornetInHallownest asset pipeline:"
 	@echo "  make local-refs        prefix dlls with Silksong into local-refs/Silksong.*.dll (+ downgraded for hk1578), publicized"
 	@echo "  make ci-refs           Stub local-refs into ci-refs"
-	@echo "  make remap-monoscripts rebuild monoscripts.silksong.bundle (m_AssemblyName -> Silksong.*)"
-	@echo "  make repack-resources  repack Silksong resources.assets -> silksong-resources.bundle"
 	@echo "  make docs              regenerate tag docs"
 
 TAGS_JQ := .layers | to_entries[] | (.key|tostring) + " " + .value
@@ -42,14 +37,3 @@ ci-refs: local-refs
 	refasmer --all -O $(CI_REFS)/lib $(LOCAL_REFS)/Silksong.*.dll
 	refasmer --all -O $(CI_REFS)/hk1578 $(LOCAL_REFS_1578)/Silksong.*.dll \
 	  $(addprefix $(LOCAL_REFS_1578)/,Unity.Addressables.dll Unity.ResourceManager.dll Newtonsoft.Json.UnityConverters.dll HKMP.dll)
-
-# Rebuild monoscripts bundle, rewriting m_AssemblyName -> Silksong.*. HK 1.5.78 keeps tk2d in its Assembly-CSharp.
-remap-monoscripts:
-	cd $(PIPELINE) && cargo run --release --bin remap-monoscripts
-	cd $(PIPELINE) && TARGET_UNITY_VERSION=$(UNITY1578) HORNET_BUNDLE_OUT="$(BUNDLES_1578)" cargo run --release --bin remap-monoscripts -- \
-	  TeamCherry.TK2D=Assembly-CSharp TeamCherry.SharedUtils=Silksong.TeamCherry.SharedUtils
-
-# Repack Silksong's resources.assets -> silksong-resources.bundle assetbundle
-repack-resources:
-	cd $(PIPELINE) && cargo run --release --bin repack-resources
-	cd $(PIPELINE) && TARGET_UNITY_VERSION=$(UNITY1578) HORNET_BUNDLE_OUT="$(BUNDLES_1578)" cargo run --release --bin repack-resources
