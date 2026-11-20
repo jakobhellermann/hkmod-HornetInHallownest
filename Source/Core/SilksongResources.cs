@@ -5,11 +5,10 @@ using Object = UnityEngine.Object;
 
 namespace HornetInHallownest.Core;
 
-// Serves Resource.Load assets from the bundled `silksong-resources.bundle`, which contains scripts remapped to `Silksong.*`.
+// Serves Resource.Load assets from Silksong's resources bundle, which contains scripts remapped to `Silksong.*`.
 internal static class SilksongResources {
     private static Api? installed;
     private static AssetBundle? bundle;
-    private static string ResourcesBundlePath => Paths.ModFile("silksong-resources.bundle");
 
     // Unity's supported override point for Resources.Load; a MonoMod detour of Resources.Load fails on Unity 2020.
     private sealed class Api : ResourcesAPI {
@@ -22,9 +21,9 @@ internal static class SilksongResources {
     internal static void Install() {
         if (installed != null) return;
 
-        bundle = AssetBundle.LoadFromFile(ResourcesBundlePath);
+        bundle = AssetBundle.LoadFromFile(SilksongBundles.Resources);
         if (bundle == null) {
-            Log.Error($"[SilksongResources] LoadFromFile failed: {ResourcesBundlePath}");
+            Log.Error($"[SilksongResources] LoadFromFile failed: {SilksongBundles.Resources}");
             return;
         }
 

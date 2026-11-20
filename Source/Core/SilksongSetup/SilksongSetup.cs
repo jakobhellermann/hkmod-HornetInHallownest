@@ -33,13 +33,14 @@ internal static class SilksongSetup {
 
     // True if already installed, false if actions were taken and a restart is needed.
     internal static bool EnsureInstalled() {
-        var changed = EnsureInstalledAssemblies(new InstalledFiles(Paths.HkManagedDir));
+        var fingerprint = FingerprintGameVersion();
+        var changed = EnsureInstalledAssemblies(new InstalledFiles(Paths.HkManagedDir), fingerprint);
         changed |= RegisterForSerialization($"{Paths.HkDataDir}/ScriptingAssemblies.json");
+        SilksongBundles.EnsureBuilt(fingerprint);
         return !changed;
     }
 
-    private static bool EnsureInstalledAssemblies(InstalledFiles install) {
-        var fingerprint = FingerprintGameVersion();
+    private static bool EnsureInstalledAssemblies(InstalledFiles install, string fingerprint) {
         install.RemoveStale();
         if (install.IsCurrent(fingerprint)) return false;
 
