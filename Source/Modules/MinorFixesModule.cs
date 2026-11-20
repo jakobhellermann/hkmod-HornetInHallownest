@@ -4,9 +4,12 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using GlobalEnums;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
+using Newtonsoft.Json;
+using Newtonsoft.Json.UnityConverters;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
@@ -61,6 +64,37 @@ public sealed class MinorFixesModule : ModuleBase {
         Detour(typeof(SFsm), "SwitchState", OnSilksongSwitchState, typeof(SFsmState));
         USceneManager.activeSceneChanged += OnActiveSceneChanged;
         CollectTerrainOutlines(USceneManager.GetActiveScene());
+        Detour(typeof(Silksong::SaveDataUtility), "CreateJsonObjects", OnCreateJsonObjects);
+        SeedNestedFadeGroupBridges();
+    }
+
+    // Silksong's UnityConverters config picks up every JsonConverter in every loaded assembly, so other mods' converters
+    // end up in Silksong's serializer (Satchel's ColorConverter claims every type and breaks PlayerData deserialization).
+    private static void OnCreateJsonObjects(Action orig) {
+        // Not in Initialize: the settings load their config asset on first access, which Unity can't bind that early.
+        var settings = UnityConverterInitializer.defaultUnityConvertersSettings;
+        Assembly[] own = [typeof(UnityConverterInitializer).Assembly, typeof(JsonConverter).Assembly];
+        settings.Converters = settings.Converters.Where(c => own.Contains(c.GetType().Assembly)).ToList();
+        orig();
+    }
+
+    // NestedFadeGroup collects its bridges via GetTypes over every loaded assembly, which throws on a mod assembly with an
+    // unresolvable reference and leaves the bridge list empty for good. The bridges are only declared in these two.
+    private static void SeedNestedFadeGroupBridges() {
+        var fadeGroup = Type.GetType("TeamCherry.NestedFadeGroup.NestedFadeGroup, Silksong.TeamCherry.NestedFadeGroup", true);
+        var bridgeAttribute = fadeGroup.Assembly.GetType("TeamCherry.NestedFadeGroup.NestedFadeGroupBridgeAttribute", true);
+        var bridgeType = fadeGroup.GetNestedType("Bridge", BindingFlags.NonPublic)!;
+        var bridges = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(bridgeType));
+        foreach (var assembly in new[] { fadeGroup.Assembly, typeof(Silksong::HeroController).Assembly })
+        foreach (var type in assembly.GetTypes())
+        foreach (var attribute in type.GetCustomAttributes(bridgeAttribute, true))
+        foreach (var source in attribute.GetPropertyValue<Type[]>("TargetTypes")!) {
+            var bridge = Activator.CreateInstance(bridgeType);
+            bridge.SetFieldValue("SourceType", source);
+            bridge.SetFieldValue("DestinationType", type);
+            bridges.Add(bridge);
+        }
+        fadeGroup.SetFieldValue("_bridges", bridges);
     }
 
     protected override void OnDeinitialize() => USceneManager.activeSceneChanged -= OnActiveSceneChanged;
