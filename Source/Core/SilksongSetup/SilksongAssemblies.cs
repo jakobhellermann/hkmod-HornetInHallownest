@@ -13,6 +13,9 @@ internal static class SilksongAssemblies {
     // The shim and its dependencies, shipped side by side.
     internal static readonly string[] ShimFiles = [Shim, "AssetsTools.NET"];
 
+    // Shipped next to the mod, as HK's Managed holds the modding API's own older unityscenerepacker under the same name.
+    internal const string RepackerBindings = "UnitySceneRepacker.Bindings";
+
     // Silksong assemblies HK lacks, installed under their own name.
     internal static readonly string[] Deps = [
         "Unity.Addressables",

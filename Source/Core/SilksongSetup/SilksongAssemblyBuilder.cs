@@ -10,7 +10,7 @@ namespace HornetInHallownest.Core.SilksongSetup;
 // and with a shim (hosts older than Silksong's Unity) everything downgraded onto it.
 internal static class SilksongAssemblyBuilder {
     internal static void Build(string silksongManaged, string hostManaged, IReadOnlyCollection<string> deps,
-        string? shimPath, string outDir, Action<string> log) {
+        string? shimPath, IReadOnlyCollection<string> shimRefs, string outDir, Action<string> log) {
         // A previous install may still sit in the host's folder; it must not count as the host.
         var installed = new HashSet<string>(SilksongAssemblies.Deps.Concat(SilksongAssemblies.Hk1578Deps)
             .Concat(SilksongAssemblies.Hk1578PlatformDeps).Concat(SilksongAssemblies.Prefixed)
@@ -24,7 +24,7 @@ internal static class SilksongAssemblyBuilder {
             ? []
             : SilksongAssemblies.ShimFiles.Where(n => n != SilksongAssemblies.Shim)
                 .Select(n => $"{Path.GetDirectoryName(shimPath)}/{n}.dll").ToList();
-        using var resolver = new StrictAssemblyResolver(hostFiles.Concat(shimDeps));
+        using var resolver = new StrictAssemblyResolver(hostFiles.Concat(shimDeps).Concat(shimRefs));
         var prefixed = SilksongAssemblies.PrefixInputs.Select(n => resolver.Read($"{silksongManaged}/{n}.dll")).ToList();
         AssemblyPrefixer.Prefix(SilksongAssemblies.Prefix, prefixed);
         Directory.CreateDirectory(outDir);

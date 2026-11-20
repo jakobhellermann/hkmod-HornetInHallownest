@@ -66,6 +66,8 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'hk1578'">
+        <!-- Computes the compat patches of Silksong's bundles -->
+        <PackageReference Include="unityscenerepacker" Version="5.3.0"/>
         <!-- Optional dependency: only touched when the HKMP mod is loaded -->
         <Reference Include="HKMP" Private="false">
             <HintPath>$(RefsDir)/HKMP.dll</HintPath>
@@ -138,6 +140,14 @@
         </ItemGroup>
     </Target>
 
+    <!-- A target, as the package's items are only defined after the project body -->
+    <Target Name="CollectRepackerFiles" BeforeTargets="CopyMod;CurateModPublish" Condition="'$(TargetFramework)' == 'hk1578'">
+        <ItemGroup>
+            <!-- next to the mod, where the bindings find their native library -->
+            <ModFile Include="@(UnitySceneRepackerFiles)" Condition="'%(Filename)' != 'UnitySceneRepacker.Addressables'"/>
+        </ItemGroup>
+    </Target>
+
     <Target Name="CopyMod" AfterTargets="PostBuildEvent" Condition="'$(ModsDir)' != '' And Exists('$(ModsDir)')">
         <PropertyGroup>
             <CopyDir>$(ModsDir)/HornetInHallownest</CopyDir>
@@ -148,6 +158,7 @@
         <Copy SourceFiles="$(BundleDir)/monoscripts.silksong.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="$(BundleDir)/silksong-resources.bundle" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
         <Copy SourceFiles="@(ManagedInstallFile)" DestinationFolder="$(CopyDir)/managed" SkipUnchangedFiles="true"/>
+        <Copy SourceFiles="@(ModFile)" DestinationFolder="$(CopyDir)" SkipUnchangedFiles="true"/>
     </Target>
 
     <!-- Allowlist files for `dotnet publish` -->
@@ -159,6 +170,7 @@
         <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PublishDir)"/>
         <Copy SourceFiles="$(BundleDir)/monoscripts.silksong.bundle;$(BundleDir)/silksong-resources.bundle" DestinationFolder="$(PublishDir)"/>
         <Copy SourceFiles="@(ManagedInstallFile)" DestinationFolder="$(PublishDir)/managed"/>
+        <Copy SourceFiles="@(ModFile)" DestinationFolder="$(PublishDir)"/>
 
         <!-- create zip for distribution -->
         <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(MSBuildProjectDirectory)/bin/$(Configuration)/HornetInHallownest.zip" Overwrite="true"/>
