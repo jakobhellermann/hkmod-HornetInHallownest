@@ -19,8 +19,6 @@
         <GameLibsPackageVersion>1.0.0</GameLibsPackageVersion>
         <TargetFrameworkIdentifier>.NETStandard</TargetFrameworkIdentifier>
         <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
-        <!-- 2020.2-declared, tk2d/SharedUtils MonoScripts retargeted -->
-        <BundleDir>$(MSBuildThisFileDirectory)Assets/bundles-hk1578</BundleDir>
         <!-- Prefixed + IL-downgraded Silksong compile refs -->
         <LocalRefs>$(MSBuildThisFileDirectory)local-refs-hk1578</LocalRefs>
         <CiRefsLib>$(MSBuildThisFileDirectory)ci-refs/hk1578</CiRefsLib>
