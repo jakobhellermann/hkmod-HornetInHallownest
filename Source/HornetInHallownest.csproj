@@ -48,6 +48,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Unity.Analyzers" Version="1.26.0" PrivateAssets="all"/>
+        <PackageReference Include="unityscenerepacker" Version="5.3.0"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -66,8 +67,6 @@
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'hk1578'">
-        <!-- Computes the compat patches of Silksong's bundles -->
-        <PackageReference Include="unityscenerepacker" Version="5.3.0"/>
         <!-- Optional dependency: only touched when the HKMP mod is loaded -->
         <Reference Include="HKMP" Private="false">
             <HintPath>$(RefsDir)/HKMP.dll</HintPath>
@@ -141,7 +140,7 @@
     </Target>
 
     <!-- A target, as the package's items are only defined after the project body -->
-    <Target Name="CollectRepackerFiles" BeforeTargets="CopyMod;CurateModPublish" Condition="'$(TargetFramework)' == 'hk1578'">
+    <Target Name="CollectRepackerFiles" BeforeTargets="CopyMod;CurateModPublish">
         <ItemGroup>
             <!-- next to the mod, where the bindings find their native library -->
             <ModFile Include="@(UnitySceneRepackerFiles)" Condition="'%(Filename)' != 'UnitySceneRepacker.Addressables'"/>
