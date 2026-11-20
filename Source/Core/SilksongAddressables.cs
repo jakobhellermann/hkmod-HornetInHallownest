@@ -10,15 +10,12 @@ namespace HornetInHallownest.Core;
 
 // Register Silksong's Addressables catalog.
 internal static class SilksongAddressables {
-    // Contains MonoScript entries prefixed with `Silksong.*`
-    private const string MonoScriptsBundleName = "monoscripts.silksong.bundle";
-
     internal static void EnsureMounted() {
         var aa = Paths.SilksongAddressables;
         var catalogId = $"{aa}/catalog.bin";
         if (IsRegistered(catalogId)) return; // survives hot reload
 
-        InstallIdTransform(aa, Paths.ModFile(MonoScriptsBundleName));
+        InstallIdTransform(aa, SilksongBundles.MonoScripts);
         MarkRuntimeStarted($"{aa}/settings.json");
         var locator = LoadCatalog(catalogId);
         Log.Debug($"[Addressables] Silksong catalog mounted (locator={locator})");

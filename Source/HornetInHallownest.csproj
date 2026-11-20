@@ -138,12 +138,12 @@
         </ItemGroup>
     </Target>
 
-    <ItemGroup Condition="'$(TargetFramework)' == 'hk1578'">
-        <!-- Computes the compat patches of Silksong's bundles -->
+    <ItemGroup>
+        <!-- Builds the Silksong bundles, and computes the compat patches of Silksong's bundles on HK 1.5.78 -->
         <PackageReference Include="unityscenerepacker" Version="5.3.0"/>
     </ItemGroup>
     <!-- A target, as the package's items are only defined after the project body -->
-    <Target Name="CollectRepackerFiles" BeforeTargets="CopyMod;CurateModPublish" Condition="'$(TargetFramework)' == 'hk1578'">
+    <Target Name="CollectRepackerFiles" BeforeTargets="CopyMod;CurateModPublish">
         <ItemGroup>
             <!-- next to the mod, where the bindings find their native library; the package carries the native library
                  of each platform it was packed on -->
