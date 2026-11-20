@@ -1,20 +1,21 @@
 // Loads Unity 6 asset bundles on Unity 2020.2, which reads UnityFS up to format version 7 and refuses bundles
 // declaring a different engine version. Silksong's bundles are v8 with uncompressed data blocks, so the header is
-// rewritten and the blocks info and data are served from the file, with a few bytes patched (see DiscreteCurvePatches).
+// rewritten and the blocks info and data are served from the file, with the bytes patched that Unity 2020 would misread.
 // ReSharper disable CheckNamespace
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using AssetsTools.NET;
-using AssetsTools.NET.Extra;
+using UnitySceneRepacker;
 
 namespace UnityEngine.Compat;
 
 internal static class UnityFsBundles {
     // Streams have to stay open until their bundle is unloaded.
     private static readonly Dictionary<AssetBundleCreateRequest, Stream> streams = new Dictionary<AssetBundleCreateRequest, Stream>();
+
+    private static GameRepacker silksong;
 
     private static int translatedBundles;
     private static readonly Stopwatch patchTime = new Stopwatch();
@@ -32,10 +33,11 @@ internal static class UnityFsBundles {
         translatedBundles++;
         var started = patchTime.Elapsed;
         patchTime.Start();
-        var patches = DiscreteCurvePatches.Compute(path);
+        silksong ??= new GameRepacker(GameDir(path));
+        var patches = silksong.CompatPatches(path, Application.unityVersion);
         patchTime.Stop();
-        if (patches.Count > 0)
-            Debug.Log($"[UnityCompat] {Path.GetFileName(path)}: {patches.Count} discrete curve patches in " +
+        if (patches.Length > 0)
+            Debug.Log($"[UnityCompat] {Path.GetFileName(path)}: {patches.Length} compat patches in " +
                 $"{(patchTime.Elapsed - started).TotalMilliseconds:F0} ms (so far {translatedBundles} bundles, " +
                 $"{patchTime.Elapsed.TotalMilliseconds:F0} ms computing patches)");
 
@@ -43,6 +45,13 @@ internal static class UnityFsBundles {
         var request = AssetBundle.LoadFromStreamAsync(stream, crc);
         streams[request] = stream;
         return request;
+    }
+
+    // The game a bundle of its StreamingAssets belongs to.
+    private static string GameDir(string bundlePath) {
+        for (var dir = new DirectoryInfo(Path.GetDirectoryName(bundlePath)); dir != null; dir = dir.Parent)
+            if (dir.Name.EndsWith("_Data", StringComparison.Ordinal)) return dir.Parent.FullName;
+        throw new InvalidOperationException($"{bundlePath} isn't inside a game's data folder");
     }
 
     // The bundle's stream, to be disposed once the bundle is unloaded. Null for bundles loaded from a file.
@@ -56,96 +65,6 @@ internal static class UnityFsBundles {
     }
 }
 
-internal readonly struct BytePatch {
-    // Relative to the start of the bundle's data.
-    public readonly long Offset;
-    public readonly byte[] Bytes;
-
-    public BytePatch(long offset, byte[] bytes) {
-        Offset = offset;
-        Bytes = bytes;
-    }
-}
-
-// Unity 2022+ stores PPtr curves (sprite swaps) as discrete curves: their keys follow the continuous ones in the streamed
-// clip data but are counted in discreteCurveCount instead of curveCount. Unity 2020's typetree has no such field, so it
-// reads those keys with curve indices >= curveCount and crashes once an Animator evaluates the clip. Unity 2020 encodes
-// PPtr curves exactly like that, counted in curveCount, so folding the count over is a faithful conversion. Both fields
-// are adjacent u16s, so the patch is size-preserving.
-internal static class DiscreteCurvePatches {
-    private const uint SerializedFileFlag = 4;
-
-    public static List<BytePatch> Compute(string path) {
-        var patches = new List<BytePatch>();
-        var manager = new AssetsManager();
-        try {
-            using (var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)) {
-                var bundle = manager.LoadBundleFile(file, path, false);
-                var info = bundle.file.BlockAndDirInfo;
-                if (info.BlockInfos.Any(b => b.GetCompressionType() != 0))
-                    throw new InvalidDataException($"{path}: compressed data blocks can't be patched in place");
-
-                for (var i = 0; i < info.DirectoryInfos.Count; i++) {
-                    var entry = info.DirectoryInfos[i];
-                    if ((entry.Flags & SerializedFileFlag) == 0) continue;
-                    var assets = LoadBuffered(manager, bundle, entry, path);
-                    foreach (var clip in assets.file.GetAssetsOfType(AssetClassID.AnimationClip)) {
-                        var patch = Patch(manager, assets, clip);
-                        if (patch != null) patches.Add(new BytePatch(entry.Offset + patch.Value.Offset, patch.Value.Bytes));
-                    }
-                }
-            }
-        } finally {
-            manager.UnloadAll(true);
-        }
-        patches.Sort((a, b) => a.Offset.CompareTo(b.Offset));
-        return patches;
-    }
-
-    // Parsing straight from the bundle stream costs a seek per small read, about 25x slower than from memory.
-    private static AssetsFileInstance LoadBuffered(AssetsManager manager, BundleFileInstance bundle, AssetBundleDirectoryInfo entry,
-        string path) {
-        var reader = bundle.file.DataReader;
-        reader.Position = entry.Offset;
-        var data = reader.ReadBytes((int)entry.DecompressedSize);
-        return manager.LoadAssetsFile(new MemoryStream(data), $"{path}/{entry.Name}", false);
-    }
-
-    // Offset relative to the serialized file.
-    private static BytePatch? Patch(AssetsManager manager, AssetsFileInstance assets, AssetFileInfo clip) {
-        var root = manager.GetBaseField(assets, clip);
-        var streamed = root["m_MuscleClip"]["m_Clip"]["data"]["m_StreamedClip"];
-        var discrete = streamed["discreteCurveCount"];
-        if (discrete.IsDummy || discrete.AsUInt == 0) return null;
-
-        var start = clip.GetAbsoluteByteOffset(assets.file);
-        var reader = assets.file.Reader;
-        reader.Position = start;
-        var original = reader.ReadBytes((int)clip.ByteSize);
-
-        streamed["curveCount"].AsUInt += discrete.AsUInt;
-        discrete.AsUInt = 0;
-        var patched = root.WriteToByteArray();
-
-        // Anything differing beyond the two counts means the re-serialization isn't faithful.
-        if (patched.Length != original.Length) throw MismatchError();
-        int first = -1, last = -1;
-        for (var i = 0; i < original.Length; i++) {
-            if (original[i] == patched[i]) continue;
-            if (last < 0) first = i;
-            last = i;
-        }
-        if (last < 0 || last - first >= 4) throw MismatchError();
-
-        var bytes = new byte[last - first + 1];
-        Array.Copy(patched, first, bytes, 0, bytes.Length);
-        return new BytePatch(start + first, bytes);
-
-        Exception MismatchError() =>
-            new InvalidDataException($"AnimationClip {root["m_Name"].AsString} (path id {clip.PathId}) doesn't re-serialize faithfully");
-    }
-}
-
 // Presents a UnityFS v8 bundle as v7: the rewritten header, then the original blocks info and data.
 internal sealed class UnityFsDowngradeStream : Stream {
     private readonly Stream file;
@@ -156,9 +75,9 @@ internal sealed class UnityFsDowngradeStream : Stream {
     private readonly long length;
     private long position;
 
-    private readonly List<BytePatch> patches;
+    private readonly BytePatch[] patches;
 
-    public UnityFsDowngradeStream(Stream file, AssetBundleHeader source, string declaredRevision, List<BytePatch> patches) {
+    public UnityFsDowngradeStream(Stream file, AssetBundleHeader source, string declaredRevision, BytePatch[] patches) {
         this.file = file;
         this.patches = patches;
         var fs = source.FileStreamHeader;

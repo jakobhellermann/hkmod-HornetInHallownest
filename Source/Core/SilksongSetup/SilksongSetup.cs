@@ -21,11 +21,13 @@ internal static class SilksongSetup {
     // Everything a previous install may have left, whichever Silksong build it came from.
     private static string[] Removable => [..Installed, ..SilksongAssemblies.Hk1578PlatformDeps];
     private static string? ShimPath => Paths.ModFile($"managed/{SilksongAssemblies.Shim}.dll");
+    private static string[] ShimRefs => [Paths.ModFile($"{SilksongAssemblies.RepackerBindings}.dll")];
 #else
     private static string[] Deps => SilksongAssemblies.Deps;
     private static string[] Installed => [..Deps, ..SilksongAssemblies.Prefixed];
     private static string[] Removable => Installed;
     private static string? ShimPath => null;
+    private static string[] ShimRefs => [];
 #endif
 
     // True if already installed, false if actions were taken and a restart is needed.
@@ -54,7 +56,7 @@ internal static class SilksongSetup {
 
         public void Reinstall(string fingerprint) {
             Clean();
-            SilksongAssemblyBuilder.Build(Paths.SilksongManagedDir, managed, Deps, ShimPath, managed, Log.Debug);
+            SilksongAssemblyBuilder.Build(Paths.SilksongManagedDir, managed, Deps, ShimPath, ShimRefs, managed, Log.Debug);
             File.WriteAllText($"{managed}/{FingerprintFile}", fingerprint);
         }
 
