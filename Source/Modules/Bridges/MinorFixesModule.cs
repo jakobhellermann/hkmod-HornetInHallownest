@@ -69,7 +69,7 @@ public sealed class MinorFixesModule : ModuleBase {
         CollectTerrainOutlines(USceneManager.GetActiveScene());
         Detour(typeof(Silksong::SaveDataUtility), "CreateJsonObjects", OnCreateJsonObjects);
         SeedNestedFadeGroupBridges();
-        
+
         // Fix knockback from walls. Silksong's layer matrix allows this, HK's doesn't, but this doesn't change any behaviour.
         Physics2D.IgnoreLayerCollision(tinkerLayer, terrainLayer, false);
     }

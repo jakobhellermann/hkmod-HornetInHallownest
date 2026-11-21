@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using HornetInHallownest.Core;
+using HutongGames.PlayMaker;
+using UnityEngine;
 
 namespace HornetInHallownest.Modules;
 
@@ -56,8 +58,22 @@ public sealed class AnimationRemapModule : ModuleBase {
     private static readonly HashSet<string> loopStartClips = ["Collect Shadow"];
 
     private static readonly Dictionary<(string Playing, string Next), string> followUpMap = new() {
-        [("Collect Memory Orb", "GetUpToIdle")] = "Land"
+        [("Collect Memory Orb", "GetUpToIdle")] = "Land",
     };
+
+    // Pick doalogue look animation by height. Examples: Elderbug 0.9, Grimm 1.84
+    private static readonly (float MinHeightRatio, Dictionary<string, string> Clips)[] conversationLooks = [
+        (1.7f, new() { ["LookUp"] = "LookUp", ["LookUpEnd"] = "LookUpEnd", ["LookUpToIdle"] = "LookUpToIdle" }),
+        (0.85f, new() {
+            ["LookUp"] = "Look Up Half", ["LookUpEnd"] = "Look Up Half End", ["LookUpToIdle"] = "Look Up Half End ToIdle",
+        }),
+        (0.4f, new() {
+            ["LookUp"] = "LookDown Slight", ["LookUpEnd"] = "LookDown Slight End", ["LookUpToIdle"] = "LookDown Slight End",
+        }),
+        (float.NegativeInfinity, new() {
+            ["LookUp"] = "LookDown", ["LookUpEnd"] = "LookDownEnd", ["LookUpToIdle"] = "LookDownToIdle",
+        })
+    ];
 
     public override string Id => "animation-remap";
 
@@ -66,6 +82,11 @@ public sealed class AnimationRemapModule : ModuleBase {
     }
 
     private void OnPlay(Action<tk2dSpriteAnimator, string> orig, tk2dSpriteAnimator self, string name) {
+        if (ConversationLook(self, name) is { } look) {
+            orig(self, look);
+            return;
+        }
+
         if (self && self.CurrentClip is { } playing &&
             followUpMap.TryGetValue((playing.name, name), out var followUp) &&
             self.GetClipByName(followUp) is not null) {
@@ -100,6 +121,21 @@ public sealed class AnimationRemapModule : ModuleBase {
         }
 
         orig(self!, name);
+    }
+
+    private string? ConversationLook(tk2dSpriteAnimator self, string name) {
+        if (name is not ("LookUp" or "LookUpEnd" or "LookUpToIdle") || HornetSpawner.Hornet is not { } hornet ||
+            self.gameObject != hornet.gameObject || FsmExecutionStack.ExecutingFsm is not { Name: "Conversation Control" } fsm)
+            return null;
+
+        var npc = fsm.GameObject.GetComponentInParent<tk2dSprite>() ?? fsm.GameObject.GetComponentInChildren<tk2dSprite>();
+
+        // Inspectables like bretta diary count as hornet height
+        var heightRatio = npc ? npc.GetComponent<Renderer>().bounds.size.y / self.GetComponent<Renderer>().bounds.size.y : 1f;
+
+        LogInfo($"conversation with '{fsm.GameObject.name}': NPC {heightRatio:F2}x Hornet's height");
+
+        return conversationLooks.First(look => heightRatio >= look.MinHeightRatio).Clips[name];
     }
 
     private static IEnumerator SendAnimationCompletionEvent(tk2dSpriteAnimator anim, tk2dSpriteAnimationClip clip) {
