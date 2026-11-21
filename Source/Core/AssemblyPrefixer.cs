@@ -14,7 +14,8 @@ internal static class AssemblyPrefixer {
         foreach (var asm in asms) {
             var module = asm.MainModule;
             foreach (var r in module.AssemblyReferences)
-                if (rename.TryGetValue(r.Name, out var newRefName)) r.Name = newRefName;
+                if (rename.TryGetValue(r.Name, out var newRefName))
+                    r.Name = newRefName;
             var newName = rename[asm.Name.Name];
             asm.Name.Name = newName;
             module.Name = newName + ".dll";

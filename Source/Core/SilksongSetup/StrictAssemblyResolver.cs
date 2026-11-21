@@ -18,7 +18,11 @@ internal sealed class StrictAssemblyResolver : IAssemblyResolver {
 
     // Read fully into memory, so the file can be overwritten while the definition is alive.
     public AssemblyDefinition Read(string path) {
-        var asm = AssemblyDefinition.ReadAssembly(path, new ReaderParameters { AssemblyResolver = this, InMemory = true });
+        var asm = AssemblyDefinition.ReadAssembly(path,
+            new ReaderParameters {
+                AssemblyResolver = this,
+                InMemory = true
+            });
         owned.Add(asm);
         return asm;
     }

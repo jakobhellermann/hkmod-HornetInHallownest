@@ -9,8 +9,15 @@ namespace HornetInHallownest.Core.SilksongSetup;
 // Builds the Silksong assemblies for a host from the Silksong install: deps as-is, conflicting assemblies prefixed,
 // and with a shim (hosts older than Silksong's Unity) everything downgraded onto it.
 internal static class SilksongAssemblyBuilder {
-    internal static void Build(string silksongManaged, string hostManaged, IReadOnlyCollection<string> deps,
-        string? shimPath, IReadOnlyCollection<string> shimRefs, string outDir, Action<string> log) {
+    internal static void Build(
+        string silksongManaged,
+        string hostManaged,
+        IReadOnlyCollection<string> deps,
+        string? shimPath,
+        IReadOnlyCollection<string> shimRefs,
+        string outDir,
+        Action<string> log
+    ) {
         // A previous install may still sit in the host's folder; it must not count as the host.
         var installed = new HashSet<string>(SilksongAssemblies.Deps.Concat(SilksongAssemblies.Hk1578Deps)
             .Concat(SilksongAssemblies.Hk1578PlatformDeps).Concat(SilksongAssemblies.Prefixed)

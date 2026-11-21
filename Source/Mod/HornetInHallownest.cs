@@ -17,7 +17,9 @@ using Object = UnityEngine.Object;
 namespace HornetInHallownest;
 
 // ReSharper disable once ClassNeverInstantiated.Global (the Modding API instantiates mods via reflection)
-public class HornetInHallownest() : Mod("HornetInHallownest"), ITogglableMod, ILocalSettings<HornetSaveData>,
+public class HornetInHallownest() : Mod("HornetInHallownest"),
+    ITogglableMod,
+    ILocalSettings<HornetSaveData>,
     IGlobalSettings<HornetGlobalSettings> {
     private readonly ModuleHost moduleHost = new();
 

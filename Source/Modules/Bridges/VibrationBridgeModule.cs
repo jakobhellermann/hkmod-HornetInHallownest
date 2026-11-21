@@ -43,13 +43,19 @@ public sealed class VibrationBridgeModule : ModuleBase {
 
         public override int PlayingEmissionCount => Prune().Count;
 
-        public override SVibrationEmission? PlayEmission(SVibrationData data, SVibrationTarget target, bool isLooping,
-            string tag, bool isRealtime) {
+        public override SVibrationEmission? PlayEmission(
+            SVibrationData data,
+            SVibrationTarget target,
+            bool isLooping,
+            string tag,
+            bool isRealtime
+        ) {
             var hk = VibrationManager.GetMixer();
             var vibration = Convert(data.GamepadVibration);
             if (hk == null || !vibration) return null;
             var hkData = VibrationData.Create((LowFidelityVibrations)(int)data.LowFidelityVibration,
-                data.HighFidelityVibration, vibration);
+                data.HighFidelityVibration,
+                vibration);
             var hkTarget = new VibrationTarget((VibrationMotors)(int)target.Motors);
             var inner = hk.PlayEmission(hkData, hkTarget, isLooping, tag, isRealtime);
             if (inner == null) return null;

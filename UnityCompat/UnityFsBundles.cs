@@ -1,6 +1,7 @@
 // Loads Unity 6 asset bundles on Unity 2020.2, which reads UnityFS only up to v7 and refuses bundles declaring a
 // different engine version: Silksong's v8 bundles are read through the repacker as v7, with compat patches applied.
 // ReSharper disable CheckNamespace
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -30,9 +31,7 @@ internal static class UnityFsBundles {
         var stream = silksong.OpenV8AsV7(path, Application.unityVersion);
         patchTime.Stop();
         if (stream.PatchCount > 0)
-            Debug.Log($"[UnityCompat] {Path.GetFileName(path)}: {stream.PatchCount} compat patches in " +
-                $"{(patchTime.Elapsed - started).TotalMilliseconds:F0} ms (so far {translatedBundles} bundles, " +
-                $"{patchTime.Elapsed.TotalMilliseconds:F0} ms computing patches)");
+            Debug.Log($"[UnityCompat] {Path.GetFileName(path)}: {stream.PatchCount} compat patches in " + $"{(patchTime.Elapsed - started).TotalMilliseconds:F0} ms (so far {translatedBundles} bundles, " + $"{patchTime.Elapsed.TotalMilliseconds:F0} ms computing patches)");
 
         var request = AssetBundle.LoadFromStreamAsync(stream, crc);
         streams[request] = stream;
@@ -42,7 +41,8 @@ internal static class UnityFsBundles {
     // The game a bundle of its StreamingAssets belongs to.
     private static string GameDir(string bundlePath) {
         for (var dir = new DirectoryInfo(Path.GetDirectoryName(bundlePath)); dir != null; dir = dir.Parent)
-            if (dir.Name.EndsWith("_Data", StringComparison.Ordinal)) return dir.Parent.FullName;
+            if (dir.Name.EndsWith("_Data", StringComparison.Ordinal))
+                return dir.Parent.FullName;
         throw new InvalidOperationException($"{bundlePath} isn't inside a game's data folder");
     }
 

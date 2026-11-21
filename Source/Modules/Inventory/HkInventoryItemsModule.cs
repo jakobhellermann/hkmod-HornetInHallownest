@@ -19,7 +19,8 @@ namespace HornetInHallownest.Modules;
 // inventory. Each reads the PlayerData, text and sprite HK's own inventory pane shows for it.
 public sealed class HkInventoryItemsModule : ModuleBase {
     private static readonly HkItemInfo[] itemInfos = [
-        new("XunFlower", pd => Has(pd is { hasXunFlower: true, xunFlowerGiven: false }),
+        new("XunFlower",
+            pd => Has(pd is { hasXunFlower: true, xunFlowerGiven: false }),
             pd => pd.xunFlowerBroken ? "FLOWER_BROKEN" : "FLOWER",
             pd => pd.xunFlowerBroken ? "White_Flower_Half" : "White_Flower_Full",
             DescriptionKey: pd =>
@@ -27,7 +28,9 @@ public sealed class HkInventoryItemsModule : ModuleBase {
         new("SimpleKey", pd => pd.simpleKeys, _ => "SIMPLEKEY", _ => "inv_item__00014_graveyard_key", true),
         new("StoreKey", pd => Has(pd.hasSlykey), _ => "STOREKEY", _ => "inv_item__0002_storeroom_key"),
         // HK hides the Elegant Key while the Shopkeeper's Key is held.
-        new("WhiteKey", pd => Has(pd is { hasWhiteKey: true, usedWhiteKey: false, hasSlykey: false }), _ => "WHITEKEY",
+        new("WhiteKey",
+            pd => Has(pd is { hasWhiteKey: true, usedWhiteKey: false, hasSlykey: false }),
+            _ => "WHITEKEY",
             _ => "Elegant_Key"),
         new("CityKey", pd => Has(pd.hasCityKey), _ => "CITYKEY", _ => "inv_item_city_key"),
         new("LoveKey", pd => Has(pd.hasLoveKey), _ => "LOVEKEY", _ => "inv_Love_Key"),
@@ -40,7 +43,8 @@ public sealed class HkInventoryItemsModule : ModuleBase {
         new("ShadowDash", pd => Has(pd.hasShadowDash), _ => "SHADOWDASH", _ => "items__0004_shade_cloak"),
         // Desolate Dive is what breaks floors for her; Descending Dark earns her a tool instead.
         new("Quake", pd => Has(pd.quakeLevel > 0), _ => "SPELL_QUAKE1", _ => "Inv_0026_spell_quake_01"),
-        new("MapQuill", pd => Has(pd.hasMap || pd.hasQuill),
+        new("MapQuill",
+            pd => Has(pd.hasMap || pd.hasQuill),
             pd => pd.hasMap && pd.hasQuill ? "MAPQUILL" : pd.hasMap ? "MAP" : "QUILL",
             pd => pd.hasMap && pd.hasQuill ? "inv_item_map_quill_combined" :
                 pd.hasMap ? "inv_item__0008_jar_col_map" : "inv_item__0004_quill"),
@@ -50,8 +54,11 @@ public sealed class HkInventoryItemsModule : ModuleBase {
         new("Trinket4", pd => pd.trinket4, _ => "TRINKET4", _ => "inv_item__0011_arcane-egg", true),
         new("RancidEgg", pd => pd.rancidEggs, _ => "RANCIDEGG", _ => "inv_rancid_egg", true),
         new("Ore", pd => pd.ore, _ => "ORE", _ => "inv_item__0009_ore", true),
-        new("DreamNail", pd => pd.hasDreamNail ? pd.dreamOrbs : 0,
-            pd => pd.dreamNailUpgraded ? "DREAMNAIL_B" : "DREAMNAIL_A", _ => "dream_nail_0003_1", true)
+        new("DreamNail",
+            pd => pd.hasDreamNail ? pd.dreamOrbs : 0,
+            pd => pd.dreamNailUpgraded ? "DREAMNAIL_B" : "DREAMNAIL_A",
+            _ => "dream_nail_0003_1",
+            true)
     ];
 
     private static readonly List<HkCollectableItem> items = [];
@@ -74,8 +81,11 @@ public sealed class HkInventoryItemsModule : ModuleBase {
     }
 
     // The collected items are cached until CollectableItemManager's version changes, which HK progress never bumps.
-    private static List<SCollectableItem> OnGetItems(Func<Silksong::InventoryItemCollectableManager,
-        List<SCollectableItem>> orig, Silksong::InventoryItemCollectableManager self) {
+    private static List<SCollectableItem> OnGetItems(
+        Func<Silksong::InventoryItemCollectableManager,
+            List<SCollectableItem>> orig,
+        Silksong::InventoryItemCollectableManager self
+    ) {
         if (items.Count == 0 && MasterList() is { } masterList)
             foreach (var info in itemInfos) {
                 var item = ScriptableObject.CreateInstance<HkCollectableItem>();
@@ -114,7 +124,8 @@ internal sealed record HkItemInfo(
     Func<PlayerData, string> TextKey,
     Func<PlayerData, string> SpriteName,
     bool ShowsAmount = false,
-    Func<PlayerData, string>? DescriptionKey = null);
+    Func<PlayerData, string>? DescriptionKey = null
+);
 
 internal sealed class HkCollectableItem : SCollectableItem {
     private const string Sheet = "UI";
@@ -144,7 +155,8 @@ internal sealed class HkCollectableItem : SCollectableItem {
         if (spritesByName == null) {
             spritesByName = [];
             foreach (var sprite in Resources.FindObjectsOfTypeAll<Sprite>())
-                if (!spritesByName.ContainsKey(sprite.name)) spritesByName[sprite.name] = sprite;
+                if (!spritesByName.ContainsKey(sprite.name))
+                    spritesByName[sprite.name] = sprite;
         }
 
         return spritesByName.TryGetValue(Info.SpriteName(PlayerData.instance), out var found) ? found : null!;

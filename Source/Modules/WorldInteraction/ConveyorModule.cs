@@ -23,7 +23,8 @@ public sealed class ConveyorModule : ModuleBase {
         if (self.vertical) {
             collision.gameObject.GetComponent<Silksong::ConveyorMovementHero>().StartConveyorMove(0f, self.speed);
             hero.cState.onConveyorV = true;
-        } else {
+        }
+        else {
             hero.conveyorSpeed = self.speed;
             hero.cState.onConveyor = true;
         }

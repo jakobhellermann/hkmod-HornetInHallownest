@@ -30,11 +30,9 @@ internal abstract class HeroPresence {
         if (go) SetVisible(go, false);
     }
 
-    protected virtual void OnActivate(GameObject go) {
-    }
+    protected virtual void OnActivate(GameObject go) { }
 
-    protected virtual void OnDeactivate(GameObject go) {
-    }
+    protected virtual void OnDeactivate(GameObject go) { }
 
     // The hero's HeroAnimationController - a different type per game, so each presence resolves it.
     protected abstract Behaviour? AnimCtrl(GameObject go);

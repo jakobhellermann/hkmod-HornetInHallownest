@@ -18,6 +18,7 @@ public sealed class FsmLookupModule : ModuleBase {
     public override string Id => "fsm-lookup";
 
     #region Generic hooks
+
     private GameObject? holder;
 
     public override void Initialize() {
@@ -62,9 +63,12 @@ public sealed class FsmLookupModule : ModuleBase {
         }
 
         var dummy = holder.AddComponent<PlayMakerFSM>();
-        dummy.fsm = new Fsm { Name = fsmName };
+        dummy.fsm = new Fsm {
+            Name = fsmName
+        };
         return dummy;
     }
+
     #endregion
 
     internal static GameObject? RoarObject => roarObjectVar?.Value;
@@ -90,6 +94,7 @@ public sealed class FsmLookupModule : ModuleBase {
     }
 
     #region damages_enemy: Hornet's slash uses a DamageEnemies component, not an FSM; hand HK's readers a stand-in
+
     // Some FSMs (e.g. stag bell) read vars off the slash "damages_enemy" FSM.
     private PlayMakerFSM? damagesDummy;
     private FsmInt? damageDealt;
@@ -102,8 +107,14 @@ public sealed class FsmLookupModule : ModuleBase {
             damagesDummy = NewDummy("damages_enemy");
             var v = damagesDummy.Fsm.Variables;
             v.IntVariables = [damageDealt = new FsmInt("damageDealt"), attackType = new FsmInt("attackType")];
-            v.FloatVariables =
-                [direction = new FsmFloat("direction"), new FsmFloat("magnitudeMult") { Value = 1f }, new FsmFloat("Multiplier") { Value = 1f }];
+            v.FloatVariables = [
+                direction = new FsmFloat("direction"), new FsmFloat("magnitudeMult") {
+                    Value = 1f
+                },
+                new FsmFloat("Multiplier") {
+                    Value = 1f
+                }
+            ];
             v.BoolVariables = [circleDirection = new FsmBool("circleDirection")];
         }
 
@@ -118,5 +129,6 @@ public sealed class FsmLookupModule : ModuleBase {
     private static int MapAttackType(int ss) {
         return ss <= 7 ? ss : 1;
     }
+
     #endregion
 }

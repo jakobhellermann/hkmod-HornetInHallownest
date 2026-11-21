@@ -99,12 +99,17 @@ public sealed class PlayerDataSyncModule : ModuleBase {
     // HK's 3 nail arts + Shade Cloak fill Hornet's leftover unlocks: 1st art -> charge attack; the rest (2nd art, 3rd
     // art, Shade Cloak) each add a silk-heart regen tier (silkRegenMax 0-3). Params override HK PD for the field being set
     // right now (the SetBool hook fires before the write, so HK PD is stale for that one); null => read HK.
-    private static void RecomputeArts(SPlayerData ss, bool? cyclone = null, bool? dashSlash = null,
-        bool? greatSlash = null, bool? shadeCloak = null) {
+    private static void RecomputeArts(
+        SPlayerData ss,
+        bool? cyclone = null,
+        bool? dashSlash = null,
+        bool? greatSlash = null,
+        bool? shadeCloak = null
+    ) {
         var hk = PlayerData.instance;
         var arts = ((cyclone ?? hk.hasCyclone) ? 1 : 0)
-                   + ((dashSlash ?? hk.hasDashSlash) ? 1 : 0)
-                   + ((greatSlash ?? hk.hasUpwardSlash) ? 1 : 0);
+            + ((dashSlash ?? hk.hasDashSlash) ? 1 : 0)
+            + ((greatSlash ?? hk.hasUpwardSlash) ? 1 : 0);
         ss.hasChargeSlash = arts >= 1; // Needle Strike (charge attack)
         ss.silkRegenMax = (arts >= 2 ? 1 : 0) + (arts >= 3 ? 1 : 0) + ((shadeCloak ?? hk.hasShadowDash) ? 1 : 0);
     }
@@ -146,6 +151,8 @@ public sealed class PlayerDataSyncModule : ModuleBase {
         ss.hasChargeSlash = ss.hasQuill = ss.hasParry = ss.hasNeedolin = ss.hasNeedleThrow = true;
         ss.hasThreadSphere = ss.hasSilkSpecial = ss.hasSilkCharge = ss.hasSilkBomb = ss.hasSilkBossNeedle = true;
         ss.hasNeedolinMemoryPowerup = true;
-        return new { ok = true };
+        return new {
+            ok = true
+        };
     }
 }

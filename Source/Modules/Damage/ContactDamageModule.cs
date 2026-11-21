@@ -41,8 +41,7 @@ public sealed class ContactDamageModule : ModuleBase {
             else {
                 var damageHero = other.GetComponent<DamageHero>();
                 if (damageHero && damageHero.enabled) {
-                    if (ShadowDashModule.ShadeDashActive &&
-                        (damageHero.shadowDashHazard || IsShadeDashAllowed(other))) return;
+                    if (ShadowDashModule.ShadeDashActive && (damageHero.shadowDashHazard || IsShadeDashAllowed(other))) return;
                     dmg = damageHero.damageDealt;
                     if (damageHero.hazardType >= 2) ssHazard = MapHazard(damageHero.hazardType);
                 }
@@ -87,8 +86,10 @@ public sealed class ContactDamageModule : ModuleBase {
 
         // traitor lord shockwave
         if (t.name == "hurtbox"
-            && t.parent && t.parent.name == "slash_core"
-            && t.parent.parent && t.parent.parent.name.StartsWith("mega_mantis_tall_slash", StringComparison.Ordinal)) {
+            && t.parent
+            && t.parent.name == "slash_core"
+            && t.parent.parent
+            && t.parent.parent.name.StartsWith("mega_mantis_tall_slash", StringComparison.Ordinal)) {
             return true;
         }
 

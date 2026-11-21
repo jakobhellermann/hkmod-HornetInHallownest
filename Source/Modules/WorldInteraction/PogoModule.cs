@@ -24,8 +24,12 @@ public sealed class PogoModule : ModuleBase {
     }
 
     // Side and up slashes into a shroom: HK's NailSlash knocks the Knight back off it and bounces the shroom.
-    private bool OnDoDamage(Func<Silksong::DamageEnemies, GameObject, bool, bool> orig,
-        Silksong::DamageEnemies self, GameObject target, bool isFirstHit) {
+    private bool OnDoDamage(
+        Func<Silksong::DamageEnemies, GameObject, bool, bool> orig,
+        Silksong::DamageEnemies self,
+        GameObject target,
+        bool isFirstHit
+    ) {
         var result = orig(self, target, isFirstHit);
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
         if (!hero || !target || !self.transform.IsChildOf(hero.transform)) return result;
@@ -71,7 +75,8 @@ public sealed class PogoModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         foreach (var trigger in subscribedTriggers)
-            if (trigger) trigger.OnCollisionEnteredDirectional -= BounceOffShroom;
+            if (trigger)
+                trigger.OnCollisionEnteredDirectional -= BounceOffShroom;
         subscribedTriggers.Clear();
     }
 
@@ -94,8 +99,11 @@ public sealed class PogoModule : ModuleBase {
 
     // Mantling onto a shroom lands her while control is still relinquished, which Bounce refuses, and no new collision
     // follows once she's standing on it.
-    private static IEnumerator BounceWhenControlled(Silksong::HeroController hero, Collider2D shroom,
-        Collider2D heroCollider) {
+    private static IEnumerator BounceWhenControlled(
+        Silksong::HeroController hero,
+        Collider2D shroom,
+        Collider2D heroCollider
+    ) {
         var deadline = Time.time + 1f;
         while (hero && hero.controlReqlinquished && Time.time < deadline) yield return null;
         if (hero && shroom && shroom.IsTouching(heroCollider) && hero.Bounce()) RecoilRandomly(hero);
@@ -114,8 +122,11 @@ public sealed class PogoModule : ModuleBase {
         return nb && nb.active;
     }
 
-    private void OnContinueBounce(Action<Silksong::HeroDownAttack, GameObject?> orig, Silksong::HeroDownAttack self,
-        GameObject otherObj) {
+    private void OnContinueBounce(
+        Action<Silksong::HeroDownAttack, GameObject?> orig,
+        Silksong::HeroDownAttack self,
+        GameObject otherObj
+    ) {
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
         if (hero && otherObj) {
             // Do the dedicated launch instead of orig's normal downspike QueueBounce (which would override the bigger

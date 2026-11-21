@@ -43,7 +43,7 @@ internal static class SilksongAssemblies {
     internal static readonly string[] Hk1578PlatformDeps = ["SharpDX", "SharpDX.DirectInput", "XGamingRuntime"];
 
     internal static string[] PresentIn(string managed, string[] names) =>
-        [..names.Where(n => File.Exists($"{managed}/{n}.dll"))];
+        [.. names.Where(n => File.Exists($"{managed}/{n}.dll"))];
 
     // Silksong assemblies whose types conflict with HK's, installed as Silksong.*.
     internal static readonly string[] PrefixInputs = [
@@ -56,5 +56,5 @@ internal static class SilksongAssemblies {
         "TeamCherry.SharedUtils",
     ];
 
-    internal static readonly string[] Prefixed = [..PrefixInputs.Select(n => AssemblyPrefixer.PrefixedName(Prefix, n))];
+    internal static readonly string[] Prefixed = [.. PrefixInputs.Select(n => AssemblyPrefixer.PrefixedName(Prefix, n))];
 }

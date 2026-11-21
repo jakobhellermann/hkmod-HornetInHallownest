@@ -24,9 +24,13 @@ public sealed class QuickMapModule : ModuleBase {
 
     // Silksong EventRegister event -> HK's quick map FSM event
     private static readonly Dictionary<int, string> quickMapEvents = new() {
-        { "OPEN QUICK MAP".GetHashCode(), "OPEN QUICK MAP" },
-        { "CLOSE QUICK MAP".GetHashCode(), "CLOSE QUICK MAP" },
-        { "CLOSE QUICK MAP INSTANT".GetHashCode(), "CLOSE QUICK MAP" }
+        {
+            "OPEN QUICK MAP".GetHashCode(), "OPEN QUICK MAP"
+        }, {
+            "CLOSE QUICK MAP".GetHashCode(), "CLOSE QUICK MAP"
+        }, {
+            "CLOSE QUICK MAP INSTANT".GetHashCode(), "CLOSE QUICK MAP"
+        }
     };
 
     // HK's map FSM state that moves past the map's edge -> Silksong's inventory event for that pane move
@@ -95,8 +99,11 @@ public sealed class QuickMapModule : ModuleBase {
 
         var input = InputHandler.Instance.inputActions;
         if (input.dreamNail.WasPressed) MapKey()?.SendEvent("ACTION");
-        var uiEvent = Platform.Current.GetMenuAction(input.menuSubmit.WasPressed, input.menuCancel.WasPressed,
-            input.jump.WasPressed, false, input.cast.WasPressed) switch {
+        var uiEvent = Platform.Current.GetMenuAction(input.menuSubmit.WasPressed,
+            input.menuCancel.WasPressed,
+            input.jump.WasPressed,
+            false,
+            input.cast.WasPressed) switch {
             Platform.MenuActions.Submit => "UI CONFIRM",
             Platform.MenuActions.Cancel => "UI CANCEL",
             _ when input.left.WasPressed => "UI LEFT",
@@ -113,8 +120,10 @@ public sealed class QuickMapModule : ModuleBase {
     }
 
     // Pharloom's map would act on the same presses as HK's map.
-    private static void OnPaneInputUpdate(Action<Silksong::InventoryPaneInput> orig,
-        Silksong::InventoryPaneInput self) {
+    private static void OnPaneInputUpdate(
+        Action<Silksong::InventoryPaneInput> orig,
+        Silksong::InventoryPaneInput self
+    ) {
         if (!shownMap || !IsMapPane(self)) orig(self);
     }
 
@@ -179,8 +188,10 @@ public sealed class QuickMapModule : ModuleBase {
         // The zoom fades the area overview out, and only HK's zoom out brings it back.
         FSMUtility.SendEventToGameObject(worldMap.Find("Wide Map").gameObject, "UP", true);
         var arrows = worldMap.Find("Pan Arrows");
-        map.SetPanArrows(arrows.Find("Arrow U").gameObject, arrows.Find("Arrow D").gameObject,
-            arrows.Find("Arrow L").gameObject, arrows.Find("Arrow R").gameObject);
+        map.SetPanArrows(arrows.Find("Arrow U").gameObject,
+            arrows.Find("Arrow D").gameObject,
+            arrows.Find("Arrow L").gameObject,
+            arrows.Find("Arrow R").gameObject);
         hkMapControl = FSMUtility.LocateFSM(worldMap.gameObject, "UI Control");
         isActivating = true;
 

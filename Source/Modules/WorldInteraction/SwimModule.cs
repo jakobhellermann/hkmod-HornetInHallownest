@@ -108,8 +108,7 @@ public sealed class SwimModule : ModuleBase {
         var rise = surfaceY - p.y;
         var blocked = rise > 0f && Physics2D.Raycast(p, Vector2.up, rise, terrainMask).collider != null;
         if (!blocked) hero.transform.position = new Vector3(p.x, surfaceY, p.z);
-        LogDebug($"enter '{region.name}' surfaceY={surfaceY:F2} fromY={p.y:F2} " +
-                 (blocked ? "terrain overhead -> float in place" : "snapped to surface"));
+        LogDebug($"enter '{region.name}' surfaceY={surfaceY:F2} fromY={p.y:F2} " + (blocked ? "terrain overhead -> float in place" : "snapped to surface"));
     }
 
     public override void HornetActiveUpdate(SHero hero) {

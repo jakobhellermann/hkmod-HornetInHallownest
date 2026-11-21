@@ -26,7 +26,11 @@ internal static class GameCamerasBootstrap {
     // Border") have different uniqueIDs than HK's, so HK rejects them and OnUpdate re-applies every frame. Remap the
     // invalid ones to HK's by-name equivalent ("HUD" fallback).
     private static readonly Dictionary<int, string> ssSortingLayerNames = new() {
-        { 59515797, "Inventory" }, { 1017658613, "Scene Border" }
+        {
+            59515797, "Inventory"
+        }, {
+            1017658613, "Scene Border"
+        }
     };
 
     private const float HudScale = 0.75f; // roughly HK footprint
@@ -72,13 +76,18 @@ internal static class GameCamerasBootstrap {
                 if (existing != null && Silksong::GameCameras.SilentInstance == null)
                     Silksong::GameCameras._instance = existing;
                 return new {
-                    ok = true, note = "reused existing rig", instanceSet = Silksong::GameCameras.SilentInstance != null
+                    ok = true,
+                    note = "reused existing rig",
+                    instanceSet = Silksong::GameCameras.SilentInstance != null
                 };
             }
 
             SilksongAddressables.EnsureMounted();
             var prefab = Addressables.LoadAssetAsync<GameObject>("_GameCameras").WaitForCompletion();
-            if (prefab == null) return new { error = "_GameCameras load returned null" };
+            if (prefab == null)
+                return new {
+                    error = "_GameCameras load returned null"
+                };
 
             // Instantiate under an inactive holder so we can neuter components before any Awake fires, then activate it
             // so every HUD FSM (health_display, silk, …) self-initializes via its real Awake/Start (a dormant rig left
@@ -90,7 +99,10 @@ internal static class GameCamerasBootstrap {
 
             // Neuter HK-owned parts before activation (so their Update never runs). Disable, don't destroy, so the rig's
             // serialized refs stay non-null.
-            int cams = 0, listeners = 0, controllers = 0, blur = 0;
+            int cams = 0,
+                listeners = 0,
+                controllers = 0,
+                blur = 0;
             foreach (var c in inst.GetComponentsInChildren<Camera>(true)) {
                 c.enabled = false;
                 cams++;
@@ -151,13 +163,20 @@ internal static class GameCamerasBootstrap {
                 ok = true,
                 active = true,
                 instanceSet,
-                neutered = new { cameras = cams, audioListeners = listeners, cameraControllers = controllers, blur },
+                neutered = new {
+                    cameras = cams,
+                    audioListeners = listeners,
+                    cameraControllers = controllers,
+                    blur
+                },
                 cameraTarget = inst.GetComponentInChildren<Silksong::CameraTarget>(true) != null
             };
         } catch (Exception e) {
             var ex = e.InnerException ?? e;
             Log.Error($"[GameCameras] bootstrap failed: {ex}");
-            return new { error = ex.GetType().Name + ": " + ex.Message };
+            return new {
+                error = ex.GetType().Name + ": " + ex.Message
+            };
         }
     }
 
@@ -191,13 +210,22 @@ internal static class GameCamerasBootstrap {
     // ReSharper disable once UnusedMethodReturnValue.Global
     internal static object BringUpHud(bool on) {
         rig ??= FindExistingRig();
-        if (rig == null) return new { error = "rig not up (spawn first)" };
+        if (rig == null)
+            return new {
+                error = "rig not up (spawn first)"
+            };
         var hudCam = FindByName(rig.transform, "HudCamera");
-        if (hudCam == null) return new { error = "HudCamera not found" };
+        if (hudCam == null)
+            return new {
+                error = "HudCamera not found"
+            };
         var cam = hudCam.GetComponent<Camera>();
         if (!on) {
             FindByName(hudCam, "In-game")?.gameObject.SetActive(false);
-            return new { ok = true, hudOn = false };
+            return new {
+                ok = true,
+                hudOn = false
+            };
         }
 
         // HudCamera is inactive in the prefab (StartScene activates it; we skip that), so its HUD subtree + FSMs never
@@ -303,7 +331,11 @@ internal static class GameCamerasBootstrap {
 
         var uiSet = Silksong::UIManager.instance != null;
         return new {
-            ok = true, hudOn = true, camEnabled = cam != null && cam.enabled, uiManager = uiSet, layerFixes,
+            ok = true,
+            hudOn = true,
+            camEnabled = cam != null && cam.enabled,
+            uiManager = uiSet,
+            layerFixes,
             silkSpool = realSpool != null
         };
     }
@@ -423,8 +455,7 @@ internal static class GameCamerasBootstrap {
         private void OnCameraPreCull(Camera cam) {
             if (isApplied || !ResolveHkCamera() || !cam.transform.IsChildOf(hkCamT!)) return;
             // apply HK camera shake multiplier
-            appliedOffset = ((transform.parent ? transform.parent.localPosition - parentRest : Vector3.zero) +
-                             (shakeManager ? shakeManager.currentOffset : Vector3.zero)) * ConfigManager.CameraShakeMultiplier;
+            appliedOffset = ((transform.parent ? transform.parent.localPosition - parentRest : Vector3.zero) + (shakeManager ? shakeManager.currentOffset : Vector3.zero)) * ConfigManager.CameraShakeMultiplier;
             hkCamT!.localPosition += appliedOffset;
             isApplied = true;
         }

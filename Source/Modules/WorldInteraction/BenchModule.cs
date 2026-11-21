@@ -25,14 +25,20 @@ public sealed class BenchModule : ModuleBase {
         // A tool icon can't redraw while the HUD is hidden, and it doesn't redraw on its own when shown again.
         GameCamerasBootstrap.HornetHudShown += RefreshToolHud;
         Silksong::ToolItemManager.OnEquippedStateChanged += OnEquipsChanged;
-        Detour(typeof(Silksong::ToolItemManager), "TryReplenishTools", OnTryReplenishTools, typeof(bool),
+        Detour(typeof(Silksong::ToolItemManager),
+            "TryReplenishTools",
+            OnTryReplenishTools,
+            typeof(bool),
             typeof(SReplenishMethod));
     }
 
     // The Architect Crest's quick craft pays in shell shards, which HK doesn't have; refill the tools it would refill
     // for free instead, like the bench does.
-    private static bool OnTryReplenishTools(Func<bool, SReplenishMethod, bool> orig, bool doReplenish,
-        SReplenishMethod method) {
+    private static bool OnTryReplenishTools(
+        Func<bool, SReplenishMethod, bool> orig,
+        bool doReplenish,
+        SReplenishMethod method
+    ) {
         if (method != SReplenishMethod.QuickCraft) return orig(doReplenish, method);
         var tools = Silksong::ToolItemManager.GetCurrentEquippedTools();
         if (tools == null) return false;
@@ -40,8 +46,7 @@ public sealed class BenchModule : ModuleBase {
         var pd = Silksong::PlayerData.instance;
         var canRefill = false;
         foreach (var tool in tools) {
-            if (!tool || !tool.IsAutoReplenished() || tool.ReplenishResource == SReplenishResources.None ||
-                tool.ReplenishUsage == SReplenishUsages.OneForOne) continue;
+            if (!tool || !tool.IsAutoReplenished() || tool.ReplenishResource == SReplenishResources.None || tool.ReplenishUsage == SReplenishUsages.OneForOne) continue;
             var data = pd.GetToolData(tool.name);
             var storage = Silksong::ToolItemManager.GetToolStorageAmount(tool);
             if (data.AmountLeft >= storage) continue;

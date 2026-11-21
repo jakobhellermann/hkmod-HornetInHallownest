@@ -16,8 +16,11 @@ namespace HornetInHallownest.Modules;
 // Also disambiguate method calls that do work, but won't resolve due to ambiguous overload.
 public sealed class FsmMethodCallRemapModule : ModuleBase {
     private static readonly Dictionary<string, string> methodRedirects = new() {
-        { "CanTalk", "CanInspect" },
-        { "CanFocus", "CanCast" }
+        {
+            "CanTalk", "CanInspect"
+        }, {
+            "CanFocus", "CanCast"
+        }
     };
 
     #region Replacement methods
@@ -52,20 +55,31 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     // HK-only MP methods called on Hornet -> the stand-in that runs instead. Hornet has no soul, so most no-op; the
     // hot-spring soul refill is the exception, mapped onto her silk and masks.
     private static readonly Dictionary<string, MethodInfo?> hkMethodStandIns = new() {
-        { "ClearMP", noOpStandIn },
-        { "ClearMPSendEvents", noOpStandIn },
-        { "AddMPCharge", noOpStandIn },
-        { "StartMPDrain", noOpStandIn },
-        { "StopMPDrain", noOpStandIn },
-        { "SetMPCharge", noOpStandIn },
-        { "TryAddMPChargeSpa", spaStandIn },
-        { "AddMPChargeSpa", spaStandIn }
+        {
+            "ClearMP", noOpStandIn
+        }, {
+            "ClearMPSendEvents", noOpStandIn
+        }, {
+            "AddMPCharge", noOpStandIn
+        }, {
+            "StartMPDrain", noOpStandIn
+        }, {
+            "StopMPDrain", noOpStandIn
+        }, {
+            "SetMPCharge", noOpStandIn
+        }, {
+            "TryAddMPChargeSpa", spaStandIn
+        }, {
+            "AddMPChargeSpa", spaStandIn
+        }
     };
 
     // Soul vessel pickups `SendMessage` their max-up to "Hero", i.e. Hornet, whose HeroController has no
     // AddToMaxMPReserve. PlayerDataSyncModule mirrors HK PD onto hers, so the upgrade has to land on the Knight.
     private static readonly Dictionary<string, Action<HeroController, int>> knightUpgrades = new() {
-        { "AddToMaxMPReserve", (knight, amount) => knight.AddToMaxMPReserve(amount) }
+        {
+            "AddToMaxMPReserve", (knight, amount) => knight.AddToMaxMPReserve(amount)
+        }
     };
 
     private const float MaskHealInterval = 0.15f;
@@ -146,8 +160,7 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
         }
 
         var hornet = HornetSpawner.HornetRoot;
-        if (self.methodName?.Value == RelinquishControl && hornet &&
-            self.Fsm.GetOwnerDefaultTarget(self.gameObject) == hornet)
+        if (self.methodName?.Value == RelinquishControl && hornet && self.Fsm.GetOwnerDefaultTarget(self.gameObject) == hornet)
             CancelMove(hornet);
         orig(self);
     }
@@ -170,17 +183,14 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
         var type = self.cachedType;
         var methodName = self.methodName?.Value;
 
-        if (type != null && methodName != null &&
-            methodRedirects.TryGetValue(methodName, out var redirect) &&
-            type.GetMethod(redirect, Type.EmptyTypes) is { } altMethod) {
+        if (type != null && methodName != null && methodRedirects.TryGetValue(methodName, out var redirect) && type.GetMethod(redirect, Type.EmptyTypes) is { } altMethod) {
             SetCached(self, altMethod);
             LogDebugOnce($"redirect|{methodName}|{type.Name}",
                 $"redirected '{methodName}' -> '{redirect}' on {type.Name}");
             return true;
         }
 
-        if (HeroSwitch.HornetActive && methodName != null &&
-            hkMethodStandIns.TryGetValue(methodName, out var standIn)) {
+        if (HeroSwitch.HornetActive && methodName != null && hkMethodStandIns.TryGetValue(methodName, out var standIn)) {
             if (standIn == null) return false;
             SetCached(self, standIn);
             LogDebugOnce($"hkonly|{methodName}", $"HK-only '{methodName}' -> {standIn.Name}");

@@ -49,15 +49,18 @@ internal static class Stub {
         Skip(typeof(Silksong::DeliveryQuestItem),
             "TakeHit"); // Superjump ceiling-slam, GetActiveItems NullRef hangs "Hit Roof" FSM
         Skip(typeof(Silksong::GameManager), "FadeSceneIn"); // Silksong scene fade fights HK's; HK owns the fade
-        Skip(typeof(Silksong::GameManager), "AwardAchievement",
+        Skip(typeof(Silksong::GameManager),
+            "AwardAchievement",
             true); // achievementHandler null; achievements irrelevant
         Skip(typeof(Silksong::GameManager), "UpdateAchievementProgress", true);
         Skip(typeof(Silksong::GameManager), "AwardQueuedAchievements", true);
 
         // HeroController.Start's initial AddSilk NullRefs in SpawnNewChunk (null animator); suppress so Start completes.
         var addSilk = typeof(Silksong::HeroController).GetMethod("AddSilk",
-            BindingFlags.Instance | BindingFlags.Public, null,
-            [typeof(int), typeof(bool), typeof(Silksong::SilkSpool.SilkAddSource), typeof(bool)], null);
+            BindingFlags.Instance | BindingFlags.Public,
+            null,
+            [typeof(int), typeof(bool), typeof(Silksong::SilkSpool.SilkAddSource), typeof(bool)],
+            null);
         if (addSilk != null)
             detours.Add(new Hook(addSilk,
                 (Action<Action<Silksong::HeroController, int, bool, Silksong::SilkSpool.SilkAddSource, bool>,
@@ -102,8 +105,7 @@ internal static class Stub {
 
     // Stub every method named `method` on `type` (all overloads/visibilities) to log-once + return default.
     private static void Skip(Type type, string method, bool silent = false) {
-        var found = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public |
-                                    BindingFlags.NonPublic);
+        var found = type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
         var any = false;
         foreach (var mi in found) {
             if (mi.Name != method || mi.IsAbstract || mi.GetMethodBody() == null) continue;
@@ -122,8 +124,7 @@ internal static class Stub {
     // Called from stubbed methods (emitted by Rewrite). Logged dedups per label; Silent never logs.
     public static void Logged(string label) => Log.DebugOnce($"stub|{label}", $"[Stub] >> {label} (stubbed, no-op)");
 
-    public static void Silent(string _) {
-    }
+    public static void Silent(string _) { }
 
     private static void Rewrite(ILContext il, string label, bool silent = false) {
         il.Body.Instructions.Clear();

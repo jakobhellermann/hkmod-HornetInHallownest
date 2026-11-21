@@ -26,12 +26,22 @@ public sealed class HeroSfxModule : ModuleBase {
         Detour(typeof(AudioSource), "PlayOneShot", OnPlayOneShot, typeof(AudioClip), typeof(float));
 #else
         Detour(typeof(AudioSource), "PlayHelper", OnPlay, typeof(AudioSource), typeof(ulong));
-        Detour(typeof(AudioSource), "PlayOneShotHelper", OnPlayOneShot, typeof(AudioSource), typeof(AudioClip),
+        Detour(typeof(AudioSource),
+            "PlayOneShotHelper",
+            OnPlayOneShot,
+            typeof(AudioSource),
+            typeof(AudioClip),
             typeof(float));
 #endif
         // Some pool objects like double damage audio don't go through PlayActive but set playOnAwake.
-        Detour(typeof(Silksong::ObjectPool), "Spawn", OnSpawn,
-            typeof(GameObject), typeof(Transform), typeof(Vector3), typeof(Quaternion), typeof(bool));
+        Detour(typeof(Silksong::ObjectPool),
+            "Spawn",
+            OnSpawn,
+            typeof(GameObject),
+            typeof(Transform),
+            typeof(Vector3),
+            typeof(Quaternion),
+            typeof(bool));
         // Hero child effects like the Magnetite Dice shield are instantiated in Awake, not pooled, and set playOnAwake.
         Detour(typeof(Silksong::HeroController), "SpawnChildPrefab", OnSpawnChildPrefab, typeof(GameObject));
     }
@@ -45,14 +55,23 @@ public sealed class HeroSfxModule : ModuleBase {
     }
 
     // Reroute audio mixer of the prefab template to HK's audio sfx group.
-    private GameObject OnSpawn(Func<GameObject, Transform, Vector3, Quaternion, bool, GameObject> orig,
-        GameObject prefab, Transform parent, Vector3 position, Quaternion rotation, bool stealActiveSpawned) {
+    private GameObject OnSpawn(
+        Func<GameObject, Transform, Vector3, Quaternion, bool, GameObject> orig,
+        GameObject prefab,
+        Transform parent,
+        Vector3 position,
+        Quaternion rotation,
+        bool stealActiveSpawned
+    ) {
         ReroutePrefabAudio(prefab);
         return orig(prefab, parent, position, rotation, stealActiveSpawned);
     }
 
-    private GameObject OnSpawnChildPrefab(Func<Silksong::HeroController, GameObject, GameObject> orig,
-        Silksong::HeroController self, GameObject prefab) {
+    private GameObject OnSpawnChildPrefab(
+        Func<Silksong::HeroController, GameObject, GameObject> orig,
+        Silksong::HeroController self,
+        GameObject prefab
+    ) {
         ReroutePrefabAudio(prefab);
         return orig(self, prefab);
     }
@@ -85,8 +104,12 @@ public sealed class HeroSfxModule : ModuleBase {
     }
 #endif
 
-    private void OnPlayOneShot(Action<AudioSource, AudioClip, float> orig, AudioSource source, AudioClip clip,
-        float volumeScale) {
+    private void OnPlayOneShot(
+        Action<AudioSource, AudioClip, float> orig,
+        AudioSource source,
+        AudioClip clip,
+        float volumeScale
+    ) {
         Normalize(source);
         orig(source, clip, volumeScale);
     }

@@ -96,12 +96,15 @@ internal sealed class UnityDowngrader {
             [("tk2dSprite", "MoveKeywords")] = "tk2dSprite_MoveKeywords",
             [("tk2dSprite", "SetFloat")] = "tk2dSprite_SetFloat",
         };
-        foreach (var e in new[] { "AnimationCompletedEvent", "AnimationEventTriggeredEvent", "AnimationChanged" }) {
+        foreach (var e in new[] {
+                     "AnimationCompletedEvent", "AnimationEventTriggeredEvent", "AnimationChanged"
+                 }) {
             map[("tk2dSpriteAnimator", "add_" + e)] = "tk2dSpriteAnimator_add_" + e;
             map[("tk2dSpriteAnimator", "remove_" + e)] = "tk2dSpriteAnimator_remove_" + e;
         }
-        foreach (var p in new[] { "excludeLayers", "includeLayers", "callbackLayers", "contactCaptureLayers",
-                                  "forceSendLayers", "forceReceiveLayers", "layerOverridePriority" }) {
+        foreach (var p in new[] {
+                     "excludeLayers", "includeLayers", "callbackLayers", "contactCaptureLayers", "forceSendLayers", "forceReceiveLayers", "layerOverridePriority"
+                 }) {
             map[("UnityEngine.Collider2D", "get_" + p)] = "Collider2D_get_" + p;
             map[("UnityEngine.Collider2D", "set_" + p)] = "Collider2D_set_" + p;
         }
@@ -130,7 +133,8 @@ internal sealed class UnityDowngrader {
         foreach (var asm in hostOrder) {
             hostAssemblies[asm.Name.Name] = asm.Name;
             foreach (var type in asm.MainModule.Types.Where(t => t.IsPublic))
-                if (!hostTypes.ContainsKey(type.FullName)) hostTypes[type.FullName] = asm.Name;
+                if (!hostTypes.ContainsKey(type.FullName))
+                    hostTypes[type.FullName] = asm.Name;
         }
 
         foreach (var type in shim.MainModule.Types.Where(t => t.IsPublic)) shimTypes.Add(type.FullName);
@@ -201,7 +205,8 @@ internal sealed class UnityDowngrader {
                     if (rename.Namespace != "") tr.Namespace = rename.Namespace;
                     tr.Name = rename.Name;
                     Changes++;
-                } else if (nestedToShim.TryGetValue(tr.FullName, out var shimName)) {
+                }
+                else if (nestedToShim.TryGetValue(tr.FullName, out var shimName)) {
                     tr.DeclaringType = null; // a nested reference takes its scope from the declaring type
                     tr.Namespace = "UnityEngine.Compat";
                     tr.Name = shimName;
@@ -214,7 +219,8 @@ internal sealed class UnityDowngrader {
         private IEnumerable<string> RehomeTypeReferences() {
             var unresolved = new List<string>();
             foreach (var tr in module.GetTypeReferences().Where(t => t.DeclaringType == null))
-                if (!Rehome(tr)) unresolved.Add(tr.FullName);
+                if (!Rehome(tr))
+                    unresolved.Add(tr.FullName);
             return unresolved;
         }
 
@@ -353,7 +359,8 @@ internal sealed class UnityDowngrader {
             var name = stem.Insert(stem.LastIndexOf('_') + 1, isLoad ? "get_" : "set_");
             if (!d.shimMethodOwner.TryGetValue(name, out var owner))
                 throw new InvalidOperationException($"shim method {name} missing");
-            var accessor = new MethodReference(name, isLoad ? field.FieldType : module.TypeSystem.Void,
+            var accessor = new MethodReference(name,
+                isLoad ? field.FieldType : module.TypeSystem.Void,
                 new TypeReference(owner.Namespace, owner.Name, module, ShimScope()));
             accessor.Parameters.Add(new ParameterDefinition(field.DeclaringType));
             if (!isLoad) accessor.Parameters.Add(new ParameterDefinition(field.FieldType));
@@ -423,8 +430,11 @@ internal sealed class UnityDowngrader {
             && a.Parameters.Select(p => p.ParameterType.FullName).SequenceEqual(b.Parameters.Select(p => p.ParameterType.FullName));
 
         private MethodDefinition CloneAsExplicitImplementation(TypeDefinition iface, MethodDefinition source) {
-            const MethodAttributes attributes = MethodAttributes.Private | MethodAttributes.Final | MethodAttributes.Virtual
-                                                | MethodAttributes.NewSlot | MethodAttributes.HideBySig;
+            const MethodAttributes attributes = MethodAttributes.Private
+                | MethodAttributes.Final
+                | MethodAttributes.Virtual
+                | MethodAttributes.NewSlot
+                | MethodAttributes.HideBySig;
             var clone = new MethodDefinition($"{iface.FullName}.{source.Name}", attributes, source.ReturnType) {
                 IsSpecialName = source.IsSpecialName,
             };
@@ -476,7 +486,9 @@ internal sealed class UnityDowngrader {
         private AssemblyNameReference Scope(AssemblyNameReference target) {
             var existing = module.AssemblyReferences.FirstOrDefault(r => r.Name == target.Name);
             if (existing != null) return existing;
-            var reference = new AssemblyNameReference(target.Name, target.Version) { PublicKeyToken = target.PublicKeyToken };
+            var reference = new AssemblyNameReference(target.Name, target.Version) {
+                PublicKeyToken = target.PublicKeyToken
+            };
             module.AssemblyReferences.Add(reference);
             return reference;
         }

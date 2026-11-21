@@ -34,14 +34,21 @@ public sealed class HitBridgeModule : ModuleBase {
     private static Collider2D[] solidTinkers = [];
 
     public override void Initialize() {
-        Detour(typeof(Silksong::HitTaker), "GetHitResponders", OnGetHitResponders,
-            typeof(List<SIHit>), typeof(GameObject), typeof(int), typeof(HashSet<SIHit>));
+        Detour(typeof(Silksong::HitTaker),
+            "GetHitResponders",
+            OnGetHitResponders,
+            typeof(List<SIHit>),
+            typeof(GameObject),
+            typeof(int),
+            typeof(HashSet<SIHit>));
         Detour(typeof(Silksong::DamageEnemies), "DoDamage", OnDoDamage, typeof(GameObject), typeof(bool));
         Detour(typeof(SHealthManager), "Hit", OnHealthManagerHit, typeof(SHitInstance));
         // OnAwake, not Awake: HealthManager also runs it via IInitialisable, which hooking Awake alone would miss.
         Detour(typeof(SHealthManager), "OnAwake", OnHealthManagerAwake);
         // Status ticks and lag hits deal their damage here, to the bridge's own hp.
-        Detour(typeof(SHealthManager), nameof(SHealthManager.ApplyExtraDamage), OnApplyExtraDamage,
+        Detour(typeof(SHealthManager),
+            nameof(SHealthManager.ApplyExtraDamage),
+            OnApplyExtraDamage,
             typeof(SHitInstance));
         // HK enemy hits call HeroController.instance.SoulGain, redirect to Hornet's SilkGain when active.
         Detour(typeof(HeroController), "SoulGain", OnSoulGain);
@@ -65,8 +72,13 @@ public sealed class HitBridgeModule : ModuleBase {
         }
     }
 
-    private void OnGetHitResponders(Action<List<SIHit>, GameObject, int, HashSet<SIHit>> orig, List<SIHit> store,
-        GameObject target, int depth, HashSet<SIHit> blackList) {
+    private void OnGetHitResponders(
+        Action<List<SIHit>, GameObject, int, HashSet<SIHit>> orig,
+        List<SIHit> store,
+        GameObject target,
+        int depth,
+        HashSet<SIHit> blackList
+    ) {
         orig(store, target, depth, blackList);
         if (!target) return;
 
@@ -100,8 +112,12 @@ public sealed class HitBridgeModule : ModuleBase {
         if (!blackList.Contains(bridge)) store.Add(bridge);
     }
 
-    private static bool OnDoDamage(Func<Silksong::DamageEnemies, GameObject, bool, bool> orig,
-        Silksong::DamageEnemies self, GameObject target, bool isFirstHit) {
+    private static bool OnDoDamage(
+        Func<Silksong::DamageEnemies, GameObject, bool, bool> orig,
+        Silksong::DamageEnemies self,
+        GameObject target,
+        bool isFirstHit
+    ) {
         var previous = currentDamager;
         currentDamager = self;
         try {
@@ -121,7 +137,10 @@ public sealed class HitBridgeModule : ModuleBase {
         }
 
         // Fsm.Event reads the sender's active state, which throws while its states are null.
-        damagerFsm ??= new Fsm { Name = "damages_enemy", States = [] };
+        damagerFsm ??= new Fsm {
+            Name = "damages_enemy",
+            States = []
+        };
         damagerFsm.Owner = currentDamager;
         FsmExecutionStack.PushFsm(damagerFsm);
         try {
@@ -131,8 +150,11 @@ public sealed class HitBridgeModule : ModuleBase {
         }
     }
 
-    private static SIHit.HitResponse OnHealthManagerHit(Func<SHealthManager, SHitInstance, SIHit.HitResponse> orig,
-        SHealthManager self, SHitInstance si) {
+    private static SIHit.HitResponse OnHealthManagerHit(
+        Func<SHealthManager, SHitInstance, SIHit.HitResponse> orig,
+        SHealthManager self,
+        SHitInstance si
+    ) {
         if (self is HkEnemyHitBridge b) return b.ForwardHit(si);
 
         return orig(self, si);
@@ -144,8 +166,11 @@ public sealed class HitBridgeModule : ModuleBase {
         return false;
     }
 
-    private static void OnApplyExtraDamage(Action<SHealthManager, SHitInstance> orig, SHealthManager self,
-        SHitInstance hit) {
+    private static void OnApplyExtraDamage(
+        Action<SHealthManager, SHitInstance> orig,
+        SHealthManager self,
+        SHitInstance hit
+    ) {
         if (self is HkEnemyHitBridge b) b.ForwardExtraDamage(hit);
         else orig(self, hit);
     }
@@ -283,15 +308,11 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
     // effects through NailHitEnemy (Beast heal, evolved Hunter meter) and the Reaper's silk orbs.
     private void RewardHero(SHitInstance si) {
         var hero = Silksong::HeroController.instance;
-        var isNailHit = si.AttackType is SAttackTypes.Nail or SAttackTypes.NailBeam ||
-                        (si.AttackType == SAttackTypes.Heavy && si.Source &&
-                         Silksong::DamageEnemies.IsNailAttackObject(si.Source));
+        var isNailHit = si.AttackType is SAttackTypes.Nail or SAttackTypes.NailBeam || (si.AttackType == SAttackTypes.Heavy && si.Source && Silksong::DamageEnemies.IsNailAttackObject(si.Source));
         if (!hero || !isNailHit) return;
         hero.NailHitEnemy(this, si);
 
-        var reaps = si is { AttackType: SAttackTypes.Nail } or { AttackType: SAttackTypes.Heavy, IsNailTag: true } &&
-                    si.SilkGeneration != Silksong::HitSilkGeneration.None &&
-                    Silksong::PlayerData.instance.CurrentCrestID == "Reaper" && hero.ReaperState.IsInReaperMode;
+        var reaps = si is { AttackType: SAttackTypes.Nail } or { AttackType: SAttackTypes.Heavy, IsNailTag: true } && si.SilkGeneration != Silksong::HitSilkGeneration.None && Silksong::PlayerData.instance.CurrentCrestID == "Reaper" && hero.ReaperState.IsInReaperMode;
         if (!reaps) return;
 
         var direction = Silksong::DirectionUtils.GetCardinalDirection(
@@ -299,20 +320,23 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
         var degrees = direction * 90f;
         var payout = hero.GetReaperPayout();
         Silksong::FlingUtils.SpawnAndFling(new Silksong::FlingUtils.Config {
-            Prefab = Silksong::GlobalSettings.Gameplay.ReaperBundlePrefab,
-            AmountMin = payout,
-            AmountMax = payout,
-            SpeedMin = 25f,
-            SpeedMax = 50f,
-            AngleMin = degrees - 45f,
-            AngleMax = degrees + 45f
-        }, transform, Vector3.zero);
+                Prefab = Silksong::GlobalSettings.Gameplay.ReaperBundlePrefab,
+                AmountMin = payout,
+                AmountMax = payout,
+                SpeedMin = 25f,
+                SpeedMax = 50f,
+                AngleMin = degrees - 45f,
+                AngleMax = degrees + 45f
+            },
+            transform,
+            Vector3.zero);
 
         var effectPrefab = Silksong::GlobalSettings.Effects.ReapHitEffectPrefab;
         if (!effectPrefab) return;
         var effect = Silksong::ObjectPoolExtensions.Spawn(effectPrefab, transform.position);
         Silksong::Extensions.SetRotation2D(effect.transform, direction % 2 == 1 ? 90f : 0f);
-        effect.transform.localScale = new Vector3(direction == 2 ? -1f : 1f, direction == 3 ? -1f : 1f,
+        effect.transform.localScale = new Vector3(direction == 2 ? -1f : 1f,
+            direction == 3 ? -1f : 1f,
             effect.transform.localScale.z);
     }
 }

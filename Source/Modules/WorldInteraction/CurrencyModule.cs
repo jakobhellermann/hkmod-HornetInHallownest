@@ -24,19 +24,31 @@ public sealed class CurrencyModule : ModuleBase {
         GameCamerasBootstrap.HornetHudShown += OnHudShown;
 
         // HK's geo is the single source of truth.
-        Detour(typeof(Silksong::HeroController), "TakeGeo",
+        Detour(typeof(Silksong::HeroController),
+            "TakeGeo",
             (System.Action<System.Action<Silksong::HeroController, int>, Silksong::HeroController, int>)
-            ((_, _, amount) => PlayerData.instance.TakeGeo(amount)), typeof(int));
-        Detour(typeof(Silksong::HeroController), "AddGeo",
+            ((_, _, amount) => PlayerData.instance.TakeGeo(amount)),
+            typeof(int));
+        Detour(typeof(Silksong::HeroController),
+            "AddGeo",
             (System.Action<System.Action<Silksong::HeroController, int>, Silksong::HeroController, int>)
-            ((_, _, amount) => PlayerData.instance.AddGeo(amount)), typeof(int));
+            ((_, _, amount) => PlayerData.instance.AddGeo(amount)),
+            typeof(int));
         // Silksong's own payouts (e.g. a broken death cocoon) write its Money straight into Silksong's geo.
-        Detour(typeof(Silksong::CurrencyManager), "ChangeCurrency", OnChangeCurrency, typeof(int),
-            typeof(SCurrencyType), typeof(bool));
+        Detour(typeof(Silksong::CurrencyManager),
+            "ChangeCurrency",
+            OnChangeCurrency,
+            typeof(int),
+            typeof(SCurrencyType),
+            typeof(bool));
     }
 
-    private static void OnChangeCurrency(System.Action<int, SCurrencyType, bool> orig, int amount, SCurrencyType type,
-        bool showCounter) {
+    private static void OnChangeCurrency(
+        System.Action<int, SCurrencyType, bool> orig,
+        int amount,
+        SCurrencyType type,
+        bool showCounter
+    ) {
         if (type != SCurrencyType.Money) {
             orig(amount, type, showCounter);
             return;

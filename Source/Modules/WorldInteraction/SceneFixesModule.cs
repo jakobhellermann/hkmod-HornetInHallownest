@@ -21,14 +21,23 @@ public sealed class SceneFixesModule : ModuleBase {
         ModHooks.GetPlayerBoolHook += OnGetBool;
         ModHooks.GetPlayerIntHook += OnGetInt;
         // TODO: just hook into thread storm
-        Detour(typeof(SFsm), "SwitchState",
-            (Action<Action<SFsm, SFsmState?>, SFsm, SFsmState?>)OnSilksongSwitchState, typeof(SFsmState));
-        Detour(typeof(SNonSlider), nameof(SNonSlider.IsNonSlider),
-            (Func<Func<GameObject, bool>, GameObject, bool>)OnIsNonSlider, typeof(GameObject));
-        Detour(typeof(SNonSlider), nameof(SNonSlider.IsNonSlider),
-            (Func<Func<Collider2D, bool>, Collider2D, bool>)OnIsNonSlider, typeof(Collider2D));
-        Detour(typeof(SNonSlider), nameof(SNonSlider.TryGetNonSlider),
-            (TryGetNonSliderHook)OnTryGetNonSlider, typeof(GameObject), typeof(SNonSlider).MakeByRefType());
+        Detour(typeof(SFsm),
+            "SwitchState",
+            (Action<Action<SFsm, SFsmState?>, SFsm, SFsmState?>)OnSilksongSwitchState,
+            typeof(SFsmState));
+        Detour(typeof(SNonSlider),
+            nameof(SNonSlider.IsNonSlider),
+            (Func<Func<GameObject, bool>, GameObject, bool>)OnIsNonSlider,
+            typeof(GameObject));
+        Detour(typeof(SNonSlider),
+            nameof(SNonSlider.IsNonSlider),
+            (Func<Func<Collider2D, bool>, Collider2D, bool>)OnIsNonSlider,
+            typeof(Collider2D));
+        Detour(typeof(SNonSlider),
+            nameof(SNonSlider.TryGetNonSlider),
+            (TryGetNonSliderHook)OnTryGetNonSlider,
+            typeof(GameObject),
+            typeof(SNonSlider).MakeByRefType());
     }
 
     public override string Id => "scene-fixes";
@@ -72,7 +81,8 @@ public sealed class SceneFixesModule : ModuleBase {
         if (go.GetComponent<NonSlider>()) return true;
         if (go.layer != (int)PhysLayers.HERO_DETECTOR) return false;
         foreach (var collider in go.GetComponents<Collider2D>())
-            if (!collider.isTrigger) return true;
+            if (!collider.isTrigger)
+                return true;
         return false;
     }
 
@@ -87,6 +97,7 @@ public sealed class SceneFixesModule : ModuleBase {
     }
 
     private delegate bool TryGetNonSliderOrig(GameObject go, out SNonSlider nonSlider);
+
     private delegate bool TryGetNonSliderHook(TryGetNonSliderOrig orig, GameObject go, out SNonSlider nonSlider);
 
     private static bool OnTryGetNonSlider(TryGetNonSliderOrig orig, GameObject go, out SNonSlider nonSlider) {
@@ -156,9 +167,7 @@ public sealed class SceneFixesModule : ModuleBase {
 
     private void OnSilksongSwitchState(Action<SFsm, SFsmState?> orig, SFsm fsm, SFsmState? to) {
         try {
-            if (screamGet != null && to is { Name: "Do Sphere" } && fsm.Name == "Silk Specials" &&
-                screamGet.ActiveStateName == "In" &&
-                PlayerData.instance.screamLevel < 2) {
+            if (screamGet != null && to is { Name: "Do Sphere" } && fsm.Name == "Silk Specials" && screamGet.ActiveStateName == "In" && PlayerData.instance.screamLevel < 2) {
                 LogInfo("Thread Storm cast in Abyss shriek zone -> broadcasting SCREAM GET");
                 PlayMakerFSM.BroadcastEvent("SCREAM GET");
                 holdingForScreamGet = true;
@@ -245,8 +254,7 @@ public sealed class SceneFixesModule : ModuleBase {
     // Hornet doesn't equip kingsoul, so pretend it is equipped in the abyss scene if we have it
     // royalCharmState 3 = King Soul, 4 = Void Heart
     private bool OnGetBool(string name, bool orig) =>
-        orig || inAbyssCore && name == "equippedCharm_36" && HeroSwitch.HornetActive &&
-        PlayerData.instance.royalCharmState > 2;
+        orig || inAbyssCore && name == "equippedCharm_36" && HeroSwitch.HornetActive && PlayerData.instance.royalCharmState > 2;
 
     // The lifeblood door lights a lamp per blue mask up to the Knight's 15. Hornet's blue health stops short of 9: there
     // Silksong turns it into her lifeblood state and empties healthBlue, so only that state opens the door.

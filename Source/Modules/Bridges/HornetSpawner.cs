@@ -49,8 +49,11 @@ public sealed class HornetSpawner : ModuleBase {
     // without this she'd linger active on the menu.
     public override void Initialize() {
         Detour(typeof(GameManager), "FinishedEnteringScene", OnEnteredScene);
-        Detour(typeof(GameManager), "ReturnToMainMenu", OnReturnToMainMenu,
-            typeof(GameManager.ReturnToMainMenuSaveModes), typeof(Action<bool>));
+        Detour(typeof(GameManager),
+            "ReturnToMainMenu",
+            OnReturnToMainMenu,
+            typeof(GameManager.ReturnToMainMenuSaveModes),
+            typeof(Action<bool>));
 
         // Hornet has no place in non-gameplay scenes (End_Credits, cinematics). Despawn her there so HK owns the
         // camera/scene, else it keeps following her and the credits render off-screen (blackscreen).
@@ -83,18 +86,23 @@ public sealed class HornetSpawner : ModuleBase {
     }
 
     private IEnumerator OnReturnToMainMenu(
-        Func<GameManager, GameManager.ReturnToMainMenuSaveModes, Action<bool>?, IEnumerator> orig, GameManager self,
-        GameManager.ReturnToMainMenuSaveModes mode, Action<bool>? cb) {
+        Func<GameManager, GameManager.ReturnToMainMenuSaveModes, Action<bool>?, IEnumerator> orig,
+        GameManager self,
+        GameManager.ReturnToMainMenuSaveModes mode,
+        Action<bool>? cb
+    ) {
         if (!HornetRoot) return orig(self, mode, cb);
 
         // HK raises UnloadingLevel once the save is done and the screen has faded out, or never when a failed save
         // cancels the quit; it also raises it on every room change, hence the one-shot subscription.
         self.UnloadingLevel += DespawnForMenu;
-        return orig(self, mode, didSave => {
-            if (mode == GameManager.ReturnToMainMenuSaveModes.SaveAndCancelOnFail && !didSave)
-                self.UnloadingLevel -= DespawnForMenu;
-            cb?.Invoke(didSave);
-        });
+        return orig(self,
+            mode,
+            didSave => {
+                if (mode == GameManager.ReturnToMainMenuSaveModes.SaveAndCancelOnFail && !didSave)
+                    self.UnloadingLevel -= DespawnForMenu;
+                cb?.Invoke(didSave);
+            });
     }
 
     private void DespawnForMenu() {

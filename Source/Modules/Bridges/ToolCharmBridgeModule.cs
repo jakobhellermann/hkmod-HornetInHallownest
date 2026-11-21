@@ -68,8 +68,10 @@ public sealed class ToolCharmBridgeModule : ModuleBase {
     // Switching heroes switches whose charm or tool counts.
     public override void HornetToggled(bool active) => PlayMakerFSM.BroadcastEvent("CHARM EQUIP CHECK");
 
-    private static void OnToolItemManagerAwake(Action<Silksong::ToolItemManager> orig,
-        Silksong::ToolItemManager self) {
+    private static void OnToolItemManagerAwake(
+        Action<Silksong::ToolItemManager> orig,
+        Silksong::ToolItemManager self
+    ) {
         orig(self);
         AddGrimmchild(ToolList(self));
     }
@@ -137,7 +139,10 @@ internal sealed class GrimmchildTool : SToolItem {
 
     public override Sprite GetHudSprite(IconVariants iconVariant) => CharmIcon();
 
-    private static SLocalisedString Text(string key) => new() { Sheet = Sheet, Key = key };
+    private static SLocalisedString Text(string key) => new() {
+        Sheet = Sheet,
+        Key = key
+    };
 
     private static CharmIconList? charmIcons;
 

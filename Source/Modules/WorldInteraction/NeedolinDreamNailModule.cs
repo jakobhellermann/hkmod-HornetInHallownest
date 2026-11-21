@@ -59,7 +59,9 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
 
     // What the Dream Nail hitbox can touch, which a dream entrance has to.
     private static readonly ContactFilter2D entranceFilter = new() {
-        useTriggers = true, useLayerMask = true, layerMask = Physics2D.GetLayerCollisionMask(HeroAttackLayer)
+        useTriggers = true,
+        useLayerMask = true,
+        layerMask = Physics2D.GetLayerCollisionMask(HeroAttackLayer)
     };
 
     private GameObject? hitboxGo;
@@ -83,8 +85,10 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 
-    private static void OnActiveSceneChanged(UnityEngine.SceneManagement.Scene from,
-        UnityEngine.SceneManagement.Scene to) => dreamEntrances.Clear();
+    private static void OnActiveSceneChanged(
+        UnityEngine.SceneManagement.Scene from,
+        UnityEngine.SceneManagement.Scene to
+    ) => dreamEntrances.Clear();
 
     private static void OnSwitchState(Action<Fsm, FsmState> orig, Fsm self, FsmState to) {
         orig(self, to);
@@ -200,9 +204,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         var isEntrance = go.GetComponentsInParent<PlayMakerFSM>(true).Any(fsm => {
             var actions = fsm.FsmStates.Where(state => state.ActionsLoaded).SelectMany(state => state.Actions)
                 .ToArray();
-            return actions.Any(a => a is BeginSceneTransition) &&
-                   (actions.Any(a => a is Trigger2dEvent { collideTag.Value: DreamAttackTag }) ||
-                    fsm.FsmStates.Any(state => state.Transitions.Any(t => t.EventName == DreamImpact)));
+            return actions.Any(a => a is BeginSceneTransition) && (actions.Any(a => a is Trigger2dEvent { collideTag.Value: DreamAttackTag }) || fsm.FsmStates.Any(state => state.Transitions.Any(t => t.EventName == DreamImpact)));
         });
         dreamEntrances[go] = isEntrance;
         return isEntrance;
@@ -247,8 +249,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
         if (enterEffect) return enterEffect;
         AssetBundle? bundle = null;
         foreach (var (file, name) in enterEffectBundles)
-            bundle = AssetBundle.GetAllLoadedAssetBundles().FirstOrDefault(b => b && b.name == name) ??
-                     AssetBundle.LoadFromFile(Paths.SilksongAddressablesBundle(file));
+            bundle = AssetBundle.GetAllLoadedAssetBundles().FirstOrDefault(b => b && b.name == name) ?? AssetBundle.LoadFromFile(Paths.SilksongAddressablesBundle(file));
         enterEffect = bundle ? bundle.LoadAsset<GameObject>(EnterEffectPath) : null;
         if (!enterEffect) Log.Error($"[{nameof(NeedolinDreamNailModule)}] {EnterEffectPath} didn't load");
         return enterEffect;
@@ -285,7 +286,10 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
 
     private void EnsureHitbox(Silksong::HeroController hero) {
         if (hitboxGo) return;
-        hitboxGo = new GameObject("hp_needolin_dreamnail") { tag = DreamAttackTag, layer = HeroAttackLayer };
+        hitboxGo = new GameObject("hp_needolin_dreamnail") {
+            tag = DreamAttackTag,
+            layer = HeroAttackLayer
+        };
         hitboxGo.transform.SetParent(hero.transform, false);
         var c = hitboxGo.AddComponent<CircleCollider2D>();
         c.isTrigger = true;

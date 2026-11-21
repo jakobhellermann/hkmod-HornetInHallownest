@@ -25,26 +25,42 @@ public sealed class HeroBroadcastModule : ModuleBase {
     private static int moveControlVersion = -1;
 
     public override void Initialize() {
-        Detour(typeof(Fsm), "BroadcastEventToGameObject", OnBroadcast,
-            typeof(GameObject), typeof(FsmEvent), typeof(FsmEventData), typeof(bool), typeof(bool));
-        Detour(typeof(FSMUtility), "SendEventToGameObject", OnSendEventToGameObject,
-            typeof(GameObject), typeof(FsmEvent), typeof(bool));
-        Detour(typeof(Silksong::HeroController), nameof(Silksong::HeroController.RelinquishControlNotVelocity),
+        Detour(typeof(Fsm),
+            "BroadcastEventToGameObject",
+            OnBroadcast,
+            typeof(GameObject),
+            typeof(FsmEvent),
+            typeof(FsmEventData),
+            typeof(bool),
+            typeof(bool));
+        Detour(typeof(FSMUtility),
+            "SendEventToGameObject",
+            OnSendEventToGameObject,
+            typeof(GameObject),
+            typeof(FsmEvent),
+            typeof(bool));
+        Detour(typeof(Silksong::HeroController),
+            nameof(Silksong::HeroController.RelinquishControlNotVelocity),
             OnRelinquishControlNotVelocity);
     }
 
-    private static void OnRelinquishControlNotVelocity(Action<Silksong::HeroController> orig,
-        Silksong::HeroController self) {
+    private static void OnRelinquishControlNotVelocity(
+        Action<Silksong::HeroController> orig,
+        Silksong::HeroController self
+    ) {
         orig(self);
         moveControlVersion = Silksong::HeroController.ControlVersion;
     }
 
     internal static bool IsInMove(Silksong::HeroController hero) =>
-        hero.controlReqlinquished && !hero.cState.transitioning &&
-        Silksong::HeroController.ControlVersion == moveControlVersion;
+        hero.controlReqlinquished && !hero.cState.transitioning && Silksong::HeroController.ControlVersion == moveControlVersion;
 
-    private static void OnSendEventToGameObject(Action<GameObject, FsmEvent?, bool> orig, GameObject go, FsmEvent? ev,
-        bool isRecursive) {
+    private static void OnSendEventToGameObject(
+        Action<GameObject, FsmEvent?, bool> orig,
+        GameObject go,
+        FsmEvent? ev,
+        bool isRecursive
+    ) {
         orig(go, ev, isRecursive);
         RelayHudSlide(go, ev?.Name);
     }
@@ -55,8 +71,15 @@ public sealed class HeroBroadcastModule : ModuleBase {
         if (hk && go == hk.hudCanvas) GameCamerasBootstrap.SendHornetHudSlideEvent(eventName);
     }
 
-    private void OnBroadcast(Action<Fsm, GameObject, FsmEvent?, FsmEventData?, bool, bool> orig, Fsm self,
-        GameObject go, FsmEvent? ev, FsmEventData? data, bool sendToChildren, bool excludeSelf) {
+    private void OnBroadcast(
+        Action<Fsm, GameObject, FsmEvent?, FsmEventData?, bool, bool> orig,
+        Fsm self,
+        GameObject go,
+        FsmEvent? ev,
+        FsmEventData? data,
+        bool sendToChildren,
+        bool excludeSelf
+    ) {
         orig(self, go, ev, data, sendToChildren, excludeSelf);
         try {
             var name = ev?.Name;

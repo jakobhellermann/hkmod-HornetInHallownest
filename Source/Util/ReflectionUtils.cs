@@ -19,8 +19,7 @@ public static class ReflectionExtension {
     internal const BindingFlags StaticInstanceAnyVisibility =
         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
-    internal const BindingFlags InstanceAnyVisibilityDeclaredOnly = BindingFlags.Public | BindingFlags.NonPublic |
-                                                                    BindingFlags.Instance | BindingFlags.DeclaredOnly;
+    internal const BindingFlags InstanceAnyVisibilityDeclaredOnly = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
 
     private static readonly ConcurrentDictionary<MemberKey, MemberInfo?> CachedMemberInfos = new();
     private static readonly ConcurrentDictionary<MemberKey, FieldInfo?> CachedFieldInfos = new();
@@ -39,8 +38,12 @@ public static class ReflectionExtension {
     private static readonly ConcurrentDictionary<AllMemberKey, IEnumerable<MethodInfo>> CachedAllMethodInfos = new();
 
     /// Resolves the target member on the type, caching the result
-    public static MemberInfo? GetMemberInfo(this Type type, string name,
-        BindingFlags bindingFlags = StaticInstanceAnyVisibility, bool logFailure = true) {
+    public static MemberInfo? GetMemberInfo(
+        this Type type,
+        string name,
+        BindingFlags bindingFlags = StaticInstanceAnyVisibility,
+        bool logFailure = true
+    ) {
         var key = new MemberKey(type, name);
         if (CachedMemberInfos.TryGetValue(key, out var result)) return result;
 
@@ -56,8 +59,12 @@ public static class ReflectionExtension {
     }
 
     /// Resolves the target field on the type, caching the result
-    public static FieldInfo? GetFieldInfo(this Type type, string name,
-        BindingFlags bindingFlags = StaticInstanceAnyVisibility, bool logFailure = true) {
+    public static FieldInfo? GetFieldInfo(
+        this Type type,
+        string name,
+        BindingFlags bindingFlags = StaticInstanceAnyVisibility,
+        bool logFailure = true
+    ) {
         var key = new MemberKey(type, name);
         if (CachedFieldInfos.TryGetValue(key, out var result)) return result;
 
@@ -73,8 +80,12 @@ public static class ReflectionExtension {
     }
 
     /// Resolves the target property on the type, caching the result
-    public static PropertyInfo? GetPropertyInfo(this Type type, string name,
-        BindingFlags bindingFlags = StaticInstanceAnyVisibility, bool logFailure = true) {
+    public static PropertyInfo? GetPropertyInfo(
+        this Type type,
+        string name,
+        BindingFlags bindingFlags = StaticInstanceAnyVisibility,
+        bool logFailure = true
+    ) {
         var key = new MemberKey(type, name);
         if (CachedPropertyInfos.TryGetValue(key, out var result)) return result;
 
@@ -90,8 +101,13 @@ public static class ReflectionExtension {
     }
 
     /// Resolves the target method on the type, with the specific parameter types, caching the result
-    public static MethodInfo? GetMethodInfo(this Type type, string name, Type?[]? parameterTypes = null,
-        BindingFlags bindingFlags = StaticInstanceAnyVisibility, bool logFailure = true) {
+    public static MethodInfo? GetMethodInfo(
+        this Type type,
+        string name,
+        Type?[]? parameterTypes = null,
+        BindingFlags bindingFlags = StaticInstanceAnyVisibility,
+        bool logFailure = true
+    ) {
         var key = new MethodKey(type, name, parameterTypes.GetCustomHashCode());
         if (CachedMethodInfos.TryGetValue(key, out var result)) return result;
 
@@ -147,8 +163,11 @@ public static class ReflectionExtension {
     }
 
     /// Resolves the target event on the type, with the specific parameter types, caching the result
-    public static EventInfo? GetEventInfo(this Type type, string name,
-        BindingFlags bindingFlags = StaticInstanceAnyVisibility) {
+    public static EventInfo? GetEventInfo(
+        this Type type,
+        string name,
+        BindingFlags bindingFlags = StaticInstanceAnyVisibility
+    ) {
         var key = new MemberKey(type, name);
         if (CachedEventInfos.TryGetValue(key, out var result)) return result;
 
@@ -164,8 +183,11 @@ public static class ReflectionExtension {
     }
 
     /// Resolves the target get-method of the property on the type, caching the result
-    public static MethodInfo? GetGetMethod(this Type type, string name,
-        BindingFlags bindingFlags = StaticInstanceAnyVisibility) {
+    public static MethodInfo? GetGetMethod(
+        this Type type,
+        string name,
+        BindingFlags bindingFlags = StaticInstanceAnyVisibility
+    ) {
         var key = new MemberKey(type, name);
         if (CachedGetMethodInfos.TryGetValue(key, out var result)) return result;
 
@@ -176,8 +198,11 @@ public static class ReflectionExtension {
     }
 
     /// Resolves the target set-method of the property on the type, caching the result
-    public static MethodInfo? GetSetMethod(this Type type, string name,
-        BindingFlags bindingFlags = StaticInstanceAnyVisibility) {
+    public static MethodInfo? GetSetMethod(
+        this Type type,
+        string name,
+        BindingFlags bindingFlags = StaticInstanceAnyVisibility
+    ) {
         var key = new MemberKey(type, name);
         if (CachedSetMethodInfos.TryGetValue(key, out var result)) return result;
 
@@ -188,8 +213,10 @@ public static class ReflectionExtension {
     }
 
     /// Resolves all fields of the type, caching the result
-    public static IEnumerable<FieldInfo> GetAllFieldInfos(this Type type,
-        BindingFlags bindingFlags = InstanceAnyVisibility) {
+    public static IEnumerable<FieldInfo> GetAllFieldInfos(
+        this Type type,
+        BindingFlags bindingFlags = InstanceAnyVisibility
+    ) {
         bindingFlags |= BindingFlags.DeclaredOnly;
 
         var key = new AllMemberKey(type, bindingFlags);
@@ -208,8 +235,10 @@ public static class ReflectionExtension {
     }
 
     /// Resolves all properties of the type, caching the result
-    public static IEnumerable<PropertyInfo> GetAllPropertyInfos(this Type type,
-        BindingFlags bindingFlags = InstanceAnyVisibility) {
+    public static IEnumerable<PropertyInfo> GetAllPropertyInfos(
+        this Type type,
+        BindingFlags bindingFlags = InstanceAnyVisibility
+    ) {
         bindingFlags |= BindingFlags.DeclaredOnly;
 
         var key = new AllMemberKey(type, bindingFlags);
@@ -228,8 +257,10 @@ public static class ReflectionExtension {
     }
 
     /// Resolves all methods of the type, caching the result
-    public static IEnumerable<MethodInfo> GetAllMethodInfos(this Type type,
-        BindingFlags bindingFlags = InstanceAnyVisibility) {
+    public static IEnumerable<MethodInfo> GetAllMethodInfos(
+        this Type type,
+        BindingFlags bindingFlags = InstanceAnyVisibility
+    ) {
         bindingFlags |= BindingFlags.DeclaredOnly;
 
         var key = new AllMemberKey(type, bindingFlags);

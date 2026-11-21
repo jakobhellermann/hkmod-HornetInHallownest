@@ -9,9 +9,18 @@ internal static class CollectableItemManagerBootstrap {
 
     internal static object Ensure() {
         var mgr = ManagerSingletonBootstrap.BringUp(
-            typeof(Silksong::CollectableItemManager), GoName, "masterList", "invalidTemplate");
-        if (mgr == null) return new { error = "CollectableItemManager bring-up failed (see log)" };
-        return new { ok = true, instanceSet = Silksong::CollectableItemManager.SilentInstance != null };
+            typeof(Silksong::CollectableItemManager),
+            GoName,
+            "masterList",
+            "invalidTemplate");
+        if (mgr == null)
+            return new {
+                error = "CollectableItemManager bring-up failed (see log)"
+            };
+        return new {
+            ok = true,
+            instanceSet = Silksong::CollectableItemManager.SilentInstance != null
+        };
     }
 
     internal static void Cleanup() {

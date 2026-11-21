@@ -32,8 +32,7 @@ public sealed class MapMarkerModule : ModuleBase {
     // HK picks the compass's room only as the map opens, since the Knight can't walk with it open.
     private static void OnMapUpdate(Action<GameMap> orig, GameMap self) {
         // The compass icon is active whenever displayingCompass is set.
-        if (HeroSwitch.HornetActive && compassScene != GameManager.instance.sceneName &&
-            self.compassIcon.activeSelf && self.displayingCompass) {
+        if (HeroSwitch.HornetActive && compassScene != GameManager.instance.sceneName && self.compassIcon.activeSelf && self.displayingCompass) {
             if (HornetSpawner.Hornet is not { isHeroInPosition: true }) return;
             self.PositionCompass(false);
         }
@@ -93,7 +92,8 @@ public sealed class MapMarkerModule : ModuleBase {
         }
 
         if (!cocoonMarker)
-            cocoonMarker = CloneMarker(CocoonMarkerName, room.parent,
+            cocoonMarker = CloneMarker(CocoonMarkerName,
+                room.parent,
                 map.shadeMarker.GetComponentInChildren<Renderer>(true));
         if (!cocoonMarker) return;
         cocoonMarker.transform.SetParent(room.parent, false);

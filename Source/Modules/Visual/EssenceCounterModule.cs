@@ -107,17 +107,25 @@ public sealed class EssenceCounterModule : ModuleBase {
     // Cuts the sprite from its tk2d atlas at the height of Silksong's counter icons. The atlas can hold it rotated a
     // quarter turn: tk2d quad corners run left-bottom, right-bottom, left-top, so the first two UVs give the atlas
     // direction along the sprite's x and the first and third the one along its y, and the renderer rotates it back.
-    private static void SetIcon(SpriteRenderer renderer, tk2dSpriteDefinition definition, Texture2D texture,
-        float height) {
+    private static void SetIcon(
+        SpriteRenderer renderer,
+        tk2dSpriteDefinition definition,
+        Texture2D texture,
+        float height
+    ) {
         var uvs = definition.uvs;
         var xDirection = uvs[1] - uvs[0];
         var yDirection = uvs[2] - uvs[0];
         var isRotated = Mathf.Abs(xDirection.y) > Mathf.Abs(xDirection.x);
         var min = new Vector2(uvs.Min(uv => uv.x), uvs.Min(uv => uv.y));
         var max = new Vector2(uvs.Max(uv => uv.x), uvs.Max(uv => uv.y));
-        var rect = new Rect(min.x * texture.width, min.y * texture.height, (max.x - min.x) * texture.width,
+        var rect = new Rect(min.x * texture.width,
+            min.y * texture.height,
+            (max.x - min.x) * texture.width,
             (max.y - min.y) * texture.height);
-        renderer.sprite = Sprite.Create(texture, rect, new Vector2(0.5f, 0.5f),
+        renderer.sprite = Sprite.Create(texture,
+            rect,
+            new Vector2(0.5f, 0.5f),
             (isRotated ? rect.width : rect.height) / height);
         if (isRotated) {
             // A quarter turn clockwise lays the atlas v along the sprite's x and u along its y; the flips point each the way

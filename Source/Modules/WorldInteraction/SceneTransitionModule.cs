@@ -24,7 +24,10 @@ namespace HornetInHallownest.Modules;
 public sealed class SceneTransitionModule : ModuleBase {
     private GameObject? driverGo;
 
-    private bool pendingSnap, dreamReturnPending, hkEntryFixed, dreamGateEntryPending;
+    private bool pendingSnap;
+    private bool dreamReturnPending;
+    private bool hkEntryFixed;
+    private bool dreamGateEntryPending;
     private bool cameraCaughtUp;
 
     // Big-lift arrival (PlayerData.liftArrival): the "Lift Move" FSM carries the hero by parenting her to the moving
@@ -80,7 +83,9 @@ public sealed class SceneTransitionModule : ModuleBase {
         Detour(typeof(GameManager), "BeginSceneTransition", OnBeginSceneTransition, typeof(GameManager.SceneLoadInfo));
         Detour(typeof(GameManager), nameof(GameManager.ChangeToScene), OnChangeToScene);
         Detour(typeof(Silksong::UIMsgProxy), nameof(Silksong::UIMsgProxy.SetIsInMsg), OnSetIsInMsg);
-        Detour(typeof(HutongGames.PlayMaker.Fsm), "SwitchState", OnSwitchState,
+        Detour(typeof(HutongGames.PlayMaker.Fsm),
+            "SwitchState",
+            OnSwitchState,
             typeof(HutongGames.PlayMaker.FsmState));
 
         // Direct SceneManager.LoadScene[Async] is the path HK FSMs take via PlayMaker's LoadLevel (e.g. Stag), bypassing
@@ -88,8 +93,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         // versions, so resolve the overload manually and Track directly.
         foreach (var m in typeof(USceneManager).GetMethods(BindingFlags.Public | BindingFlags.Static)) {
             var ps = m.GetParameters();
-            if (ps.Length != 2 || ps[0].ParameterType != typeof(string) ||
-                ps[1].ParameterType != typeof(LoadSceneParameters)) continue;
+            if (ps.Length != 2 || ps[0].ParameterType != typeof(string) || ps[1].ParameterType != typeof(LoadSceneParameters)) continue;
             if (m.Name == "LoadScene")
                 Track(new Hook(m,
                     (Func<Func<string, LoadSceneParameters, Scene>, string, LoadSceneParameters, Scene>)OnLoadScene));
@@ -101,8 +105,11 @@ public sealed class SceneTransitionModule : ModuleBase {
         }
     }
 
-    private void OnBeginSceneTransition(Action<GameManager, GameManager.SceneLoadInfo> orig, GameManager self,
-        GameManager.SceneLoadInfo info) {
+    private void OnBeginSceneTransition(
+        Action<GameManager, GameManager.SceneLoadInfo> orig,
+        GameManager self,
+        GameManager.SceneLoadInfo info
+    ) {
         if (DeferWhileMsgShown(() => OnBeginSceneTransition(orig, self, info))) return;
         orig(self, info);
         // Silksong's BeginSceneTransition closes the inventory.
@@ -112,8 +119,13 @@ public sealed class SceneTransitionModule : ModuleBase {
         DeparentHero("scene transition");
     }
 
-    private void OnChangeToScene(Action<GameManager, string, string, float> orig, GameManager self, string scene,
-        string gate, float pause) {
+    private void OnChangeToScene(
+        Action<GameManager, string, string, float> orig,
+        GameManager self,
+        string scene,
+        string gate,
+        float pause
+    ) {
         if (DeferWhileMsgShown(() => OnChangeToScene(orig, self, scene, gate, pause))) return;
         orig(self, scene, gate, pause);
     }
@@ -129,8 +141,11 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     // The Lifeblood Core's pickup, in a dream, fades the screen to white on its way out, under its reward's message too.
     // Its pause before the fade plays again until the message is dismissed.
-    private static void OnSwitchState(Action<HutongGames.PlayMaker.Fsm, HutongGames.PlayMaker.FsmState> orig,
-        HutongGames.PlayMaker.Fsm self, HutongGames.PlayMaker.FsmState to) {
+    private static void OnSwitchState(
+        Action<HutongGames.PlayMaker.Fsm, HutongGames.PlayMaker.FsmState> orig,
+        HutongGames.PlayMaker.Fsm self,
+        HutongGames.PlayMaker.FsmState to
+    ) {
         if (self.Name == "Shiny Control" && to.Name == "Fade Out" && self.ActiveState is { Name: "Fade Pause" } pause) {
             shownMsgs.RemoveWhere(msg => !msg);
             if (shownMsgs.Count > 0) to = pause;
@@ -178,8 +193,11 @@ public sealed class SceneTransitionModule : ModuleBase {
         return orig(name, p);
     }
 
-    private AsyncOperation OnLoadSceneAsync(Func<string, LoadSceneParameters, AsyncOperation> orig, string name,
-        LoadSceneParameters p) {
+    private AsyncOperation OnLoadSceneAsync(
+        Func<string, LoadSceneParameters, AsyncOperation> orig,
+        string name,
+        LoadSceneParameters p
+    ) {
         DeparentHero($"LoadSceneAsync({name})");
         return orig(name, p);
     }
@@ -195,8 +213,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         hero.LeaveScene((SGate)(int)info.HeroLeaveDirection.Value);
         // Do what silksong runs on transition, like LEAVING SCENE for silk soar
         hero.LeavingScene();
-        LogDebug($"relayed LeaveScene + LeavingScene (exitedSprinting={hero.exitedSprinting}, " +
-                 $"exitedSuperDashing={hero.exitedSuperDashing})");
+        LogDebug($"relayed LeaveScene + LeavingScene (exitedSprinting={hero.exitedSprinting}, " + $"exitedSuperDashing={hero.exitedSuperDashing})");
     }
 
     // Mirror Silksong's OnLevelUnload -> SetHeroParent(null) -> DontDestroyOnLoad, but keyed on scene not parent:
@@ -221,8 +238,11 @@ public sealed class SceneTransitionModule : ModuleBase {
 
         // enterWithoutInput entries rely on an HK arrival FSM to RegainControl/AcceptInput; Hornet has none, leaving her
         // frozen after FinishedEnteringScene, so do the close.
-        Detour(typeof(Silksong::HeroController), "FinishedEnteringScene", OnFinishedEnteringScene,
-            typeof(bool), typeof(bool));
+        Detour(typeof(Silksong::HeroController),
+            "FinishedEnteringScene",
+            OnFinishedEnteringScene,
+            typeof(bool),
+            typeof(bool));
 
         // Dream entries warp in via a direct hero_ctrl.EnterSceneDreamGate() on the Knight (typed field call, no shim
         // redirects it), so Hornet's never runs. Flag it; Tick positions her and runs hers.
@@ -248,14 +268,25 @@ public sealed class SceneTransitionModule : ModuleBase {
         // Arrival i-frames: block damage through the dream-arrival window (see arrivalInvulnerable). Needed because on a
         // cross-scene dream warp she briefly sits at the carried-over position, which in Radiance's arena is inside the
         // Abyss Pit spike; the damage box is HeroBox (a child GO with its own layer) so root-layer tricks don't stop it.
-        Detour(typeof(Silksong::HeroController), "TakeDamage", OnTakeDamage,
-            typeof(GameObject), typeof(SCollisionSide), typeof(int), typeof(SHazardType), typeof(SDamageFlags));
+        Detour(typeof(Silksong::HeroController),
+            "TakeDamage",
+            OnTakeDamage,
+            typeof(GameObject),
+            typeof(SCollisionSide),
+            typeof(int),
+            typeof(SHazardType),
+            typeof(SDamageFlags));
     }
 
     private void OnTakeDamage(
         Action<Silksong::HeroController, GameObject, SCollisionSide, int, SHazardType, SDamageFlags> orig,
-        Silksong::HeroController self, GameObject go, SCollisionSide side, int dmg, SHazardType hazard,
-        SDamageFlags flags) {
+        Silksong::HeroController self,
+        GameObject go,
+        SCollisionSide side,
+        int dmg,
+        SHazardType hazard,
+        SDamageFlags flags
+    ) {
         if (arrivalInvulnerable) return;
         orig(self, go, side, dmg, hazard, flags);
     }
@@ -265,8 +296,11 @@ public sealed class SceneTransitionModule : ModuleBase {
         Silksong::PlayerData.instance.SetHazardRespawn(pos, facing);
     }
 
-    private void OnSetHazardRespawnMarker(Action<PlayerData, HazardRespawnMarker> orig, PlayerData self,
-        HazardRespawnMarker marker) {
+    private void OnSetHazardRespawnMarker(
+        Action<PlayerData, HazardRespawnMarker> orig,
+        PlayerData self,
+        HazardRespawnMarker marker
+    ) {
         orig(self, marker);
         if (marker)
             Silksong::PlayerData.instance.SetHazardRespawn(marker.transform.position, marker.respawnFacingRight);
@@ -295,8 +329,10 @@ public sealed class SceneTransitionModule : ModuleBase {
     }
 #endif
 
-    private static string OnGetEntryGateName(Func<Silksong::HeroController, string> orig,
-        Silksong::HeroController self) {
+    private static string OnGetEntryGateName(
+        Func<Silksong::HeroController, string> orig,
+        Silksong::HeroController self
+    ) {
         var knight = HeroController.UnsafeInstance;
         return HeroSwitch.HornetActive && knight ? knight.GetEntryGateName() : orig(self);
     }
@@ -325,8 +361,7 @@ public sealed class SceneTransitionModule : ModuleBase {
             if (hornet) {
                 // HK's Dream Return FSM lays the Knight down on arrival through "door_dreamReturn" (in Godhome EnterHero
                 // swaps it for "door_dreamReturnGG*").
-                lieDownArrival = fromMaskBreak ||
-                                 knight.GetEntryGateName().StartsWith("door_dreamReturn", StringComparison.Ordinal);
+                lieDownArrival = fromMaskBreak || knight.GetEntryGateName().StartsWith("door_dreamReturn", StringComparison.Ordinal);
                 RegainForEntry(hornet);
                 hornet.EnterSceneDreamGate();
                 StartCoroutine(lieDownArrival ? PlayLieDownArrival(hornet) : PlayDreamArrival(hornet));
@@ -354,8 +389,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     // arrival hand her control on the way in, so hold her every frame instead.
     private static void HoldDuringMaskBreak() {
         var hornet = HornetSpawner.Hornet;
-        if (!HeroSwitch.HornetActive || !hornet ||
-            hornet is { controlReqlinquished: true, acceptingInput: false }) return;
+        if (!HeroSwitch.HornetActive || !hornet || hornet is { controlReqlinquished: true, acceptingInput: false }) return;
         if (USceneManager.GetActiveScene().name == "Cutscene_Boss_Door") hornet.RelinquishControl();
     }
 
@@ -366,8 +400,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         // from.name is null when the previous scene was already unloaded (single-mode load, e.g. quit-to-menu); it's
         // only a real dream exit when the departed scene is still loaded and named. Null -> not a dream. The Nightmare
         // King's dream is the one not named "Dream...".
-        dreamReturnPending = from.name is { } departed &&
-                             (departed.StartsWith("Dream", StringComparison.Ordinal) || departed == "Grimm_Nightmare");
+        dreamReturnPending = from.name is { } departed && (departed.StartsWith("Dream", StringComparison.Ordinal) || departed == "Grimm_Nightmare");
         fromMaskBreak = from.name == "Cutscene_Boss_Door";
         hkEntryFixed = false;
         cameraCaughtUp = false;
@@ -517,9 +550,12 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     // For boss scene entry there's a Dream Entry FSM which leaves enterWithoutInput.
     // For the Hall of Gods return, the Knight uses its Dream Return FSM, we have to do it here.
-    private void OnFinishedEnteringScene(Action<Silksong::HeroController, bool, bool> orig,
+    private void OnFinishedEnteringScene(
+        Action<Silksong::HeroController, bool, bool> orig,
         Silksong::HeroController self,
-        bool setHazardMarker, bool preventRunBob) {
+        bool setHazardMarker,
+        bool preventRunBob
+    ) {
         var wasEnterWithoutInput = self.enterWithoutInput;
         var isMoveResume = self.exitedSuperDashing || self.exitedQuake || self.exitedSprinting;
         orig(self, setHazardMarker, preventRunBob);
@@ -586,8 +622,10 @@ public sealed class SceneTransitionModule : ModuleBase {
     private static readonly RaycastHit2D[] gateHits = new RaycastHit2D[8];
 
     // Silk Soar checks for TransitionPoint via gate layer, which doesn't work for HK
-    private static void OnSuperJumpRaycast(Action<Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast> orig,
-        Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast self) {
+    private static void OnSuperJumpRaycast(
+        Action<Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast> orig,
+        Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast self
+    ) {
         orig(self);
         if (self.StoreIsTransitionGate.Value || Mathf.Abs(self.Distance.Value) < Mathf.Epsilon) return;
 
@@ -597,7 +635,11 @@ public sealed class SceneTransitionModule : ModuleBase {
             : self.Direction.Value;
         var roof = self.StoreDidHit.Value ? self.StoreDistance.Value
             : self.Distance.Value > 0f ? self.Distance.Value : float.PositiveInfinity;
-        var filter = new ContactFilter2D { useLayerMask = true, layerMask = 1 << gateLayer, useTriggers = true };
+        var filter = new ContactFilter2D {
+            useLayerMask = true,
+            layerMask = 1 << gateLayer,
+            useTriggers = true
+        };
         var count = Physics2D.Raycast(origin, direction.normalized, filter, gateHits, roof);
 
         for (var i = 0; i < count; i++) {
@@ -752,9 +794,7 @@ public sealed class SceneTransitionModule : ModuleBase {
             var start = Time.time;
             var faded = false;
             var input = InputHandler.Instance.inputActions;
-            while (Time.time < start + 1f || !(input.up.WasPressed || input.down.WasPressed || input.left.WasPressed ||
-                                               input.right.WasPressed || input.attack.WasPressed ||
-                                               input.jump.WasPressed)) {
+            while (Time.time < start + 1f || !(input.up.WasPressed || input.down.WasPressed || input.left.WasPressed || input.right.WasPressed || input.attack.WasPressed || input.jump.WasPressed)) {
                 HoldArrival(hero);
                 if (hero.AnimCtrl.animator.CurrentClip?.name != "Prostrate") hero.AnimCtrl.PlayClipForced("Prostrate");
 
@@ -809,9 +849,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     private void ArmDreamArrival(GameManager.SceneLoadInfo info) {
         if (!HeroSwitch.HornetActive) return;
         var vis = info.Visualization;
-        if (vis != GameManager.SceneLoadVisualizations.Dream &&
-            vis != GameManager.SceneLoadVisualizations.GrimmDream &&
-            vis != GameManager.SceneLoadVisualizations.GodsAndGlory) return;
+        if (vis != GameManager.SceneLoadVisualizations.Dream && vis != GameManager.SceneLoadVisualizations.GrimmDream && vis != GameManager.SceneLoadVisualizations.GodsAndGlory) return;
         dreamPending = true;
         dreamArrivalPending = true;
         dreamGate = info.EntryGateName;

@@ -49,7 +49,7 @@ public sealed class AnimationRemapModule : ModuleBase {
         [("Tutorial_01", "Collect Normal 3")] = "Prostrate Rise"
     };
 
-    private static readonly HashSet<string> overriddenClips = [..hornetSceneClipOverrides.Keys.Select(k => k.Clip)];
+    private static readonly HashSet<string> overriddenClips = [.. hornetSceneClipOverrides.Keys.Select(k => k.Clip)];
 
     // These clips are looping, but the orig HK clip play expects an animation finished event.
     // Send it manually when the animation first loops.
@@ -63,15 +63,25 @@ public sealed class AnimationRemapModule : ModuleBase {
 
     // Pick doalogue look animation by height. Examples: Elderbug 0.9, Grimm 1.84
     private static readonly (float MinHeightRatio, Dictionary<string, string> Clips)[] conversationLooks = [
-        (1.7f, new() { ["LookUp"] = "LookUp", ["LookUpEnd"] = "LookUpEnd", ["LookUpToIdle"] = "LookUpToIdle" }),
+        (1.7f, new() {
+            ["LookUp"] = "LookUp",
+            ["LookUpEnd"] = "LookUpEnd",
+            ["LookUpToIdle"] = "LookUpToIdle"
+        }),
         (0.85f, new() {
-            ["LookUp"] = "Look Up Half", ["LookUpEnd"] = "Look Up Half End", ["LookUpToIdle"] = "Look Up Half End ToIdle",
+            ["LookUp"] = "Look Up Half",
+            ["LookUpEnd"] = "Look Up Half End",
+            ["LookUpToIdle"] = "Look Up Half End ToIdle",
         }),
         (0.4f, new() {
-            ["LookUp"] = "LookDown Slight", ["LookUpEnd"] = "LookDown Slight End", ["LookUpToIdle"] = "LookDown Slight End",
+            ["LookUp"] = "LookDown Slight",
+            ["LookUpEnd"] = "LookDown Slight End",
+            ["LookUpToIdle"] = "LookDown Slight End",
         }),
         (float.NegativeInfinity, new() {
-            ["LookUp"] = "LookDown", ["LookUpEnd"] = "LookDownEnd", ["LookUpToIdle"] = "LookDownToIdle",
+            ["LookUp"] = "LookDown",
+            ["LookUpEnd"] = "LookDownEnd",
+            ["LookUpToIdle"] = "LookDownToIdle",
         })
     ];
 
@@ -87,24 +97,19 @@ public sealed class AnimationRemapModule : ModuleBase {
             return;
         }
 
-        if (self && self.CurrentClip is { } playing &&
-            followUpMap.TryGetValue((playing.name, name), out var followUp) &&
-            self.GetClipByName(followUp) is not null) {
+        if (self && self.CurrentClip is { } playing && followUpMap.TryGetValue((playing.name, name), out var followUp) && self.GetClipByName(followUp) is not null) {
             orig(self, followUp);
             return;
         }
 
-        if (self && overriddenClips.Contains(name) && HornetSpawner.Hornet is { } hornet &&
-            self.gameObject == hornet.gameObject &&
-            hornetSceneClipOverrides.TryGetValue((UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, name), out var overridden)) {
+        if (self && overriddenClips.Contains(name) && HornetSpawner.Hornet is { } hornet && self.gameObject == hornet.gameObject && hornetSceneClipOverrides.TryGetValue((UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, name), out var overridden)) {
             orig(self, overridden);
             return;
         }
 
         if (self && !string.IsNullOrEmpty(name) && self.GetClipByName(name) is null) {
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            if ((sceneClipMap.TryGetValue((scene, name), out var mapped) || clipMap.TryGetValue(name, out mapped)) &&
-                self.GetClipByName(mapped) is { } clip) {
+            if ((sceneClipMap.TryGetValue((scene, name), out var mapped) || clipMap.TryGetValue(name, out mapped)) && self.GetClipByName(mapped) is { } clip) {
                 LogDebugOnce($"clipmap|{self.gameObject.name}|{name}",
                     $"remapped HK clip '{name}' -> Hornet '{mapped}' on '{self.gameObject.name}'");
                 if (loopStartClips.Contains(name)) self.PlayFromFrame(clip, clip.loopStart);
@@ -124,8 +129,7 @@ public sealed class AnimationRemapModule : ModuleBase {
     }
 
     private string? ConversationLook(tk2dSpriteAnimator self, string name) {
-        if (name is not ("LookUp" or "LookUpEnd" or "LookUpToIdle") || HornetSpawner.Hornet is not { } hornet ||
-            self.gameObject != hornet.gameObject || FsmExecutionStack.ExecutingFsm is not { Name: "Conversation Control" } fsm)
+        if (name is not ("LookUp" or "LookUpEnd" or "LookUpToIdle") || HornetSpawner.Hornet is not { } hornet || self.gameObject != hornet.gameObject || FsmExecutionStack.ExecutingFsm is not { Name: "Conversation Control" } fsm)
             return null;
 
         var npc = fsm.GameObject.GetComponentInParent<tk2dSprite>() ?? fsm.GameObject.GetComponentInChildren<tk2dSprite>();

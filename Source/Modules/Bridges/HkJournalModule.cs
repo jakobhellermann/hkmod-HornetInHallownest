@@ -41,8 +41,10 @@ public sealed class HkJournalModule : ModuleBase {
     // The pane itself already requires hasJournal, which PlayerDataSyncModule mirrors from the Knight's.
     private static bool OnIsAvailable(Func<SJournalItemManager, bool> orig, SJournalItemManager self) => true;
 
-    private static List<SEnemyJournalRecord> OnGetItems(Func<SJournalItemManager, List<SEnemyJournalRecord>> orig,
-        SJournalItemManager self) {
+    private static List<SEnemyJournalRecord> OnGetItems(
+        Func<SJournalItemManager, List<SEnemyJournalRecord>> orig,
+        SJournalItemManager self
+    ) {
         if (records.Count == 0) CreateRecords();
         return records.Where(record => record.IsVisible).ToList();
     }
@@ -83,7 +85,10 @@ public sealed class HkJournalModule : ModuleBase {
         }
     }
 
-    private static SLocalisedString Text(string key) => new() { Sheet = HkJournalSheet, Key = key };
+    private static SLocalisedString Text(string key) => new() {
+        Sheet = HkJournalSheet,
+        Key = key
+    };
 }
 
 internal sealed record HkJournalEntry(string PlayerDataName, int RequiredKills) {

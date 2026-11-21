@@ -10,7 +10,9 @@ internal static class ToolItemManagerBootstrap {
     private const string GoName = "Silksong_ToolItemManager";
 
     internal static void Ensure() {
-        var mgr = ManagerSingletonBootstrap.BringUp(typeof(Silksong::ToolItemManager), GoName, "toolItems",
+        var mgr = ManagerSingletonBootstrap.BringUp(typeof(Silksong::ToolItemManager),
+            GoName,
+            "toolItems",
             "crestList");
         if (mgr == null) return; // BringUp logged the failure
 
@@ -24,7 +26,10 @@ internal static class ToolItemManagerBootstrap {
     // ReSharper disable once UnusedMember.Global
     internal static object Diag() {
         var mgr = Silksong::ToolItemManager.SilentInstance;
-        if (mgr == null) return new { error = "ToolItemManager singleton null (Ensure not run / spawn first)" };
+        if (mgr == null)
+            return new {
+                error = "ToolItemManager singleton null (Ensure not run / spawn first)"
+            };
         var crests = Silksong::ToolItemManager.GetAllCrests();
         var tools = Silksong::ToolItemManager.GetUnlockedTools().ToList();
         var crestId = Silksong::PlayerData.instance.CurrentCrestID;

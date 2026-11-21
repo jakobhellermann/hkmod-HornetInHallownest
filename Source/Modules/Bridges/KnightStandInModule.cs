@@ -106,8 +106,7 @@ public sealed class KnightStandInModule : ModuleBase {
                     hero.transform.position = standIn.position + new Vector3(0f, HeroTargetModule.FeetDelta(), 0f);
                 }
 
-                var clip = animator && animator.CurrentClip is { } current &&
-                           clips.TryGetValue(current.name, out var mapped)
+                var clip = animator && animator.CurrentClip is { } current && clips.TryGetValue(current.name, out var mapped)
                     ? mapped
                     : DefaultClip;
                 // Her own FSMs can still be playing clips over it, such as a silk skill cast that started the cutscene.

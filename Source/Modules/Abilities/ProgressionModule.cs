@@ -28,8 +28,7 @@ public sealed class ProgressionModule : ModuleBase {
     // Godseeker mode starts with the Knight's whole kit but none of the events that earn the rest.
     internal sealed record Rule(string Reward, Flag[] Flags, bool AnyFlag = false) {
         internal bool IsEarned(PlayerData pd) =>
-            pd.bossRushMode || Flags.Length == 0 ||
-            (AnyFlag ? Flags.Any(f => f.IsSet(pd)) : Flags.All(f => f.IsSet(pd)));
+            pd.bossRushMode || Flags.Length == 0 || (AnyFlag ? Flags.Any(f => f.IsSet(pd)) : Flags.All(f => f.IsSet(pd)));
     }
 
     private const int BaseCharmNotches = 3;
@@ -121,11 +120,13 @@ public sealed class ProgressionModule : ModuleBase {
         Earned("Pinstress Tool", Charm(26)), // Nailmaster's Glory
         Earned("Poison Pouch", Charm(17)), // Spore Shroom
         Earned("Quick Sling", Charm(19)), // Shaman Stone
-        new("Wisp Lantern", [
-            new Flag("killedGhostAladar"), new Flag("killedGhostXero"), new Flag("killedGhostHu"),
-            new Flag("killedGhostMarmu"), new Flag("killedGhostNoEyes"), new Flag("killedGhostGalien"),
-            new Flag("killedGhostMarkoth")
-        ], AnyFlag: true),
+        new("Wisp Lantern",
+            [
+                new Flag("killedGhostAladar"), new Flag("killedGhostXero"), new Flag("killedGhostHu"),
+                new Flag("killedGhostMarmu"), new Flag("killedGhostNoEyes"), new Flag("killedGhostGalien"),
+                new Flag("killedGhostMarkoth")
+            ],
+            AnyFlag: true),
         Earned("Zap Imbuement", Charm(33)), // Spell Twister
         Earned("Thief Claw", new Flag("collectorDefeated")),
         Earned(GrimmchildTool.ToolName, Charm(40)),
@@ -244,8 +245,7 @@ public sealed class ProgressionModule : ModuleBase {
         shownHkItemMsgs.RemoveWhere(msg => !msg.GameObject);
         Silksong::UIMsgPopupBaseBase.MinYPos = shownHkItemMsgs.Count == 0
             ? float.MinValue
-            : Silksong::GlobalSettings.UI.UIMsgPopupStartPosition.y +
-              Silksong::GlobalSettings.UI.UIMsgPopupStackOffset.y;
+            : Silksong::GlobalSettings.UI.UIMsgPopupStartPosition.y + Silksong::GlobalSettings.UI.UIMsgPopupStackOffset.y;
     }
 
     private bool OnSetBool(string name, bool value) {
@@ -293,11 +293,12 @@ public sealed class ProgressionModule : ModuleBase {
         var item = FindLaterAction<SetFsmString>(self, setItem => setItem.variableName.Value == "Item")?.setValue.Value;
         if (HeroSwitch.HornetActive && (HasHornetScreen(item) || IsNailArt(item))) {
             var fsm = self.Fsm;
-            ShowHornetScreen(item!, () => {
-                RunSkippedMsgEffects(item!);
-                fsm.Event(GetItemMsgEnd);
-                if (item == "Quake") ControlReminderModule.ShowFloorBreakReminder();
-            });
+            ShowHornetScreen(item!,
+                () => {
+                    RunSkippedMsgEffects(item!);
+                    fsm.Event(GetItemMsgEnd);
+                    if (item == "Quake") ControlReminderModule.ShowFloorBreakReminder();
+                });
             self.Finish();
             return;
         }
@@ -324,8 +325,7 @@ public sealed class ProgressionModule : ModuleBase {
     }
 
     private static bool HasHornetScreen(string? item) =>
-        item != null &&
-        (powerUpScreens.ContainsKey(item) || skillScreens.ContainsKey(item) || itemScreens.ContainsKey(item));
+        item != null && (powerUpScreens.ContainsKey(item) || skillScreens.ContainsKey(item) || itemScreens.ContainsKey(item));
 
     private static bool IsNailArt(string? item) =>
         item?.StartsWith(NailArtItemPrefix, StringComparison.Ordinal) == true;
@@ -357,10 +357,10 @@ public sealed class ProgressionModule : ModuleBase {
 
     private static bool ShouldHoldRewards() {
         var hero = HornetSpawner.Hornet;
-        return (hero && hero.controlReqlinquished) ||
-               UnityApi.FindAll<DialogueBox>()
-                   .Any(box => !box.hidden) ||
-               colosseumTrials.Contains(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        return (hero && hero.controlReqlinquished)
+            || UnityApi.FindAll<DialogueBox>()
+                .Any(box => !box.hidden)
+            || colosseumTrials.Contains(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }
 
     internal static void Apply(bool showPopups = false) {
@@ -446,8 +446,7 @@ public sealed class ProgressionModule : ModuleBase {
         var earnedSilkshots = silkshots.Where(earnedTools.Contains).ToList();
         if (earnedSilkshots.Count < 2) return;
         var keptSilkshot =
-            earnedSilkshots.FirstOrDefault(name => SToolItemManager.GetToolByName(name) is { IsUnlocked: true }) ??
-            earnedSilkshots[0];
+            earnedSilkshots.FirstOrDefault(name => SToolItemManager.GetToolByName(name) is { IsUnlocked: true }) ?? earnedSilkshots[0];
         earnedTools.ExceptWith(earnedSilkshots.Where(name => name != keptSilkshot));
     }
 
@@ -538,8 +537,10 @@ public sealed class ProgressionModule : ModuleBase {
         // points at was never written. The other crests' prefix fits it.
         var prefix = crest.ItemNamePrefix;
         if (!SilksongLoc::TeamCherry.Localization.Language.Has(prefix.Key, prefix.Sheet))
-            crest.itemNamePrefix = new SilksongLoc::TeamCherry.Localization.LocalisedString
-                { Sheet = "Tools", Key = "UI_MSG_TITLE_CREST" };
+            crest.itemNamePrefix = new SilksongLoc::TeamCherry.Localization.LocalisedString {
+                Sheet = "Tools",
+                Key = "UI_MSG_TITLE_CREST"
+            };
 
         ShowHeldMsg(afterMsg => {
             Silksong::ToolCrestUIMsg.Spawn(crest, prefab, afterMsg);
@@ -553,7 +554,10 @@ public sealed class ProgressionModule : ModuleBase {
     private static void RetitleMsg(string missingKey, string sheet, string key) {
         foreach (var title in UnityApi.FindAll<Silksong::SetTextMeshProGameText>())
             if (title.Text.Key == missingKey)
-                title.Text = new SilksongLoc::TeamCherry.Localization.LocalisedString { Sheet = sheet, Key = key };
+                title.Text = new SilksongLoc::TeamCherry.Localization.LocalisedString {
+                    Sheet = sheet,
+                    Key = key
+                };
     }
 
     private static void ShowExtraSlotMsg(Silksong::ToolItemType slotType, int slotNumber) {
@@ -594,10 +598,13 @@ public sealed class ProgressionModule : ModuleBase {
         // Silksong equips a new skill before announcing it, and the message reads the crest's slots that equipping
         // fills in: a new save's crest has none.
         SToolItemManager.AutoEquip(skill);
-        ShowHeldMsg(end => Silksong::SkillGetMsg.Spawn(msg, skill, () => {
-            Silksong::GameCameras.instance.HUDIn();
-            end();
-        }), afterMsg);
+        ShowHeldMsg(end => Silksong::SkillGetMsg.Spawn(msg,
+                skill,
+                () => {
+                    Silksong::GameCameras.instance.HUDIn();
+                    end();
+                }),
+            afterMsg);
     }
 
     private static void ShowPowerUpMsg(Silksong::PowerUpGetMsg.PowerUps powerUp, Action? afterMsg = null) {
@@ -608,10 +615,13 @@ public sealed class ProgressionModule : ModuleBase {
             return;
         }
 
-        ShowHeldMsg(end => Silksong::PowerUpGetMsg.Spawn(msg, powerUp, () => {
-            Silksong::GameCameras.instance.HUDIn();
-            end();
-        }), afterMsg);
+        ShowHeldMsg(end => Silksong::PowerUpGetMsg.Spawn(msg,
+                powerUp,
+                () => {
+                    Silksong::GameCameras.instance.HUDIn();
+                    end();
+                }),
+            afterMsg);
     }
 
     // The screen's own FSM picks its text by the item and reports its end to every register of the event; a register
@@ -624,25 +634,26 @@ public sealed class ProgressionModule : ModuleBase {
         }
 
         ShowHeldMsg(end => {
-            Silksong::GameCameras.instance.HUDOut();
-            var msg = UnityEngine.Object.Instantiate(prefab, Vector3.zero, Quaternion.identity);
-            if (msg.transform.Find("Icon") is { } iconSlot)
-                iconSlot.GetComponent<SpriteRenderer>().sprite = LoadPromptIcon(icon);
-            msg.SetActive(true);
-            var control = msg.GetComponents<SilksongPM::PlayMakerFSM>().First(fsm => fsm.FsmName == "Msg Control");
-            control.FsmVariables.FindFsmString("Item").Value = item;
-            // Silksong shows its Silk Heart message before granting the heart, and skips it once Hornet has one;
-            // PlayerDataSyncModule has granted it by now.
-            if (item == SilkHeartItem)
-                foreach (var test in control.Fsm.GetState(SilkHeartState).Actions
-                             .OfType<Silksong::HutongGames.PlayMaker.Actions.PlayerDataVariableTest>())
-                    test.Enabled = false;
-            Silksong::EventRegister.GetRegisterGuaranteed(msg, GetItemMsgEnd).ReceivedEvent += () => {
-                UnityEngine.Object.Destroy(msg);
-                Silksong::GameCameras.instance.HUDIn();
-                end();
-            };
-        }, afterMsg);
+                Silksong::GameCameras.instance.HUDOut();
+                var msg = UnityEngine.Object.Instantiate(prefab, Vector3.zero, Quaternion.identity);
+                if (msg.transform.Find("Icon") is { } iconSlot)
+                    iconSlot.GetComponent<SpriteRenderer>().sprite = LoadPromptIcon(icon);
+                msg.SetActive(true);
+                var control = msg.GetComponents<SilksongPM::PlayMakerFSM>().First(fsm => fsm.FsmName == "Msg Control");
+                control.FsmVariables.FindFsmString("Item").Value = item;
+                // Silksong shows its Silk Heart message before granting the heart, and skips it once Hornet has one;
+                // PlayerDataSyncModule has granted it by now.
+                if (item == SilkHeartItem)
+                    foreach (var test in control.Fsm.GetState(SilkHeartState).Actions
+                                 .OfType<Silksong::HutongGames.PlayMaker.Actions.PlayerDataVariableTest>())
+                        test.Enabled = false;
+                Silksong::EventRegister.GetRegisterGuaranteed(msg, GetItemMsgEnd).ReceivedEvent += () => {
+                    UnityEngine.Object.Destroy(msg);
+                    Silksong::GameCameras.instance.HUDIn();
+                    end();
+                };
+            },
+            afterMsg);
     }
 
     // Rewards earned together would open their screens in the same frame, one over the other.
@@ -693,8 +704,7 @@ public sealed class ProgressionModule : ModuleBase {
     // The message prefabs and their icons have no Addressables key. Their bundle may already be mounted by Addressables,
     // and a second LoadFromFile of a mounted bundle throws.
     private static AssetBundle? FindOrLoadBundle(string file, string path) =>
-        AssetBundle.GetAllLoadedAssetBundles().FirstOrDefault(b => b && b.Contains(path)) ??
-        AssetBundle.LoadFromFile(Paths.SilksongAddressablesBundle(file));
+        AssetBundle.GetAllLoadedAssetBundles().FirstOrDefault(b => b && b.Contains(path)) ?? AssetBundle.LoadFromFile(Paths.SilksongAddressablesBundle(file));
 
     private static bool IsSuperseded(SToolCrest crest) {
         var upgradedCrest = crest.upgradedVersion;

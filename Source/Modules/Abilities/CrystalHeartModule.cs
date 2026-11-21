@@ -68,8 +68,7 @@ public sealed class CrystalHeartModule : ModuleBase {
     private bool CanStart(SHeroController hero) {
         if (!HeroSwitch.HornetActive || hero != HornetSpawner.Hornet || !PlayerData.instance.hasSuperDash) return false;
         var actions = Input(hero).inputActions;
-        return actions.SuperDash.WasPressed && actions.Up.IsPressed && !actions.Down.IsPressed &&
-               !airSuperdashUsed && hero.CanHarpoonDash();
+        return actions.SuperDash.WasPressed && actions.Up.IsPressed && !actions.Down.IsPressed && !airSuperdashUsed && hero.CanHarpoonDash();
     }
 
     private static bool OnWall(SHeroController hero) => hero.cState.wallSliding || hero.cState.wallClinging;
@@ -193,8 +192,7 @@ public sealed class CrystalHeartModule : ModuleBase {
                 break;
             }
 
-            if (time >= CancelDelay &&
-                (input.inputActions.Jump.WasPressed || input.inputActions.SuperDash.WasPressed))
+            if (time >= CancelDelay && (input.inputActions.Jump.WasPressed || input.inputActions.SuperDash.WasPressed))
                 break;
             body.SetVelocity(new Vector2(direction * Speed, 0f));
         }
@@ -248,7 +246,10 @@ public sealed class CrystalHeartModule : ModuleBase {
         if (clip == null) return;
         if (!loopedClips.TryGetValue(clip, out var looped))
             loopedClips[clip] = looped = new tk2dSpriteAnimationClip {
-                name = clip.name, fps = clip.fps, frames = clip.frames, loopStart = clip.loopStart,
+                name = clip.name,
+                fps = clip.fps,
+                frames = clip.frames,
+                loopStart = clip.loopStart,
                 wrapMode = tk2dSpriteAnimationClip.WrapMode.LoopSection
             };
         animator.Play(looped);
@@ -257,8 +258,7 @@ public sealed class CrystalHeartModule : ModuleBase {
     // Silksong counts every RelinquishControl, also one that finds her relinquished already, such as an arena's that
     // stops her for its boss's entrance.
     private bool IsInterrupted(SHeroController hero) =>
-        !hero || !HeroSwitch.HornetActive || hero.cState.dead || hero.cState.hazardDeath ||
-        hero.cState.hazardRespawning || hero.cState.recoiling || SHeroController.ControlVersion != controlVersion;
+        !hero || !HeroSwitch.HornetActive || hero.cState.dead || hero.cState.hazardDeath || hero.cState.hazardRespawning || hero.cState.recoiling || SHeroController.ControlVersion != controlVersion;
 
     // Damage, death, transitions and arenas take Hornet over themselves.
     private void Finish(SHeroController hero) {
@@ -359,7 +359,8 @@ public sealed class CrystalHeartModule : ModuleBase {
         if (KnightState(state)?.Actions.OfType<PlayVibration>().FirstOrDefault() is not { } vibration) return;
         VibrationManager.PlayVibrationClipOneShot(VibrationData.Create(
             (LowFidelityVibrations)vibration.lowFidelityVibration.Value,
-            vibration.highFidelityVibration.Value as TextAsset, vibration.gamepadVibration.Value as GamepadVibration));
+            vibration.highFidelityVibration.Value as TextAsset,
+            vibration.gamepadVibration.Value as GamepadVibration));
     }
 
     private static FsmState? KnightState(string state) {

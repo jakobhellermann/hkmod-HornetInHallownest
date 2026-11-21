@@ -76,7 +76,10 @@ internal static class HeroSwitch {
 
     internal static object SetActive(ActiveHero who) {
         if (who == ActiveHero.Hornet && !HornetSpawner.Hornet)
-            return new { error = "Hornet not spawned (POST /spawn-real first)", active = Active.ToString() };
+            return new {
+                error = "Hornet not spawned (POST /spawn-real first)",
+                active = Active.ToString()
+            };
 
         var prev = Active;
         Active = who;
@@ -110,7 +113,9 @@ internal static class HeroSwitch {
         }
 
         ReassertEnvironment();
-        return new { active = Active.ToString() };
+        return new {
+            active = Active.ToString()
+        };
     }
 
     // Re-point the HK-owned state (camera/HUD/audio + the PlayMaker "Hero" var) at the active hero, and re-hide

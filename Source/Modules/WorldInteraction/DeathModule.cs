@@ -40,21 +40,38 @@ public sealed class DeathModule : ModuleBase {
 
     public override void Initialize() {
         Detour(typeof(SGameManager), "PlayerDead", NoPlayerDead, typeof(float));
-        Detour(typeof(SHeroController), "GetHeroDeathPrefab", OnGetHeroDeathPrefab, typeof(bool), typeof(bool),
+        Detour(typeof(SHeroController),
+            "GetHeroDeathPrefab",
+            OnGetHeroDeathPrefab,
+            typeof(bool),
+            typeof(bool),
             typeof(bool));
         USceneManager.sceneLoaded += SpawnCocoon;
-        Detour(typeof(SHeroController), nameof(SHeroController.CocoonBroken), OnCocoonBroken, typeof(bool),
+        Detour(typeof(SHeroController),
+            nameof(SHeroController.CocoonBroken),
+            OnCocoonBroken,
+            typeof(bool),
             typeof(bool));
         Detour(typeof(CreateObject), nameof(CreateObject.OnEnter), OnCreateObject);
         ModHooks.SetPlayerStringHook += OnSetString;
 
         // HK hazard zones call HeroController.instance.TakeDamage on the inert Knight; ContactDamageBridge already routes
         // hazard damage to Hornet, so skip the Knight's while she's active.
-        Detour(typeof(HeroController), "TakeDamage", OnKnightTakeDamage,
-            typeof(GameObject), typeof(CollisionSide), typeof(int), typeof(int));
+        Detour(typeof(HeroController),
+            "TakeDamage",
+            OnKnightTakeDamage,
+            typeof(GameObject),
+            typeof(CollisionSide),
+            typeof(int),
+            typeof(int));
 
-        Detour(typeof(SHeroController), "SetBenchRespawn", OnSetBenchRespawn,
-            typeof(string), typeof(string), typeof(int), typeof(bool));
+        Detour(typeof(SHeroController),
+            "SetBenchRespawn",
+            OnSetBenchRespawn,
+            typeof(string),
+            typeof(string),
+            typeof(int),
+            typeof(bool));
         Detour(typeof(SHeroController), "SetHazardRespawn", OnSetHazardRespawn, typeof(Vector3), typeof(bool));
 
         // HK's spike death prefab broadcasts KNIGHT SPIKE HIT, which raises e.g. the Colosseum respawn platform. Hornet's
@@ -80,8 +97,13 @@ public sealed class DeathModule : ModuleBase {
     // HK's dream zones end in a dream return without a shade, so Hornet loses nothing there either.
     private static bool IsDreamZone(string mapZone) => mapZone is "DREAM_WORLD" or "WHITE_PALACE" or "GODS_GLORY";
 
-    private static GameObject OnGetHeroDeathPrefab(System.Func<SHeroController, bool, bool, bool, GameObject> orig,
-        SHeroController self, bool nonLethal, bool inMemoryScene, bool isFrostDamage) {
+    private static GameObject OnGetHeroDeathPrefab(
+        System.Func<SHeroController, bool, bool, bool, GameObject> orig,
+        SHeroController self,
+        bool nonLethal,
+        bool inMemoryScene,
+        bool isFrostDamage
+    ) {
         var lethal = !IsDreamZone(GameManager.instance.GetCurrentMapZone());
         return orig(self, nonLethal && !lethal, inMemoryScene, isFrostDamage);
     }
@@ -118,8 +140,12 @@ public sealed class DeathModule : ModuleBase {
         spd.IsSilkSpoolBroken = true;
     }
 
-    private static void OnCocoonBroken(System.Action<SHeroController, bool, bool> orig, SHeroController self,
-        bool doAirPause, bool forceCanBind) {
+    private static void OnCocoonBroken(
+        System.Action<SHeroController, bool, bool> orig,
+        SHeroController self,
+        bool doAirPause,
+        bool forceCanBind
+    ) {
         orig(self, doAirPause, forceCanBind);
         var pd = PlayerData.instance;
         if (!HeroSwitch.HornetActive || pd.soulLimited) return;
@@ -131,8 +157,7 @@ public sealed class DeathModule : ModuleBase {
     private static string OnSetString(string name, string value) {
         var spd = SPlayerData.instance;
         var pd = PlayerData.instance;
-        if (name != nameof(PlayerData.shadeScene) || !HeroSwitch.HornetActive || pd.soulLimited || value == "None" ||
-            string.IsNullOrEmpty(spd.HeroCorpseScene)) return value;
+        if (name != nameof(PlayerData.shadeScene) || !HeroSwitch.HornetActive || pd.soulLimited || value == "None" || string.IsNullOrEmpty(spd.HeroCorpseScene)) return value;
         spd.HeroCorpseScene = value;
         spd.HeroDeathScenePos = new Vector2(pd.shadePositionX, pd.shadePositionY);
         return value;
@@ -155,7 +180,8 @@ public sealed class DeathModule : ModuleBase {
         if (!LoadCocoonPrefab()) return;
 
         var pos = ClearOfWalls(spd.HeroDeathScenePos, cocoonPrefab!.GetComponent<BoxCollider2D>().size * 0.5f);
-        var cocoon = Object.Instantiate(cocoonPrefab, new Vector3(pos.x, pos.y, cocoonPrefab.transform.position.z),
+        var cocoon = Object.Instantiate(cocoonPrefab,
+            new Vector3(pos.x, pos.y, cocoonPrefab.transform.position.z),
             Quaternion.identity);
         // Instantiate lands in the still-active previous scene, which unloads right after.
         USceneManager.MoveGameObjectToScene(cocoon, scene);
@@ -330,20 +356,33 @@ public sealed class DeathModule : ModuleBase {
         yield break;
     }
 
-    private IEnumerator NoPlayerDead(System.Func<SGameManager, float, IEnumerator> orig, SGameManager self,
-        float wait) {
+    private IEnumerator NoPlayerDead(
+        System.Func<SGameManager, float, IEnumerator> orig,
+        SGameManager self,
+        float wait
+    ) {
         return Empty();
     }
 
     // DieFromHazard is an iterator, so orig only creates it; mirror the body's hazardDeath guard here.
-    private IEnumerator OnDieFromHazard(System.Func<SHeroController, SHazardType, float, IEnumerator> orig,
-        SHeroController self, SHazardType type, float angle) {
+    private IEnumerator OnDieFromHazard(
+        System.Func<SHeroController, SHazardType, float, IEnumerator> orig,
+        SHeroController self,
+        SHazardType type,
+        float angle
+    ) {
         if (type == SHazardType.SPIKES && !self.cState.hazardDeath) PlayMakerFSM.BroadcastEvent("KNIGHT SPIKE HIT");
         return orig(self, type, angle);
     }
 
-    private void OnKnightTakeDamage(System.Action<HeroController, GameObject, CollisionSide, int, int> orig,
-        HeroController self, GameObject source, CollisionSide side, int damage, int hazard) {
+    private void OnKnightTakeDamage(
+        System.Action<HeroController, GameObject, CollisionSide, int, int> orig,
+        HeroController self,
+        GameObject source,
+        CollisionSide side,
+        int damage,
+        int hazard
+    ) {
         if (HeroSwitch.HornetActive) return;
         orig(self, source, side, damage, hazard);
     }
@@ -353,14 +392,24 @@ public sealed class DeathModule : ModuleBase {
     // HK owns respawn (reads HK's PlayerData), but cross-game scene FSMs set the respawn via Silksong's HeroController
     // (SetBenchRespawn/SetHazardRespawn), which the death path never reads. Mirror both onto HK's HeroController so its
     // PlayerData stays the source of truth (first case: the Vengeful-Spirit hard save in Crossroads_ShamanTemple).
-    private void OnSetBenchRespawn(System.Action<SHeroController, string, string, int, bool> orig,
-        SHeroController self, string marker, string scene, int type, bool facingRight) {
+    private void OnSetBenchRespawn(
+        System.Action<SHeroController, string, string, int, bool> orig,
+        SHeroController self,
+        string marker,
+        string scene,
+        int type,
+        bool facingRight
+    ) {
         orig(self, marker, scene, type, facingRight);
         if (HeroController.UnsafeInstance is { } hk) hk.SetBenchRespawn(marker, scene, type, facingRight);
     }
 
-    private void OnSetHazardRespawn(System.Action<SHeroController, Vector3, bool> orig,
-        SHeroController self, Vector3 pos, bool facingRight) {
+    private void OnSetHazardRespawn(
+        System.Action<SHeroController, Vector3, bool> orig,
+        SHeroController self,
+        Vector3 pos,
+        bool facingRight
+    ) {
         orig(self, pos, facingRight);
         if (HeroController.UnsafeInstance is { } hk) hk.SetHazardRespawn(pos, facingRight);
     }
@@ -374,7 +423,10 @@ public sealed class DeathModule : ModuleBase {
     // POST /getup - force Hornet out of any stuck bench/no_input/dead state.
     internal static object ForceGetUp() {
         var hero = HornetSpawner.Hornet;
-        if (!hero) return new { error = "no Hornet spawned" };
+        if (!hero)
+            return new {
+                error = "no Hornet spawned"
+            };
         PlayerData.instance.atBench = false;
         Silksong::PlayerData.instance.isInventoryOpen = false;
         if (Time.timeScale == 0f) Time.timeScale = 1f;
@@ -387,27 +439,44 @@ public sealed class DeathModule : ModuleBase {
         hero.SetState(SActorStates.idle);
         hero.StartAnimationControlToIdle();
         hero.RegainControl();
-        return new { ok = true };
+        return new {
+            ok = true
+        };
     }
 
     // POST /kill - kill Hornet via the real damage path (NonLethal, like ContactDamageBridge).
     internal static object Kill() {
         var hc = HornetSpawner.Hornet;
-        if (!hc) return new { error = "no Hornet spawned" };
+        if (!hc)
+            return new {
+                error = "no Hornet spawned"
+            };
         var pd = Silksong::PlayerData.instance;
         pd.isInvincible = false;
         pd.health = 1;
 
-        hc.TakeDamage(hc.gameObject, Silksong::GlobalEnums.CollisionSide.left, 1,
-            Silksong::GlobalEnums.HazardType.ENEMY, Silksong::GlobalEnums.DamagePropertyFlags.NonLethal);
-        return new { ok = true, pd.health };
+        hc.TakeDamage(hc.gameObject,
+            Silksong::GlobalEnums.CollisionSide.left,
+            1,
+            Silksong::GlobalEnums.HazardType.ENEMY,
+            Silksong::GlobalEnums.DamagePropertyFlags.NonLethal);
+        return new {
+            ok = true,
+            pd.health
+        };
     }
 
     // POST /hazard?type=N - trigger a specific hazard (2=spikes,3=acid,4=lava,5=pit), same mapping as ContactDamageBridge.
     internal static object Hazard(string typeStr) {
         var hc = HornetSpawner.Hornet;
-        if (!hc) return new { error = "no Hornet spawned" };
-        if (!int.TryParse(typeStr, out var hk)) return new { error = $"bad type '{typeStr}'" };
+        if (!hc)
+            return new {
+                error = "no Hornet spawned"
+            };
+        if (!int.TryParse(typeStr, out var hk))
+            return new {
+                error = $"bad type '{typeStr}'"
+            };
         var ss = hk switch {
             2 => Silksong::GlobalEnums.HazardType.SPIKES,
             3 => Silksong::GlobalEnums.HazardType.ACID,
@@ -417,9 +486,17 @@ public sealed class DeathModule : ModuleBase {
         };
         var pd = Silksong::PlayerData.instance;
         pd.isInvincible = false;
-        hc.TakeDamage(hc.gameObject, Silksong::GlobalEnums.CollisionSide.left, 1, ss,
+        hc.TakeDamage(hc.gameObject,
+            Silksong::GlobalEnums.CollisionSide.left,
+            1,
+            ss,
             Silksong::GlobalEnums.DamagePropertyFlags.NonLethal);
-        return new { ok = true, hkType = hk, ssHazard = ss.ToString(), pd.health };
+        return new {
+            ok = true,
+            hkType = hk,
+            ssHazard = ss.ToString(),
+            pd.health
+        };
     }
     // ReSharper restore UnusedMember.Global
 

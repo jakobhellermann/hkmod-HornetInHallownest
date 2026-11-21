@@ -1,6 +1,7 @@
 // ReSharper disable UnassignedField.Global
 // ReSharper disable FieldCanBeMadeReadOnly.Global
 // ReSharper disable ConvertToConstant.Global
+
 namespace HornetInHallownest.Save;
 
 // Global binds for hornet's actions. Null key: use HK's equivalent. Null controller button: no button.

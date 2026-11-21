@@ -31,11 +31,14 @@ public sealed class BeastlingCallModule : ModuleBase {
 
     public override void Initialize() {
         Detour(typeof(SCheckIsTeleportBlocked), "get_IsTrue", OnIsTeleportBlocked);
-        Detour(typeof(SFindFastTravelTeleportPoint), nameof(SFindFastTravelTeleportPoint.OnEnter),
+        Detour(typeof(SFindFastTravelTeleportPoint),
+            nameof(SFindFastTravelTeleportPoint.OnEnter),
             OnFindFastTravelTeleportPoint);
         Detour(typeof(SGetFastTravelScene), nameof(SGetFastTravelScene.OnEnter), OnGetFastTravelScene);
         Detour(typeof(SStartPreloadingScene), nameof(SStartPreloadingScene.OnEnter), OnStartPreloadingScene);
-        Detour(typeof(SGameManager), nameof(SGameManager.BeginSceneTransition), OnBeginSceneTransition,
+        Detour(typeof(SGameManager),
+            nameof(SGameManager.BeginSceneTransition),
+            OnBeginSceneTransition,
             typeof(SGameManager.SceneLoadInfo));
     }
 
@@ -56,8 +59,10 @@ public sealed class BeastlingCallModule : ModuleBase {
 
     // Replaces Silksong's search for room to land the Bell Beast's children with HK's Dream Gate check: floor right under
     // both feet.
-    private static void OnFindFastTravelTeleportPoint(Action<SFindFastTravelTeleportPoint> orig,
-        SFindFastTravelTeleportPoint self) {
+    private static void OnFindFastTravelTeleportPoint(
+        Action<SFindFastTravelTeleportPoint> orig,
+        SFindFastTravelTeleportPoint self
+    ) {
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
         if (!hero || !hero.TryGetComponent<Collider2D>(out var body)) {
             orig(self);
@@ -66,9 +71,7 @@ public sealed class BeastlingCallModule : ModuleBase {
 
         var feet = new Vector2(body.bounds.center.x, body.bounds.min.y + FootRayLift);
         var floor = Physics2D.Raycast(feet, Vector2.down, FootRayLength, terrainMask);
-        var clear = CanCallStag() && floor.collider &&
-                    Physics2D.Raycast(feet + Vector2.left * FootOffset, Vector2.down, FootRayLength, terrainMask) &&
-                    Physics2D.Raycast(feet + Vector2.right * FootOffset, Vector2.down, FootRayLength, terrainMask);
+        var clear = CanCallStag() && floor.collider && Physics2D.Raycast(feet + Vector2.left * FootOffset, Vector2.down, FootRayLength, terrainMask) && Physics2D.Raycast(feet + Vector2.right * FootOffset, Vector2.down, FootRayLength, terrainMask);
         self.StoreGroundPos.Value = clear ? floor.point : Vector2.zero;
         self.StoreRoofHeight.Value = NoRoofHeight;
         self.StoreLeftClear.Value = clear;
@@ -114,8 +117,11 @@ public sealed class BeastlingCallModule : ModuleBase {
         orig(self);
     }
 
-    private static void OnBeginSceneTransition(Action<SGameManager, SGameManager.SceneLoadInfo> orig, SGameManager self,
-        SGameManager.SceneLoadInfo info) {
+    private static void OnBeginSceneTransition(
+        Action<SGameManager, SGameManager.SceneLoadInfo> orig,
+        SGameManager self,
+        SGameManager.SceneLoadInfo info
+    ) {
         if (!HeroSwitch.HornetActive || info.EntryGateName != FastTravelExitGate) {
             orig(self, info);
             return;

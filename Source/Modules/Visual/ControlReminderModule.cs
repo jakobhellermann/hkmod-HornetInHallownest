@@ -106,9 +106,7 @@ public sealed class ControlReminderModule : ModuleBase {
         };
         if (action == null) return;
         foreach (var name in castButtons)
-            if (self.GameObject.transform.Find(name) is { } cast &&
-                cast.TryGetComponent<ActionButtonIcon>(out var icon) &&
-                icon.action != action)
+            if (self.GameObject.transform.Find(name) is { } cast && cast.TryGetComponent<ActionButtonIcon>(out var icon) && icon.action != action)
                 icon.SetAction(action.Value);
     }
 

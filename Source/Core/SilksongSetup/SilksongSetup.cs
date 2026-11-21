@@ -25,7 +25,7 @@ internal static class SilksongSetup {
     private static string[] ShimRefs => [Paths.ModFile($"{SilksongAssemblies.RepackerBindings}.dll")];
 #else
     private static string[] Deps => SilksongAssemblies.Deps;
-    private static string[] Installed => [..Deps, ..SilksongAssemblies.Prefixed];
+    private static string[] Installed => [.. Deps, .. SilksongAssemblies.Prefixed];
     private static string[] Removable => Installed;
     private static string? ShimPath => null;
     private static string[] ShimRefs => [];
@@ -81,8 +81,11 @@ internal static class SilksongSetup {
 
         public void RemoveStale() {
             foreach (var stale in Directory.GetFiles(managed, "*.stale")) {
-                try { File.Delete(stale); }
-                catch (UnauthorizedAccessException) { Log.Debug($"[SilksongSetup] Failed to delete {Path.GetFileName(stale)}"); }
+                try {
+                    File.Delete(stale);
+                } catch (UnauthorizedAccessException) {
+                    Log.Debug($"[SilksongSetup] Failed to delete {Path.GetFileName(stale)}");
+                }
             }
         }
 
@@ -116,7 +119,10 @@ internal static class SilksongSetup {
 
         var hadOurs = names.Any(IsOurs);
         for (var i = names.Count - 1; i >= 0; i--)
-            if (IsOurs(names[i])) { names.RemoveAt(i); types.RemoveAt(i); }
+            if (IsOurs(names[i])) {
+                names.RemoveAt(i);
+                types.RemoveAt(i);
+            }
         foreach (var name in SilksongAssemblies.Prefixed) {
             names.Add($"{name}.dll");
             types.Add(16); // MonoBehaviour/serialized-type flag

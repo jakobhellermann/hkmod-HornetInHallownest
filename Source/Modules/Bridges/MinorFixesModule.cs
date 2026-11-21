@@ -29,11 +29,22 @@ namespace HornetInHallownest.Modules;
 //   - FreezeMoment: the GM's hit-stop coroutine can't start on the inactive GM ("Coroutine couldn't be started" per hit).
 //     Pure juice (a brief global timeScale dip), so no-op it, but still invoke onFinish so death-sequence chains don't hang.
 public sealed class MinorFixesModule : ModuleBase {
-    private delegate void CheckForBumpOrig(SBumpCheck self, SCollisionSide side, out bool hitBump, out bool hitWall,
-        out bool hitHighWall);
+    private delegate void CheckForBumpOrig(
+        SBumpCheck self,
+        SCollisionSide side,
+        out bool hitBump,
+        out bool hitWall,
+        out bool hitHighWall
+    );
 
-    private delegate void CheckForBumpHook(CheckForBumpOrig orig, SBumpCheck self, SCollisionSide side,
-        out bool hitBump, out bool hitWall, out bool hitHighWall);
+    private delegate void CheckForBumpHook(
+        CheckForBumpOrig orig,
+        SBumpCheck self,
+        SCollisionSide side,
+        out bool hitBump,
+        out bool hitWall,
+        out bool hitHighWall
+    );
 
     // Above any ledge top Hornet's vault or clamber accepts (at most 0.94 over her head).
     private const float ClamberLandingHeight = 1.2f;
@@ -58,7 +69,8 @@ public sealed class MinorFixesModule : ModuleBase {
         Detour(typeof(MonoBehaviour), "StartCoroutine", OnStartCoroutine, typeof(IEnumerator));
         Detour(typeof(Silksong::GameManager), "FreezeMoment", OnFreezeMoment, typeof(SFreeze), typeof(Action));
         Detour(typeof(Silksong::HeroController), "RelinquishControl", OnRelinquishControl);
-        Detour(typeof(Silksong::HeroController), nameof(Silksong::HeroController.PreventCastByDialogueEnd),
+        Detour(typeof(Silksong::HeroController),
+            nameof(Silksong::HeroController.PreventCastByDialogueEnd),
             OnPreventCastByDialogueEnd);
         Detour(typeof(IgnoreHeroCollision), "Ignore", OnIgnoreHeroCollision);
         Detour(typeof(SBumpCheck), nameof(SBumpCheck.CheckForBump), (CheckForBumpHook)OnCheckForBump);
@@ -91,7 +103,9 @@ public sealed class MinorFixesModule : ModuleBase {
         var bridgeAttribute = fadeGroup.Assembly.GetType("TeamCherry.NestedFadeGroup.NestedFadeGroupBridgeAttribute", true);
         var bridgeType = fadeGroup.GetNestedType("Bridge", BindingFlags.NonPublic)!;
         var bridges = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(bridgeType));
-        foreach (var assembly in new[] { fadeGroup.Assembly, typeof(Silksong::HeroController).Assembly })
+        foreach (var assembly in new[] {
+                     fadeGroup.Assembly, typeof(Silksong::HeroController).Assembly
+                 })
         foreach (var type in assembly.GetTypes())
         foreach (var attribute in type.GetCustomAttributes(bridgeAttribute, true))
         foreach (var source in attribute.GetPropertyValue<Type[]>("TargetTypes")!) {
@@ -141,16 +155,23 @@ public sealed class MinorFixesModule : ModuleBase {
 
     #endregion
 
-    private Coroutine OnStartCoroutine(Func<MonoBehaviour, IEnumerator, Coroutine> orig, MonoBehaviour self,
-        IEnumerator? routine) {
+    private Coroutine OnStartCoroutine(
+        Func<MonoBehaviour, IEnumerator, Coroutine> orig,
+        MonoBehaviour self,
+        IEnumerator? routine
+    ) {
         if (routine == null) return orig(self, null!);
         // Redirect only when the calling GO is inactive; normal calls pass through untouched.
         if (!host || (self && self.gameObject && self.gameObject.activeInHierarchy)) return orig(self, routine);
         return orig(host, routine);
     }
 
-    private static void OnFreezeMoment(Action<Silksong::GameManager, SFreeze, Action> orig,
-        Silksong::GameManager self, SFreeze type, Action? onFinish) {
+    private static void OnFreezeMoment(
+        Action<Silksong::GameManager, SFreeze, Action> orig,
+        Silksong::GameManager self,
+        SFreeze type,
+        Action? onFinish
+    ) {
         onFinish?.Invoke();
     }
 
@@ -173,8 +194,14 @@ public sealed class MinorFixesModule : ModuleBase {
     }
 
     // Hornet's sprint and dash find walls with raycasts, which still see the objects above.
-    private static void OnCheckForBump(CheckForBumpOrig orig, SBumpCheck self, SCollisionSide side, out bool hitBump,
-        out bool hitWall, out bool hitHighWall) {
+    private static void OnCheckForBump(
+        CheckForBumpOrig orig,
+        SBumpCheck self,
+        SCollisionSide side,
+        out bool hitBump,
+        out bool hitWall,
+        out bool hitHighWall
+    ) {
         orig(self, side, out hitBump, out hitWall, out hitHighWall);
         if (!hitWall || side is not (SCollisionSide.left or SCollisionSide.right)) return;
 
@@ -187,7 +214,11 @@ public sealed class MinorFixesModule : ModuleBase {
 
         var bounds = bumpCollider.bounds;
         var body = bumpBody;
-        var filter = new ContactFilter2D { useTriggers = false, useLayerMask = true, layerMask = bumpGroundMask };
+        var filter = new ContactFilter2D {
+            useTriggers = false,
+            useLayerMask = true,
+            layerMask = bumpGroundMask
+        };
         var right = side == SCollisionSide.right;
         var x = right ? bounds.max.x - 0.1f : bounds.min.x + 0.1f;
         var direction = right ? Vector2.right : Vector2.left;
@@ -212,10 +243,11 @@ public sealed class MinorFixesModule : ModuleBase {
         var inside = false;
         foreach (var (bounds, points) in terrainOutlines) {
             if (!bounds.Contains(point)) continue;
-            for (int i = 0, j = points.Length - 1; i < points.Length; j = i++)
-                if (points[i].y > point.y != points[j].y > point.y &&
-                    point.x < points[i].x + (point.y - points[i].y) * (points[j].x - points[i].x) /
-                    (points[j].y - points[i].y))
+            for (int i = 0,
+                 j = points.Length - 1;
+                 i < points.Length;
+                 j = i++)
+                if (points[i].y > point.y != points[j].y > point.y && point.x < points[i].x + (point.y - points[i].y) * (points[j].x - points[i].x) / (points[j].y - points[i].y))
                     inside = !inside;
         }
 

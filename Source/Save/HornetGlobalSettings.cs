@@ -1,4 +1,5 @@
 // ReSharper disable UnassignedField.Global
+
 namespace HornetInHallownest.Save;
 
 // Root of the mod's global (cross-save) settings, serialized to HornetInHallownestMod.GlobalSettings.json.

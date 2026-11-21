@@ -8,7 +8,10 @@ namespace HornetInHallownest.Modules;
 // Hornet's kinematic HeroBox sweeps past ground geo between physics steps without firing OnTriggerEnter2D, so geo isn't
 // picked up mid-dash. While dashing, sweep-overlap her HeroBox path and drive GeoControl's own collect for covered geo
 public sealed class DashGeoPickupModule : ModuleBase {
-    private readonly ContactFilter2D filter = new() { useTriggers = true, useLayerMask = false };
+    private readonly ContactFilter2D filter = new() {
+        useTriggers = true,
+        useLayerMask = false
+    };
     private readonly Collider2D[] hits = new Collider2D[16];
     private Collider2D? heroBox;
     private bool hadPrev;
@@ -16,8 +19,7 @@ public sealed class DashGeoPickupModule : ModuleBase {
 
     public override string Id => "geo-dash";
 
-    public override void Initialize() {
-    }
+    public override void Initialize() { }
 
     protected override void OnDeinitialize() {
         heroBox = null;

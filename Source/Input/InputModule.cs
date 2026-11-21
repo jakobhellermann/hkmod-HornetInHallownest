@@ -46,7 +46,10 @@ public sealed class InputModule : ModuleBase {
         new(s => s.OpenInventory, h => h.openInventory, a => a.OpenInventory, SnapshotKey: true, PrimaryOnly: true),
         // without HK equivalent
         new(s => s.Taunt, null, a => a.Taunt, ControllerSetting: s => s.TauntController),
-        new(s => s.OpenTools, null, a => a.OpenInventoryTools, ControllerSetting: s => s.OpenToolsController,
+        new(s => s.OpenTools,
+            null,
+            a => a.OpenInventoryTools,
+            ControllerSetting: s => s.OpenToolsController,
             PrimaryOnly: true)
     ];
 
@@ -93,7 +96,10 @@ public sealed class InputModule : ModuleBase {
     }
 
     private SsInputHandler.KeyOrMouseBinding OnGetKeyBindingForAction(
-        Func<SsInputHandler, SsAction, SsInputHandler.KeyOrMouseBinding> orig, SsInputHandler self, SsAction action) {
+        Func<SsInputHandler, SsAction, SsInputHandler.KeyOrMouseBinding> orig,
+        SsInputHandler self,
+        SsAction action
+    ) {
         if (SourceAction(action) is not { } source) return orig(self, action);
         var binding = source.GetKeyOrMouseBinding();
         if (binding.Mouse != Mouse.None)
@@ -103,8 +109,11 @@ public sealed class InputModule : ModuleBase {
             Enum.TryParse(binding.Key.ToString(), out SsKey key) ? key : SsKey.None);
     }
 
-    private SsInputControlType OnGetButtonBindingForAction(Func<SsInputHandler, SsAction, SsInputControlType> orig,
-        SsInputHandler self, SsAction action) {
+    private SsInputControlType OnGetButtonBindingForAction(
+        Func<SsInputHandler, SsAction, SsInputControlType> orig,
+        SsInputHandler self,
+        SsAction action
+    ) {
         if (SourceAction(action) is not { } source) return orig(self, action);
         return Enum.TryParse(source.GetControllerButtonBinding().ToString(), out SsInputControlType control)
             ? control
@@ -286,5 +295,6 @@ public sealed class InputModule : ModuleBase {
         bool SnapshotKey = false, // snapshot HK binding as default (since hk is disabled while Hornet is primary)
         bool PrimaryOnly = false, // suppressed while Hornet is active but not primary
         Func<InputSettings, string?>? ControllerSetting = null, // Silksong's controller default
-        bool Axis = false); // movement: keeps working when held through a menu closing
+        bool Axis = false
+    ); // movement: keeps working when held through a menu closing
 }

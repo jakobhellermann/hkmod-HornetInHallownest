@@ -42,13 +42,13 @@ internal static class SilksongAddressables {
     // runtime is marked started and the following LoadContentCatalogAsync doesn't wait on HK's default init.
     private static void MarkRuntimeStarted(string settingsPath) {
         var impl = typeof(Addressables)
-                       .GetProperty("m_Addressables",
-                           BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Public)
-                       ?.GetValue(null)
-                   ?? throw new InvalidOperationException("Addressables.m_Addressables not found");
+                .GetProperty("m_Addressables",
+                    BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Public)
+                ?.GetValue(null)
+            ?? throw new InvalidOperationException("Addressables.m_Addressables not found");
         var init = impl.GetType().GetMethod("InitializeAsync", [typeof(string), typeof(string), typeof(bool)])
-                   ?? throw new InvalidOperationException(
-                       "AddressablesImpl.InitializeAsync(string,string,bool) not found");
+            ?? throw new InvalidOperationException(
+                "AddressablesImpl.InitializeAsync(string,string,bool) not found");
         var handle = init.Invoke(impl, [settingsPath, null, false])!;
         handle.GetType().GetMethod("WaitForCompletion")!.Invoke(handle, null);
     }

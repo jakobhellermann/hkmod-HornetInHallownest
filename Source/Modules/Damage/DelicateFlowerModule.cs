@@ -24,12 +24,17 @@ public sealed class DelicateFlowerModule : ModuleBase {
     public override string Id => "delicate-flower";
 
     public override void Initialize() {
-        Detour(typeof(SHeroController), nameof(SHeroController.SendHeroDamagedEvent), OnSendHeroDamagedEvent,
+        Detour(typeof(SHeroController),
+            nameof(SHeroController.SendHeroDamagedEvent),
+            OnSendHeroDamagedEvent,
             typeof(SHeroController.DamageInfo));
     }
 
-    private static void OnSendHeroDamagedEvent(Action<SHeroController, SHeroController.DamageInfo> orig,
-        SHeroController self, SHeroController.DamageInfo damageInfo) {
+    private static void OnSendHeroDamagedEvent(
+        Action<SHeroController, SHeroController.DamageInfo> orig,
+        SHeroController self,
+        SHeroController.DamageInfo damageInfo
+    ) {
         orig(self, damageInfo);
         if (HeroSwitch.HornetActive && self == HornetSpawner.Hornet) Break(self);
     }

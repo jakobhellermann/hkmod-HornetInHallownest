@@ -1,5 +1,6 @@
 // .NET Standard 2.1 BCL surface missing from Unity 2020.2's mscorlib, types under their original namespaces.
 // ReSharper disable CheckNamespace
+
 using System;
 
 namespace System {
@@ -8,19 +9,27 @@ namespace System {
         private int current;
 
         private static int Mix(int hash, object value) {
-            unchecked { return hash * 31 + (value?.GetHashCode() ?? 0); }
+            unchecked {
+                return hash * 31 + (value?.GetHashCode() ?? 0);
+            }
         }
 
         public static int Combine<T1>(T1 a) => Mix(17, a);
+
         public static int Combine<T1, T2>(T1 a, T2 b) => Mix(Mix(17, a), b);
+
         public static int Combine<T1, T2, T3>(T1 a, T2 b, T3 c) => Mix(Mix(Mix(17, a), b), c);
+
         public static int Combine<T1, T2, T3, T4>(T1 a, T2 b, T3 c, T4 d) => Mix(Mix(Mix(Mix(17, a), b), c), d);
+
         public static int Combine<T1, T2, T3, T4, T5>(T1 a, T2 b, T3 c, T4 d, T5 e)
             => Mix(Mix(Mix(Mix(Mix(17, a), b), c), d), e);
+
         public static int Combine<T1, T2, T3, T4, T5, T6>(T1 a, T2 b, T3 c, T4 d, T5 e, T6 f)
             => Mix(Mix(Mix(Mix(Mix(Mix(17, a), b), c), d), e), f);
 
         public void Add<T>(T value) => current = Mix(current == 0 ? 17 : current, value);
+
         public int ToHashCode() => current;
     }
 
@@ -28,19 +37,33 @@ namespace System {
     public static class MathF {
         public const float PI = 3.14159274f;
         public const float E = 2.71828175f;
+
         public static float Abs(float x) => Math.Abs(x);
+
         public static float Max(float a, float b) => Math.Max(a, b);
+
         public static float Min(float a, float b) => Math.Min(a, b);
+
         public static float Sqrt(float x) => (float)Math.Sqrt(x);
+
         public static float Pow(float x, float y) => (float)Math.Pow(x, y);
+
         public static float Sin(float x) => (float)Math.Sin(x);
+
         public static float Cos(float x) => (float)Math.Cos(x);
+
         public static float Tan(float x) => (float)Math.Tan(x);
+
         public static float Atan2(float y, float x) => (float)Math.Atan2(y, x);
+
         public static float Floor(float x) => (float)Math.Floor(x);
+
         public static float Ceiling(float x) => (float)Math.Ceiling(x);
+
         public static float Round(float x) => (float)Math.Round(x);
+
         public static float Log(float x) => (float)Math.Log(x);
+
         public static float Sign(float x) => Math.Sign(x);
     }
 }
@@ -63,6 +86,7 @@ namespace System.Diagnostics.CodeAnalysis {
     [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.ReturnValue, AllowMultiple = true)]
     public sealed class NotNullIfNotNullAttribute : Attribute {
         public NotNullIfNotNullAttribute(string parameterName) => ParameterName = parameterName;
+
         public string ParameterName { get; }
     }
 }
@@ -84,7 +108,10 @@ namespace UnityEngine.Compat {
 
         // string.Split(char, StringSplitOptions) — .NET Standard 2.1.
         public static string[] String_Split(string self, char separator, StringSplitOptions options)
-            => self?.Split(new[] { separator }, options);
+            => self?.Split(new[] {
+                    separator
+                },
+                options);
 
         // string.TrimStart() — .NET Standard 2.1 (2.0 only has the params overload).
         public static string String_TrimStart(string self) => self.TrimStart();

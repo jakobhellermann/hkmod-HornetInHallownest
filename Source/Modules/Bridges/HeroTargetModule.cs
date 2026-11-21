@@ -40,7 +40,8 @@ public sealed class HeroTargetModule : ModuleBase {
         // transitionState, still mid-entry after a door while she already moves, and stops following her for good.
         Detour(typeof(CameraTarget), "Update", (Action<Action<CameraTarget>, CameraTarget>)OnCameraUpdate);
         Detour(typeof(CameraTarget), "ExitLockZone", (Action<Action<CameraTarget>, CameraTarget>)OnCameraUpdate);
-        Detour(typeof(CameraController), "LateUpdate",
+        Detour(typeof(CameraController),
+            "LateUpdate",
             (Action<Action<CameraController>, CameraController>)OnCameraUpdate);
 
         Detour(typeof(GetPosition), "DoGetPosition", OnGetPosition);

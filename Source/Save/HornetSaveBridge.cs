@@ -16,6 +16,7 @@ public sealed class HornetSaveBridge : ModuleBase {
     public override string Id => "save-bridge";
 
     public override void Initialize() => ModHooks.NewGameHook += OnNewGame;
+
     protected override void OnDeinitialize() => ModHooks.NewGameHook -= OnNewGame;
 
     // Matches Silksong's PlayerData serializer
@@ -64,7 +65,9 @@ public sealed class HornetSaveBridge : ModuleBase {
     }
 
     private static void OnNewGame() =>
-        Stash(new HornetSaveData { HornetActive = HornetInHallownest.LoadedInstance!.GlobalSettings.StartAsHornet });
+        Stash(new HornetSaveData {
+            HornetActive = HornetInHallownest.LoadedInstance!.GlobalSettings.StartAsHornet
+        });
 
     // The API stashes a new HornetSaveData, without PlayerData, when the main menu loads, and nothing else for a slot
     // saved without the mod.

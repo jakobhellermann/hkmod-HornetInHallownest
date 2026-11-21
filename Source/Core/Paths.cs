@@ -66,18 +66,18 @@ internal static class Paths {
 
         throw new DirectoryNotFoundException(overridden
             ? $"""
-              Couldn't find Hollow Knight Silksong at the configured SilksongPath.
-                Looked in: {install}
-                To fix: close the game, open {ConfigFile}
-                and set SilksongPath to your Hollow Knight Silksong install folder.
-              """
+               Couldn't find Hollow Knight Silksong at the configured SilksongPath.
+                 Looked in: {install}
+                 To fix: close the game, open {ConfigFile}
+                 and set SilksongPath to your Hollow Knight Silksong install folder.
+               """
             : $"""
-              Couldn't find Hollow Knight Silksong.
-                Tried to auto-detect it next to Hollow Knight at: {install}
-                Install it next to Hollow Knight, or specify the path manually:
-                close the game, open {ConfigFile}
-                and set SilksongPath to your Hollow Knight Silksong install folder.
-              """);
+               Couldn't find Hollow Knight Silksong.
+                 Tried to auto-detect it next to Hollow Knight at: {install}
+                 Install it next to Hollow Knight, or specify the path manually:
+                 close the game, open {ConfigFile}
+                 and set SilksongPath to your Hollow Knight Silksong install folder.
+               """);
     }
 
     private static void CheckSamePlatform(string install, string dataDir) {
@@ -85,9 +85,9 @@ internal static class Paths {
         if (builds.Contains(AaTarget)) return;
 
         throw new PlatformNotSupportedException($"""
-            Hollow Knight Silksong at {install} is the {string.Join(", ", builds)} build, but Hollow Knight runs as {AaTarget}.
-              Run both games natively, or both through Proton.
-            """);
+                                                 Hollow Knight Silksong at {install} is the {string.Join(", ", builds)} build, but Hollow Knight runs as {AaTarget}.
+                                                   Run both games natively, or both through Proton.
+                                                 """);
     }
 
     // Where the modding API serializes our global settings (see Modding.Mod.GetGlobalSettingsPath): beside the mod
