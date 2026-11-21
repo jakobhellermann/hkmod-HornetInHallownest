@@ -60,9 +60,7 @@ public sealed class GameObjectLookupModule : ModuleBase {
         if (SilksongContext.Active) return Intercept("FindWithTag", tag, ResolveTag(tag));
 
         try {
-            var r = orig(tag);
-            LogDebugOnce($"find|FindWithTag|{tag}", $"FindWithTag('{tag}') -> {(r ? "'" + r.name + "'" : "null")}");
-            return r;
+            return orig(tag);
         } catch (Exception e) {
             // Tag not defined in HK's tag manager, log instead of crash
             LogError($"FindWithTag('{tag}') threw {e.GetType().Name} (tag not defined in HK) -> null");
@@ -71,9 +69,7 @@ public sealed class GameObjectLookupModule : ModuleBase {
     }
 
     private GameObject? Intercept(string method, string key, GameObject? redirect) {
-        LogDebug(redirect
-            ? $"{method}('{key}') -> REDIRECT '{redirect.name}' (silksong-context)"
-            : $"{method}('{key}') -> null (silksong-context, no mapping, blocked)");
+        if (!redirect) LogDebugOnce($"blocked|{method}|{key}", $"{method}('{key}') has no Silksong mapping -> null");
         return redirect;
     }
 

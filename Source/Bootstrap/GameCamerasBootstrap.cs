@@ -11,20 +11,15 @@ using HornetInHallownest.Core;
 
 namespace HornetInHallownest.Bootstrap;
 
-// Bring up Silksong's `_GameCameras` rig (via Addressables) enough for GameCameras.instance + a live CameraTarget, so
-// the "Couldn't find GameCameras" / "Failed to find camera target" / SetSprint errors stop. HK renders the world, so we
-// neuter the rig: disable every Camera (HK renders), AudioListener (Unity allows one; HK owns it), CameraController
-// (fights HK + NullRefs). The HUD in this same rig is brought up separately (BringUpHud); CameraTarget stays live.
+// Silksong's `_GameCameras` rig, for GameCameras.instance, its CameraTarget and Hornet's HUD. HK renders and owns the
+// camera, so the rig's cameras, listener and controller stay disabled.
 internal static class GameCamerasBootstrap {
     private const string RigName = "Silksong_GameCameras";
     private static GameObject? rig;
 
-    private static Transform?
-        inGame; // Hornet HUD content container ("In-game"), cached by BringUpHud for cheap toggling
+    private static Transform? inGame;
 
-    // Fixes the per-frame "Invalid layer id" flood: some Silksong HUD MeshSortingOrder layerIDs ("Inventory"/"Scene
-    // Border") have different uniqueIDs than HK's, so HK rejects them and OnUpdate re-applies every frame. Remap the
-    // invalid ones to HK's by-name equivalent ("HUD" fallback).
+    // Silksong sorting layers whose ids differ from HK's same-named ones; the rest fall back to "HUD".
     private static readonly Dictionary<int, string> ssSortingLayerNames = new() {
         {
             59515797, "Inventory"
@@ -37,11 +32,9 @@ internal static class GameCamerasBootstrap {
     private static Transform? hudOffsetTransform;
     private static SilksongPM::PlayMakerFSM? hudSlideFsm;
     private static Vector3 hudOffsetPos;
-    private static Vector3 hkHudScale = Vector3.one; // HK hudCanvas' real scale, cached so we can restore after hiding
-    private static HashSet<PlayMakerFSM>? disabledHudFsms; // HK HUD FSMs we disabled when Knight is inert
-
-    private static Transform?
-        ssMainCamT; // Silksong rig's (neutered) main camera transform, kept on HK's camera for audio
+    private static Vector3 hkHudScale = Vector3.one;
+    private static HashSet<PlayMakerFSM>? disabledHudFsms;
+    private static Transform? ssMainCamT;
 
     // Silksong's CameraTarget GO (on the rig). Hero FSMs reference "Camera Target" via a serialized FsmGameObject whose
     // cross-game PPtr is lost -> they'd GameObject.Find and hit HK's same-named object (no SetSprint). Rewire to this.
@@ -53,11 +46,10 @@ internal static class GameCamerasBootstrap {
 
     private static bool HornetHudReady => inGame != null;
 
-    // Fires when Hornet's in-game HUD transitions to visible. Consumers re-trigger HUD elements that reset while their
-    // GameObject is deactivated (a hero switch deactivates the whole In-game GO).
+    // HUD elements reset while In-game is deactivated by a hero switch.
     internal static event Action? HornetHudShown;
 
-    // Hot-reload safe: the DDOL rig survives our DLL reload (our `rig` static doesn't) — reuse it, found by its name.
+    // The DontDestroyOnLoad rig survives a hot-reload, our static doesn't.
     private static GameObject? FindExistingRig() {
         foreach (var go in Resources.FindObjectsOfTypeAll<GameObject>())
             if (go != null && go.name == RigName && go.scene.IsValid())
@@ -65,134 +57,58 @@ internal static class GameCamerasBootstrap {
         return null;
     }
 
-    // Ensure and BringUpHud return their status to the dev server routes on the debug branch.
-    // ReSharper disable once UnusedMethodReturnValue.Global
-    internal static object Ensure() {
-        try {
-            rig ??= FindExistingRig();
-            if (rig != null) {
-                // Re-point GameCameras._instance in case it dangled across the reload (Silksong-assembly static).
-                var existing = rig.GetComponentInChildren<Silksong::GameCameras>(true);
-                if (existing != null && Silksong::GameCameras.SilentInstance == null)
-                    Silksong::GameCameras._instance = existing;
-                return new {
-                    ok = true,
-                    note = "reused existing rig",
-                    instanceSet = Silksong::GameCameras.SilentInstance != null
-                };
-            }
+    internal static void Ensure() {
+        rig ??= FindExistingRig();
+        if (rig != null) {
+            Silksong::GameCameras._instance = rig.GetComponentInChildren<Silksong::GameCameras>(true);
+            return;
+        }
 
-            SilksongAddressables.EnsureMounted();
-            var prefab = Addressables.LoadAssetAsync<GameObject>("_GameCameras").WaitForCompletion();
-            if (prefab == null)
-                return new {
-                    error = "_GameCameras load returned null"
-                };
+        SilksongAddressables.EnsureMounted();
+        var prefab = Addressables.LoadAssetAsync<GameObject>("_GameCameras").WaitForCompletion();
 
-            // Instantiate under an inactive holder so we can neuter components before any Awake fires, then activate it
-            // so every HUD FSM (health_display, silk, …) self-initializes via its real Awake/Start (a dormant rig left
-            // them un-started -> health masks' renderers never enabled).
-            var holder = new GameObject("hp_gc_holder");
-            holder.SetActive(false);
-            var inst = Object.Instantiate(prefab, holder.transform);
-            inst.name = RigName;
+        // Instantiate inactive to disable HK-owned parts before any Awake, then activate so the HUD FSMs run their Awake.
+        var holder = new GameObject("hp_gc_holder");
+        holder.SetActive(false);
+        var inst = Object.Instantiate(prefab, holder.transform);
+        inst.name = RigName;
 
-            // Neuter HK-owned parts before activation (so their Update never runs). Disable, don't destroy, so the rig's
-            // serialized refs stay non-null.
-            int cams = 0,
-                listeners = 0,
-                controllers = 0,
-                blur = 0;
-            foreach (var c in inst.GetComponentsInChildren<Camera>(true)) {
-                c.enabled = false;
-                cams++;
-            }
-
-            foreach (var a in inst.GetComponentsInChildren<AudioListener>(true)) {
-                a.enabled = false;
-                listeners++;
-            }
-
-            foreach (var cc in inst.GetComponentsInChildren<Silksong::CameraController>(true)) {
-                cc.enabled = false;
-                controllers++;
-            }
-
-            // Per-frame cosmetic background-blur: NullRefs every frame without the scene's BlurPlanes. Off.
-            foreach (var b in inst.GetComponentsInChildren<Silksong::BlurManager>(true)) {
-                b.enabled = false;
-                blur++;
-            }
-
-            foreach (var b in inst.GetComponentsInChildren<Silksong::LightBlurredBackground>(true)) {
-                b.enabled = false;
-                blur++;
-            }
-
-            // Full-screen overlay used by Silksong's scene Remaskers, unused
-            foreach (var m in inst.GetComponentsInChildren<Silksong::MaskerBlackout>(true))
-                m.gameObject.SetActive(false);
+        foreach (var c in inst.GetComponentsInChildren<Camera>(true)) c.enabled = false;
+        // Unity allows one AudioListener, HK's.
+        foreach (var a in inst.GetComponentsInChildren<AudioListener>(true)) a.enabled = false;
+        foreach (var cc in inst.GetComponentsInChildren<Silksong::CameraController>(true)) cc.enabled = false;
+        // The blurs NullRef every frame without the scene's BlurPlanes.
+        foreach (var b in inst.GetComponentsInChildren<Silksong::BlurManager>(true)) b.enabled = false;
+        foreach (var b in inst.GetComponentsInChildren<Silksong::LightBlurredBackground>(true)) b.enabled = false;
+        // Full-screen overlay for Silksong's scene Remaskers.
+        foreach (var m in inst.GetComponentsInChildren<Silksong::MaskerBlackout>(true)) m.gameObject.SetActive(false);
 
 #if HK1578
-            // Their shaders are unsupported on Unity 2020: OnEnable disables them again and OnDisable NullRefs.
-            foreach (var e in inst.GetComponentsInChildren<Silksong::UnityStandardAssets.ImageEffects.PostEffectsBase>(true))
-                e.enabled = false;
+        // Their shaders are unsupported on Unity 2020: OnEnable disables them again and OnDisable NullRefs.
+        foreach (var e in inst.GetComponentsInChildren<Silksong::UnityStandardAssets.ImageEffects.PostEffectsBase>(true))
+            e.enabled = false;
 #endif
 
-            // UIManager singleton the HUD FSMs deref during Awake/Start, before activation (PlayerData/GlobalSettings
-            // already seeded earlier in SpawnReal).
-            UIManagerBootstrap.Ensure();
+        UIManagerBootstrap.Ensure();
 
-            // Set GameCameras._instance before activation so child HUD FSMs resolve GameCameras.instance in their Awake.
-            // (GameCameras.Awake is skipped in Stub; we DDOL the holder ourselves below.)
-            var gc = inst.GetComponentInChildren<Silksong::GameCameras>(true);
-            if (gc != null) {
-                Silksong::GameCameras._instance = gc;
-                // gm.gameCams (set by the skipped SetupGameRefs) -> derefed by inventory pause (StopCameraShake), HUD, etc.
-                if (Silksong::GameManager.instance != null) Silksong::GameManager.instance.gameCams = gc;
-            }
+        // GameCameras.Awake is skipped (Stub), and the HUD FSMs read the instance in theirs.
+        var gc = inst.GetComponentInChildren<Silksong::GameCameras>(true);
+        Silksong::GameCameras._instance = gc;
+        Silksong::GameManager.instance.gameCams = gc;
 
-            Object.DontDestroyOnLoad(holder);
-            rig = inst;
-            holder.SetActive(true); // activate -> Awakes/Starts run (GameCameras.Awake/Start skipped in Stub)
-
-            var instanceSet = Silksong::GameCameras.SilentInstance != null;
-            Log.Debug(
-                $"[GameCameras] rig ACTIVE+neutered: instance={instanceSet}, cams={cams} listeners={listeners} controllers={controllers} blur={blur}");
-            return new {
-                ok = true,
-                active = true,
-                instanceSet,
-                neutered = new {
-                    cameras = cams,
-                    audioListeners = listeners,
-                    cameraControllers = controllers,
-                    blur
-                },
-                cameraTarget = inst.GetComponentInChildren<Silksong::CameraTarget>(true) != null
-            };
-        } catch (Exception e) {
-            var ex = e.InnerException ?? e;
-            Log.Error($"[GameCameras] bootstrap failed: {ex}");
-            return new {
-                error = ex.GetType().Name + ": " + ex.Message
-            };
-        }
+        Object.DontDestroyOnLoad(holder);
+        rig = inst;
+        holder.SetActive(true);
     }
 
-    private static int RemapSortingLayers(Transform root) {
-        var fixes = 0;
+    private static void RemapSortingLayers(Transform root) {
         foreach (var mso in root.GetComponentsInChildren<Silksong::MeshSortingOrder>(true)) {
             var id = mso.layerID;
             if (SortingLayer.IsValid(id)) continue;
             var hkId = SortingLayer.NameToID(ssSortingLayerNames.TryGetValue(id, out var nm) ? nm : "HUD");
             mso.layerID = hkId;
-            var rend = mso.GetComponent<MeshRenderer>();
-            if (rend != null) rend.sortingLayerID = hkId;
-            fixes++;
+            mso.GetComponent<MeshRenderer>().sortingLayerID = hkId;
         }
-
-        return fixes;
     }
 
     private static Transform? FindByName(Transform root, string name) {
@@ -205,155 +121,83 @@ internal static class GameCamerasBootstrap {
         return null;
     }
 
-    // Slide Silksong's HUD in (the rig is already active from Ensure): activate the HUD containers, fix sorting layers,
-    // re-point SilkSpool, call HUDIn. The rig's HudCamera stays disabled — HK's HudCamera renders the UI-layer meshes.
-    // ReSharper disable once UnusedMethodReturnValue.Global
-    internal static object BringUpHud(bool on) {
+    // The rig's HudCamera stays disabled: HK's HudCamera renders the HUD's UI-layer meshes.
+    internal static void BringUpHud() {
         rig ??= FindExistingRig();
-        if (rig == null)
-            return new {
-                error = "rig not up (spawn first)"
-            };
-        var hudCam = FindByName(rig.transform, "HudCamera");
-        if (hudCam == null)
-            return new {
-                error = "HudCamera not found"
-            };
-        var cam = hudCam.GetComponent<Camera>();
-        if (!on) {
-            FindByName(hudCam, "In-game")?.gameObject.SetActive(false);
-            return new {
-                ok = true,
-                hudOn = false
-            };
-        }
+        var hudCam = FindByName(rig!.transform, "HudCamera")!;
 
-        // HudCamera is inactive in the prefab (StartScene activates it; we skip that), so its HUD subtree + FSMs never
-        // Awoke. Activate the GO to self-init the FSMs, but keep the Camera component off (HK's HudCamera renders).
-        if (cam != null) cam.enabled = false;
-        // Under "In-game" sit far more than the HUD: Inventory / Quick Map / DialogueManager / Prompts / Menus panes
-        // that NullRef on Awake without their managers. Keep only "Anchor TL" (Health/silk) + "Inventory" (its managers
-        // are up) + "Screen Fader"; deactivate the rest before activating HudCamera (inactive-in-inactive won't Awake).
-        inGame = FindByName(hudCam, "In-game"); // cached for per-frame visibility toggling
+        // In-game also holds panes (Quick Map, DialogueManager, Prompts, Menus) that NullRef on Awake without their
+        // managers; deactivated while still inside the inactive HudCamera, they never Awake.
+        inGame = FindByName(hudCam, "In-game")!;
         Transform? inv = null;
-        if (inGame != null)
-            foreach (Transform c in inGame) {
-                if (c.name == "Inventory") {
-                    inv = c;
-                    continue;
-                }
-
-                // Screen Fader: hazard respawn sends "HAZARD RESPAWN" to it to hide the hero during the get-up anim.
-                // Status Vignette: the Beast Crest's rage tints the screen edges red through it.
-                if (c.name is "Anchor TL" or "Screen Fader" or "Status Vignette") continue;
-
-                c.gameObject.SetActive(false);
+        foreach (Transform c in inGame) {
+            if (c.name == "Inventory") {
+                inv = c;
+                continue;
             }
 
-        // The deactivation above hides Silksong's "Area Title", but AreaTitleInitialiser (on In-game) re-activates it
-        // each frame until AreaTitle.Initialised, so on the first bring-up its FSM flashes "The fading town" for a frame.
-        if (inGame != null && inGame.GetComponent<Silksong::AreaTitleInitialiser>() is { } areaTitleInit)
-            areaTitleInit.enabled = false;
+            // Screen Fader: hazard respawn sends "HAZARD RESPAWN" to it to hide the hero during the get-up anim.
+            // Status Vignette: the Beast Crest's rage tints the screen edges red through it.
+            if (c.name is "Anchor TL" or "Screen Fader" or "Status Vignette") continue;
 
-        // Inside Inventory, drop the Map/Quests/Journal panes (need GameMap/QuestManager, out of scope) before it
-        // activates, then activate Inventory so its tools/crests/items panes run their setup.
-        if (inv != null) {
-            foreach (Transform p in inv)
-                if (p.name is "Map" or "Quests" or "Journal")
-                    p.gameObject.SetActive(false);
-            inv.gameObject.SetActive(true);
+            c.gameObject.SetActive(false);
         }
 
-        // Wire UIButtonSkins.ih (a one-shot snapshot from Start->SetupRefs) before activation, else the inventory panes'
-        // Awakes log "...button skins before the Input Handler is ready". Call SetupRefs directly on the inactive rig's
-        // instances (gm.inputHandler is already wired; SetupRefs only sets ih + subscribes an event).
-        try {
-            var skins = UnityApi.FindAll<Silksong::UIButtonSkins>(true);
-            foreach (var s in skins) s.SetupRefs();
-            Log.Debug($"[HUD] wired UIButtonSkins.ih on {skins.Length} instance(s) before HUD activation");
-        } catch (Exception e) {
-            Log.Error($"[HUD] UIButtonSkins.SetupRefs: {e.Message}");
-        }
+        // AreaTitleInitialiser re-activates the deactivated Area Title until it initialised, flashing "The fading town".
+        inGame.GetComponent<Silksong::AreaTitleInitialiser>().enabled = false;
+
+        // These panes need GameMap/QuestManager.
+        foreach (Transform p in inv!)
+            if (p.name is "Map" or "Quests" or "Journal")
+                p.gameObject.SetActive(false);
+        inv.gameObject.SetActive(true);
+
+        // UIButtonSkins.ih is set in their Start, after the inventory panes' Awakes read it.
+        foreach (var skins in UnityApi.FindAll<Silksong::UIButtonSkins>(true)) skins.SetupRefs();
 
         hudCam.gameObject.SetActive(true);
-        inGame?.gameObject.SetActive(true); // the in-game HUD container (Anchor TL + Inventory)
-        FindByName(hudCam, "Hud Canvas")?.gameObject.SetActive(true);
+        inGame.gameObject.SetActive(true);
+        FindByName(hudCam, "Hud Canvas")!.gameObject.SetActive(true);
 
-        // Shrink the oversized Silksong HUD via "Hud Canvas Offset". Not "Hud Canvas" (its slide FSM owns that scale) nor
-        // "Anchor TL" (ForceCameraAspect owns its position on resolution change). But Hud Canvas Offset carries a
-        // HudGlobalHide that resets it to scale 1 / pos 0 in OnEnable on every HUD show, so ApplyHudScale re-applies on
-        // each show too (SetHornetHudVisible). The localPosition offset pins Hud Canvas' origin, so it looks the same as
-        // scaling Hud Canvas directly (shrink about the content's top-left, not toward the screen corner).
-        if (FindByName(hudCam, "Hud Canvas Offset") is { } hudOffset
-            && FindByName(hudOffset, "Hud Canvas") is { } hudCanvas) {
-            hudOffsetTransform = hudOffset;
-            hudSlideFsm = SilksongPM::PlayMakerFSM.FindFsmOnGameObject(hudCanvas.gameObject, "Slide Out");
-            hudOffsetPos = hudCanvas.localPosition * (1f - HudScale);
-            ApplyHudScale();
-        }
+        // Shrink via Hud Canvas Offset: Hud Canvas' scale belongs to its slide FSM, Anchor TL's position to
+        // ForceCameraAspect. The offset keeps Hud Canvas' origin in place, so it shrinks towards its top-left content.
+        var hudOffset = FindByName(hudCam, "Hud Canvas Offset")!;
+        var hudCanvas = FindByName(hudOffset, "Hud Canvas")!;
+        hudOffsetTransform = hudOffset;
+        hudSlideFsm = SilksongPM::PlayMakerFSM.FindFsmOnGameObject(hudCanvas.gameObject, "Slide Out");
+        hudOffsetPos = hudCanvas.localPosition * (1f - HudScale);
+        ApplyHudScale();
 
-        var layerFixes = RemapSortingLayers(hudCam);
+        RemapSortingLayers(hudCam);
 
-        // Cross-game tag-index collision: some Silksong HUD GOs carry a tag index that resolves to HK's "Boss" tag, so
-        // HK FSMs gating on GetTagCount("Boss") miscount the HUD as bosses (e.g. Collector never drops jars). Clear it.
-        var untagged = 0;
+        // Some HUD objects' tag index is HK's "Boss", which HK FSMs count (e.g. Collector never drops jars).
         foreach (var t in hudCam.GetComponentsInChildren<Transform>(true))
-            if (t.CompareTag("Boss")) {
+            if (t.CompareTag("Boss"))
                 t.gameObject.tag = "Untagged";
-                untagged++;
-            }
 
-        if (untagged > 0)
-            Log.Debug($"[HUD] cleared bogus 'Boss' tag off {untagged} HUD object(s) (tag-index collision)");
-
-        // The bootstrap's bare SilkSpool (added for AddUsingSilk) hijacked SilkSpool.Instance, so the HUD's real spool
-        // (with the visual refs) Awoke early-return and never drew. Re-point Instance to it + DrawSpool now.
+        // The bootstrap's bare SilkSpool took SilkSpool.Instance, so the HUD's own spool skipped its Awake.
         var realSpool = hudCam.GetComponentInChildren<Silksong::SilkSpool>(true);
-        if (realSpool != null) {
-            Silksong::SilkSpool.Instance = realSpool;
-            try {
-                realSpool.DrawSpool();
-            } catch (Exception e) {
-                Log.Error($"[HUD] DrawSpool: {e.Message}");
-            }
-        }
+        Silksong::SilkSpool.Instance = realSpool;
+        realSpool.DrawSpool();
 
-        // Fade/slide the HUD content in (health/silk start hidden until the game fires this on scene-ready).
-        try {
-            Silksong::GameCameras.instance?.HUDIn();
-        } catch (Exception e) {
-            Log.Error($"[HUD] HUDIn: {e.Message}");
-        }
+        Silksong::GameCameras.instance.HUDIn();
 
-        // Re-sync masks from PlayerData: on a reused (DDOL) rig the mask FSMs still show the previous life's count/fill,
-        // so force them back through Init to re-read maxHealth/health. Only runs on spawn, so no repeated appear anim.
+        // A reused rig still shows the previous life's masks.
         HudRefresh.ResetHealthHud();
-
-        var uiSet = Silksong::UIManager.instance != null;
-        return new {
-            ok = true,
-            hudOn = true,
-            camEnabled = cam != null && cam.enabled,
-            uiManager = uiSet,
-            layerFixes,
-            silkSpool = realSpool != null
-        };
     }
 
-    // Re-apply our HUD shrink onto Hud Canvas Offset. HudGlobalHide resets it to scale 1 / pos 0 in its OnEnable, so this
-    // must run after each HUD show, not just once at bring-up.
+    // HudGlobalHide resets Hud Canvas Offset in its OnEnable, on every HUD show.
     private static void ApplyHudScale() {
         if (!hudOffsetTransform) return;
         hudOffsetTransform.localScale = Vector3.one * HudScale;
         hudOffsetTransform.localPosition = hudOffsetPos;
     }
 
-    // Toggle Hornet's HUD content ("In-game") without re-running BringUpHud. Cheap; SetActive only on change.
     internal static void SetHornetHudVisible(bool on) {
         if (inGame == null || inGame.gameObject.activeSelf == on) return;
         inGame.gameObject.SetActive(on);
         if (on) {
-            ApplyHudScale(); // HudGlobalHide.OnEnable just reset Hud Canvas Offset; re-assert the shrink
+            ApplyHudScale();
             HudRefresh.RefreshMaxSilkHud();
             HudRefresh.RefreshBindOrbFrame();
             ModuleBase.Runtime.StartCoroutine(HudRefresh.RelistenLayouts(inGame));
@@ -365,9 +209,7 @@ internal static class GameCamerasBootstrap {
         if (hudSlideFsm) hudSlideFsm.SendEvent(eventName);
     }
 
-    // Re-point everything HK owns at the active hero. HK re-grabs all of this to its Knight on scene entry (CameraTarget
-    // in SceneInit, hudCanvas re-enable), so this is called on both triggers that need it: a hero switch
-    // (HeroSwitch.SetActive) and scene entry (HornetSpawner, after the hero is placed). No per-frame polling.
+    // HK re-grabs its camera target and HUD for the Knight on scene entry.
     internal static void SyncToActiveHero() {
         RetargetCamera(HeroSwitch.TransformOf(HeroSwitch.ActiveHeroGameObject));
         SyncMainCameraToHk();
@@ -376,11 +218,10 @@ internal static class GameCamerasBootstrap {
             SetHkHudVisible(!HeroSwitch.HornetActive);
         }
         else {
-            SetHkHudVisible(true); // no Hornet HUD yet -> always show HK's
+            SetHkHudVisible(true);
         }
     }
 
-    // Point HK's CameraTarget at `t` so HK's native camera chain (damping, lock zones, scene bounds) follows it for free.
     internal static void RetargetCamera(Transform? t) {
         if (!t) return;
         var gc = GameCameras.instance;
@@ -389,32 +230,21 @@ internal static class GameCamerasBootstrap {
         camTarget.heroTransform = t;
     }
 
-
-    // Keep Silksong's neutered main camera on HK's live camera. Both AudioEventManager (distance-culls 3D one-shots) and
-    // LowPassDistance (muffles hero SFX by distance) read GameCameras.mainCamera.position every frame; a one-time
-    // set-on-scene-entry copy drifts as HK's camera pans -> hero SFX get muffled (and eventually culled). We must NOT
-    // reparent the rig camera under HK's camera: HK rebuilds its camera on scene/save-load and Unity destroys children
-    // with the parent, so the reparented rig camera dies -> GameCameras.mainCamera dangles null -> the audio derefs NPE.
-    // Instead a follower tracks HK's camera each frame while the camera stays in its own DDOL rig.
+    // Not parented under HK's camera: HK rebuilds it on scene load and would destroy the rig camera with it.
     private static void SyncMainCameraToHk() {
-        try {
-            if (ssMainCamT == null) {
-                var ssGc = Silksong::GameCameras.SilentInstance;
-                if (ssGc == null || ssGc.mainCamera == null) return;
-                ssMainCamT = ssGc.mainCamera.transform;
-            }
-
-            if (!ssMainCamT.GetComponent<MainCamAudioFollow>())
-                ssMainCamT.gameObject.AddComponent<MainCamAudioFollow>();
-            if (!ssMainCamT.GetComponent<MainCamShakeRelay>())
-                ssMainCamT.gameObject.AddComponent<MainCamShakeRelay>();
-        } catch (Exception e) {
-            Log.Error($"[HUD] SyncMainCameraToHk: {e.Message}");
+        if (ssMainCamT == null) {
+            var ssGc = Silksong::GameCameras.SilentInstance;
+            if (ssGc == null || ssGc.mainCamera == null) return;
+            ssMainCamT = ssGc.mainCamera.transform;
         }
+
+        if (!ssMainCamT.GetComponent<MainCamAudioFollow>())
+            ssMainCamT.gameObject.AddComponent<MainCamAudioFollow>();
+        if (!ssMainCamT.GetComponent<MainCamShakeRelay>())
+            ssMainCamT.gameObject.AddComponent<MainCamShakeRelay>();
     }
 
-    // Parks the rig's main camera on HK's live main camera each frame so GameCameras.mainCamera.position (read by
-    // AudioEventManager distance-cull + LowPassDistance) sits at the listener. Re-resolves when HK rebuilds its camera.
+    // Silksong's audio culls and muffles hero sounds by their distance to GameCameras.mainCamera.
     private sealed class MainCamAudioFollow : MonoBehaviour {
         private Transform? hkCamT;
 
@@ -475,52 +305,43 @@ internal static class GameCamerasBootstrap {
     }
 
     internal static void SetHkHudVisible(bool on) {
-        try {
-            if (GameCameras._instance is not { } hk || !hk.hudCanvas) return;
+        if (GameCameras._instance is not { } hk || !hk.hudCanvas) return;
 
-            // Hide via localScale, not SetActive: re-activating hudCanvas re-fires OnEnable -> HK's ~1s HUD slide-in
-            // (the switch lag). Scaling to zero hides it instantly (tk2d mesh-based, so CanvasGroup alpha wouldn't work)
-            // with the GO staying active. Cache the real scale to restore it.
-            var t = hk.hudCanvas.transform;
-            if (t.localScale != Vector3.zero) hkHudScale = t.localScale; // remember the last non-hidden scale
-            if (!hk.hudCanvas.activeSelf) hk.hudCanvas.SetActive(true);
-            t.localScale = on ? hkHudScale : Vector3.zero;
+        // Scaled to zero instead of deactivated: re-activating replays HK's ~1s HUD slide-in.
+        var t = hk.hudCanvas.transform;
+        if (t.localScale != Vector3.zero) hkHudScale = t.localScale;
+        if (!hk.hudCanvas.activeSelf) hk.hudCanvas.SetActive(true);
+        t.localScale = on ? hkHudScale : Vector3.zero;
 
-            // When hiding (Knight inert), disable the HK HUD subtree's FSMs: they GetHero() -> HeroProxy redirects to
-            // Hornet -> they call HK-only methods (ClearMP) / FSMs (Spell Control) absent on Silksong's HeroController.
-            if (on) {
-                if (disabledHudFsms != null) {
-                    foreach (var fsm in disabledHudFsms)
-                        if (fsm != null) {
-                            // Prevent OnEnable restarting the FSM (RestartOnEnable resets to startState -> 2-3s re-appear).
-                            fsm.Fsm.RestartOnEnable = false;
-                            fsm.enabled = true;
-                        }
-
-                    disabledHudFsms = null;
-                }
-            }
-            else {
-                disabledHudFsms ??= new HashSet<PlayMakerFSM>();
-                // Hornet's essence counter shows and hides on the states of HK's.
-                foreach (var fsm in hk.hudCanvas.GetComponentsInChildren<PlayMakerFSM>(true))
-                    if (fsm.enabled && !EssenceCounterModule.IsHkCounter(fsm)) {
-                        fsm.enabled = false;
-                        disabledHudFsms.Add(fsm);
+        // HK's HUD FSMs get Hornet as the hero and call HK-only methods (ClearMP) and FSMs (Spell Control) on her.
+        if (on) {
+            if (disabledHudFsms != null) {
+                foreach (var fsm in disabledHudFsms)
+                    if (fsm != null) {
+                        // A restart replays the masks' 2-3s appear.
+                        fsm.Fsm.RestartOnEnable = false;
+                        fsm.enabled = true;
                     }
+
+                disabledHudFsms = null;
             }
-        } catch (Exception e) {
-            Log.Error($"[HUD] SetHkHudVisible({on}): {e.Message}");
+        }
+        else {
+            disabledHudFsms ??= new HashSet<PlayMakerFSM>();
+            // Hornet's essence counter shows and hides on the states of HK's.
+            foreach (var fsm in hk.hudCanvas.GetComponentsInChildren<PlayMakerFSM>(true))
+                if (fsm.enabled && !EssenceCounterModule.IsHkCounter(fsm)) {
+                    fsm.enabled = false;
+                    disabledHudFsms.Add(fsm);
+                }
         }
     }
 
     internal static void Cleanup() {
         inGame = null;
         hudSlideFsm = null;
-        // DestroyImmediate (synchronous) so the rig is gone before a hot-reload's Initialize runs Ensure again (a
-        // deferred Destroy would let FindExistingRig reuse a doomed object).
+        // Immediate, or a hot-reload's Ensure would reuse the doomed rig.
         rig ??= FindExistingRig();
-        // Destroy the persisted root (the holder that owns the rig), not just `rig`, or the holder leaks.
         if (rig != null) {
             Object.DestroyImmediate(rig.transform.root.gameObject);
             rig = null;

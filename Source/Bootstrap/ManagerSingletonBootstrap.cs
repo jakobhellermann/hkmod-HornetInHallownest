@@ -8,23 +8,19 @@ using HornetInHallownest.Util;
 
 namespace HornetInHallownest.Bootstrap;
 
-// Shared mechanism for the surgical manager bring-ups. Silksong's `_GameManager` prefab carries ~17 ManagerSingletons
-// on one root GO, so we can't activate just one (Unity Awakes every component), and the whole prefab was tried +
-// rejected (reaches into HK-owned scene/render). Instead: load the prefab asset, copy the wanted manager's serialized
-// [SerializeField] asset refs onto a fresh single-manager GO, activate it -> only its own Awake runs (registers the
-// ManagerSingleton).
+// Silksong's `_GameManager` prefab holds all managers on one GO, and activating it takes over HK's scene and rendering.
+// So each manager gets its own GO with the serialized fields copied off the prefab.
 internal static class ManagerSingletonBootstrap {
-    private static GameObject? prefab; // the loaded _GameManager prefab asset (donor of serialized field values)
+    private static GameObject? prefab;
 
-    private static GameObject? Prefab() {
+    private static GameObject Prefab() {
         if (prefab != null) return prefab;
         SilksongAddressables.EnsureMounted();
-        // Deps mount the bundles carrying the managers' ScriptableObjects; Addressables caches, so repeated calls cheap.
         prefab = Addressables.LoadAssetAsync<GameObject>("_GameManager").WaitForCompletion();
         return prefab;
     }
 
-    // Hot-reload safe: brought-up manager GOs are DontDestroyOnLoad and survive our DLL reload (statics reset). Reuse.
+    // The DontDestroyOnLoad manager GOs survive a hot-reload, our statics don't.
     private static GameObject? FindExisting(string goName) {
         foreach (var g in Resources.FindObjectsOfTypeAll<GameObject>())
             if (g != null && g.name == goName && g.scene.IsValid())
@@ -32,52 +28,30 @@ internal static class ManagerSingletonBootstrap {
         return null;
     }
 
-    // Bring up `managerType` (a Silksong ManagerSingleton<T>) onto its own GO named `goName`, copying the named
-    // [SerializeField] values off the _GameManager prefab. Returns the live component (or null on failure).
-    internal static Component? BringUp(Type managerType, string goName, params string[] serializedFields) {
-        var existing = FindExisting(goName);
-        if (existing != null) {
+    // Its Awake registers the ManagerSingleton.
+    internal static Component BringUp(Type managerType, string goName, params string[] serializedFields) {
+        if (FindExisting(goName) is { } existing) {
             var comp = existing.GetComponent(managerType);
-            if (comp != null && SilentInstance(managerType) == null) SetSingleton(managerType, comp);
+            SetSingleton(managerType, comp);
             return comp;
         }
 
-        var pf = Prefab();
-        if (pf == null) {
-            Log.Error($"[Manager] _GameManager load returned null (for {managerType.Name})");
-            return null;
-        }
-
-        var template = pf.GetComponent(managerType);
-        if (template == null) {
-            Log.Error($"[Manager] {managerType.Name} not found on _GameManager prefab");
-            return null;
-        }
+        var template = Prefab().GetComponent(managerType);
 
         var go = new GameObject(goName);
-        go.SetActive(false); // inactive -> AddComponent does not fire Awake yet; copy fields first
+        go.SetActive(false);
         var mgr = go.AddComponent(managerType);
         foreach (var name in serializedFields) {
-            // GetFieldInfo walks base types, so a [SerializeField] declared on a base class still resolves.
-            var f = managerType.GetFieldInfo(name, ReflectionExtension.InstanceAnyVisibility, logFailure: false);
-            if (f == null) {
-                Log.Error($"[Manager] {managerType.Name}.{name} field not found");
-                continue;
-            }
-
+            var f = managerType.GetFieldInfo(name, ReflectionExtension.InstanceAnyVisibility)!;
             f.SetValue(mgr, f.GetValue(template));
         }
 
         Object.DontDestroyOnLoad(go);
-        go.SetActive(true); // -> the manager's real Awake: base.Awake registers the ManagerSingleton, etc.
-
-        if (SilentInstance(managerType) == null) SetSingleton(managerType, mgr); // belt-and-suspenders if Awake bailed
-        Log.Debug($"[Manager] {managerType.Name} up: instance={SilentInstance(managerType) != null}");
+        go.SetActive(true);
         return mgr;
     }
 
-    // Register a bare singleton without copying serialized data (unlike BringUp) or running Awake: just enough so
-    // ManagerSingleton<T>.Instance stops FindAnyObjectByType-scanning the whole scene on every access while it is null.
+    // Without an instance, ManagerSingleton<T>.Instance scans the scene with FindAnyObjectByType on every access.
     internal static Component RegisterBare(Type managerType, string goName) {
         var existing = FindExisting(goName)?.GetComponent(managerType);
         if (existing != null) {
@@ -105,7 +79,7 @@ internal static class ManagerSingletonBootstrap {
         ClosedManagerSingleton(managerType).SetPropertyValue("UnsafeInstance", mgr);
     }
 
-    // DestroyImmediate (not Object.Destroy) so the GO is gone before a hot-reload's Initialize runs BringUp again.
+    // Immediate, or a hot-reload's BringUp would reuse the doomed GO.
     internal static void Destroy(string goName) {
         var g = FindExisting(goName);
         if (g != null) Object.DestroyImmediate(g);
@@ -113,6 +87,5 @@ internal static class ManagerSingletonBootstrap {
 
     internal static void Cleanup() {
         prefab = null;
-        // Addressables owns the asset; just drop our ref
     }
 }

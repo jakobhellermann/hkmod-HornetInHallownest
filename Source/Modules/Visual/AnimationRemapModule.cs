@@ -110,8 +110,6 @@ public sealed class AnimationRemapModule : ModuleBase {
         if (self && !string.IsNullOrEmpty(name) && self.GetClipByName(name) is null) {
             var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             if ((sceneClipMap.TryGetValue((scene, name), out var mapped) || clipMap.TryGetValue(name, out mapped)) && self.GetClipByName(mapped) is { } clip) {
-                LogDebugOnce($"clipmap|{self.gameObject.name}|{name}",
-                    $"remapped HK clip '{name}' -> Hornet '{mapped}' on '{self.gameObject.name}'");
                 if (loopStartClips.Contains(name)) self.PlayFromFrame(clip, clip.loopStart);
                 else orig(self, mapped);
 

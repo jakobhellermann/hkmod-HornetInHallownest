@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using HornetInHallownest.Util;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -17,8 +16,7 @@ internal static class SilksongAddressables {
 
         InstallIdTransform(aa, SilksongBundles.MonoScripts);
         MarkRuntimeStarted($"{aa}/settings.json");
-        var locator = LoadCatalog(catalogId);
-        Log.Debug($"[Addressables] Silksong catalog mounted (locator={locator})");
+        LoadCatalog(catalogId);
     }
 
     private static bool IsRegistered(string catalogId) {
@@ -53,13 +51,10 @@ internal static class SilksongAddressables {
         handle.GetType().GetMethod("WaitForCompletion")!.Invoke(handle, null);
     }
 
-    private static string? LoadCatalog(string catalogId) {
+    private static void LoadCatalog(string catalogId) {
         var op = Addressables.LoadContentCatalogAsync(catalogId, false);
         op.WaitForCompletion();
-        if (op.Status != AsyncOperationStatus.Succeeded) {
+        if (op.Status != AsyncOperationStatus.Succeeded)
             throw new InvalidOperationException($"catalog load {op.Status} for {catalogId}");
-        }
-
-        return op.Result?.LocatorId;
     }
 }

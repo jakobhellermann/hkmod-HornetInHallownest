@@ -26,14 +26,11 @@ internal static class HudRefresh {
     private static void SendToHealthDisplays(string evt) {
         // Re-enable the self-disabled (EnableFsmSelf(false)) FSMs first, so the event reaches masks parked in Idle/Inactive.
         foreach (var f in UnityApi.FindAll<SilksongPM::PlayMakerFSM>())
-            if (string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase))
-                try {
-                    Behaviour b = f;
-                    if (!b.enabled) b.enabled = true;
-                    f.SendEvent(evt);
-                } catch (Exception e) {
-                    Log.Error($"[HudRefresh] {f.FsmName}: {e.Message}");
-                }
+            if (string.Equals(f.FsmName, "health_display", StringComparison.OrdinalIgnoreCase)) {
+                Behaviour b = f;
+                b.enabled = true;
+                f.SendEvent(evt);
+            }
     }
 
     // DrawSpool() resizes the spool bar from PlayerData.CurrentSilkMaxBasic; nothing else re-runs it after silkMax

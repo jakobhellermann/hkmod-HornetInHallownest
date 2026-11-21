@@ -271,18 +271,9 @@ public sealed class SceneFixesModule : ModuleBase {
     private static readonly string[] whitePalace12DisabledSaws = ["wp_saw (18)", "wp_saw (22)", "wp_saw (23)"];
 
     private void DisableWhitePalace12Saws(Scene scene) {
-        try {
-            var count = 0;
-            foreach (var root in scene.GetRootGameObjects())
-                if (Array.IndexOf(whitePalace12DisabledSaws, root.name) >= 0) {
-                    root.SetActive(false);
-                    count++;
-                }
-
-            LogDebug($"disabled {count}/{whitePalace12DisabledSaws.Length} saws");
-        } catch (Exception e) {
-            LogError(e.Message);
-        }
+        foreach (var root in scene.GetRootGameObjects())
+            if (Array.IndexOf(whitePalace12DisabledSaws, root.name) >= 0)
+                root.SetActive(false);
     }
 
     #endregion

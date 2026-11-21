@@ -24,9 +24,6 @@ public sealed class AnimatorSafetyModule : ModuleBase {
         }
 
         var parent = Silksong::FSMUtility.GetSafe(self.Parent, self);
-        LogDebugOnce($"cc:{prefab.name}", $"CreateChildWithParentedOffset '{prefab.name}' (fsm '{self.Fsm.Name}' on " +
-                                          $"'{(parent ? parent.name : "-")}') without forced Animator tick");
-
         var offsetParent = new GameObject($"{prefab.name} Offset Parent");
         if (parent) offsetParent.transform.SetParent(parent.transform);
         var child = UnityEngine.Object.Instantiate(prefab, offsetParent.transform, true);

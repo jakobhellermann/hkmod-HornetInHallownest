@@ -27,8 +27,6 @@ internal static class SilksongResources {
             return;
         }
 
-        Log.Debug($"[SilksongResources] loaded resources bundle ({bundle.GetAllAssetNames().Length} assets)");
-
         installed = new Api();
         ResourcesAPI.overrideAPI = installed;
     }
@@ -80,11 +78,6 @@ internal static class SilksongResources {
         } catch (Exception e) {
             Log.Error($"[SilksongResources] LoadAsset '{key}' threw: {e.Message}");
             return null;
-        }
-
-        if (served != null) {
-            Log.DebugOnce($"resserve|{key}",
-                $"[Resources.Load] SERVE '{path}' as {type?.Name} (ctx={SilksongContext.Active}) <- silksong-resources.bundle");
         }
 
         return served;

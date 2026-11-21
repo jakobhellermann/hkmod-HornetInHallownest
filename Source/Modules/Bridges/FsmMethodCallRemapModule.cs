@@ -185,15 +185,12 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
 
         if (type != null && methodName != null && methodRedirects.TryGetValue(methodName, out var redirect) && type.GetMethod(redirect, Type.EmptyTypes) is { } altMethod) {
             SetCached(self, altMethod);
-            LogDebugOnce($"redirect|{methodName}|{type.Name}",
-                $"redirected '{methodName}' -> '{redirect}' on {type.Name}");
             return true;
         }
 
         if (HeroSwitch.HornetActive && methodName != null && hkMethodStandIns.TryGetValue(methodName, out var standIn)) {
             if (standIn == null) return false;
             SetCached(self, standIn);
-            LogDebugOnce($"hkonly|{methodName}", $"HK-only '{methodName}' -> {standIn.Name}");
             return true;
         }
 
@@ -223,8 +220,6 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
 
         if (resolved != null) {
             SetCached(self, resolved);
-            LogDebugOnce($"disambig|{methodName}|{type.Name}",
-                $"disambiguated '{methodName}' on {type.Name} -> {resolved}");
             return true;
         }
 

@@ -29,12 +29,10 @@ public sealed class HornetSpawner : ModuleBase {
         get {
             if (field != null) return field;
             SilksongAddressables.EnsureMounted();
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var op = Addressables.LoadAssetAsync<GameObject>("Hero_Hornet");
             op.WaitForCompletion();
             if (op.Status != AsyncOperationStatus.Succeeded)
                 throw new InvalidOperationException("loading Hero_Hornet via Addressables failed", op.OperationException);
-            Log.Debug($"[spawn] Hero_Hornet loaded via Addressables in {stopwatch.ElapsedMilliseconds} ms");
             return field = op.Result;
         }
     }
@@ -74,7 +72,6 @@ public sealed class HornetSpawner : ModuleBase {
         if (!HornetRoot)
             try {
                 Spawn();
-                LogDebug("entered gameplay scene -> spawned Hornet");
             } catch (Exception e) {
                 LogError(e.ToString());
             }
@@ -113,7 +110,6 @@ public sealed class HornetSpawner : ModuleBase {
         // Hand the camera back to the Knight before despawn, else CameraTarget.Update derefs a destroyed transform.
         HeroSwitch.SetActive(ActiveHero.Knight);
         Despawn();
-        LogDebug("quit to menu -> despawned Hornet");
     }
 
     private void DespawnOutsideGameplay(Scene scene, LoadSceneMode mode) {
@@ -131,14 +127,9 @@ public sealed class HornetSpawner : ModuleBase {
         if (gm.IsStagTravelScene()) return;
         HeroSwitch.SetActive(ActiveHero.Knight); // hand camera back before despawn (CameraTarget would deref her)
         Despawn();
-        LogDebug($"non-gameplay scene '{scene.name}' -> despawned Hornet");
     }
 
-    // Instantiate the full prefab active so every component's Awake/Start runs against our prefixed Silksong.* types.
-    // Unity swallows per-component Awake exceptions into Player.log (the "what's missing" list).
-    // Spawn and Despawn are also called, for their result, by the dev server routes on the debug branch.
-    // ReSharper disable once MemberCanBePrivate.Global, UnusedMethodReturnValue.Global
-    internal static bool Spawn() {
+    internal static void Spawn() {
         var prefab = HeroPrefab;
         GlobalsBootstrap.Ensure();
         // Minimal instance so ManagerSingleton<InteractManager>.Instance stops FindAnyObjectByType-scanning the whole scene
@@ -173,11 +164,7 @@ public sealed class HornetSpawner : ModuleBase {
             hornetInstance.SetActive(true);
         }
 
-        try {
-            GameCamerasBootstrap.BringUpHud(true);
-        } catch (Exception e) {
-            Log.Error($"[HornetSpawner] BringUpHud: {e}");
-        }
+        GameCamerasBootstrap.BringUpHud();
 
         // Necessary during new save file creation
         ToolItemManagerBootstrap.RefreshBoundAttackTools();
@@ -212,7 +199,6 @@ public sealed class HornetSpawner : ModuleBase {
         NeutralizeAmbientTint(hornetInstance);
 
         Log.Info("[HornetSpawner] instantiated");
-        return true;
     }
 
     // HK geometry is built for the Knight's collider (0.50 x 1.28); Hornet's is 0.50 x 2.08 (0.80 taller), so low
@@ -240,11 +226,6 @@ public sealed class HornetSpawner : ModuleBase {
         var root = HornetRoot;
         if (!root) return;
         TerrainCollider = root.GetComponent<BoxCollider2D>();
-        if (!TerrainCollider) {
-            Log.Error("[HornetSpawner] no terrain BoxCollider2D on Hornet_Real - collider height not applied");
-            return;
-        }
-
         var height = KnightHeightCollider ? KnightHeight : HornetHeight;
         TerrainCollider.size = new Vector2(ColliderWidth, height);
         TerrainCollider.offset = new Vector2(0f, FeetBottomLocalY + height / 2f);
@@ -274,12 +255,10 @@ public sealed class HornetSpawner : ModuleBase {
         return KnightHeightCollider;
     }
 
-    // ReSharper disable once MemberCanBePrivate.Global, UnusedMethodReturnValue.Global
-    internal static bool Despawn() {
-        if (!HornetRoot) return false;
+    internal static void Despawn() {
+        if (!HornetRoot) return;
         Object.DestroyImmediate(HornetRoot);
         HornetRoot = null;
         hornet = null;
-        return true;
     }
 }
