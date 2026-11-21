@@ -1,6 +1,7 @@
 # Changelog
 
 ## _Unreleased_
+- Fix projectiles like baldur spits breaking on nail hit
 - Fix camera shake getting stuck as hornet
 - Don't distribute any game files, regenerate necessary things on first boot
 - Fix compatibility issues with other mods

@@ -29,6 +29,10 @@ public sealed class HitBridgeModule : ModuleBase {
     private static Fsm? damagerFsm;
     internal static SHitInstance? ForwardedHit;
 
+    private static readonly int tinkerLayer = LayerMask.NameToLayer("Tinker");
+    private static Silksong::HeroController? solidTinkersOwner;
+    private static Collider2D[] solidTinkers = [];
+
     public override void Initialize() {
         Detour(typeof(Silksong::HitTaker), "GetHitResponders", OnGetHitResponders,
             typeof(List<SIHit>), typeof(GameObject), typeof(int), typeof(HashSet<SIHit>));
@@ -41,6 +45,7 @@ public sealed class HitBridgeModule : ModuleBase {
             typeof(SHitInstance));
         // HK enemy hits call HeroController.instance.SoulGain, redirect to Hornet's SilkGain when active.
         Detour(typeof(HeroController), "SoulGain", OnSoulGain);
+        Detour(typeof(EnemyBullet), "OnEnable", OnEnemyBulletEnable);
 
         USceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
@@ -147,6 +152,21 @@ public sealed class HitBridgeModule : ModuleBase {
 
     // The bridges stay disabled, so HealthManager.Update never ticks their status damage.
     public override void HornetActiveUpdate(Silksong::HeroController hero) => HkEnemyHitBridge.TickAll();
+
+    // Hornet's attacks carry solid Tinker colliders (Silksong's "Clash Tink" and "Terrain Thunker"), which HK's
+    // EnemyBullet breaks on like on a wall; the Knight's are triggers.
+    private static void OnEnemyBulletEnable(Action<EnemyBullet> orig, EnemyBullet self) {
+        orig(self);
+        if (HornetSpawner.Hornet is not { } hero) return;
+
+        if (solidTinkersOwner != hero) {
+            solidTinkersOwner = hero;
+            solidTinkers = Array.FindAll(hero.GetComponentsInChildren<Collider2D>(true),
+                c => !c.isTrigger && c.gameObject.layer == tinkerLayer);
+        }
+
+        foreach (var tinker in solidTinkers) Physics2D.IgnoreCollision(self.col, tinker);
+    }
 
     private static void OnSoulGain(Action<HeroController> orig, HeroController self) {
         if (!HeroSwitch.HornetActive || HornetSpawner.Hornet is not { } hero) orig(self);
