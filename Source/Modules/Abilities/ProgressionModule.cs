@@ -294,6 +294,7 @@ public sealed class ProgressionModule : ModuleBase {
         if (HeroSwitch.HornetActive && (HasHornetScreen(item) || IsNailArt(item))) {
             var fsm = self.Fsm;
             ShowHornetScreen(item!, () => {
+                RunSkippedMsgEffects(item!);
                 fsm.Event(GetItemMsgEnd);
                 if (item == "Quake") ControlReminderModule.ShowFloorBreakReminder();
             });
@@ -302,6 +303,15 @@ public sealed class ProgressionModule : ModuleBase {
         }
 
         orig(self);
+    }
+
+    // What the skipped HK message would do
+    private static void RunSkippedMsgEffects(string item) {
+        var pd = PlayerData.instance;
+        if (IsNailArt(item) && pd.GetBool("hasCyclone") && pd.GetBool("hasUpwardSlash") && pd.GetBool("hasDashSlash"))
+            pd.SetBool("hasAllNailArts", true);
+
+        GameManager.instance.SaveGame();
     }
 
     // HK's messages are filled in by later actions of the state that creates them.
