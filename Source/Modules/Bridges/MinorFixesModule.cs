@@ -62,6 +62,7 @@ public sealed class MinorFixesModule : ModuleBase {
         Detour(typeof(SBumpCheck), nameof(SBumpCheck.CheckForBump), (CheckForBumpHook)OnCheckForBump);
         Detour(typeof(Silksong::NoClamberRegion), "get_IsClamberBlocked", OnIsClamberBlocked);
         Detour(typeof(SFsm), "SwitchState", OnSilksongSwitchState, typeof(SFsmState));
+        Detour(typeof(HeroController), nameof(HeroController.SetWalkZone), OnSetWalkZone);
         USceneManager.activeSceneChanged += OnActiveSceneChanged;
         CollectTerrainOutlines(USceneManager.GetActiveScene());
         Detour(typeof(Silksong::SaveDataUtility), "CreateJsonObjects", OnCreateJsonObjects);
@@ -102,6 +103,12 @@ public sealed class MinorFixesModule : ModuleBase {
     private static void OnActiveSceneChanged(Scene from, Scene to) {
         ignoresHero.Clear();
         CollectTerrainOutlines(to);
+    }
+
+    // HK's WalkArea triggers on any hero-layer collider, Hornet's included, but only tells the Knight.
+    private static void OnSetWalkZone(Action<HeroController, bool> orig, HeroController self, bool inWalkZone) {
+        orig(self, inWalkZone);
+        if (HornetSpawner.Hornet is { } hornet) hornet.SetWalkZone(inWalkZone);
     }
 
     // A bind interrupted by damage goes through "Cancel All", which, unlike finishing it ("Shaman End?") or cancelling it
