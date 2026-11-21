@@ -422,8 +422,9 @@ internal static class GameCamerasBootstrap {
 
         private void OnCameraPreCull(Camera cam) {
             if (isApplied || !ResolveHkCamera() || !cam.transform.IsChildOf(hkCamT!)) return;
-            appliedOffset = (transform.parent ? transform.parent.localPosition - parentRest : Vector3.zero) +
-                            (shakeManager ? shakeManager.currentOffset : Vector3.zero);
+            // apply HK camera shake multiplier
+            appliedOffset = ((transform.parent ? transform.parent.localPosition - parentRest : Vector3.zero) +
+                             (shakeManager ? shakeManager.currentOffset : Vector3.zero)) * ConfigManager.CameraShakeMultiplier;
             hkCamT!.localPosition += appliedOffset;
             isApplied = true;
         }
