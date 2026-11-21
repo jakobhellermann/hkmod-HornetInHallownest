@@ -20,6 +20,9 @@ MSG="${1:-reload}"
 # 1. Isolate the reload: checkpoint everything logged so far (no-op if nothing new).
 logsnap commit -m "pre-reload"
 
+# The reload resets control to the Knight; remember who was active to restore it afterwards.
+ACTIVE=$(curl -sf localhost:8201/hero-state | sed -n 's/.*"activeHero": *"\([A-Za-z]*\)".*/\1/p' | tr 'A-Z' 'a-z')
+
 # 2. Build + deploy. Tee to a file (don't pipe a long build straight to grep); only surface errors on failure.
 echo "building..."
 if ! dotnet build "$SRC/HornetInHallownest.csproj" >"$BUILDLOG" 2>&1; then
@@ -32,3 +35,7 @@ echo "build ok — waiting for hot-reload + respawn"
 # 3. Block until the hot-reload re-spawns Hornet, then until the follow-up burst goes quiet, then checkpoint.
 #    --at-most bounds it (e.g. reloading at the menu won't auto-respawn -> the wait gives up and the script ends).
 logsnap commit -m "$MSG" --wait-for "[HornetSpawner] instantiated" --settle 200ms --at-most 20s
+
+if [ -n "$ACTIVE" ]; then
+	curl -sf -d '' -X POST "localhost:8201/switch?who=$ACTIVE" >/dev/null && echo "restored $ACTIVE as the active hero"
+fi
