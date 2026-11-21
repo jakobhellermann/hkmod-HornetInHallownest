@@ -93,9 +93,13 @@ public sealed class DeathModule : ModuleBase {
         var keptGeo = SGameplay.DeadPurseTool.IsEquipped ? Mathf.RoundToInt(geo * SGameplay.DeadPurseHoldPercent) : 0;
         PlayerData.instance.TakeGeo(geo - keptGeo);
 
-        spd.HeroCorpseScene = GameManager.instance.GetSceneNameString();
+        (spd.HeroCorpseScene, spd.HeroDeathScenePos) = GameManager.instance.GetCurrentMapZone() switch {
+            // HK's "Hero Death Anim" logic
+            "COLOSSEUM" => ("Room_Colosseum_02", new Vector2(27.2f, 45.6f)),
+            "FINAL_BOSS" => ("Room_Final_Boss_Atrium", new Vector2(219f, 10f)),
+            _ => (GameManager.instance.GetSceneNameString(), (Vector2)hero.transform.position),
+        };
         spd.HeroCorpseMarkerGuid = null;
-        spd.HeroDeathScenePos = hero.transform.position;
         // Confessor Jiji finds and summons a lost shade by these. HK spawns its own shade only while soulLimited, which
         // her death leaves alone, and which keeps a shade the Knight lost in them.
         var pd = PlayerData.instance;
