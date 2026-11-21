@@ -201,6 +201,7 @@ public sealed class HornetSpawner : ModuleBase {
         SilksongBootstrap.SetHeroCtrl(heroController!);
 
         ApplyColliderHeight();
+        NeutralizeAmbientTint(hornetInstance);
 
         Log.Info("[HornetSpawner] instantiated");
         return true;
@@ -239,6 +240,22 @@ public sealed class HornetSpawner : ModuleBase {
         var height = KnightHeightCollider ? KnightHeight : HornetHeight;
         TerrainCollider.size = new Vector2(ColliderWidth, height);
         TerrainCollider.offset = new Vector2(0f, FeetBottomLocalY + height / 2f);
+    }
+
+    private static readonly int ambientId = Shader.PropertyToID("glstate_lightmodel_ambient");
+
+    // Silksong's character shader lights her with the scene ambient, but HK tints its ambient for the scenery
+    // (Greenpath green) and keeps its unlit Knight out of it, so pin her to the grey ambient Silksong's scenes give
+    private static void NeutralizeAmbientTint(GameObject root) {
+        var block = new MaterialPropertyBlock();
+        foreach (var r in root.GetComponentsInChildren<Renderer>(true)) {
+            if (!r.sharedMaterial.IsKeywordEnabled("IS_CHARACTER")) continue;
+
+            // Only a property block overrides the built-in, which Unity sets to half of RenderSettings.ambientLight.
+            r.GetPropertyBlock(block);
+            block.SetColor(ambientId, new Color(0.25f, 0.25f, 0.25f, 1f));
+            r.SetPropertyBlock(block);
+        }
     }
 
     // Bound to a debug key on the debug branch.
