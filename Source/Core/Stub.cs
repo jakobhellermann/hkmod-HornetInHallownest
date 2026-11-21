@@ -44,8 +44,6 @@ internal static class Stub {
 
         Skip(typeof(Silksong::HeroController), "SetupDeliveryItems"); // delivery quests out of scope
         Skip(typeof(Silksong::DeliveryHudIcon), "OnPreUpdateDisplay"); // GetActiveItems NullRef; the icon hides itself
-        Skip(typeof(Silksong::HeroController),
-            "StartDashEffect"); // cosmetic effect prefabs unresolved, NullRef aborts HeroDash
         Skip(typeof(Silksong::SetParticleScale), "OnUpdate", true); // per-frame, null parentBody
         Skip(typeof(Silksong::DeliveryQuestItem), "BreakAllInternal");
         Skip(typeof(Silksong::DeliveryQuestItem),
