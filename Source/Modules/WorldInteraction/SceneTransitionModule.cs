@@ -191,8 +191,10 @@ public sealed class SceneTransitionModule : ModuleBase {
         var hero = HornetSpawner.Hornet;
         if (!hero) return;
         hero.LeaveScene((SGate)(int)info.HeroLeaveDirection.Value);
-        hero.RecordLeaveSceneCState();
-        LogDebug($"relayed LeaveScene + RecordLeaveSceneCState (exitedSprinting={hero.exitedSprinting})");
+        // Do what silksong runs on transition, like LEAVING SCENE for silk soar
+        hero.LeavingScene();
+        LogDebug($"relayed LeaveScene + LeavingScene (exitedSprinting={hero.exitedSprinting}, " +
+                 $"exitedSuperDashing={hero.exitedSuperDashing})");
     }
 
     // Mirror Silksong's OnLevelUnload -> SetHeroParent(null) -> DontDestroyOnLoad, but keyed on scene not parent:
@@ -236,6 +238,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         // Scene FSMs ask the "Hero" var (Hornet) which gate it entered by, e.g. the Hall of Gods statue doors that slide
         // the HUD back in after a boss. HK enters the scene on the Knight; Hornet's own entry gate is stale or unset.
         Detour(typeof(Silksong::HeroController), "GetEntryGateName", OnGetEntryGateName);
+
+        Detour(typeof(Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast), "DoRaycast", OnSuperJumpRaycast);
 
         Detour(typeof(GameManager), "LevelActivated", OnLevelActivated, typeof(Scene), typeof(Scene));
 
@@ -457,6 +461,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     //     (HK restores it ~0.7s late, during which she'd otherwise fall through the floor into the pit).
     private static readonly int playerLayer = LayerMask.NameToLayer("Player");
     private static readonly int ignoreRaycastLayer = LayerMask.NameToLayer("Ignore Raycast");
+    private static readonly int gateLayer = LayerMask.NameToLayer("TransitionGates");
 
     private IEnumerator ManageArrivalLayer() {
         var hero = HornetSpawner.Hornet;
@@ -571,6 +576,38 @@ public sealed class SceneTransitionModule : ModuleBase {
     // Inactive Silksong TransitionPoint mirroring HK's gate: GetGatePosition parses the name for the side, the rest are
     // fields identical in both games. Inactive so its Awake (needs the Silksong scene-setup env) never runs; EnterScene
     // only reads fields + GetGatePosition. customEntryFSM stays null (entry hooks no-op).
+    private static readonly RaycastHit2D[] gateHits = new RaycastHit2D[8];
+
+    // Silk Soar checks for TransitionPoint via gate layer, which doesn't work for HK
+    private static void OnSuperJumpRaycast(Action<Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast> orig,
+        Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast self) {
+        orig(self);
+        if (self.StoreIsTransitionGate.Value || Mathf.Abs(self.Distance.Value) < Mathf.Epsilon) return;
+
+        var origin = self.FromPosition.Value + (self.trans ? (Vector2)self.trans.position : Vector2.zero);
+        var direction = self.trans && self.Space == Space.Self
+            ? (Vector2)self.trans.TransformDirection(self.Direction.Value)
+            : self.Direction.Value;
+        var roof = self.StoreDidHit.Value ? self.StoreDistance.Value
+            : self.Distance.Value > 0f ? self.Distance.Value : float.PositiveInfinity;
+        var filter = new ContactFilter2D { useLayerMask = true, layerMask = 1 << gateLayer, useTriggers = true };
+        var count = Physics2D.Raycast(origin, direction.normalized, filter, gateHits, roof);
+
+        for (var i = 0; i < count; i++) {
+            var hit = gateHits[i];
+            if (hit.collider.GetComponent<TransitionPoint>() is not { } gate || gate.GetGatePosition() != GatePosition.top)
+                continue;
+
+            self.StoreDidHit.Value = true;
+            self.StoreHitObject.Value = hit.collider.gameObject;
+            self.StoreHitPoint.Value = hit.point;
+            self.StoreDistance.Value = hit.distance;
+            self.StoreIsTransitionGate.Value = true;
+            self.StoreHitSpikes.Value = false;
+            return;
+        }
+    }
+
     private static GameObject BuildGate(TransitionPoint hk) {
         var go = new GameObject(hk.name);
         go.SetActive(false);
