@@ -146,16 +146,25 @@ internal static class HeroSwitch {
 
         private void Update() {
             if (binds == null || !binds.Slots[0].WasPressed) return;
-
-            // The inventory belongs to the active hero and freezes the world by disabling HK's main camera (via
-            // DisplayFrozenCamera); switching under that would desync. Disabled main camera = the signal.
-            var gc = GameCameras.instance;
-            if (gc && gc.mainCamera && !gc.mainCamera.enabled) {
-                Log.Debug("[HeroSwitch] hero switch ignored during pause");
-                return;
-            }
-
-            Toggle();
+            PressSwitchBind();
         }
+    }
+
+    internal static void PressSwitchBind() {
+        // The inventory belongs to the active hero and freezes the world by disabling HK's main camera (via
+        // DisplayFrozenCamera); switching under that would desync. Disabled main camera = the signal.
+        var gc = GameCameras.instance;
+        if (gc && gc.mainCamera && !gc.mainCamera.enabled) {
+            Log.Debug("[HeroSwitch] hero switch ignored during pause");
+            return;
+        }
+
+        // Dialogues and cutscenes own the active hero until they end; the other hero would walk off mid-sequence.
+        if (PlayerData.instance.disablePause) {
+            Log.Debug("[HeroSwitch] hero switch ignored while pausing is disabled");
+            return;
+        }
+
+        Toggle();
     }
 }
