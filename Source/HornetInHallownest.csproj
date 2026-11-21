@@ -166,6 +166,6 @@
         <Copy SourceFiles="@(ModFile)" DestinationFolder="$(PublishDir)"/>
 
         <!-- create zip for distribution -->
-        <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(MSBuildProjectDirectory)/bin/$(Configuration)/HornetInHallownest.zip" Overwrite="true"/>
+        <ZipDirectory SourceDirectory="$(PublishDir)" DestinationFile="$(MSBuildProjectDirectory)/bin/$(Configuration)/HornetInHallownest-$(HollowKnightVersionName).zip" Overwrite="true"/>
     </Target>
 </Project>

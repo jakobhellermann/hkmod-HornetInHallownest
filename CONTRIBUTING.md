@@ -27,8 +27,8 @@ triggering hot reload if enabled in the modding API (if using [hk-modding/api#16
 
 To create a zip for distribution, run
 ```sh
-dotnet publish
-# Source/bin/Release/HornetInHallownest.zip
+dotnet publish -c Release -f hk1512620  # Source/bin/Release/HornetInHallownest-1.5.12620.zip
+dotnet publish -c Release -f hk1578     # Source/bin/Release/HornetInHallownest-1.5.78.zip
 ```
 
 ### How does 1.5.78 support work?

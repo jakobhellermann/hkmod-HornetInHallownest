@@ -18,17 +18,20 @@ jobs:
         with:
           dotnet-version: "10.x"
 
-      - name: Build zip
-        run: dotnet publish Source/HornetInHallownest.csproj -c Release -f hk1512620
-
-      # Not distributed yet
-      - name: Build hk1578
-        run: dotnet build Source/HornetInHallownest.csproj -c Release -f hk1578
+      - name: Build zips
+        run: |
+          dotnet publish Source/HornetInHallownest.csproj -c Release -f hk1512620
+          dotnet publish Source/HornetInHallownest.csproj -c Release -f hk1578
 
       - uses: actions/upload-artifact@v7
         with:
-          name: HornetInHallownest
+          name: HornetInHallownest-1.5.12620
           path: Source/bin/Release/hk1512620/publish/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: HornetInHallownest-1.5.78
+          path: Source/bin/Release/hk1578/publish/
 
       - name: Nightly release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -38,7 +41,7 @@ jobs:
           gh release view nightly >/dev/null 2>&1 || \
             gh release create nightly --prerelease --title Nightly --notes "Latest main build."
           gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/nightly" -f sha="$GITHUB_SHA" -F force=true
-          gh release upload nightly Source/bin/Release/HornetInHallownest.zip --clobber
+          gh release upload nightly Source/bin/Release/HornetInHallownest-1.5.12620.zip Source/bin/Release/HornetInHallownest-1.5.78.zip --clobber
 
       - name: Versioned release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -47,6 +50,6 @@ jobs:
         run: |
           VERSION=$(dotnet build Source/HornetInHallownest.csproj -getProperty:Version)
           if ! gh release view "v$VERSION" >/dev/null 2>&1; then
-            gh release create "v$VERSION" Source/bin/Release/HornetInHallownest.zip \
+            gh release create "v$VERSION" Source/bin/Release/HornetInHallownest-1.5.12620.zip \
               --title "v$VERSION" --generate-notes
           fi

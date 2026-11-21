@@ -8,6 +8,7 @@
 
     <PropertyGroup Condition="'$(TargetFramework)' == 'hk1512620'">
         <HollowKnightVersion>1.5.12620</HollowKnightVersion>
+        <HollowKnightVersionName>1.5.12620</HollowKnightVersionName>
         <ModdingApiVersion>78</ModdingApiVersion>
         <GameLibsPackageVersion>1.0.1</GameLibsPackageVersion>
         <TargetFrameworkIdentifier>.NETStandard</TargetFrameworkIdentifier>
@@ -15,6 +16,7 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(TargetFramework)' == 'hk1578'">
         <HollowKnightVersion>1.5.78.11833</HollowKnightVersion>
+        <HollowKnightVersionName>1.5.78</HollowKnightVersionName>
         <ModdingApiVersion>77</ModdingApiVersion>
         <GameLibsPackageVersion>1.0.0</GameLibsPackageVersion>
         <TargetFrameworkIdentifier>.NETStandard</TargetFrameworkIdentifier>
