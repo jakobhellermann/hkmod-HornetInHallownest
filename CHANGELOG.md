@@ -13,6 +13,7 @@
 - Fix reaper downslahes not giving enough height on shrooms
 - Fix hornet being tinted green in greenpath
 - Fix softlock on last mask shard pickup
+- Fix compatibility with MapWarp scene teleports
 
 ## v0.5.0
 

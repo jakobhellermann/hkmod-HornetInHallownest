@@ -325,6 +325,7 @@ public sealed class SceneTransitionModule : ModuleBase {
                 // swaps it for "door_dreamReturnGG*").
                 lieDownArrival = fromMaskBreak ||
                                  knight.GetEntryGateName().StartsWith("door_dreamReturn", StringComparison.Ordinal);
+                RegainForEntry(hornet);
                 hornet.EnterSceneDreamGate();
                 StartCoroutine(lieDownArrival ? PlayLieDownArrival(hornet) : PlayDreamArrival(hornet));
             }
@@ -551,6 +552,14 @@ public sealed class SceneTransitionModule : ModuleBase {
         LogDebug("closed enterWithoutInput entry (RegainControl+AcceptInput+FADE OUT white; no HK arrival FSM here)");
     }
 
+    // GameManager.OnNextLevelReady's regain ahead of every hero entry.
+    private static void RegainForEntry(Silksong::HeroController hc) {
+        if (Silksong::GameManager.SuppressRegainControl) Silksong::GameManager.SuppressRegainControl = false;
+        else hc.RegainControl(false);
+
+        hc.StartAnimationControl();
+    }
+
     // Run Hornet's real EnterScene from a Silksong TransitionPoint fabricated to mirror HK's gate, so she walks/drops in
     // with her own entry FSMs. Mirrors GameManager.OnNextLevelReady's regain-then-enter (our GM is inactive, never fires):
     // without the RegainControl a door up-interact's earlier RelinquishControl sticks across the transition and gates
@@ -560,9 +569,7 @@ public sealed class SceneTransitionModule : ModuleBase {
         var hkGate = knight.sceneEntryGate;
         if (!hc || !hkGate) yield break;
 
-        if (Silksong::GameManager.SuppressRegainControl) Silksong::GameManager.SuppressRegainControl = false;
-        else hc.RegainControl(false);
-        hc.StartAnimationControl();
+        RegainForEntry(hc);
 
         var gateGo = BuildGate(hkGate);
         entryInProgress = true;
