@@ -20,6 +20,7 @@
 - Give a proper error when mixing proton and native versions of the games
 - Fix knockback from hitting walls
 - Prevent hero switch during dialog and cutscenes
+- Fix rosary counter being shown during dialogue
 
 ## v0.5.0
 

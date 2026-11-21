@@ -1,5 +1,6 @@
 extern alias Silksong;
 extern alias SilksongPM;
+extern alias SilksongFade;
 using System.Collections;
 using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
@@ -94,6 +95,9 @@ public sealed class CurrencyModule : ModuleBase {
             var noDisappear = iconFsm ? iconFsm.FsmVariables.FindFsmBool("No Disappear") : null;
             noDisappear?.Value = true;
             icon.Appear();
+
+            // The prefab keeps the icon out of the counter's fade, which hides the counter while the HUD is slid out.
+            icon.GetComponent<SilksongFade::TeamCherry.NestedFadeGroup.NestedFadeGroupTK2DSprite>().ParentOverride = new();
         }
     }
 
