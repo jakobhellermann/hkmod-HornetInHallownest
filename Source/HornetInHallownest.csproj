@@ -48,16 +48,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Reference Include="Silksong.Assembly-CSharp" Private="true" Aliases="Silksong">
+        <Reference Include="Silksong.Assembly-CSharp" Private="false" Aliases="Silksong">
             <HintPath>$(RefsDir)/Silksong.Assembly-CSharp.dll</HintPath>
         </Reference>
-        <Reference Include="Silksong.Assembly-CSharp-firstpass" Private="true" Aliases="Silksong">
+        <Reference Include="Silksong.Assembly-CSharp-firstpass" Private="false" Aliases="Silksong">
             <HintPath>$(RefsDir)/Silksong.Assembly-CSharp-firstpass.dll</HintPath>
         </Reference>
-        <Reference Include="Silksong.PlayMaker" Private="true" Aliases="SilksongPM">
+        <Reference Include="Silksong.PlayMaker" Private="false" Aliases="SilksongPM">
             <HintPath>$(RefsDir)/Silksong.PlayMaker.dll</HintPath>
         </Reference>
-        <Reference Include="Silksong.TeamCherry.Localization" Private="true" Aliases="SilksongLoc">
+        <Reference Include="Silksong.TeamCherry.Localization" Private="false" Aliases="SilksongLoc">
             <HintPath>$(RefsDir)/Silksong.TeamCherry.Localization.dll</HintPath>
         </Reference>
     </ItemGroup>
