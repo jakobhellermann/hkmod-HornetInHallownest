@@ -80,16 +80,16 @@ public sealed class ToolCharmBridgeModule : ModuleBase {
         if (!grimmchild) {
             grimmchild = ScriptableObject.CreateInstance<GrimmchildTool>();
             grimmchild.name = GrimmchildTool.ToolName;
-            grimmchild.SetFieldValue("type", Silksong::ToolItemType.Blue);
+            grimmchild.type = Silksong::ToolItemType.Blue;
             // A deserialized tool always has one, and ToolItem reads it unguarded; CreateInstance leaves it null.
-            grimmchild.SetFieldValue("alternateUnlockedTest", new Silksong::PlayerDataTest());
+            grimmchild.alternateUnlockedTest = new Silksong::PlayerDataTest();
         }
 
         list.Add(grimmchild);
     }
 
     private static Silksong::ToolItemList? ToolList(Silksong::ToolItemManager? manager) =>
-        manager ? manager.GetFieldValue<Silksong::ToolItemList>("toolItems") : null;
+        manager ? manager.toolItems : null;
 
     private static void OnWorldMap(Action<GameMap> orig, GameMap self) =>
         WithHornetCharm(CompassCharm, () => orig(self));

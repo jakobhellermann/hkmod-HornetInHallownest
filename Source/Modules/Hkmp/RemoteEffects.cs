@@ -76,7 +76,7 @@ internal sealed class RemoteEffects {
             animator.fireEvents = false; // their receivers are stripped
         // As without an imbuement: stripped, these would leave the element variants in the prefab's state.
         foreach (var imbuement in clone.GetComponentsInChildren<Silksong::HeroNailImbuementEffect>(true))
-        foreach (var variant in imbuement.GetFieldValue<GameObject[]>("activateObjects")!)
+        foreach (var variant in imbuement.activateObjects)
             if (variant)
                 variant.SetActive(false);
         // Dependents before what they require (behaviours and audio filters on audio sources, colliders, rigidbodies).

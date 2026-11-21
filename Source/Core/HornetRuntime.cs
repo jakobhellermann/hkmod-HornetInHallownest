@@ -20,8 +20,7 @@ public sealed class HornetRuntime : MonoBehaviour {
             // Mirror HK's pause onto Silksong's GM so her input pipeline freezes with it
             var gm = Silksong::GameManager._instance;
             if (gm) {
-                gm.SetFieldValue("<GameState>k__BackingField",
-                    paused ? Silksong::GlobalEnums.GameState.PAUSED : Silksong::GlobalEnums.GameState.PLAYING);
+                gm.GameState = paused ? Silksong::GlobalEnums.GameState.PAUSED : Silksong::GlobalEnums.GameState.PLAYING;
             }
 
             if (active != wasHornetActive) {
@@ -35,7 +34,7 @@ public sealed class HornetRuntime : MonoBehaviour {
             // Unity keeps ticking her Update.
             if (!paused) {
                 if (!hero!.enabled) hero.enabled = true;
-                hero.SetFieldValue("isGameplayScene", true);
+                hero.isGameplayScene = true;
             }
 
             // Pump the modules. Also while the inventory is open (world frozen, but input must still reach it); a full

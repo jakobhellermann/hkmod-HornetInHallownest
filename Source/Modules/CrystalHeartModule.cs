@@ -80,7 +80,7 @@ public sealed class CrystalHeartModule : ModuleBase {
     private static SInputHandler Input(SHeroController hero) {
         if (ReferenceEquals(hero, inputHero)) return inputHandler;
         inputHero = hero;
-        return inputHandler = hero.GetFieldValue<SInputHandler>("inputHandler")!;
+        return inputHandler = hero.inputHandler;
     }
 
     private IEnumerator Superdash(SHeroController hero, SInputHandler input) {

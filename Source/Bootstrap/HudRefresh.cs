@@ -50,8 +50,8 @@ internal static class HudRefresh {
     internal static void RefreshBindOrbFrame() {
         var frame = UnityApi.FindAny<Silksong::BindOrbHudFrame>();
         if (!frame) return;
-        frame.SetFieldValue("currentFrameCrest", null);
-        frame.SetFieldValue("currentFrameAnims", null);
+        frame.currentFrameCrest = null;
+        frame.currentFrameAnims = null;
         frame.AlreadyAppeared();
     }
 
@@ -62,7 +62,7 @@ internal static class HudRefresh {
         yield return null;
         if (!root) yield break;
         foreach (var layout in root.GetComponentsInChildren<Silksong::TransformLayout>()) {
-            layout.InvokeMethod("UpdateListeners");
+            layout.UpdateListeners();
             layout.UpdatePositions();
         }
     }
@@ -72,9 +72,9 @@ internal static class HudRefresh {
     internal static void ForgetSilkChunks() {
         var spool = Silksong::SilkSpool.Instance;
         if (!spool) return;
-        spool.GetFieldValue<List<Silksong::SilkChunk>>("silkChunks")?.Clear();
-        spool.SetFieldValue("mossChunks", null);
-        spool.SetFieldValue("partsChunk", null);
-        spool.SetFieldValue("wasUsingChunk", null);
+        spool.silkChunks.Clear();
+        spool.mossChunks = null;
+        spool.partsChunk = null;
+        spool.wasUsingChunk = null;
     }
 }

@@ -114,7 +114,7 @@ public sealed class PogoModule : ModuleBase {
                 // End the downspike first (else the stab keeps driving her velocity down): mirror DownspikeBounce's exit
                 // (FinishDownspike + BecomeAirborne) without its velocity-capping jump_steps bounce, then ShroomBounce.
                 hero.FinishDownspike(true);
-                hero.InvokeMethod("BecomeAirborne");
+                hero.BecomeAirborne();
                 hero.ShroomBounce();
                 MatchKnightShroomHeight(hero);
                 DoShroomEffects(shroom, hero);
@@ -139,7 +139,7 @@ public sealed class PogoModule : ModuleBase {
         try {
             shroom.BounceLarge();
             // BounceLarge parents its particles to HeroController.instance (HK's inert Knight) -> re-parent onto Hornet.
-            var hp = typeof(BounceShroom).GetFieldValue<GameObject>("heroParticles");
+            var hp = BounceShroom.heroParticles;
             if (hp) {
                 hp.transform.SetParent(hero.transform, false);
                 hp.transform.localPosition = new Vector3(0f, -1.5f, -0.002f);

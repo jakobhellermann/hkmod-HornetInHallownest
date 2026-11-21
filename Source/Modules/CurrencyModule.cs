@@ -73,12 +73,12 @@ public sealed class CurrencyModule : ModuleBase {
         SCurrencyCounter.Show(SCurrencyType.Money, setStackVisible: true);
 
         foreach (var c in UnityApi.FindAll<SCurrencyCounter>()) {
-            if (c.GetFieldValue<SCurrencyType>("currencyType") != SCurrencyType.Money) continue;
+            if (c.currencyType != SCurrencyType.Money) continue;
 
             // The icon is a separate FSM (RestartOnEnable) that hides in its Init state until APPEAR, so it vanishes on
             // every HUD/scene reactivation. Setting "No Disappear" var makes Init go visible.
             var icon = c.GetComponentInChildren<SCurrencyCounterIcon>(true);
-            var iconFsm = icon.GetFieldValue<SilksongPM::PlayMakerFSM>("fsm");
+            var iconFsm = icon.fsm;
             var noDisappear = iconFsm ? iconFsm.FsmVariables.FindFsmBool("No Disappear") : null;
             noDisappear?.Value = true;
             icon.Appear();

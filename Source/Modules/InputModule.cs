@@ -235,8 +235,8 @@ public sealed class InputModule : ModuleBase {
         inputActions.MenuCancel.CommitWithState((primary && hk != null && hk.menuCancel.IsPressed) || esc, tick, dt);
 
         // Recompute the composite two-axis actions from the just committed axes
-        inputActions.MoveVector.InvokeMethod("Update", tick, dt);
-        inputActions.RightStick.InvokeMethod("Update", tick, dt);
+        inputActions.MoveVector.Update(tick, dt);
+        inputActions.RightStick.Update(tick, dt);
 
         if (!Paused) MaintainInputHandler();
         SyncActiveController();
@@ -248,7 +248,7 @@ public sealed class InputModule : ModuleBase {
         var ih = SilksongBootstrap.Handler;
         if (!ih) return;
 
-        ih.InvokeMethod("UpdateButtonQueueing");
+        ih.UpdateButtonQueueing();
 
         // Clear ForceDreamNailRePress once DreamNail is released (RegainControl sets it, only Update clears it, else
         // ListenForDreamNail skips forever). Inlined to skip PlayingInput's CheatManager.IsOpen read.
@@ -267,7 +267,7 @@ public sealed class InputModule : ModuleBase {
             : Silksong::InControl.BindingSourceType.KeyBindingSource;
         if (ih.lastActiveController != hkController) {
             ih.lastActiveController = hkController;
-            ih.InvokeMethod("SendRefreshEvent");
+            ih.SendRefreshEvent();
         }
     }
 

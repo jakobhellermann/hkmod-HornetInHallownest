@@ -2,7 +2,6 @@ extern alias Silksong;
 extern alias SilksongPM;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using HornetInHallownest.Util;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -71,7 +70,7 @@ internal static class GameCamerasBootstrap {
                 // Re-point GameCameras._instance in case it dangled across the reload (Silksong-assembly static).
                 var existing = rig.GetComponentInChildren<Silksong::GameCameras>(true);
                 if (existing != null && Silksong::GameCameras.SilentInstance == null)
-                    typeof(Silksong::GameCameras).SetFieldValue("_instance", existing);
+                    Silksong::GameCameras._instance = existing;
                 return new {
                     ok = true, note = "reused existing rig", instanceSet = Silksong::GameCameras.SilentInstance != null
                 };
@@ -136,7 +135,7 @@ internal static class GameCamerasBootstrap {
             // (GameCameras.Awake is skipped in Stub; we DDOL the holder ourselves below.)
             var gc = inst.GetComponentInChildren<Silksong::GameCameras>(true);
             if (gc != null) {
-                typeof(Silksong::GameCameras).SetFieldValue("_instance", gc);
+                Silksong::GameCameras._instance = gc;
                 // gm.gameCams (set by the skipped SetupGameRefs) -> derefed by inventory pause (StopCameraShake), HUD, etc.
                 if (Silksong::GameManager.instance != null) Silksong::GameManager.instance.gameCams = gc;
             }
@@ -163,15 +162,12 @@ internal static class GameCamerasBootstrap {
     }
 
     private static int RemapSortingLayers(Transform root) {
-        var msoType = typeof(Silksong::MeshSortingOrder);
-        var layerIdF = msoType.GetField("layerID", BindingFlags.NonPublic | BindingFlags.Instance);
-        if (layerIdF == null) return -1;
         var fixes = 0;
         foreach (var mso in root.GetComponentsInChildren<Silksong::MeshSortingOrder>(true)) {
-            var id = (int)(layerIdF.GetValue(mso) ?? 0);
+            var id = mso.layerID;
             if (SortingLayer.IsValid(id)) continue;
             var hkId = SortingLayer.NameToID(ssSortingLayerNames.TryGetValue(id, out var nm) ? nm : "HUD");
-            layerIdF.SetValue(mso, hkId);
+            mso.layerID = hkId;
             var rend = mso.GetComponent<MeshRenderer>();
             if (rend != null) rend.sortingLayerID = hkId;
             fixes++;
@@ -245,7 +241,7 @@ internal static class GameCamerasBootstrap {
         // instances (gm.inputHandler is already wired; SetupRefs only sets ih + subscribes an event).
         try {
             var skins = UnityApi.FindAll<Silksong::UIButtonSkins>(true);
-            foreach (var s in skins) s.InvokeMethod("SetupRefs");
+            foreach (var s in skins) s.SetupRefs();
             Log.Debug($"[HUD] wired UIButtonSkins.ih on {skins.Length} instance(s) before HUD activation");
         } catch (Exception e) {
             Log.Error($"[HUD] UIButtonSkins.SetupRefs: {e.Message}");
@@ -286,7 +282,7 @@ internal static class GameCamerasBootstrap {
         // (with the visual refs) Awoke early-return and never drew. Re-point Instance to it + DrawSpool now.
         var realSpool = hudCam.GetComponentInChildren<Silksong::SilkSpool>(true);
         if (realSpool != null) {
-            typeof(Silksong::SilkSpool).SetPropertyValue("Instance", realSpool);
+            Silksong::SilkSpool.Instance = realSpool;
             try {
                 realSpool.DrawSpool();
             } catch (Exception e) {
@@ -358,7 +354,7 @@ internal static class GameCamerasBootstrap {
         var gc = GameCameras.instance;
         var camTarget = gc ? gc.cameraTarget : null;
         if (!camTarget) return;
-        camTarget.SetFieldValue("heroTransform", t);
+        camTarget.heroTransform = t;
     }
 
 
@@ -388,14 +384,11 @@ internal static class GameCamerasBootstrap {
     // Parks the rig's main camera on HK's live main camera each frame so GameCameras.mainCamera.position (read by
     // AudioEventManager distance-cull + LowPassDistance) sits at the listener. Re-resolves when HK rebuilds its camera.
     private sealed class MainCamAudioFollow : MonoBehaviour {
-        private static FieldInfo? hkInstanceField;
         private Transform? hkCamT;
 
         private void LateUpdate() {
             if (!hkCamT) {
-                hkInstanceField ??= typeof(GameCameras)
-                    .GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
-                if (hkInstanceField?.GetValue(null) is not GameCameras hk || !hk.mainCamera) return;
+                if (GameCameras._instance is not { } hk || !hk.mainCamera) return;
                 hkCamT = hk.mainCamera.transform;
             }
 
@@ -407,7 +400,6 @@ internal static class GameCamerasBootstrap {
     // CameraShakeManager offsets the main camera at render time. Carry both onto HK's main camera for each frame's render,
     // and take them off again before HK's CameraController moves it in LateUpdate.
     private sealed class MainCamShakeRelay : MonoBehaviour {
-        private static FieldInfo? hkInstanceField;
         private Silksong::CameraShakeManager? shakeManager;
         private Vector3 parentRest;
         private Transform? hkCamT;
@@ -431,7 +423,7 @@ internal static class GameCamerasBootstrap {
         private void OnCameraPreCull(Camera cam) {
             if (isApplied || !ResolveHkCamera() || !cam.transform.IsChildOf(hkCamT!)) return;
             appliedOffset = (transform.parent ? transform.parent.localPosition - parentRest : Vector3.zero) +
-                            (shakeManager ? shakeManager.GetFieldValue<Vector3>("currentOffset") : Vector3.zero);
+                            (shakeManager ? shakeManager.currentOffset : Vector3.zero);
             hkCamT!.localPosition += appliedOffset;
             isApplied = true;
         }
@@ -444,8 +436,7 @@ internal static class GameCamerasBootstrap {
 
         private bool ResolveHkCamera() {
             if (hkCamT) return true;
-            hkInstanceField ??= typeof(GameCameras).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
-            if (hkInstanceField?.GetValue(null) is not GameCameras hk || !hk.mainCamera) return false;
+            if (GameCameras._instance is not { } hk || !hk.mainCamera) return false;
             hkCamT = hk.mainCamera.transform;
             return true;
         }
@@ -453,7 +444,7 @@ internal static class GameCamerasBootstrap {
 
     internal static void SetHkHudVisible(bool on) {
         try {
-            if (typeof(GameCameras).GetFieldValue<GameCameras>("_instance") is not { } hk || !hk.hudCanvas) return;
+            if (GameCameras._instance is not { } hk || !hk.hudCanvas) return;
 
             // Hide via localScale, not SetActive: re-activating hudCanvas re-fires OnEnable -> HK's ~1s HUD slide-in
             // (the switch lag). Scaling to zero hides it instantly (tk2d mesh-based, so CanvasGroup alpha wouldn't work)
@@ -503,6 +494,6 @@ internal static class GameCamerasBootstrap {
             rig = null;
         }
 
-        typeof(Silksong::GameCameras).SetFieldValue("_instance", null);
+        Silksong::GameCameras._instance = null;
     }
 }

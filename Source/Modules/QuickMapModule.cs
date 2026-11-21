@@ -202,7 +202,7 @@ public sealed class QuickMapModule : ModuleBase {
         FSMUtility.SendEventToGameObject(hkMapPane, "DOWN");
         // Its fade group holds the HK inventory border's pane arrows, which stay on screen outside the inventory.
         var borderFade = worldMap.GetComponent<FadeGroup>();
-        borderFade.InvokeMethod("DisableRenderers");
+        borderFade.DisableRenderers();
         foreach (var arrow in borderFade.animators) arrow.GetComponent<MeshRenderer>().enabled = false;
         MapMarkerModule.SetWideMapCompass(wideMapCompass!.transform, false);
         wideMapCompass.SetActive(wasWideMapCompassActive);

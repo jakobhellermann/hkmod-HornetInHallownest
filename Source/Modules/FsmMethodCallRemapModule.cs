@@ -110,7 +110,7 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
 
         orig(self);
         if (flash && functionName.StartsWith("Flashing", StringComparison.Ordinal))
-            hkRepeatingFlashId = flash.GetFieldValue<int>("lastFlashId");
+            hkRepeatingFlashId = flash.lastFlashId;
 
         var knight = HeroController.UnsafeInstance;
         if (knight && knightUpgrades.TryGetValue(functionName, out var deliver))
@@ -138,11 +138,11 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     // CallMethodProper caches the resolved behaviour instance on the first call and invokes on it forever, after we
     // retarget Hero (switch or respawn) that's stale.
     private static void DoMethodCallHook(Action<CallMethodProper> orig, CallMethodProper self) {
-        if (self.GetFieldValue<MethodInfo>("cachedMethodInfo") != null) {
+        if (self.cachedMethodInfo != null) {
             var target = self.Fsm.GetOwnerDefaultTarget(self.gameObject);
-            var cached = self.GetFieldValue<UnityEngine.Object>("cachedBehaviour") as Component;
+            var cached = self.cachedBehaviour as Component;
             if (target && (!cached || cached.gameObject != target))
-                self.SetFieldValue("cachedMethodInfo", null);
+                self.cachedMethodInfo = null;
         }
 
         var hornet = HornetSpawner.HornetRoot;
@@ -167,7 +167,7 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     }
 
     private bool TryRecoverMiss(CallMethodProper self) {
-        var type = self.GetFieldValue<Type>("cachedType");
+        var type = self.cachedType;
         var methodName = self.methodName?.Value;
 
         if (type != null && methodName != null &&
@@ -193,9 +193,9 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
 
     // orig set cachedType before GetMethod threw; fall back to the resolved component's type if not.
     private bool TryDisambiguate(CallMethodProper self) {
-        var type = self.GetFieldValue<Type>("cachedType");
+        var type = self.cachedType;
         if (type == null) {
-            var comp = self.GetFieldValue<MonoBehaviour>("component");
+            var comp = self.component;
             if (comp != null) type = comp.GetType();
         }
 
@@ -218,13 +218,13 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
             return true;
         }
 
-        self.SetFieldValue("errorString", $"ambiguous '{methodName}' on {type.Name} - no overload matched\n");
+        self.errorString = $"ambiguous '{methodName}' on {type.Name} - no overload matched\n";
         LogError($"ambiguous '{methodName}' on {type.Name} - could not resolve, skipping");
         return false;
     }
 
     private static void SetCached(CallMethodProper self, MethodInfo method) {
-        self.SetFieldValue("cachedMethodInfo", method);
-        self.SetFieldValue("cachedParameterInfo", method.GetParameters());
+        self.cachedMethodInfo = method;
+        self.cachedParameterInfo = method.GetParameters();
     }
 }

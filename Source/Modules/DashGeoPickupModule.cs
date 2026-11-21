@@ -1,5 +1,4 @@
 extern alias Silksong;
-using System.Reflection;
 using HornetInHallownest.Core;
 using UnityEngine;
 
@@ -11,7 +10,6 @@ namespace HornetInHallownest.Modules;
 public sealed class DashGeoPickupModule : ModuleBase {
     private readonly ContactFilter2D filter = new() { useTriggers = true, useLayerMask = false };
     private readonly Collider2D[] hits = new Collider2D[16];
-    private MethodInfo? geoTrigger;
     private Collider2D? heroBox;
     private bool hadPrev;
     private Vector2 prevCenter;
@@ -57,9 +55,7 @@ public sealed class DashGeoPickupModule : ModuleBase {
             var geo = hits[i].GetComponent<GeoControl>();
             if (!geo) geo = hits[i].GetComponentInParent<GeoControl>();
             if (!geo) continue;
-            geoTrigger ??= typeof(GeoControl)
-                .GetMethod("OnTriggerEnter2D", BindingFlags.Instance | BindingFlags.NonPublic);
-            geoTrigger?.Invoke(geo, [heroBox]);
+            geo.OnTriggerEnter2D(heroBox);
         }
     }
 }

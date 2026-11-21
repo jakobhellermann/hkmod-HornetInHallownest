@@ -298,7 +298,7 @@ public sealed class DeathModule : ModuleBase {
         SHeroBox.Inactive = false; // Die turned the global hero-box gate off
         if (hero.heroBox) hero.heroBox.HeroBoxNormal();
 
-        if (hero.GetFieldValue<MeshRenderer>("renderer") is { } mr) mr.enabled = true;
+        if (hero.renderer is { } mr) mr.enabled = true;
         hero.gameObject.layer = 9; // Die moved her to layer 2 (no-collision)
         hero.AffectedByGravity(true);
         if (!DreamRestoreModule.TryLeaveDream(hero)) hero.MaxHealth();
@@ -308,7 +308,7 @@ public sealed class DeathModule : ModuleBase {
 
         var atBench = PlayerData.instance.atBench;
         if (!atBench) {
-            hero.InvokeMethod("SetState", SActorStates.idle);
+            hero.SetState(SActorStates.idle);
             hero.StartAnimationControlToIdle();
             hero.RegainControl();
         }
@@ -376,11 +376,11 @@ public sealed class DeathModule : ModuleBase {
         if (Time.timeScale == 0f) Time.timeScale = 1f;
         hero.cState.dead = false;
         SHeroBox.Inactive = false;
-        if (hero.GetFieldValue<MeshRenderer>("renderer") is { } mr) mr.enabled = true;
+        if (hero.renderer is { } mr) mr.enabled = true;
         hero.gameObject.layer = 9;
         if (hero.TryGetComponent<Rigidbody2D>(out var rb)) rb.bodyType = RigidbodyType2D.Dynamic;
         hero.AffectedByGravity(true);
-        hero.InvokeMethod("SetState", SActorStates.idle);
+        hero.SetState(SActorStates.idle);
         hero.StartAnimationControlToIdle();
         hero.RegainControl();
         return new { ok = true };

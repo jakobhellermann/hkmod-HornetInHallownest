@@ -223,7 +223,7 @@ public sealed class HeroTargetModule : ModuleBase {
     private void OnSoulOrbActivate(Action<SoulOrb> orig, SoulOrb self) {
         orig(self);
         if (HeroSwitch.HornetActive && HornetSpawner.Hornet is { } hero)
-            self.SetFieldValue("target", hero.transform);
+            self.target = hero.transform;
     }
 
     private void OnAddMpCharge(Action<HeroController, int> orig, HeroController self, int amount) {

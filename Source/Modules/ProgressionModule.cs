@@ -349,7 +349,7 @@ public sealed class ProgressionModule : ModuleBase {
         var hero = HornetSpawner.Hornet;
         return (hero && hero.controlReqlinquished) ||
                UnityApi.FindAll<DialogueBox>()
-                   .Any(box => !box.GetFieldValue<bool>("hidden")) ||
+                   .Any(box => !box.hidden) ||
                colosseumTrials.Contains(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }
 
@@ -362,11 +362,10 @@ public sealed class ProgressionModule : ModuleBase {
 
         var earnedTools = new HashSet<string>(ToolRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward));
         if (!pd.bossRushMode) KeepOneSilkshot(earnedTools);
-        var upgrades = SToolItemManager.GetAllTools().Where(t => t && t.GetFieldValue<SToolItem>("getReplaces"))
-            .ToList();
-        var replaceableTools = new HashSet<SToolItem?>(upgrades.Select(t => t.GetFieldValue<SToolItem>("getReplaces")));
+        var upgrades = SToolItemManager.GetAllTools().Where(t => t && t.getReplaces).ToList();
+        var replaceableTools = new HashSet<SToolItem?>(upgrades.Select(t => t.getReplaces));
         var replacedTools = new HashSet<SToolItem?>(upgrades.Where(t => earnedTools.Contains(t.name))
-            .Select(t => t.GetFieldValue<SToolItem>("getReplaces")));
+            .Select(t => t.getReplaces));
         foreach (var tool in SToolItemManager.GetAllTools()) {
             if (!tool) continue;
             var earned = earnedTools.Contains(tool.name);
@@ -444,7 +443,7 @@ public sealed class ProgressionModule : ModuleBase {
 
     // A tool also counts as unlocked while its alternate unlock test passes, so that test is failed too.
     private static void LockTool(SToolItem tool) {
-        var test = tool.GetFieldValue<Silksong::PlayerDataTest>("alternateUnlockedTest");
+        var test = tool.alternateUnlockedTest;
         if (test is { IsDefined: true })
             foreach (var group in test.TestGroups)
             foreach (var condition in group.Tests)
@@ -529,9 +528,8 @@ public sealed class ProgressionModule : ModuleBase {
         // points at was never written. The other crests' prefix fits it.
         var prefix = crest.ItemNamePrefix;
         if (!SilksongLoc::TeamCherry.Localization.Language.Has(prefix.Key, prefix.Sheet))
-            crest.SetFieldValue("itemNamePrefix",
-                new SilksongLoc::TeamCherry.Localization.LocalisedString
-                    { Sheet = "Tools", Key = "UI_MSG_TITLE_CREST" });
+            crest.itemNamePrefix = new SilksongLoc::TeamCherry.Localization.LocalisedString
+                { Sheet = "Tools", Key = "UI_MSG_TITLE_CREST" };
 
         ShowHeldMsg(afterMsg => {
             Silksong::ToolCrestUIMsg.Spawn(crest, prefab, afterMsg);
@@ -689,7 +687,7 @@ public sealed class ProgressionModule : ModuleBase {
         AssetBundle.LoadFromFile(Paths.SilksongAddressablesBundle(file));
 
     private static bool IsSuperseded(SToolCrest crest) {
-        var upgradedCrest = crest.GetFieldValue<SToolCrest>("upgradedVersion");
+        var upgradedCrest = crest.upgradedVersion;
         return upgradedCrest && upgradedCrest.IsUnlocked;
     }
 }

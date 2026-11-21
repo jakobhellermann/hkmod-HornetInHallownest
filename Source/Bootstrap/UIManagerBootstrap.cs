@@ -54,7 +54,7 @@ internal static class UIManagerBootstrap {
 
     private static void RebindInstance(GameObject inst) {
         var uim = inst.GetComponentInChildren<Silksong::UIManager>(true);
-        if (uim != null) typeof(Silksong::UIManager).SetFieldValue("_instance", uim);
+        if (uim != null) Silksong::UIManager._instance = uim;
     }
 
     internal static void Cleanup() {
@@ -63,6 +63,6 @@ internal static class UIManagerBootstrap {
             ui = null;
         }
 
-        typeof(Silksong::UIManager).SetFieldValue("_instance", null);
+        Silksong::UIManager._instance = null;
     }
 }

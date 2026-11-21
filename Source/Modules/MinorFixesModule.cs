@@ -165,9 +165,9 @@ public sealed class MinorFixesModule : ModuleBase {
 
         if (!ReferenceEquals(self, bumpCheck)) {
             bumpCheck = self;
-            bumpCollider = self.GetFieldValue<Collider2D>("collider")!;
-            bumpBody = self.GetFieldValue<Rigidbody2D>("body")!;
-            bumpGroundMask = self.GetFieldValue<LayerMask>("groundMask");
+            bumpCollider = self.collider;
+            bumpBody = self.body;
+            bumpGroundMask = self.groundMask;
         }
 
         var bounds = bumpCollider.bounds;

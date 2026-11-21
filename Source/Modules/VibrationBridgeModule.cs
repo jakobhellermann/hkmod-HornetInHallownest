@@ -89,9 +89,9 @@ public sealed class VibrationBridgeModule : ModuleBase {
             if (vibrations.TryGetValue(source, out var converted) && converted) return converted;
             converted = ScriptableObject.CreateInstance<GamepadVibration>();
             converted.name = source.name;
-            converted.SetFieldValue("smallMotor", source.SmallMotor);
-            converted.SetFieldValue("largeMotor", source.LargeMotor);
-            converted.SetFieldValue("playbackRate", source.PlaybackRate);
+            converted.smallMotor = source.SmallMotor;
+            converted.largeMotor = source.LargeMotor;
+            converted.playbackRate = source.PlaybackRate;
             vibrations[source] = converted;
             return converted;
         }

@@ -16,7 +16,7 @@ internal static class ToolItemManagerBootstrap {
 
         // Our bootstrap GM never fires GameManager.SceneInit, so ToolItemManager.SceneInit (the only place that inits
         // the equipChangedTool*Reminder fields) never runs -> ReportBoundAttackToolUsed NullRefs. Call it directly.
-        mgr.InvokeMethod("SceneInit");
+        ((Silksong::ToolItemManager)mgr).SceneInit();
     }
 
     // Diagnostic: confirm the singleton + serialized lists resolve, and that GetCrestByName works.
@@ -58,7 +58,7 @@ internal static class ToolItemManagerBootstrap {
     internal static void RefreshBoundAttackTools() {
         var mgr = Silksong::ToolItemManager.SilentInstance;
         if (mgr == null) return;
-        mgr.SetFieldValue("queueAttackToolsChanged", true);
+        mgr.queueAttackToolsChanged = true;
         Silksong::ToolItemManager.ReportAllBoundAttackToolsUpdated();
         Silksong::ToolItemManager.SendEquippedChangedEvent(true);
     }

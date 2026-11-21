@@ -71,14 +71,13 @@ public sealed class HkJournalModule : ModuleBase {
             if (!prefab || !prefab.TryGetComponent<JournalEntryStats>(out var stats)) continue;
             var record = ScriptableObject.CreateInstance<SEnemyJournalRecord>();
             record.name = "HK " + stats.playerDataName;
-            record.SetFieldValue("iconSprite",
-                prefab.transform.Find("Portrait")?.GetComponent<SpriteRenderer>().sprite);
-            record.SetFieldValue("enemySprite", stats.sprite);
-            record.SetFieldValue("displayName", Text("NAME_" + stats.convoName));
-            record.SetFieldValue("description", Text("DESC_" + stats.convoName));
-            record.SetFieldValue("notes", Text("NOTE_" + stats.convoName));
+            record.iconSprite = prefab.transform.Find("Portrait")?.GetComponent<SpriteRenderer>().sprite;
+            record.enemySprite = stats.sprite;
+            record.displayName = Text("NAME_" + stats.convoName);
+            record.description = Text("DESC_" + stats.convoName);
+            record.notes = Text("NOTE_" + stats.convoName);
             var requiredKills = Math.Max(1, newSave.GetFieldValue<int>("kills" + stats.playerDataName));
-            record.SetFieldValue("killsRequired", requiredKills);
+            record.killsRequired = requiredKills;
             entries[record] = new HkJournalEntry(stats.playerDataName, requiredKills);
             records.Add(record);
         }

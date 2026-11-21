@@ -166,7 +166,7 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
     private new void Awake() {
         nonBouncer = GetComponent<NonBouncer>();
         tagTaker = Silksong::TagDamageTaker.Add(gameObject, this);
-        this.SetFieldValue("tagDamageTaker", tagTaker);
+        tagDamageTaker = tagTaker;
         all.Add(this);
     }
 #pragma warning restore UNT0039
@@ -294,7 +294,7 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
 
 // Required to pass a GetComponent<TinkEffect> in DamageEnemies.OnTriggerEnter2D
 internal sealed class HkTinkBridge : STinkEffect {
-    protected override void Awake() {
+    public override void Awake() {
         base.Awake();
         OnTinked = new UnityEvent();
         OnTinkedHeavy = new UnityEvent();

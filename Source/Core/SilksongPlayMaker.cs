@@ -1,7 +1,6 @@
 extern alias Silksong;
 extern alias SilksongPM;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using HornetInHallownest.Util;
@@ -23,8 +22,8 @@ internal static class SilksongPlayMaker {
     internal static void Apply() {
         try {
             var types = CollectSilksongTypes();
-            SeedCache(typeof(SilksongPM::HutongGames.PlayMaker.ReflectionUtils), "typeLookup", types);
-            SeedCache(typeof(SilksongPM::HutongGames.PlayMaker.ActionData), "ActionTypeLookup", types);
+            SeedCache(SilksongPM::HutongGames.PlayMaker.ReflectionUtils.typeLookup, types);
+            SeedCache(SilksongPM::HutongGames.PlayMaker.ActionData.ActionTypeLookup, types);
         } catch (Exception e) {
             Log.Error($"[SilksongPlayMaker] {e}");
         }
@@ -60,12 +59,7 @@ internal static class SilksongPlayMaker {
                 byName[t.FullName] = t;
     }
 
-    private static void SeedCache(Type owner, string field, Dictionary<string, Type> types) {
-        if (owner.GetField(field, BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null) is not IDictionary cache) {
-            Log.Error($"[SilksongPlayMaker] {owner.Name}.{field} not found");
-            return;
-        }
-
+    private static void SeedCache(Dictionary<string, Type> cache, Dictionary<string, Type> types) {
         foreach (var kv in types)
             cache[kv.Key] = kv.Value;
     }

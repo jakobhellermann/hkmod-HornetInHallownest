@@ -33,7 +33,7 @@ public sealed class MapMarkerModule : ModuleBase {
     private static void OnMapUpdate(Action<GameMap> orig, GameMap self) {
         // The compass icon is active whenever displayingCompass is set.
         if (HeroSwitch.HornetActive && compassScene != GameManager.instance.sceneName &&
-            self.compassIcon.activeSelf && self.GetFieldValue<bool>("displayingCompass")) {
+            self.compassIcon.activeSelf && self.displayingCompass) {
             if (HornetSpawner.Hornet is not { isHeroInPosition: true }) return;
             self.PositionCompass(false);
         }
@@ -62,7 +62,7 @@ public sealed class MapMarkerModule : ModuleBase {
     private static void UpdateCompass(GameMap map) {
         // The map places the compass at the hero it cached, the Knight, who stays at his previous room's spot for a moment
         // after a door until HK places him.
-        if (HeroSwitch.ActiveHeroGameObject is { } hero) map.SetFieldValue("hero", hero);
+        if (HeroSwitch.ActiveHeroGameObject is { } hero) map.hero = hero;
         var knightHead = map.compassIcon.GetComponent<Renderer>();
         if (!hornetCompass) hornetCompass = CloneMarker(CompassIconName, map.compassIcon.transform, knightHead);
         if (!hornetCompass) return;
@@ -142,7 +142,7 @@ public sealed class MapMarkerModule : ModuleBase {
 
     private static Silksong::GameMap? SilksongMapPrefab() {
         var manager = UnityApi.FindAny<Silksong::InventoryMapManager>(includeInactive: true);
-        return manager ? manager.GetFieldValue<Silksong::GameMap>("gameMapPrefab") : null;
+        return manager ? manager.gameMapPrefab : null;
     }
 }
 

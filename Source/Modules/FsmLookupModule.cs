@@ -62,7 +62,7 @@ public sealed class FsmLookupModule : ModuleBase {
         }
 
         var dummy = holder.AddComponent<PlayMakerFSM>();
-        dummy.SetFieldValue("fsm", new Fsm { Name = fsmName });
+        dummy.fsm = new Fsm { Name = fsmName };
         return dummy;
     }
     #endregion

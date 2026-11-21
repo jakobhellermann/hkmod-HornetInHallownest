@@ -51,7 +51,7 @@ public sealed class HeroBroadcastModule : ModuleBase {
 
     private static void RelayHudSlide(GameObject go, string? eventName) {
         if (!HeroSwitch.HornetActive || eventName == null || !hudSlideEvents.Contains(eventName)) return;
-        var hk = typeof(GameCameras).GetFieldValue<GameCameras>("_instance");
+        var hk = GameCameras._instance;
         if (hk && go == hk.hudCanvas) GameCamerasBootstrap.SendHornetHudSlideEvent(eventName);
     }
 

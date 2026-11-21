@@ -34,7 +34,7 @@ public sealed class BenchModule : ModuleBase {
     private static bool OnTryReplenishTools(Func<bool, SReplenishMethod, bool> orig, bool doReplenish,
         SReplenishMethod method) {
         if (method != SReplenishMethod.QuickCraft) return orig(doReplenish, method);
-        var tools = typeof(Silksong::ToolItemManager).InvokeMethod<List<Silksong::ToolItem>>("GetCurrentEquippedTools");
+        var tools = Silksong::ToolItemManager.GetCurrentEquippedTools();
         if (tools == null) return false;
 
         var pd = Silksong::PlayerData.instance;

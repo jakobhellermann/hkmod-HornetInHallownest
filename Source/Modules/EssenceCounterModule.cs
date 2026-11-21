@@ -68,8 +68,7 @@ public sealed class EssenceCounterModule : ModuleBase {
     }
 
     private static bool Build(GameObject hkCounter) {
-        var template =
-            typeof(Silksong::ItemCurrencyCounter).GetFieldValue<Silksong::ItemCurrencyCounter>("_templateItem");
+        var template = Silksong::ItemCurrencyCounter._templateItem;
         if (!template) return false;
         var templateIcon = template.transform.Find("Parent/Geo Sprite").GetComponent<SpriteRenderer>();
         var definition = FindEssenceDefinition(hkCounter);
@@ -87,7 +86,7 @@ public sealed class EssenceCounterModule : ModuleBase {
         Object.Destroy(holder);
 
         // The slot under the rosaries, which are always shown.
-        var slotY = stack.GetComponent<Silksong::CurrencyCounterStack>().GetFieldValue<float>("yOffset");
+        var slotY = stack.GetComponent<Silksong::CurrencyCounterStack>().yOffset;
         counter.transform.localPosition = new Vector3(0f, slotY, 0f);
         counter.transform.Find("Parent/Roller Group").gameObject.SetActive(false);
         var iconRenderer = counter.transform.Find("Parent/Geo Sprite").GetComponent<SpriteRenderer>();

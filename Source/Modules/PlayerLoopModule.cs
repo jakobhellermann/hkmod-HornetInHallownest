@@ -1,7 +1,6 @@
 extern alias Silksong;
 using System;
 using System.Linq;
-using System.Reflection;
 using HornetInHallownest.Core;
 using UnityEngine.LowLevel;
 
@@ -14,10 +13,8 @@ public sealed class PlayerLoopModule : ModuleBase {
     public override string Id => "player-loop";
 
     public override void Initialize() {
-        var cpl = typeof(Silksong::CustomPlayerLoop);
-        var lateType = cpl.GetNestedType("LateFixedUpdate", BindingFlags.NonPublic)!;
-        if (Contains(PlayerLoop.GetCurrentPlayerLoop(), lateType)) return;
-        cpl.GetMethod("SetupCustomPlayerLoop", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, null);
+        if (Contains(PlayerLoop.GetCurrentPlayerLoop(), typeof(Silksong::CustomPlayerLoop.LateFixedUpdate))) return;
+        Silksong::CustomPlayerLoop.SetupCustomPlayerLoop();
     }
 
     private static bool Contains(PlayerLoopSystem sys, Type t) {

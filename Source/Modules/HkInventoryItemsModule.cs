@@ -103,7 +103,7 @@ public sealed class HkInventoryItemsModule : ModuleBase {
     }
 
     private static Silksong::CollectableItemList? MasterList() =>
-        Silksong::CollectableItemManager.SilentInstance?.GetFieldValue<Silksong::CollectableItemList>("masterList");
+        Silksong::CollectableItemManager.SilentInstance?.masterList;
 
     private static int Has(bool held) => held ? 1 : 0;
 }
@@ -127,7 +127,7 @@ internal sealed class HkCollectableItem : SCollectableItem {
 
     public override int CollectedAmount => PlayerData.instance is { } pd ? Info.Amount(pd) : 0;
 
-    protected override int IsSeenIndex => -1;
+    public override int IsSeenIndex => -1;
 
     public override string GetDisplayName(ReadSource readSource) =>
         Text("INV_NAME_");
@@ -150,7 +150,7 @@ internal sealed class HkCollectableItem : SCollectableItem {
         return spritesByName.TryGetValue(Info.SpriteName(PlayerData.instance), out var found) ? found : null!;
     }
 
-    protected override IEnumerable<UseResponse> GetUseResponses() => [];
+    public override IEnumerable<UseResponse> GetUseResponses() => [];
 
     internal static void ClearSprites() => spritesByName = null;
 }

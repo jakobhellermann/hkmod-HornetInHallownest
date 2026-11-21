@@ -19,7 +19,7 @@ internal sealed class KnightPresence : HeroPresence {
         Renderer? heroLight = null;
         if (go.TryGetComponent<HeroController>(out var hk)) {
             // Only HK FallCheck cancels rumble
-            hk.InvokeMethod("CancelFallEffects");
+            hk.CancelFallEffects();
             hk.enabled = false;
             vignetteFsm = hk.vignetteFSM;
             vignette = hk.vignette ? hk.vignette.transform : null;

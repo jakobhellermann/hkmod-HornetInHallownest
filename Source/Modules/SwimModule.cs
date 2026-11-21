@@ -91,7 +91,7 @@ public sealed class SwimModule : ModuleBase {
                 SnapToSurface(hero, region, offset);
                 wc.EnterWaterRegion(EnsureCarrier());
                 // so that TumbleOut's exit-recoil picks the correct side
-                wc.SetFieldValue("waterBounds", region.bounds);
+                wc.waterBounds = region.bounds;
             }
 
             activeWc = wc;
@@ -158,8 +158,8 @@ public sealed class SwimModule : ModuleBase {
         Object.DontDestroyOnLoad(go);
         go.AddComponent<BoxCollider2D>(); // the Bounds getter needs one
         var region = carrier = go.AddComponent<SWaterRegion>();
-        region.SetFieldValue("flowSpeed", 0f); // HK acid is static -> no horizontal current
-        region.SetFieldValue("useSpaAnims", false); // regular swim anims, not the bathhouse (spa) set
+        region.flowSpeed = 0f; // HK acid is static -> no horizontal current
+        region.useSpaAnims = false; // regular swim anims, not the bathhouse (spa) set
         return region;
     }
 

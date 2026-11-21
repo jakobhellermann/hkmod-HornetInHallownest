@@ -146,7 +146,7 @@ public sealed class HornetSpawner : ModuleBase {
 
         var heroController = hornetInstance.GetComponent<Silksong::HeroController>();
         // Child components cache HeroController.instance in their Awake
-        typeof(Silksong::HeroController).SetFieldValue("_instance", heroController);
+        Silksong::HeroController._instance = heroController;
 
         hornetInstance.SetActive(false);
         hornetInstance.transform.SetParent(null, false);
@@ -189,7 +189,7 @@ public sealed class HornetSpawner : ModuleBase {
         Silksong::HeroBox.Inactive = false;
 
         // Silk regen doesn't work without it, after hornet re-enters a save.
-        heroController.SetFieldValue("hasSilkSpoolAppeared", true);
+        heroController.hasSilkSpoolAppeared = true;
 
         // Do not auto-activate Hornet here: the spawn coincides with HK's scene entry, and inerting the Knight mid-entry
         // breaks HK's entry handshake (never finishes -> Hornet ends in nirvana). A "reload stays on Hornet" feature
