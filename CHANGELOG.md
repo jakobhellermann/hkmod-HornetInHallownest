@@ -1,6 +1,18 @@
 # Changelog
 
 ## _Unreleased_
+- Fix camera shake getting stuck as hornet
+- Don't distribute any game files, regenerate necessary things on first boot
+- Fix compatibility issues with other mods
+- Fix sly not doing his basement sequence after getting nail arts
+- Fix hornet violently flashing when in hot spring
+- Respect camera shake setting for hornet
+- Make Hornet walk slowly in dirtmouth, like the knight
+- Allow doing a silk soar through up transitions
+- Fix cocoons in radiance and colloseum
+- Fix reaper downslahes not giving enough height on shrooms
+- Fix hornet being tinted green in greenpath
+- Fix softlock on last mask shard pickup
 
 ## v0.5.0
 
