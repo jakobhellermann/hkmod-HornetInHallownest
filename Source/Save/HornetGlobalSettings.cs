@@ -8,7 +8,7 @@ public sealed class HornetGlobalSettings {
     public string? SilksongPath;
 
     public InputSettings Controls = new();
-    
+
     // New games start on Hornet instead of the Knight.
     public bool StartAsHornet = true;
 

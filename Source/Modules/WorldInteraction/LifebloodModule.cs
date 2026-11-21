@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace HornetInHallownest.Modules;
 
-// Bring HK's lifeblood grant into Hornet's real Silksong blue-health FSM ("Blue Health Control") 
+// Bring HK's lifeblood grant into Hornet's real Silksong blue-health FSM ("Blue Health Control")
 public sealed class LifebloodModule : ModuleBase {
     private const string AddEvent = "ADD BLUE HEALTH";
     private const string SceneReadyEvent = "LAST HP ADDED"; // Wait -> Set Blue -> Add Existing? -> Idle

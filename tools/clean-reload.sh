@@ -18,62 +18,62 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 LAUNCHER="$HERE/../.run/run-hollow-knight.sh"
 TFM=""
 if [ "${1:-}" = "-f" ]; then
-    TFM="$2"
-    shift 2
+	TFM="$2"
+	shift 2
 fi
 SLOT="${1:-1}"
 DEV="localhost:8201"
 
 if [ "$(uname)" = Darwin ]; then
-    # macOS splits the two logs across different directories.
-    PLAYER_LOG="$HOME/Library/Logs/Team Cherry/Hollow Knight/Player.log"
-    MODLOG="$HOME/Library/Application Support/unity.Team Cherry.Hollow Knight/ModLog.txt"
+	# macOS splits the two logs across different directories.
+	PLAYER_LOG="$HOME/Library/Logs/Team Cherry/Hollow Knight/Player.log"
+	MODLOG="$HOME/Library/Application Support/unity.Team Cherry.Hollow Knight/ModLog.txt"
 else
-    LOGDIR="$HOME/.config/unity3d/Team Cherry/Hollow Knight"
-    PLAYER_LOG="$LOGDIR/Player.log"
-    MODLOG="$LOGDIR/ModLog.txt"
+	LOGDIR="$HOME/.config/unity3d/Team Cherry/Hollow Knight"
+	PLAYER_LOG="$LOGDIR/Player.log"
+	MODLOG="$LOGDIR/ModLog.txt"
 fi
 
 # pidof matches the executable, unlike pkill -f, which also hits shells or editors that mention it.
 game_pids() {
-    if [ "$(uname)" = Darwin ]; then
-        pgrep -f "hollow_knight.app/Contents/MacOS/Hollow Knight"
-    else
-        pidof hollow_knight.x86_64
-    fi
+	if [ "$(uname)" = Darwin ]; then
+		pgrep -f "hollow_knight.app/Contents/MacOS/Hollow Knight"
+	else
+		pidof hollow_knight.x86_64
+	fi
 }
 
 # Returns once the game has exited: a relaunch while it is still shutting down fails to start.
 kill_game() {
-    pids=$(game_pids) || return 1
-    kill $pids
-    for _ in $(seq 1 100); do
-        game_pids >/dev/null || return 0
-        sleep 0.1
-    done
-    echo "Hollow Knight (pid $pids) did not exit" >&2
-    exit 1
+	pids=$(game_pids) || return 1
+	kill $pids
+	for _ in $(seq 1 100); do
+		game_pids >/dev/null || return 0
+		sleep 0.1
+	done
+	echo "Hollow Knight (pid $pids) did not exit" >&2
+	exit 1
 }
 
 launch_game() {
-    # nohup: detached, so the game survives this script exiting (portable across macOS/Linux).
-    nohup "$LAUNCHER" >/dev/null 2>&1 < /dev/null &
-    echo "launched Hollow Knight (pid $!)"
+	# nohup: detached, so the game survives this script exiting (portable across macOS/Linux).
+	nohup "$LAUNCHER" >/dev/null 2>&1 </dev/null &
+	echo "launched Hollow Knight (pid $!)"
 }
 
 # 0. Open a fresh logsnap session (cursors at EOF) and kill any running instance before a fresh launch.
 rm -f "$PLAYER_LOG" "$MODLOG"
 logsnap open "$PLAYER_LOG" "$MODLOG"
 if kill_game; then
-    echo "killed running Hollow Knight"
+	echo "killed running Hollow Knight"
 fi
 
 if [ -n "$TFM" ]; then
-    dotnet build "$HERE/../Source" -f "$TFM"
-    HK_GAME_DIR="$(dotnet msbuild "$HERE/../Source" -p:TargetFramework="$TFM" -getProperty:GamePath)"
-    export HK_GAME_DIR
+	dotnet build "$HERE/../Source" -f "$TFM"
+	HK_GAME_DIR="$(dotnet msbuild "$HERE/../Source" -p:TargetFramework="$TFM" -getProperty:GamePath)"
+	export HK_GAME_DIR
 else
-    dotnet build
+	dotnet build
 fi
 
 # 1. Launch.
@@ -86,15 +86,18 @@ launch_game
 echo -n "waiting for debug server"
 relaunched=false
 for _ in $(seq 1 90); do
-    if curl -sf --max-time 1 "$DEV/routes" >/dev/null 2>&1; then echo " up"; break; fi
-    if ! $relaunched && grep -q "Please restart Hollow Knight" "$MODLOG" 2>/dev/null; then
-        echo " installed Silksong assemblies, restarting"
-        kill_game
-        launch_game
-        relaunched=true
-    fi
-    echo -n "."
-    sleep 1
+	if curl -sf --max-time 1 "$DEV/routes" >/dev/null 2>&1; then
+		echo " up"
+		break
+	fi
+	if ! $relaunched && grep -q "Please restart Hollow Knight" "$MODLOG" 2>/dev/null; then
+		echo " installed Silksong assemblies, restarting"
+		kill_game
+		launch_game
+		relaunched=true
+	fi
+	echo -n "."
+	sleep 1
 done
 logsnap commit -m "loadgame" --settle 200ms
 

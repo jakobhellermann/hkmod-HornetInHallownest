@@ -1,8 +1,8 @@
 namespace HornetInHallownest.Save;
 
-// Per-save-slot data persisted for Hornet via the modding API. 
+// Per-save-slot data persisted for Hornet via the modding API.
 public class HornetSaveData {
-    // Which hero the player controlled when the save was written: true = Hornet, false = Knight. 
+    // Which hero the player controlled when the save was written: true = Hornet, false = Knight.
     public bool HornetActive;
 
     // Hornet's full Silksong PlayerData. Kept as string for control over serialization settings.

@@ -54,7 +54,7 @@ internal sealed class HkmpLink : IHkmpLink {
         this.api = api;
         internals = new HkmpInternals(api, OnAnimationEntry,
             () => HeroSwitch.HornetActive && !HeroSwitch.BothActive, IsRemoteHornet);
-        
+
         tk2DPlayHook = new Hook(
             typeof(tk2dSpriteAnimator).GetMethod(nameof(tk2dSpriteAnimator.Play),
                 [typeof(tk2dSpriteAnimationClip), typeof(float), typeof(float)])!,
@@ -265,7 +265,7 @@ internal sealed class HkmpLink : IHkmpLink {
     private tk2dSpriteAnimation HornetLibrary() {
         // Remote Hornets can show up before the local player ever switched to Hornet.
         if (!hornetLibrary) TrackLocalHornet(HornetSpawner.Hornet!);
-        
+
         return hornetLibrary!;
     }
 
@@ -281,7 +281,7 @@ internal sealed class HkmpLink : IHkmpLink {
     private void RestoreKnight(ushort playerId) {
         if (!remoteHornets.TryGetValue(playerId, out var remote)) return;
         remoteHornets.Remove(playerId);
-        
+
         if (remote.Animator) remote.Animator.Library = remote.KnightLibrary;
         if (remote.Body) remote.Body.enabled = true;
         if (remote.Name) remote.Name.localPosition = remote.NameLocalPosition;

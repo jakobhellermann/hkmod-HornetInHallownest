@@ -7,7 +7,7 @@ namespace HornetInHallownest.Modules;
 
 // Silksong's "Inventory Control" FSM opens the inventory via CallMethodProper(GameManager.SetIsInventoryOpen). The call
 // reaches our bootstrap GameManager but its real body -> SetPausedState derefs inactive singletons
-// (gameCams/ui/GlobalSettings.Camera) and would NullRef. 
+// (gameCams/ui/GlobalSettings.Camera) and would NullRef.
 // TODO: reuse more upstream logic?
 public sealed class InventoryModule : ModuleBase {
     private object? inputBlocker;

@@ -7,7 +7,7 @@ using Log =
 
 namespace HornetInHallownest.Core;
 
-// Ordered list of lifecycle modules 
+// Ordered list of lifecycle modules
 public sealed class ModuleHost {
     private readonly HashSet<string> active = [];
     private readonly List<ModuleBase> modules = [];

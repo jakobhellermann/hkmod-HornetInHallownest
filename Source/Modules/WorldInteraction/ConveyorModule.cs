@@ -19,7 +19,7 @@ public sealed class ConveyorModule : ModuleBase {
         orig(self, collision);
         if (!HeroSwitch.HornetActive) return;
         if (!collision.gameObject.TryGetComponent<Silksong::HeroController>(out var hero)) return;
-        
+
         if (self.vertical) {
             collision.gameObject.GetComponent<Silksong::ConveyorMovementHero>().StartConveyorMove(0f, self.speed);
             hero.cState.onConveyorV = true;
@@ -32,7 +32,7 @@ public sealed class ConveyorModule : ModuleBase {
     private static void OnExit(Action<ConveyorBelt, Collision2D> orig, ConveyorBelt self, Collision2D collision) {
         orig(self, collision);
         if (!collision.gameObject.TryGetComponent<Silksong::HeroController>(out var hero)) return;
-        
+
         collision.gameObject.GetComponent<Silksong::ConveyorMovementHero>().StopConveyorMove();
         hero.conveyorSpeed = 0f;
         hero.cState.onConveyor = false;

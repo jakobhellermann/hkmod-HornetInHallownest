@@ -56,9 +56,9 @@ public sealed class GameObjectLookupModule : ModuleBase {
     private GameObject? OnFindWithTag(Func<string, GameObject> orig, string tag) {
         // Both Knight and Hornet carry "Player"
         if (tag == "Player" && HeroSwitch.HornetActive && HeroSwitch.ActiveHeroGameObject is { } hero) return hero;
-        
+
         if (SilksongContext.Active) return Intercept("FindWithTag", tag, ResolveTag(tag));
-        
+
         try {
             var r = orig(tag);
             LogDebugOnce($"find|FindWithTag|{tag}", $"FindWithTag('{tag}') -> {(r ? "'" + r.name + "'" : "null")}");

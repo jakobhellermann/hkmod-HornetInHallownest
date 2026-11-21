@@ -23,9 +23,9 @@ logsnap commit -m "pre-reload"
 # 2. Build + deploy. Tee to a file (don't pipe a long build straight to grep); only surface errors on failure.
 echo "building..."
 if ! dotnet build "$SRC/HornetInHallownest.csproj" >"$BUILDLOG" 2>&1; then
-    echo "build FAILED:"
-    grep -E "error|Error\(s\)" "$BUILDLOG" | head
-    exit 1
+	echo "build FAILED:"
+	grep -E "error|Error\(s\)" "$BUILDLOG" | head
+	exit 1
 fi
 echo "build ok — waiting for hot-reload + respawn"
 
