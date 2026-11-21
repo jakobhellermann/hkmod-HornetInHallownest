@@ -160,9 +160,8 @@ internal static class SilksongBootstrap {
                     hudCamComp != null ? hudCamComp.GameplayChild : null;
                 var sf = gameplayChild != null ? Silksong::FSMUtility.LocateFSM(gameplayChild, "Screen Fader") : null;
                 if (sf != null) bootstrapGm.screenFader_fsm = sf;
+                bootstrapGm.inventoryFSM = gameplayChild!.transform.Find("Inventory").GetComponent<SilksongPM::PlayMakerFSM>();
             }
-
-            Log.Debug("[Bootstrap] hero_ctrl + cameraCtrl + screenFader wired");
         } catch (Exception e) {
             Log.Error($"[Bootstrap] SetHeroCtrl: {e.Message}");
         }

@@ -105,6 +105,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         GameManager.SceneLoadInfo info) {
         if (DeferWhileMsgShown(() => OnBeginSceneTransition(orig, self, info))) return;
         orig(self, info);
+        // Silksong's BeginSceneTransition closes the inventory.
+        if (HeroSwitch.HornetActive) Silksong::GameManager._instance.inventoryFSM.SendEvent("INVENTORY CANCEL");
         RelayLeaveScene(info);
         ArmDreamArrival(info);
         DeparentHero("scene transition");

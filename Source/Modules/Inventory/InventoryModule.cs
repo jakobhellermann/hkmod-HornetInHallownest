@@ -54,6 +54,9 @@ public sealed class InventoryModule : ModuleBase {
     private static void OnSetHkInventoryOpen(Action<GameManager, bool> orig, GameManager self, bool value) {
         HkInventoryOpen = value;
         orig(self, value);
+
+        // When MapWarp closes inventory it goes through HK
+        if (!value && HeroSwitch.HornetActive) Silksong::GameManager._instance.inventoryFSM.SendEvent("INVENTORY CANCEL");
     }
 #endif
 
