@@ -39,6 +39,8 @@ public sealed class MinorFixesModule : ModuleBase {
     private const float ClamberLandingHeight = 1.2f;
 
     private static readonly int haloEndState = Animator.StringToHash("End");
+    private static readonly int tinkerLayer = LayerMask.NameToLayer("Tinker");
+    private static readonly int terrainLayer = LayerMask.NameToLayer("Terrain");
 
     private static readonly RaycastHit2D[] wallHits = new RaycastHit2D[10];
     private static readonly List<(Rect Bounds, Vector2[] Points)> terrainOutlines = [];
@@ -67,6 +69,9 @@ public sealed class MinorFixesModule : ModuleBase {
         CollectTerrainOutlines(USceneManager.GetActiveScene());
         Detour(typeof(Silksong::SaveDataUtility), "CreateJsonObjects", OnCreateJsonObjects);
         SeedNestedFadeGroupBridges();
+        
+        // Fix knockback from walls. Silksong's layer matrix allows this, HK's doesn't, but this doesn't change any behaviour.
+        Physics2D.IgnoreLayerCollision(tinkerLayer, terrainLayer, false);
     }
 
     // Silksong's UnityConverters config picks up every JsonConverter in every loaded assembly, so other mods' converters
@@ -98,7 +103,10 @@ public sealed class MinorFixesModule : ModuleBase {
         fadeGroup.SetFieldValue("_bridges", bridges);
     }
 
-    protected override void OnDeinitialize() => USceneManager.activeSceneChanged -= OnActiveSceneChanged;
+    protected override void OnDeinitialize() {
+        USceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        Physics2D.IgnoreLayerCollision(tinkerLayer, terrainLayer, true);
+    }
 
     private static void OnActiveSceneChanged(Scene from, Scene to) {
         ignoresHero.Clear();

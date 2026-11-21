@@ -17,6 +17,7 @@
 - Fix compatibility with MapWarp scene teleports
 - Fix beast crest not giving silk while focused
 - Give a proper error when mixing proton and native versions of the games
+- Fix knockback from hitting walls
 
 ## v0.5.0
 
