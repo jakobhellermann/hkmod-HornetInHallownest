@@ -11,7 +11,7 @@ public sealed class GateFacingModule : ModuleBase {
     public override string Id => "gate-facing";
 
     public override void Initialize() {
-        Detour(typeof(TransitionPoint), "OnTriggerEnter2D", OnTriggerEnter2D, typeof(Collider2D));
+        Detour(typeof(TransitionPoint), nameof(TransitionPoint.OnTriggerEnter2D), OnTriggerEnter2D, typeof(Collider2D));
     }
 
     private static void OnTriggerEnter2D(Action<TransitionPoint, Collider2D> orig, TransitionPoint self, Collider2D movingObj) {

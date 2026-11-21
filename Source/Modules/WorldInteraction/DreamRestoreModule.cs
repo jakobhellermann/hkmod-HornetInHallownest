@@ -26,9 +26,9 @@ public sealed class DreamRestoreModule : ModuleBase {
     public override string Id => "dream-restore";
 
     public override void Initialize() {
-        Detour(typeof(GameManager), "OnNextLevelReady", OnNextLevelReady);
-        Detour(typeof(GameManager), "FinishedEnteringScene", OnEnteredScene);
-        Detour(typeof(Silksong::HeroController), "MaxHealth", OnMaxHealth);
+        Detour(typeof(GameManager), nameof(GameManager.OnNextLevelReady), OnNextLevelReady);
+        Detour(typeof(GameManager), nameof(GameManager.FinishedEnteringScene), OnEnteredScene);
+        Detour(typeof(Silksong::HeroController), nameof(Silksong::HeroController.MaxHealth), OnMaxHealth);
         USceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 

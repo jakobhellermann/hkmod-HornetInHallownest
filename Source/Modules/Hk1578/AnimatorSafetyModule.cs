@@ -13,7 +13,7 @@ public sealed class AnimatorSafetyModule : ModuleBase {
     public override string Id => "animator-safety";
 
     public override void Initialize() {
-        Detour(typeof(SCreateChild), "OnEnter", OnCreateChildEnter);
+        Detour(typeof(SCreateChild), nameof(SCreateChild.OnEnter), OnCreateChildEnter);
     }
 
     private void OnCreateChildEnter(Action<SCreateChild> orig, SCreateChild self) {

@@ -24,36 +24,36 @@ internal static class Stub {
         // startup: hooking SendMonoMessage forces the cctor, which runs its one broadcast before the detour is wired.
         var lang = typeof(SilksongLoc::TeamCherry.Localization.Language);
         using (SilksongContext.Enter()) {
-            Skip(lang, "SendMonoMessage");
+            Skip(lang, nameof(SilksongLoc::TeamCherry.Localization.Language.SendMonoMessage));
             RuntimeHelpers.RunClassConstructor(lang.TypeHandle);
         }
 
-        Skip(typeof(Silksong::PersonalObjectPool), "OnStart");
-        Skip(typeof(Silksong::HeroAnimationController), "UpdateToolEquipFlags");
+        Skip(typeof(Silksong::PersonalObjectPool), nameof(Silksong::PersonalObjectPool.OnStart));
+        Skip(typeof(Silksong::HeroAnimationController), nameof(Silksong::HeroAnimationController.UpdateToolEquipFlags));
 
         // ControlReminder button-prompt UI: its GO is deactivated in BringUpHud, so Instance/Owner are null here.
-        Skip(typeof(Silksong::ControlReminder), "get_Instance", true);
-        Skip(typeof(Silksong::ControlReminder.ConfigBase), "Disappear", true);
-        Skip(typeof(Silksong::ControlReminder), "PushSingle", true);
-        Skip(typeof(Silksong::ControlReminder), "ShowPushed", true);
-        Skip(typeof(Silksong::ControlReminder.SingleConfig), "Appear", true);
-        Skip(typeof(Silksong::ControlReminder.DoubleConfig), "Appear", true);
+        Skip(typeof(Silksong::ControlReminder), "get_" + nameof(Silksong::ControlReminder.Instance), true);
+        Skip(typeof(Silksong::ControlReminder.ConfigBase), nameof(Silksong::ControlReminder.ConfigBase.Disappear), true);
+        Skip(typeof(Silksong::ControlReminder), nameof(Silksong::ControlReminder.PushSingle), true);
+        Skip(typeof(Silksong::ControlReminder), nameof(Silksong::ControlReminder.ShowPushed), true);
+        Skip(typeof(Silksong::ControlReminder.SingleConfig), nameof(Silksong::ControlReminder.SingleConfig.Appear), true);
+        Skip(typeof(Silksong::ControlReminder.DoubleConfig), nameof(Silksong::ControlReminder.DoubleConfig.Appear), true);
 
-        Skip(typeof(Silksong::FollowTransform), "OnEnable");
+        Skip(typeof(Silksong::FollowTransform), nameof(Silksong::FollowTransform.OnEnable));
         Skip(typeof(Silksong::MappableControllerButton), "ShowCurrentBinding"); // SetupRef NullRef
 
-        Skip(typeof(Silksong::HeroController), "SetupDeliveryItems"); // delivery quests out of scope
-        Skip(typeof(Silksong::DeliveryHudIcon), "OnPreUpdateDisplay"); // GetActiveItems NullRef; the icon hides itself
-        Skip(typeof(Silksong::SetParticleScale), "OnUpdate", true); // per-frame, null parentBody
-        Skip(typeof(Silksong::DeliveryQuestItem), "BreakAllInternal");
+        Skip(typeof(Silksong::HeroController), nameof(Silksong::HeroController.SetupDeliveryItems)); // delivery quests out of scope
+        Skip(typeof(Silksong::DeliveryHudIcon), nameof(Silksong::DeliveryHudIcon.OnPreUpdateDisplay)); // GetActiveItems NullRef; the icon hides itself
+        Skip(typeof(Silksong::SetParticleScale), nameof(Silksong::SetParticleScale.OnUpdate), true); // per-frame, null parentBody
+        Skip(typeof(Silksong::DeliveryQuestItem), nameof(Silksong::DeliveryQuestItem.BreakAllInternal));
         Skip(typeof(Silksong::DeliveryQuestItem),
             "TakeHit"); // Superjump ceiling-slam, GetActiveItems NullRef hangs "Hit Roof" FSM
-        Skip(typeof(Silksong::GameManager), "FadeSceneIn"); // Silksong scene fade fights HK's; HK owns the fade
+        Skip(typeof(Silksong::GameManager), nameof(Silksong::GameManager.FadeSceneIn)); // Silksong scene fade fights HK's; HK owns the fade
         Skip(typeof(Silksong::GameManager),
             "AwardAchievement",
             true); // achievementHandler null; achievements irrelevant
-        Skip(typeof(Silksong::GameManager), "UpdateAchievementProgress", true);
-        Skip(typeof(Silksong::GameManager), "AwardQueuedAchievements", true);
+        Skip(typeof(Silksong::GameManager), nameof(Silksong::GameManager.UpdateAchievementProgress), true);
+        Skip(typeof(Silksong::GameManager), nameof(Silksong::GameManager.AwardQueuedAchievements), true);
 
         // HeroController.Start's initial AddSilk NullRefs in SpawnNewChunk (null animator); suppress so Start completes.
         var addSilk = typeof(Silksong::HeroController).GetMethod("AddSilk",
@@ -75,16 +75,16 @@ internal static class Stub {
         else
             Log.Error("[Stub] HeroController.AddSilk(int,bool,SilkAddSource,bool) not found");
 
-        Skip(typeof(Silksong::CameraController), "ScreenFlash"); // SimpleFadeOut.SetColor NullRef (Awake never ran)
+        Skip(typeof(Silksong::CameraController), nameof(Silksong::CameraController.ScreenFlash)); // SimpleFadeOut.SetColor NullRef (Awake never ran)
         Skip(typeof(Silksong::GameCameras),
             "Start"); // gs null (SetupGameRefs skipped); overscan cosmetic, HK owns camera
-        Skip(typeof(Silksong::HUDCamera), "OnEnable"); // GM.inputHandler null + menu plumbing; HUD renders regardless
+        Skip(typeof(Silksong::HUDCamera), nameof(Silksong::HUDCamera.OnEnable)); // GM.inputHandler null + menu plumbing; HUD renders regardless
         Skip(typeof(Silksong::GameCameras),
             "Awake"); // non-root DDOL warning; GameCamerasBootstrap sets _instance itself
-        Skip(typeof(Silksong::InventoryItemWideMapZone), "get_IsUnlocked"); // gameMap null; no map, correctly locked
-        Skip(typeof(Silksong::QuestItemManager), "Awake"); // GetItems over null quest source, ArgumentNullException
-        Skip(typeof(Silksong::QuestManager), "MaybeShowQuestUpdated", true); // no QuestManager; quest-update UI moot
-        Skip(typeof(Silksong::InventoryMapManager), "OnPaneStart"); // GameMap uninitialized; map pane inert
+        Skip(typeof(Silksong::InventoryItemWideMapZone), "get_" + nameof(Silksong::InventoryItemWideMapZone.IsUnlocked)); // gameMap null; no map, correctly locked
+        Skip(typeof(Silksong::QuestItemManager), nameof(Silksong::QuestItemManager.Awake)); // GetItems over null quest source, ArgumentNullException
+        Skip(typeof(Silksong::QuestManager), nameof(Silksong::QuestManager.MaybeShowQuestUpdated), true); // no QuestManager; quest-update UI moot
+        Skip(typeof(Silksong::InventoryMapManager), nameof(Silksong::InventoryMapManager.OnPaneStart)); // GameMap uninitialized; map pane inert
 
         // GetActiveQuests/GetAcceptedQuests return null without a QuestManager, so callers foreach over null; return Empty.
         var qm = typeof(Silksong::QuestManager);
@@ -96,11 +96,11 @@ internal static class Stub {
             hooks.Add(new ILHook(getAccepted, il => ReturnEmpty(il, typeof(Silksong::BasicQuestBase))));
 
         // Inventory opens as an overlay, not via Silksong's pause: SetPausedState freezes HK's world and our InputDriver.
-        Skip(typeof(Silksong::GameManager), "SetPausedState");
+        Skip(typeof(Silksong::GameManager), nameof(Silksong::GameManager.SetPausedState));
 
         // Death-FSM actions that deref the un-run GM's audio/fader (null) before their Finish(), so they hang regardless.
-        Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.ApplyMusicCue), "OnEnter");
-        Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.ScreenFader), "OnEnter");
+        Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.ApplyMusicCue), nameof(Silksong::HutongGames.PlayMaker.Actions.ApplyMusicCue.OnEnter));
+        Skip(typeof(Silksong::HutongGames.PlayMaker.Actions.ScreenFader), nameof(Silksong::HutongGames.PlayMaker.Actions.ScreenFader.OnEnter));
     }
 
     // Stub every method named `method` on `type` (all overloads/visibilities) to log-once + return default.

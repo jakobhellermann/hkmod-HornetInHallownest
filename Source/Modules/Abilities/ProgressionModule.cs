@@ -217,7 +217,7 @@ public sealed class ProgressionModule : ModuleBase {
         ModHooks.SetPlayerIntHook += OnSetInt;
         Detour(typeof(CreateObject), nameof(CreateObject.OnEnter), OnCreateObject);
         Detour(typeof(CreateUIMsgGetItem), nameof(CreateUIMsgGetItem.OnEnter), OnCreateUIMsgGetItem);
-        Detour(typeof(Fsm), "SwitchState", OnSwitchState, typeof(FsmState));
+        Detour(typeof(Fsm), nameof(Fsm.SwitchState), OnSwitchState, typeof(FsmState));
         Detour(typeof(PlayerData), nameof(PlayerData.CountJournalEntries), OnCountJournalEntries);
     }
 

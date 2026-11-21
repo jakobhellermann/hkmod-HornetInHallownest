@@ -92,9 +92,9 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     public override string Id => "fsm-method-remap";
 
     public override void Initialize() {
-        Detour(typeof(CallMethodProper), "DoCache", DoCacheHook);
-        Detour(typeof(CallMethodProper), "DoMethodCall", DoMethodCallHook);
-        Detour(typeof(SendMessage), "DoSendMessage", DoSendMessageHook);
+        Detour(typeof(CallMethodProper), nameof(CallMethodProper.DoCache), DoCacheHook);
+        Detour(typeof(CallMethodProper), nameof(CallMethodProper.DoMethodCall), DoMethodCallHook);
+        Detour(typeof(SendMessage), nameof(SendMessage.DoSendMessage), DoSendMessageHook);
     }
 
     protected override void OnDeinitialize() => hkRepeatingFlashId = null;

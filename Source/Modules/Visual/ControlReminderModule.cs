@@ -51,7 +51,7 @@ public sealed class ControlReminderModule : ModuleBase {
 
     public override void Initialize() {
         ModHooks.LanguageGetHook += OnLanguageGet;
-        Detour(typeof(Fsm), "SwitchState", OnSwitchState, typeof(FsmState));
+        Detour(typeof(Fsm), nameof(Fsm.SwitchState), OnSwitchState, typeof(FsmState));
     }
 
     protected override void OnDeinitialize() => ModHooks.LanguageGetHook -= OnLanguageGet;

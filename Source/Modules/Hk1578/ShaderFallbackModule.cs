@@ -37,7 +37,7 @@ public sealed class ShaderFallbackModule : ModuleBase {
                 hkShaders[shader.name] = shader;
 
         // Addressables also opens dependency bundles, whose materials load without anything loaded from them directly.
-        Detour(typeof(AssetBundleResource), "GetAssetBundle",
+        Detour(typeof(AssetBundleResource), nameof(AssetBundleResource.GetAssetBundle),
             (Func<Func<AssetBundleResource, AssetBundle?>, AssetBundleResource, AssetBundle?>)OnGetAssetBundle);
         // Bundles opened with LoadFromFile only show up here.
         Detour(typeof(AssetBundle), nameof(AssetBundle.LoadAsset),

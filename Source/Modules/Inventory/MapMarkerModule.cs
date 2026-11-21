@@ -26,7 +26,7 @@ public sealed class MapMarkerModule : ModuleBase {
 
     public override void Initialize() {
         Detour(typeof(GameMap), nameof(GameMap.PositionCompass), OnPositionCompass);
-        Detour(typeof(GameMap), "Update", OnMapUpdate);
+        Detour(typeof(GameMap), nameof(GameMap.Update), OnMapUpdate);
     }
 
     // HK picks the compass's room only as the map opens, since the Knight can't walk with it open.

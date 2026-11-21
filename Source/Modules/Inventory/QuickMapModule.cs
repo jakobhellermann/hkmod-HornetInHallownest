@@ -58,13 +58,13 @@ public sealed class QuickMapModule : ModuleBase {
     public override bool RunWhilePaused => true;
 
     public override void Initialize() {
-        Detour(typeof(SHeroController), "CanQuickMap", OnCanQuickMap, typeof(bool));
-        Detour(typeof(Silksong::EventRegister), "SendEvent", OnSendEvent, typeof(int), typeof(GameObject));
-        Detour(typeof(SInventoryPane), "get_IsAvailable", OnPaneIsAvailable);
+        Detour(typeof(SHeroController), nameof(SHeroController.CanQuickMap), OnCanQuickMap, typeof(bool));
+        Detour(typeof(Silksong::EventRegister), nameof(Silksong::EventRegister.SendEvent), OnSendEvent, typeof(int), typeof(GameObject));
+        Detour(typeof(SInventoryPane), "get_" + nameof(SInventoryPane.IsAvailable), OnPaneIsAvailable);
         Detour(typeof(SInventoryPane), nameof(SInventoryPane.PaneStart), OnPaneStart);
         Detour(typeof(SInventoryPaneBase), nameof(SInventoryPaneBase.PaneEnd), OnPaneEnd);
         Detour(typeof(SInventoryPaneList), nameof(SInventoryPaneList.OnClosingInventory), OnClosingInventory);
-        Detour(typeof(Silksong::InventoryPaneInput), "Update", OnPaneInputUpdate);
+        Detour(typeof(Silksong::InventoryPaneInput), nameof(Silksong::InventoryPaneInput.Update), OnPaneInputUpdate);
         Detour(typeof(Silksong::InventoryMapManager), nameof(Silksong::InventoryMapManager.AutoZoomIn), OnAutoZoomIn);
         Detour(typeof(Silksong::InventoryMapManager), nameof(Silksong::InventoryMapManager.ZoomOut), OnZoomOut);
     }

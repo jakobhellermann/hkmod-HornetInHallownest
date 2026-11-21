@@ -18,9 +18,9 @@ public sealed class LifebloodModule : ModuleBase {
     public override void Initialize() {
         // TODO: less specific hook?
 #if HK1578
-        Detour(typeof(EventRegister), "SendEvent", OnSendEvent, typeof(string));
+        Detour(typeof(EventRegister), nameof(EventRegister.SendEvent), OnSendEvent, typeof(string));
 #else
-        Detour(typeof(EventRegister), "SendEvent", OnSendEvent, typeof(string), typeof(GameObject));
+        Detour(typeof(EventRegister), nameof(EventRegister.SendEvent), OnSendEvent, typeof(string), typeof(GameObject));
 #endif
     }
 

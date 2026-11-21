@@ -13,8 +13,8 @@ public sealed class GodhomeDifficultyBridgeModule : ModuleBase {
     private static SBossSceneController? mirror;
 
     public override void Initialize() {
-        Detour(typeof(BossSceneController), "Awake", OnAwake);
-        Detour(typeof(BossSceneController), "OnDestroy", OnDestroy);
+        Detour(typeof(BossSceneController), nameof(BossSceneController.Awake), OnAwake);
+        Detour(typeof(BossSceneController), nameof(BossSceneController.OnDestroy), OnDestroy);
     }
 
     private static void OnAwake(Action<BossSceneController> orig, BossSceneController self) {

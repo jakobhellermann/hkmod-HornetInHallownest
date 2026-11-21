@@ -37,15 +37,15 @@ public sealed class InventoryModule : ModuleBase {
 #endif
 
     public override void Initialize() {
-        Detour(typeof(Silksong::GameManager), "SetIsInventoryOpen", OnSetInventoryOpen);
+        Detour(typeof(Silksong::GameManager), nameof(Silksong::GameManager.SetIsInventoryOpen), OnSetInventoryOpen);
 #if HK1512620
-        Detour(typeof(GameManager), "SetIsInventoryOpen", OnSetHkInventoryOpen);
+        Detour(typeof(GameManager), nameof(GameManager.SetIsInventoryOpen), OnSetHkInventoryOpen);
 #else
         // Silksong's frozen-camera view (a blurred snapshot sized from its own, disabled camera) can't render on Unity
         // 2020. The world is paused anyway, so skip it and let the game keep rendering behind the inventory.
-        Detour(typeof(Silksong::DisplayFrozenCamera), "Freeze",
+        Detour(typeof(Silksong::DisplayFrozenCamera), nameof(Silksong::DisplayFrozenCamera.Freeze),
             (Action<Action<Silksong::DisplayFrozenCamera>, Silksong::DisplayFrozenCamera>)((_, _) => { }));
-        Detour(typeof(Silksong::DisplayFrozenCamera), "Unfreeze",
+        Detour(typeof(Silksong::DisplayFrozenCamera), nameof(Silksong::DisplayFrozenCamera.Unfreeze),
             (Action<Action<Silksong::DisplayFrozenCamera>, Silksong::DisplayFrozenCamera>)((_, _) => { }));
 #endif
     }

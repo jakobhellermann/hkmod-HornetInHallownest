@@ -11,8 +11,8 @@ public sealed class ConveyorModule : ModuleBase {
     public override string Id => "conveyor";
 
     public override void Initialize() {
-        Detour(typeof(ConveyorBelt), "OnCollisionEnter2D", OnEnter);
-        Detour(typeof(ConveyorBelt), "OnCollisionExit2D", OnExit);
+        Detour(typeof(ConveyorBelt), nameof(ConveyorBelt.OnCollisionEnter2D), OnEnter);
+        Detour(typeof(ConveyorBelt), nameof(ConveyorBelt.OnCollisionExit2D), OnExit);
     }
 
     private static void OnEnter(Action<ConveyorBelt, Collision2D> orig, ConveyorBelt self, Collision2D collision) {

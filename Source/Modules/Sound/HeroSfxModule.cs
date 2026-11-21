@@ -21,9 +21,9 @@ public sealed class HeroSfxModule : ModuleBase {
     public override void Initialize() {
 #if HK1578
         // Unity 2020's PlayHelper/PlayOneShotHelper are internal calls; hook the public wrappers instead.
-        Detour(typeof(AudioSource), "Play", OnPlayNoDelay, NoParams);
-        Detour(typeof(AudioSource), "Play", OnPlay, typeof(ulong));
-        Detour(typeof(AudioSource), "PlayOneShot", OnPlayOneShot, typeof(AudioClip), typeof(float));
+        Detour(typeof(AudioSource), nameof(AudioSource.Play), OnPlayNoDelay, NoParams);
+        Detour(typeof(AudioSource), nameof(AudioSource.Play), OnPlay, typeof(ulong));
+        Detour(typeof(AudioSource), nameof(AudioSource.PlayOneShot), OnPlayOneShot, typeof(AudioClip), typeof(float));
 #else
         Detour(typeof(AudioSource), "PlayHelper", OnPlay, typeof(AudioSource), typeof(ulong));
         Detour(typeof(AudioSource),
@@ -43,7 +43,7 @@ public sealed class HeroSfxModule : ModuleBase {
             typeof(Quaternion),
             typeof(bool));
         // Hero child effects like the Magnetite Dice shield are instantiated in Awake, not pooled, and set playOnAwake.
-        Detour(typeof(Silksong::HeroController), "SpawnChildPrefab", OnSpawnChildPrefab, typeof(GameObject));
+        Detour(typeof(Silksong::HeroController), nameof(Silksong::HeroController.SpawnChildPrefab), OnSpawnChildPrefab, typeof(GameObject));
     }
 
     protected override void OnDeinitialize() {

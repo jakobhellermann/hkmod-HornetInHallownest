@@ -17,10 +17,10 @@ public sealed class PogoModule : ModuleBase {
     public override string Id => "pogo";
 
     public override void Initialize() {
-        Detour(typeof(Silksong::HeroDownAttack), "IsNonBounce", OnIsNonBounce, typeof(GameObject));
-        Detour(typeof(Silksong::HeroDownAttack), "ContinueBounceTrigger", OnContinueBounce, typeof(GameObject));
-        Detour(typeof(BounceShroom), "Start", OnShroomStart);
-        Detour(typeof(Silksong::DamageEnemies), "DoDamage", OnDoDamage, typeof(GameObject), typeof(bool));
+        Detour(typeof(Silksong::HeroDownAttack), nameof(Silksong::HeroDownAttack.IsNonBounce), OnIsNonBounce, typeof(GameObject));
+        Detour(typeof(Silksong::HeroDownAttack), nameof(Silksong::HeroDownAttack.ContinueBounceTrigger), OnContinueBounce, typeof(GameObject));
+        Detour(typeof(BounceShroom), nameof(BounceShroom.Start), OnShroomStart);
+        Detour(typeof(Silksong::DamageEnemies), nameof(Silksong::DamageEnemies.DoDamage), OnDoDamage, typeof(GameObject), typeof(bool));
     }
 
     // Side and up slashes into a shroom: HK's NailSlash knocks the Knight back off it and bounces the shroom.

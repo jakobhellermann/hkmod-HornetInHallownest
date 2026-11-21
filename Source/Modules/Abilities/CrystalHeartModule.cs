@@ -47,7 +47,7 @@ public sealed class CrystalHeartModule : ModuleBase {
     public override string Id => "crystal-heart";
 
     public override void Initialize() {
-        Detour(typeof(SHeroController), "LookForQueueInput", OnLookForQueueInput);
+        Detour(typeof(SHeroController), nameof(SHeroController.LookForQueueInput), OnLookForQueueInput);
         Detour(typeof(SHeroController), nameof(SHeroController.CanHarpoonDash), OnCanHarpoonDash);
     }
 

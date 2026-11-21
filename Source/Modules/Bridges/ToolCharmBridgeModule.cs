@@ -36,8 +36,8 @@ public sealed class ToolCharmBridgeModule : ModuleBase {
         ModHooks.GetPlayerBoolHook += OnGetBool;
         Detour(typeof(GameMap), nameof(GameMap.WorldMap), OnWorldMap);
         Detour(typeof(GameMap), nameof(GameMap.PositionCompass), OnPositionCompass);
-        Detour(typeof(FlamePin), "OnEnable", OnFlamePinEnable);
-        Detour(typeof(Silksong::ToolItemManager), "Awake", OnToolItemManagerAwake);
+        Detour(typeof(FlamePin), nameof(FlamePin.OnEnable), OnFlamePinEnable);
+        Detour(typeof(Silksong::ToolItemManager), nameof(Silksong::ToolItemManager.Awake), OnToolItemManagerAwake);
         Silksong::ToolItemManager.OnEquippedStateChanged += OnToolEquipsChanged;
         detectorsIgnoredPusher = Physics2D.GetIgnoreLayerCollision(EnemyDetectorLayer, PhysicalPusherLayer);
         Physics2D.IgnoreLayerCollision(EnemyDetectorLayer, PhysicalPusherLayer);

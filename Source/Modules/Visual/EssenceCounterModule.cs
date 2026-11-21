@@ -25,7 +25,7 @@ public sealed class EssenceCounterModule : ModuleBase {
     public override string Id => "essence-counter";
 
     public override void Initialize() {
-        Detour(typeof(Fsm), "SwitchState", OnSwitchState, typeof(FsmState));
+        Detour(typeof(Fsm), nameof(Fsm.SwitchState), OnSwitchState, typeof(FsmState));
     }
 
     protected override void OnDeinitialize() {

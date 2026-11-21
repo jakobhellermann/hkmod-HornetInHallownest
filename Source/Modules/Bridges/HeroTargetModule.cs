@@ -25,29 +25,29 @@ public sealed class HeroTargetModule : ModuleBase {
 
     public override void Initialize() {
         // GetHero caches instance into a per-FSM local var, so rewrite its result.
-        Detour(typeof(GetHero), "OnEnter", OnGetHero);
+        Detour(typeof(GetHero), nameof(GetHero.OnEnter), OnGetHero);
 
         // SoulOrb (pooled) homes to HeroController.instance: Start caches it once at pool warmup (before Hornet exists),
         // OnEnable fires per fling, so retarget on both. AddMPCharge converts the soul to silk.
-        Detour(typeof(SoulOrb), "Start", OnSoulOrbActivate);
-        Detour(typeof(SoulOrb), "OnEnable", OnSoulOrbActivate);
-        Detour(typeof(HeroController), "AddMPCharge", OnAddMpCharge, typeof(int));
+        Detour(typeof(SoulOrb), nameof(SoulOrb.Start), OnSoulOrbActivate);
+        Detour(typeof(SoulOrb), nameof(SoulOrb.OnEnable), OnSoulOrbActivate);
+        Detour(typeof(HeroController), nameof(HeroController.AddMPCharge), OnAddMpCharge, typeof(int));
 
         // The camera follows Hornet's transform (RetargetCamera) but reads the hero's state off HeroController.instance,
         // the inert Knight whose cState froze on deactivation: a frozen `falling` glues the camera to her Y (fallStick),
         // look up/down never triggers, the look-ahead keeps his facing. Mirror her state onto him for the call, and her
         // position too: CameraController's look offset is relative to hero_ctrl.transform. Leaving a lock zone reads his
         // transitionState, still mid-entry after a door while she already moves, and stops following her for good.
-        Detour(typeof(CameraTarget), "Update", (Action<Action<CameraTarget>, CameraTarget>)OnCameraUpdate);
-        Detour(typeof(CameraTarget), "ExitLockZone", (Action<Action<CameraTarget>, CameraTarget>)OnCameraUpdate);
+        Detour(typeof(CameraTarget), nameof(CameraTarget.Update), (Action<Action<CameraTarget>, CameraTarget>)OnCameraUpdate);
+        Detour(typeof(CameraTarget), nameof(CameraTarget.ExitLockZone), (Action<Action<CameraTarget>, CameraTarget>)OnCameraUpdate);
         Detour(typeof(CameraController),
             "LateUpdate",
             (Action<Action<CameraController>, CameraController>)OnCameraUpdate);
 
-        Detour(typeof(GetPosition), "DoGetPosition", OnGetPosition);
-        Detour(typeof(GetPosition2D), "DoGetPosition", OnGetPosition2D);
-        Detour(typeof(SetPosition), "DoSetPosition", OnSetPosition);
-        Detour(typeof(SetPositionToObject), "DoSetPosition", OnSetPositionToObject);
+        Detour(typeof(GetPosition), nameof(GetPosition.DoGetPosition), OnGetPosition);
+        Detour(typeof(GetPosition2D), nameof(GetPosition2D.DoGetPosition), OnGetPosition2D);
+        Detour(typeof(SetPosition), nameof(SetPosition.DoSetPosition), OnSetPosition);
+        Detour(typeof(SetPositionToObject), nameof(SetPositionToObject.DoSetPosition), OnSetPositionToObject);
 
         Detour(typeof(GameManager), nameof(GameManager.GetPlayerDataInt), OnGetPlayerDataInt);
     }

@@ -39,7 +39,7 @@ public sealed class DeathModule : ModuleBase {
     public override string Id => "death";
 
     public override void Initialize() {
-        Detour(typeof(SGameManager), "PlayerDead", NoPlayerDead, typeof(float));
+        Detour(typeof(SGameManager), nameof(SGameManager.PlayerDead), NoPlayerDead, typeof(float));
         Detour(typeof(SHeroController),
             "GetHeroDeathPrefab",
             OnGetHeroDeathPrefab,
@@ -72,11 +72,11 @@ public sealed class DeathModule : ModuleBase {
             typeof(string),
             typeof(int),
             typeof(bool));
-        Detour(typeof(SHeroController), "SetHazardRespawn", OnSetHazardRespawn, typeof(Vector3), typeof(bool));
+        Detour(typeof(SHeroController), nameof(SHeroController.SetHazardRespawn), OnSetHazardRespawn, typeof(Vector3), typeof(bool));
 
         // HK's spike death prefab broadcasts KNIGHT SPIKE HIT, which raises e.g. the Colosseum respawn platform. Hornet's
         // spawns Silksong's prefab on Silksong's separate PlayMaker, so HK's FSMs never hear it.
-        Detour(typeof(SHeroController), "DieFromHazard", OnDieFromHazard, typeof(SHazardType), typeof(float));
+        Detour(typeof(SHeroController), nameof(SHeroController.DieFromHazard), OnDieFromHazard, typeof(SHazardType), typeof(float));
     }
 
     public override void HornetActiveUpdate(SHeroController hero) {

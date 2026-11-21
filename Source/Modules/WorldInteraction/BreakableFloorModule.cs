@@ -21,8 +21,8 @@ public sealed class BreakableFloorModule : ModuleBase {
     public override string Id => "breakable-floor";
 
     public override void Initialize() {
-        Detour(typeof(SHeroController), "HeroDashPressed", OnDashPressed);
-        Detour(typeof(SHeroController), "GetState", OnGetState, typeof(string));
+        Detour(typeof(SHeroController), nameof(SHeroController.HeroDashPressed), OnDashPressed);
+        Detour(typeof(SHeroController), nameof(SHeroController.GetState), OnGetState, typeof(string));
     }
 
     protected override void OnDeinitialize() {

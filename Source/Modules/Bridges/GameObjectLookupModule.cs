@@ -14,13 +14,13 @@ public sealed class GameObjectLookupModule : ModuleBase {
     public override void Initialize() {
 #if HK1578
         // GameObject.CompareTag / FindGameObjectWithTag are internal calls on Unity 2020; hook the managed entry points.
-        Detour(typeof(Component), "CompareTag", OnComponentCompareTag, typeof(string));
-        Detour(typeof(GameObject), "FindWithTag", OnFindWithTag, typeof(string));
+        Detour(typeof(Component), nameof(Component.CompareTag), OnComponentCompareTag, typeof(string));
+        Detour(typeof(GameObject), nameof(GameObject.FindWithTag), OnFindWithTag, typeof(string));
 #else
-        Detour(typeof(GameObject), "CompareTag", OnCompareTag, typeof(string));
-        Detour(typeof(GameObject), "FindGameObjectWithTag", OnFindWithTag, typeof(string));
+        Detour(typeof(GameObject), nameof(GameObject.CompareTag), OnCompareTag, typeof(string));
+        Detour(typeof(GameObject), nameof(GameObject.FindGameObjectWithTag), OnFindWithTag, typeof(string));
 #endif
-        Detour(typeof(GameObject), "GetComponent", OnGetComponent, typeof(string));
+        Detour(typeof(GameObject), nameof(GameObject.GetComponent), OnGetComponent, typeof(string));
     }
 
     private static bool OnCompareTag(Func<GameObject, string, bool> orig, GameObject self, string tag) {

@@ -81,7 +81,7 @@ public sealed class NeedolinDreamNailModule : ModuleBase {
     public override string Id => "needolin-dreamnail";
 
     public override void Initialize() {
-        Detour(typeof(Fsm), "SwitchState", OnSwitchState, typeof(FsmState));
+        Detour(typeof(Fsm), nameof(Fsm.SwitchState), OnSwitchState, typeof(FsmState));
         UnityEngine.SceneManagement.SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 

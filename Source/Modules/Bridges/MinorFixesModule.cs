@@ -66,20 +66,20 @@ public sealed class MinorFixesModule : ModuleBase {
 
     public override void Initialize() {
         host = UnityApi.FindAny<HornetRuntime>();
-        Detour(typeof(MonoBehaviour), "StartCoroutine", OnStartCoroutine, typeof(IEnumerator));
-        Detour(typeof(Silksong::GameManager), "FreezeMoment", OnFreezeMoment, typeof(SFreeze), typeof(Action));
-        Detour(typeof(Silksong::HeroController), "RelinquishControl", OnRelinquishControl);
+        Detour(typeof(MonoBehaviour), nameof(MonoBehaviour.StartCoroutine), OnStartCoroutine, typeof(IEnumerator));
+        Detour(typeof(Silksong::GameManager), nameof(Silksong::GameManager.FreezeMoment), OnFreezeMoment, typeof(SFreeze), typeof(Action));
+        Detour(typeof(Silksong::HeroController), nameof(Silksong::HeroController.RelinquishControl), OnRelinquishControl);
         Detour(typeof(Silksong::HeroController),
             nameof(Silksong::HeroController.PreventCastByDialogueEnd),
             OnPreventCastByDialogueEnd);
-        Detour(typeof(IgnoreHeroCollision), "Ignore", OnIgnoreHeroCollision);
+        Detour(typeof(IgnoreHeroCollision), nameof(IgnoreHeroCollision.Ignore), OnIgnoreHeroCollision);
         Detour(typeof(SBumpCheck), nameof(SBumpCheck.CheckForBump), (CheckForBumpHook)OnCheckForBump);
-        Detour(typeof(Silksong::NoClamberRegion), "get_IsClamberBlocked", OnIsClamberBlocked);
-        Detour(typeof(SFsm), "SwitchState", OnSilksongSwitchState, typeof(SFsmState));
+        Detour(typeof(Silksong::NoClamberRegion), "get_" + nameof(Silksong::NoClamberRegion.IsClamberBlocked), OnIsClamberBlocked);
+        Detour(typeof(SFsm), nameof(SFsm.SwitchState), OnSilksongSwitchState, typeof(SFsmState));
         Detour(typeof(HeroController), nameof(HeroController.SetWalkZone), OnSetWalkZone);
         USceneManager.activeSceneChanged += OnActiveSceneChanged;
         CollectTerrainOutlines(USceneManager.GetActiveScene());
-        Detour(typeof(Silksong::SaveDataUtility), "CreateJsonObjects", OnCreateJsonObjects);
+        Detour(typeof(Silksong::SaveDataUtility), nameof(Silksong::SaveDataUtility.CreateJsonObjects), OnCreateJsonObjects);
         SeedNestedFadeGroupBridges();
 
         // Fix knockback from walls. Silksong's layer matrix allows this, HK's doesn't, but this doesn't change any behaviour.

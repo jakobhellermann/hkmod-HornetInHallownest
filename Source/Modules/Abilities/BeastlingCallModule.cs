@@ -30,7 +30,7 @@ public sealed class BeastlingCallModule : ModuleBase {
     public override string Id => "beastling-call";
 
     public override void Initialize() {
-        Detour(typeof(SCheckIsTeleportBlocked), "get_IsTrue", OnIsTeleportBlocked);
+        Detour(typeof(SCheckIsTeleportBlocked), "get_" + nameof(SCheckIsTeleportBlocked.IsTrue), OnIsTeleportBlocked);
         Detour(typeof(SFindFastTravelTeleportPoint),
             nameof(SFindFastTravelTeleportPoint.OnEnter),
             OnFindFastTravelTeleportPoint);

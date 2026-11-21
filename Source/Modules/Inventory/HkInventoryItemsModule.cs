@@ -66,7 +66,7 @@ public sealed class HkInventoryItemsModule : ModuleBase {
     public override string Id => "hk-inventory-items";
 
     public override void Initialize() {
-        Detour(typeof(Silksong::InventoryItemCollectableManager), "GetItems", OnGetItems);
+        Detour(typeof(Silksong::InventoryItemCollectableManager), nameof(Silksong::InventoryItemCollectableManager.GetItems), OnGetItems);
     }
 
     protected override void OnDeinitialize() {

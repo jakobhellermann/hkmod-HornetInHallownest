@@ -22,9 +22,9 @@ public sealed class FsmLookupModule : ModuleBase {
     private GameObject? holder;
 
     public override void Initialize() {
-        Detour(typeof(ActionHelpers), "GetGameObjectFsm", OnLookup, typeof(GameObject), typeof(string));
-        Detour(typeof(PlayMakerFSM), "FindFsmOnGameObject", OnLookup, typeof(GameObject), typeof(string));
-        Detour(typeof(FSMUtility), "LocateFSM", OnLookup, typeof(GameObject), typeof(string));
+        Detour(typeof(ActionHelpers), nameof(ActionHelpers.GetGameObjectFsm), OnLookup, typeof(GameObject), typeof(string));
+        Detour(typeof(PlayMakerFSM), nameof(PlayMakerFSM.FindFsmOnGameObject), OnLookup, typeof(GameObject), typeof(string));
+        Detour(typeof(FSMUtility), nameof(FSMUtility.LocateFSM), OnLookup, typeof(GameObject), typeof(string));
     }
 
     protected override void OnDeinitialize() {

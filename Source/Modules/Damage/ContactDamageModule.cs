@@ -20,7 +20,7 @@ public sealed class ContactDamageModule : ModuleBase {
     public override string Id => "contact-damage";
 
     public override void Initialize() {
-        Detour(typeof(SHeroBox), "CheckForDamage", OnCheckForDamage, typeof(GameObject));
+        Detour(typeof(SHeroBox), nameof(SHeroBox.CheckForDamage), OnCheckForDamage, typeof(GameObject));
     }
 
     private void OnCheckForDamage(Action<SHeroBox, GameObject> orig, SHeroBox self, GameObject other) {

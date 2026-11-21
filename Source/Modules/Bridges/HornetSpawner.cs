@@ -46,7 +46,7 @@ public sealed class HornetSpawner : ModuleBase {
     // ReturnToMainMenu despawns her: she's a separate DontDestroyOnLoad body HK's teardown doesn't know about, so
     // without this she'd linger active on the menu.
     public override void Initialize() {
-        Detour(typeof(GameManager), "FinishedEnteringScene", OnEnteredScene);
+        Detour(typeof(GameManager), nameof(GameManager.FinishedEnteringScene), OnEnteredScene);
         Detour(typeof(GameManager),
             "ReturnToMainMenu",
             OnReturnToMainMenu,

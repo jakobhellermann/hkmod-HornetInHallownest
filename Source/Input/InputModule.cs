@@ -84,7 +84,7 @@ public sealed class InputModule : ModuleBase {
 
         // Rebuild when HK's bindings change. HK loads its keyboard bindings in InputHandler.Start, which can run after
         // this (the 1.5.78 Modding API initializes mods from InputHandler's own Awake).
-        Detour(typeof(InputHandler), "MapKeyboardLayoutFromGameSettings", OnBindingsChanged);
+        Detour(typeof(InputHandler), nameof(InputHandler.MapKeyboardLayoutFromGameSettings), OnBindingsChanged);
         Detour(typeof(InputHandler), nameof(InputHandler.MapControllerButtons), OnMapControllerButtons);
         Detour(typeof(InputHandler), nameof(InputHandler.SendKeyBindingsToGameSettings), OnBindingsChanged);
         Detour(typeof(InputHandler), nameof(InputHandler.RemapUIButtons), OnBindingsChanged);

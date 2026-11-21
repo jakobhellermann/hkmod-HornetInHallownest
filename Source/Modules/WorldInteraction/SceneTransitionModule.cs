@@ -80,7 +80,7 @@ public sealed class SceneTransitionModule : ModuleBase {
     private void InstallLeaveHooks() {
         // Fires at the start of a transition, before the unload. Silksong's GM never fires its own UnloadingLevel
         // (inactive), so after orig we relay the leave handshake and deparent her ourselves.
-        Detour(typeof(GameManager), "BeginSceneTransition", OnBeginSceneTransition, typeof(GameManager.SceneLoadInfo));
+        Detour(typeof(GameManager), nameof(GameManager.BeginSceneTransition), OnBeginSceneTransition, typeof(GameManager.SceneLoadInfo));
         Detour(typeof(GameManager), nameof(GameManager.ChangeToScene), OnChangeToScene);
         Detour(typeof(Silksong::UIMsgProxy), nameof(Silksong::UIMsgProxy.SetIsInMsg), OnSetIsInMsg);
         Detour(typeof(HutongGames.PlayMaker.Fsm),
@@ -233,8 +233,8 @@ public sealed class SceneTransitionModule : ModuleBase {
     private void InstallEnterHooks() {
         // HK calls SetHazardRespawn from FinishedEnteringScene and from HazardRespawnTrigger (any Layer-9 collider, incl.
         // Hornet). Mirror onto Silksong's PlayerData so her HazardRespawn lands at the right spot.
-        Detour(typeof(PlayerData), "SetHazardRespawn", OnSetHazardRespawn, typeof(Vector3), typeof(bool));
-        Detour(typeof(PlayerData), "SetHazardRespawn", OnSetHazardRespawnMarker, typeof(HazardRespawnMarker));
+        Detour(typeof(PlayerData), nameof(PlayerData.SetHazardRespawn), OnSetHazardRespawn, typeof(Vector3), typeof(bool));
+        Detour(typeof(PlayerData), nameof(PlayerData.SetHazardRespawn), OnSetHazardRespawnMarker, typeof(HazardRespawnMarker));
 
         // enterWithoutInput entries rely on an HK arrival FSM to RegainControl/AcceptInput; Hornet has none, leaving her
         // frozen after FinishedEnteringScene, so do the close.
@@ -246,24 +246,24 @@ public sealed class SceneTransitionModule : ModuleBase {
 
         // Dream entries warp in via a direct hero_ctrl.EnterSceneDreamGate() on the Knight (typed field call, no shim
         // redirects it), so Hornet's never runs. Flag it; Tick positions her and runs hers.
-        Detour(typeof(HeroController), "EnterSceneDreamGate", OnEnterSceneDreamGate);
+        Detour(typeof(HeroController), nameof(HeroController.EnterSceneDreamGate), OnEnterSceneDreamGate);
 
 #if HK1512620
         // Scene FSMs waiting on heroInPosition (WaitForHeroInPosition) read the hero's position right in the handler,
         // before Tick walks Hornet in: Ruins1_31's lift wall keeps its room masked unless she's already left of it.
-        Detour(typeof(HeroController), "SendHeroInPosition", OnSendHeroInPosition, typeof(bool));
+        Detour(typeof(HeroController), nameof(HeroController.SendHeroInPosition), OnSendHeroInPosition, typeof(bool));
 #else
         // Same for HK 1.5.78, which raises heroInPosition inline.
-        Detour(typeof(HeroController), "LeaveScene", OnKnightLeaveScene, typeof(GatePosition?));
+        Detour(typeof(HeroController), nameof(HeroController.LeaveScene), OnKnightLeaveScene, typeof(GatePosition?));
 #endif
 
         // Scene FSMs ask the "Hero" var (Hornet) which gate it entered by, e.g. the Hall of Gods statue doors that slide
         // the HUD back in after a boss. HK enters the scene on the Knight; Hornet's own entry gate is stale or unset.
-        Detour(typeof(Silksong::HeroController), "GetEntryGateName", OnGetEntryGateName);
+        Detour(typeof(Silksong::HeroController), nameof(Silksong::HeroController.GetEntryGateName), OnGetEntryGateName);
 
-        Detour(typeof(Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast), "DoRaycast", OnSuperJumpRaycast);
+        Detour(typeof(Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast), nameof(Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast.DoRaycast), OnSuperJumpRaycast);
 
-        Detour(typeof(GameManager), "LevelActivated", OnLevelActivated, typeof(Scene), typeof(Scene));
+        Detour(typeof(GameManager), nameof(GameManager.LevelActivated), OnLevelActivated, typeof(Scene), typeof(Scene));
 
         // Arrival i-frames: block damage through the dream-arrival window (see arrivalInvulnerable). Needed because on a
         // cross-scene dream warp she briefly sits at the carried-over position, which in Radiance's arena is inside the

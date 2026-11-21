@@ -18,7 +18,7 @@ public sealed class ShadowDashModule : ModuleBase {
     public override string Id => "shadow-dash";
 
     public override void Initialize() {
-        Detour(typeof(ShadowGateColliderControl), "FixedUpdate", OnGateFixedUpdate);
+        Detour(typeof(ShadowGateColliderControl), nameof(ShadowGateColliderControl.FixedUpdate), OnGateFixedUpdate);
     }
 
     private static bool HasShadowDash => PlayerData.instance.hasShadowDash;

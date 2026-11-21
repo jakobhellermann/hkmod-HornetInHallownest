@@ -88,7 +88,7 @@ public sealed class AnimationRemapModule : ModuleBase {
     public override string Id => "animation-remap";
 
     public override void Initialize() {
-        Detour(typeof(tk2dSpriteAnimator), "Play", OnPlay, typeof(string));
+        Detour(typeof(tk2dSpriteAnimator), nameof(tk2dSpriteAnimator.Play), OnPlay, typeof(string));
     }
 
     private void OnPlay(Action<tk2dSpriteAnimator, string> orig, tk2dSpriteAnimator self, string name) {

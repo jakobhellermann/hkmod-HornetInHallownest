@@ -27,7 +27,7 @@ public sealed class HkJournalModule : ModuleBase {
 
     public override void Initialize() {
         Detour(typeof(SJournalItemManager), nameof(SJournalItemManager.IsAvailable), OnIsAvailable);
-        Detour(typeof(SJournalItemManager), "GetItems", OnGetItems);
+        Detour(typeof(SJournalItemManager), nameof(SJournalItemManager.GetItems), OnGetItems);
         Detour(typeof(SEnemyJournalManager), nameof(SEnemyJournalManager.GetKillData), OnGetKillData);
         Detour(typeof(SEnemyJournalManager), nameof(SEnemyJournalManager.SetJournalSeen), OnSetJournalSeen);
     }

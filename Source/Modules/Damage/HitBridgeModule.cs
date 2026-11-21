@@ -41,18 +41,18 @@ public sealed class HitBridgeModule : ModuleBase {
             typeof(GameObject),
             typeof(int),
             typeof(HashSet<SIHit>));
-        Detour(typeof(Silksong::DamageEnemies), "DoDamage", OnDoDamage, typeof(GameObject), typeof(bool));
-        Detour(typeof(SHealthManager), "Hit", OnHealthManagerHit, typeof(SHitInstance));
+        Detour(typeof(Silksong::DamageEnemies), nameof(Silksong::DamageEnemies.DoDamage), OnDoDamage, typeof(GameObject), typeof(bool));
+        Detour(typeof(SHealthManager), nameof(SHealthManager.Hit), OnHealthManagerHit, typeof(SHitInstance));
         // OnAwake, not Awake: HealthManager also runs it via IInitialisable, which hooking Awake alone would miss.
-        Detour(typeof(SHealthManager), "OnAwake", OnHealthManagerAwake);
+        Detour(typeof(SHealthManager), nameof(SHealthManager.OnAwake), OnHealthManagerAwake);
         // Status ticks and lag hits deal their damage here, to the bridge's own hp.
         Detour(typeof(SHealthManager),
             nameof(SHealthManager.ApplyExtraDamage),
             OnApplyExtraDamage,
             typeof(SHitInstance));
         // HK enemy hits call HeroController.instance.SoulGain, redirect to Hornet's SilkGain when active.
-        Detour(typeof(HeroController), "SoulGain", OnSoulGain);
-        Detour(typeof(EnemyBullet), "OnEnable", OnEnemyBulletEnable);
+        Detour(typeof(HeroController), nameof(HeroController.SoulGain), OnSoulGain);
+        Detour(typeof(EnemyBullet), nameof(EnemyBullet.OnEnable), OnEnemyBulletEnable);
 
         USceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
