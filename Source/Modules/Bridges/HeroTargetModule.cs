@@ -15,6 +15,7 @@ namespace HornetInHallownest.Modules;
 //   - PlayMaker global "Hero" var (most enemy/cutscene/UI FSMs)
 //   - the GetHero action
 //   - SoulOrb (a plain MonoBehaviour reading HeroController.instance directly) + soul->silk conversion
+//   - the hero's health as HK's FSMs read it from PlayerData
 public sealed class HeroTargetModule : ModuleBase {
     private const int SoulPerSilk = 11;
 
@@ -46,6 +47,8 @@ public sealed class HeroTargetModule : ModuleBase {
         Detour(typeof(GetPosition2D), "DoGetPosition", OnGetPosition2D);
         Detour(typeof(SetPosition), "DoSetPosition", OnSetPosition);
         Detour(typeof(SetPositionToObject), "DoSetPosition", OnSetPositionToObject);
+
+        Detour(typeof(GameManager), nameof(GameManager.GetPlayerDataInt), OnGetPlayerDataInt);
     }
 
     #region Position in the Knight's terms
@@ -236,6 +239,22 @@ public sealed class HeroTargetModule : ModuleBase {
         }
 
         orig(self, amount);
+    }
+
+    #endregion
+
+    #region Health
+
+    private static int OnGetPlayerDataInt(Func<GameManager, string, int> orig, GameManager self, string intName) {
+        if (!HeroSwitch.HornetActive) return orig(self, intName);
+
+        var pd = Silksong::PlayerData.instance;
+        return intName switch {
+            // Fix mask shards "Full Health?" check softlock
+            nameof(PlayerData.health) => pd.health,
+            nameof(PlayerData.maxHealth) => pd.CurrentMaxHealth,
+            _ => orig(self, intName),
+        };
     }
 
     #endregion
