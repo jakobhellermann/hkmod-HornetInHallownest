@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using HornetInHallownest.Util;
 using UnityEngine;
@@ -58,7 +59,10 @@ internal static class Paths {
             ? $"Using custom silksong path: {install}"
             : $"Using auto detected silksong path: {install}");
 
-        if (Directory.Exists(dataDir)) return dataDir;
+        if (Directory.Exists(dataDir)) {
+            CheckSamePlatform(install, dataDir);
+            return dataDir;
+        }
 
         throw new DirectoryNotFoundException(overridden
             ? $"""
@@ -74,6 +78,16 @@ internal static class Paths {
                 close the game, open {ConfigFile}
                 and set SilksongPath to your Hollow Knight Silksong install folder.
               """);
+    }
+
+    private static void CheckSamePlatform(string install, string dataDir) {
+        var builds = Directory.GetDirectories($"{dataDir}/StreamingAssets/aa", "Standalone*").Select(Path.GetFileName).ToArray();
+        if (builds.Contains(AaTarget)) return;
+
+        throw new PlatformNotSupportedException($"""
+            Hollow Knight Silksong at {install} is the {string.Join(", ", builds)} build, but Hollow Knight runs as {AaTarget}.
+              Run both games natively, or both through Proton.
+            """);
     }
 
     // Where the modding API serializes our global settings (see Modding.Mod.GetGlobalSettingsPath): beside the mod
