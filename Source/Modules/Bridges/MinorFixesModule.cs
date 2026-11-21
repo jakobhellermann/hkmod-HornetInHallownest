@@ -1,4 +1,5 @@
 extern alias Silksong;
+extern alias SilksongFade;
 extern alias SilksongPM;
 using System;
 using System.Collections;
@@ -99,8 +100,8 @@ public sealed class MinorFixesModule : ModuleBase {
     // NestedFadeGroup collects its bridges via GetTypes over every loaded assembly, which throws on a mod assembly with an
     // unresolvable reference and leaves the bridge list empty for good. The bridges are only declared in these two.
     private static void SeedNestedFadeGroupBridges() {
-        var fadeGroup = Type.GetType("TeamCherry.NestedFadeGroup.NestedFadeGroup, Silksong.TeamCherry.NestedFadeGroup", true);
-        var bridgeAttribute = fadeGroup.Assembly.GetType("TeamCherry.NestedFadeGroup.NestedFadeGroupBridgeAttribute", true);
+        var fadeGroup = typeof(SilksongFade::TeamCherry.NestedFadeGroup.NestedFadeGroup);
+        var bridgeAttribute = typeof(SilksongFade::TeamCherry.NestedFadeGroup.NestedFadeGroupBridgeAttribute);
         var bridgeType = fadeGroup.GetNestedType("Bridge", BindingFlags.NonPublic)!;
         var bridges = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(bridgeType));
         foreach (var assembly in new[] {

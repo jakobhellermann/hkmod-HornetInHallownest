@@ -1,4 +1,5 @@
 extern alias Silksong;
+extern alias SilksongFade;
 using System;
 using System.Linq;
 using HornetInHallownest.Core;
@@ -17,7 +18,7 @@ public sealed class EssenceCounterModule : ModuleBase {
     private const float FadeOutTime = 0.5f;
 
     private static GameObject? counter;
-    private static Component? fade;
+    private static SilksongFade::TeamCherry.NestedFadeGroup.NestedFadeGroup? fade;
     private static Silksong::TextBridge? text;
     private static Silksong::CurrencyCounterIcon? icon;
     private static Fsm? hkCounterFsm;
@@ -34,7 +35,7 @@ public sealed class EssenceCounterModule : ModuleBase {
     }
 
     public override void HornetToggled(bool active) {
-        if (!active && fade) fade.SetPropertyValue("AlphaSelf", 0f);
+        if (!active && fade) fade.AlphaSelf = 0f;
     }
 
     internal static bool IsHkCounter(PlayMakerFSM fsm) =>
@@ -52,7 +53,7 @@ public sealed class EssenceCounterModule : ModuleBase {
                 if (text) text.Text = PlayerData.instance.dreamOrbs.ToString();
                 break;
             case "Deactivate":
-                if (fade) fade.InvokeMethod("FadeToZero", FadeOutTime);
+                if (fade) fade.FadeToZero(FadeOutTime);
                 break;
         }
     }
@@ -64,7 +65,7 @@ public sealed class EssenceCounterModule : ModuleBase {
         if (!counter && !Build(hkCounter)) return;
         text!.Text = PlayerData.instance.dreamOrbs.ToString();
         icon!.Appear();
-        fade!.InvokeMethod("FadeToOne", FadeInTime);
+        fade!.FadeToOne(FadeInTime);
     }
 
     private static bool Build(GameObject hkCounter) {
@@ -93,8 +94,8 @@ public sealed class EssenceCounterModule : ModuleBase {
         SetIcon(iconRenderer, definition, texture, templateIcon.sprite.bounds.size.y);
         icon = iconRenderer.GetComponent<Silksong::CurrencyCounterIcon>();
         text = counter.transform.Find("Parent/Geo Text").GetComponent<Silksong::TextBridge>();
-        fade = counter.GetComponents<Component>().First(c => c.GetType().Name == "NestedFadeGroup");
-        fade.SetPropertyValue("AlphaSelf", 0f);
+        fade = counter.GetComponent<SilksongFade::TeamCherry.NestedFadeGroup.NestedFadeGroup>();
+        fade.AlphaSelf = 0f;
         return true;
     }
 

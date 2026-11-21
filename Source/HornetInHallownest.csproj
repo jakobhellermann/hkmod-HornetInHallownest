@@ -61,6 +61,9 @@
         <Reference Include="Silksong.TeamCherry.Localization" Private="false" Aliases="SilksongLoc">
             <HintPath>$(RefsDir)/Silksong.TeamCherry.Localization.dll</HintPath>
         </Reference>
+        <Reference Include="Silksong.TeamCherry.NestedFadeGroup" Private="false" Aliases="SilksongFade">
+            <HintPath>$(RefsDir)/Silksong.TeamCherry.NestedFadeGroup.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'hk1578'">
