@@ -13,7 +13,6 @@ namespace HornetInHallownest.Bootstrap;
 // block below names the field and the NullRef it prevents.
 internal static class SilksongBootstrap {
     private static Silksong::GameManager? bootstrapGm;
-    private static Silksong::CameraController? bootstrapCamCtrl;
     private static GameObject? gmGo;
     private static GameObject? poolGo;
     private static bool done;
@@ -57,15 +56,7 @@ internal static class SilksongBootstrap {
             // Handler is ready" (inventory prompts). Assign our bootstrap ih.
             gm.inputHandler = ih;
 
-            // gm.cameraCtrl null -> SendHeroInPosition's ResetStartTimer() NullRefs. Bare CameraController (inactive GO,
-            // no heavy Awake). Its camTarget is wired later (SetHeroCtrl, after the rig is up) since FreezeInPlace /
-            // HazardRespawn deref it.
-            var camCtrl = gmGo.AddComponent<Silksong::CameraController>();
-            gm.cameraCtrl = camCtrl;
-
-            // gm.hero_ctrl (SetupGameRefs, skipped) -> PlayerDeadFromHazard's hero_ctrl.cState.dead NullRefs. Hero isn't
-            // spawned yet, so SetHeroCtrl (from SpawnReal) wires it. camCtrl stored for its later camTarget wiring too.
-            bootstrapCamCtrl = camCtrl;
+            gm.cameraCtrl = gmGo.AddComponent<Silksong::CameraController>();
 
             // gm.sm null -> GetTotalFrostSpeed's gm.sm.FrostSpeed (+ other per-scene reads) NullRef. Bare instance => defaults.
             var sm = gmGo.AddComponent<Silksong::CustomSceneManager>();
@@ -154,17 +145,12 @@ internal static class SilksongBootstrap {
         if (string.IsNullOrEmpty(pd.CurrentCrestID)) pd.CurrentCrestID = "Hunter";
     }
 
-    // Called from SpawnReal (hero spawned + rig up): wires gm.hero_ctrl (PlayerDeadFromHazard.cState.dead), the bare
-    // CameraController's camTarget (FreezeInPlace / HazardRespawn), and gm.screenFader_fsm (hazard-respawn fade).
     internal static void SetHeroCtrl(Silksong::HeroController hero) {
         if (bootstrapGm == null) return;
         try {
             bootstrapGm.hero_ctrl = hero;
 
-            if (bootstrapCamCtrl != null) {
-                var ct = GameCamerasBootstrap.CameraTargetGo?.GetComponent<Silksong::CameraTarget>();
-                if (ct != null) bootstrapCamCtrl.camTarget = ct;
-            }
+            bootstrapGm.cameraCtrl = Silksong::GameCameras._instance.cameraController;
 
             // screenFader_fsm: SetupGameRefs finds it under HudCamera/In-game; the rig is up, so locate + wire it.
             var hudCam = GameCamerasBootstrap.HudCameraGo;
@@ -176,7 +162,7 @@ internal static class SilksongBootstrap {
                 if (sf != null) bootstrapGm.screenFader_fsm = sf;
             }
 
-            Log.Debug("[Bootstrap] hero_ctrl + camTarget + screenFader wired");
+            Log.Debug("[Bootstrap] hero_ctrl + cameraCtrl + screenFader wired");
         } catch (Exception e) {
             Log.Error($"[Bootstrap] SetHeroCtrl: {e.Message}");
         }

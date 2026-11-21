@@ -14,6 +14,7 @@
 - Fix hornet being tinted green in greenpath
 - Fix softlock on last mask shard pickup
 - Fix compatibility with MapWarp scene teleports
+- Fix beast crest not giving silk while focused
 
 ## v0.5.0
 

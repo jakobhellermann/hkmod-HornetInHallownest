@@ -198,6 +198,8 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
         var attackType = si is { AttackType: SAttackTypes.Heavy, IsNailTag: true } ? AttackTypes.Nail
             : isUnhandledAttackType ? AttackTypes.Generic
             : (AttackTypes)si.AttackType;
+        var isPiercingNail = attackType == AttackTypes.Nail && (si.SpecialType & SSpecialTypes.Piercer) != 0;
+
         // Allow e.g. silkspear to pierce enemies with a shield
         if ((si.SpecialType & SSpecialTypes.Piercer) != 0) attackType = AttackTypes.Spell;
         if (si.CriticalHit) ApplyCrit(ref si);
@@ -233,6 +235,9 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
         }
 
         if (hm) RewardHero(si);
+
+        // HK gives silk only for nail hits, and a piercing one (the Beast Crest's rage slashes) reaches it as a spell.
+        if (isPiercingNail && hm && hm.hp < previousHp) Silksong::HeroController.instance.SilkGain(si);
 
         if (si.Source && !(nonBouncer && nonBouncer.active)) {
             Silksong::FSMUtility.SendEventToGameObject(si.Source, "HIT LANDED");
