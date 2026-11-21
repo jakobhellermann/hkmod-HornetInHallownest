@@ -23,9 +23,8 @@ public sealed class PogoModule : ModuleBase {
         Detour(typeof(Silksong::DamageEnemies), "DoDamage", OnDoDamage, typeof(GameObject), typeof(bool));
     }
 
-    // Side and up slashes into a shroom: HK's NailSlash knocks the Knight back off it and bounces the shroom. Down
-    // slashes are the pogo in OnContinueBounce.
-    private static bool OnDoDamage(Func<Silksong::DamageEnemies, GameObject, bool, bool> orig,
+    // Side and up slashes into a shroom: HK's NailSlash knocks the Knight back off it and bounces the shroom.
+    private bool OnDoDamage(Func<Silksong::DamageEnemies, GameObject, bool, bool> orig,
         Silksong::DamageEnemies self, GameObject target, bool isFirstHit) {
         var result = orig(self, target, isFirstHit);
         var hero = HeroSwitch.HornetActive ? HornetSpawner.Hornet : null;
@@ -34,6 +33,18 @@ public sealed class PogoModule : ModuleBase {
         if (!shroom || !shroom.active) return result;
 
         var direction = self.GetDirection();
+        if (Mathf.Abs(Mathf.DeltaAngle(direction, 270f)) <= 45f) {
+            if (hero.cState.downSpiking) return result;
+
+            // The slash's own downspike bounce already started, and its jump steps would hold her at its lower speed.
+            hero.CancelJump();
+            hero.BecomeAirborne();
+            hero.ShroomBounce();
+            MatchKnightShroomHeight(hero);
+            DoShroomEffects(shroom, hero);
+            return result;
+        }
+
         if (Mathf.Abs(Mathf.DeltaAngle(direction, 0f)) <= 45f) hero.RecoilLeftLong();
         else if (Mathf.Abs(Mathf.DeltaAngle(direction, 180f)) <= 45f) hero.RecoilRightLong();
         else if (Mathf.Abs(Mathf.DeltaAngle(direction, 90f)) <= 45f) hero.RecoilDown();
