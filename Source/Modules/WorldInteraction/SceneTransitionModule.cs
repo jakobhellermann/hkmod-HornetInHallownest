@@ -440,8 +440,8 @@ public sealed class SceneTransitionModule : ModuleBase {
     // HK's EnterScene ends by calling gm.FinishedEnteringScene() (ENTERING_LEVEL -> PLAYING). A bottom gate ("up"
     // transition) ends at DROPPING_DOWN and only completes once the Knight physically lands, which the inert Knight
     // (physics off) never does, so gameState sticks at ENTERING_LEVEL and every later gate's TryDoTransition bails. We
-    // finish HK's half and settle transitionState (HK camera reads the Knight's as the proxy; a stuck DROPPING_DOWN makes
-    // CameraTarget.ExitLockZone drop to FREE). Once per scene.
+    // finish it as his landing would, which also settles transitionState (HK camera reads the Knight's as the proxy; a
+    // stuck DROPPING_DOWN makes CameraTarget.ExitLockZone drop to FREE) and cState.transitioning. Once per scene.
     private void CompleteStuckHkVerticalEntry(HeroController? knight) {
         if (hkEntryFixed || !HeroSwitch.HornetActive || !knight || knight.enabled) return; // only the inert Knight
         var gm = GameManager.UnsafeInstance;
@@ -449,10 +449,8 @@ public sealed class SceneTransitionModule : ModuleBase {
         if (knight.transitionState != HeroTransitionState.DROPPING_DOWN) return;
         var gate = knight.sceneEntryGate;
         if (!gate || gate.GetGatePosition() != GatePosition.bottom) return;
-        gm.FinishedEnteringScene();
-        knight.transitionState = HeroTransitionState.WAITING_TO_TRANSITION;
+        knight.FinishedEnteringScene();
         hkEntryFixed = true;
-        LogDebug("completed inert-Knight bottom-gate entry (FinishedEnteringScene + settled WAITING_TO_TRANSITION)");
     }
 
     // Manage the hero's collision layer across a cross-scene dream arrival. Two windows, both racy in our setup:
