@@ -6,11 +6,14 @@ UNITY1578       := 2020.2.2f1
 
 CI_REFS := $(CURDIR)/ci-refs
 
+# assembly-publicizer targets .NET 6
+export DOTNET_ROLL_FORWARD := Major
+
 .PHONY: local-refs ci-refs remap-monoscripts repack-resources docs help
 
 help:
 	@echo "HornetInHallownest asset pipeline:"
-	@echo "  make local-refs        prefix dlls with Silksong into local-refs/Silksong.*.dll (+ downgraded for hk1578)"
+	@echo "  make local-refs        prefix dlls with Silksong into local-refs/Silksong.*.dll (+ downgraded for hk1578), publicized"
 	@echo "  make ci-refs           Stub local-refs into ci-refs"
 	@echo "  make remap-monoscripts rebuild monoscripts.silksong.bundle (m_AssemblyName -> Silksong.*)"
 	@echo "  make repack-resources  repack Silksong resources.assets -> silksong-resources.bundle"
@@ -29,13 +32,15 @@ docs/tags-hkss.txt:
 local-refs:
 	dotnet msbuild $(CURDIR)/Source/HornetInHallownest.csproj -t:GenerateLocalRefs -p:TargetFramework=hk1512620
 	dotnet msbuild $(CURDIR)/Source/HornetInHallownest.csproj -t:GenerateLocalRefs -p:TargetFramework=hk1578
+	assembly-publicizer -f -o $(LOCAL_REFS) $(LOCAL_REFS)/Silksong.*.dll
+	assembly-publicizer -f -o $(LOCAL_REFS_1578) $(LOCAL_REFS_1578)/Silksong.*.dll
 
 # Stub the references into ci-refs
 ci-refs: local-refs
 	rm -rf $(CI_REFS)
 	mkdir -p $(CI_REFS)/lib $(CI_REFS)/hk1578
-	refasmer --omit-non-api-members true -O $(CI_REFS)/lib $(LOCAL_REFS)/Silksong.*.dll
-	refasmer --omit-non-api-members true -O $(CI_REFS)/hk1578 $(LOCAL_REFS_1578)/Silksong.*.dll \
+	refasmer --all -O $(CI_REFS)/lib $(LOCAL_REFS)/Silksong.*.dll
+	refasmer --all -O $(CI_REFS)/hk1578 $(LOCAL_REFS_1578)/Silksong.*.dll \
 	  $(addprefix $(LOCAL_REFS_1578)/,Unity.Addressables.dll Unity.ResourceManager.dll Newtonsoft.Json.UnityConverters.dll HKMP.dll)
 
 # Rebuild monoscripts bundle, rewriting m_AssemblyName -> Silksong.*. HK 1.5.78 keeps tk2d in its Assembly-CSharp.
