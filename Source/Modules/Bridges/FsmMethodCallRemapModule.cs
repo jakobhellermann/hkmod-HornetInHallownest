@@ -35,7 +35,7 @@ public sealed class FsmMethodCallRemapModule : ModuleBase {
     // HK's hot springs refill only the Knight's soul; Hornet's also heal her masks.
     private static bool SpaHeal() {
         if (HornetSpawner.Hornet is not { } hero) return true;
-        hero.AddSilk(1, true);
+        hero.AddSilk(1, false);
         var pd = Silksong::PlayerData.instance;
         if (Time.time < nextSpaMaskTime || pd.health >= pd.CurrentMaxHealth) return true;
         hero.AddHealth(1);
