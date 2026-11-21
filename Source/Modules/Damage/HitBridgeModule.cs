@@ -232,7 +232,7 @@ internal sealed class HkEnemyHitBridge : SHealthManager {
                 tagTaker.AddDamageTagToStack(Silksong::GlobalSettings.Gameplay.ZapDamageTag, si.ZapDamageTicks);
         }
 
-        RewardHero(si);
+        if (hm) RewardHero(si);
 
         if (si.Source && !(nonBouncer && nonBouncer.active)) {
             Silksong::FSMUtility.SendEventToGameObject(si.Source, "HIT LANDED");
