@@ -140,6 +140,9 @@ public class HornetInHallownest() : Mod("HornetInHallownest"),
         moduleHost.Add(new ToolCharmBridgeModule());
         moduleHost.Add(new CurrencyModule());
         moduleHost.Add(new EssenceCounterModule());
+#if HK1512620
+        moduleHost.Add(new HudAppearanceModule());
+#endif
         moduleHost.Add(new FsmLookupModule());
         moduleHost.Add(new HeroSfxModule());
 #if HK1512620

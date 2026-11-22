@@ -28,10 +28,13 @@ internal static class GameCamerasBootstrap {
         }
     };
 
-    private const float HudScale = 0.75f; // roughly HK footprint
+    // Personal taste, this feels most in line with hollowknight when switching
+    private const float BaseHudScale = 0.9f;
+
     private static Transform? hudOffsetTransform;
+    private static Silksong::HudGlobalHide? hudGlobalHide;
+    private static Vector3 hudCanvasPos;
     private static SilksongPM::PlayMakerFSM? hudSlideFsm;
-    private static Vector3 hudOffsetPos;
     private static Vector3 hkHudScale = Vector3.one;
     private static HashSet<PlayMakerFSM>? disabledHudFsms;
     private static Transform? ssMainCamT;
@@ -165,8 +168,14 @@ internal static class GameCamerasBootstrap {
         var hudCanvas = FindByName(hudOffset, "Hud Canvas")!;
         hudOffsetTransform = hudOffset;
         hudSlideFsm = SilksongPM::PlayMakerFSM.FindFsmOnGameObject(hudCanvas.gameObject, "Slide Out");
-        hudOffsetPos = hudCanvas.localPosition * (1f - HudScale);
+        hudGlobalHide = hudOffset.GetComponent<Silksong::HudGlobalHide>();
+        hudCanvasPos = hudCanvas.localPosition;
+#if HK1578
         ApplyHudScale();
+#else
+        var hudSetting = GameManager.instance.gameSettings.hudScaleSetting;
+        SetHudAppearance(hudSetting == 2, hudSetting == 1);
+#endif
 
         RemapSortingLayers(hudCam);
 
@@ -186,11 +195,22 @@ internal static class GameCamerasBootstrap {
         HudRefresh.ResetHealthHud();
     }
 
-    // HudGlobalHide resets Hud Canvas Offset in its OnEnable, on every HUD show.
+    internal static void SetHudAppearance(bool hidden, bool reduced) {
+        Silksong::HudGlobalHide.IsHidden = hidden;
+        Silksong::HudGlobalHide.IsReduced = reduced;
+        Silksong::HudScalePositioner.IsReduced = reduced;
+        ApplyHudScale();
+    }
+
+    // HudGlobalHide sets Hud Canvas Offset to Silksong's size on every HUD show; the shrink keeps Hud Canvas' origin.
     private static void ApplyHudScale() {
-        if (!hudOffsetTransform) return;
-        hudOffsetTransform.localScale = Vector3.one * HudScale;
-        hudOffsetTransform.localPosition = hudOffsetPos;
+        // HudGlobalHide parks a hidden HUD below the screen.
+        if (!hudOffsetTransform || Silksong::HudGlobalHide.IsHidden) return;
+        var reduced = Silksong::HudGlobalHide.IsReduced;
+        var scale = reduced ? hudGlobalHide!.reducedScale.x : 1f;
+        var pos = reduced ? (Vector3)hudGlobalHide!.reducedPos : Vector3.zero;
+        hudOffsetTransform.localScale = Vector3.one * (BaseHudScale * scale);
+        hudOffsetTransform.localPosition = pos + hudCanvasPos * (scale * (1f - BaseHudScale));
     }
 
     internal static void SetHornetHudVisible(bool on) {

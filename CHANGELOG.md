@@ -1,6 +1,7 @@
 # Changelog
 
 ## _Unreleased_
+- Apply HUD Scale setting to hornet
 - Pick look up animation based on NPC height
 - Fix projectiles like baldur spits breaking on nail hit
 - Fix camera shake getting stuck as hornet
