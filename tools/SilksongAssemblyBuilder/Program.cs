@@ -23,7 +23,7 @@ string[] deps = shimPath == null
     ? SilksongAssemblies.Deps
     : [
         ..SilksongAssemblies.Deps, ..SilksongAssemblies.Hk1578Deps,
-        ..SilksongAssemblies.PresentIn(silksongManaged, SilksongAssemblies.Hk1578PlatformDeps),
+        ..SilksongAssemblies.PresentIn(silksongManaged, SilksongAssemblies.Hk1578WindowsDeps),
     ];
 string[] shimRefs = shimPath == null ? [] : [$"{Path.GetDirectoryName(shimPath)}/{SilksongAssemblies.RepackerBindings}.dll"];
 SilksongAssemblyBuilder.Build(silksongManaged, hkManaged, deps, shimPath, shimRefs, outDir, Console.WriteLine);

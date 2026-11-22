@@ -38,9 +38,8 @@ internal static class SilksongAssemblies {
         "com.rlabrecque.steamworks.net",
     ];
 
-    // Only in some platforms' Silksong builds (Windows), whose assemblies then reference them; installed on HK 1.5.78
-    // when present.
-    internal static readonly string[] Hk1578PlatformDeps = ["SharpDX", "SharpDX.DirectInput", "XGamingRuntime"];
+    // Referenced by Silksong's Windows build, not persent in  HK 1.5.78
+    internal static readonly string[] Hk1578PlatformDeps = ["SharpDX", "SharpDX.DirectInput"];
 
     internal static string[] PresentIn(string managed, string[] names) =>
         [.. names.Where(n => File.Exists($"{managed}/{n}.dll"))];

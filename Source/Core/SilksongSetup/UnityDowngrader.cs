@@ -19,9 +19,9 @@ internal sealed class UnityDowngrader {
     // Assemblies whose types win over same-named types elsewhere in the host.
     private static readonly string[] preferredHostAssemblies = ["mscorlib", "System.Core", "System", "netstandard"];
 
-    // May stay unresolved when the host doesn't ship them. GOG Galaxy SDK: only in GOG builds of HK, and Silksong
-    // only touches it from GogGalaxyManager, which nothing instantiates.
-    private static readonly string[] optionalHostAssemblies = ["GalaxyCSharp"];
+    // Types missing from HK's own copy of these store SDKs may stay unresolved: Silksong only calls them from its GOG
+    // Galaxy and Xbox GameCore code, which never runs here.
+    private static readonly string[] unusedStoreSdks = ["GalaxyCSharp", "XGamingRuntime"];
 
     private static readonly Dictionary<string, (string Namespace, string Name)> typeRenames = new() {
         ["UnityEngine.PhysicsMaterial"] = ("UnityEngine", "PhysicMaterial"),
@@ -148,8 +148,7 @@ internal sealed class UnityDowngrader {
         }
     }
 
-    private bool IsMissingOptional(string assembly) =>
-        optionalHostAssemblies.Contains(assembly) && !hostAssemblies.ContainsKey(assembly);
+    private static bool IsUnusedStoreSdk(string assembly) => unusedStoreSdks.Contains(assembly);
 
     // Throws listing every type reference neither the host nor the shim defines, across all assemblies.
     public void Downgrade(IReadOnlyCollection<AssemblyDefinition> assemblies) {
@@ -290,7 +289,7 @@ internal sealed class UnityDowngrader {
             AssemblyNameReference target;
             if (d.hostTypes.TryGetValue(tr.FullName, out var host)) target = host;
             else if (d.shimTypes.Contains(tr.FullName)) target = d.shim;
-            else return scope != null && d.IsMissingOptional(scope);
+            else return scope != null && IsUnusedStoreSdk(scope);
 
             tr.Scope = Scope(target);
             Changes++;
@@ -415,12 +414,12 @@ internal sealed class UnityDowngrader {
             return false;
         }
 
-        // Null for types from an optional host assembly the host doesn't ship; they can't implement our interfaces.
+        // Null for types from a store SDK the host doesn't ship; they can't implement our interfaces.
         private TypeDefinition? ResolveInHierarchy(TypeReference? tr) {
             if (tr == null) return null;
             try {
                 return tr.Resolve();
-            } catch (AssemblyResolutionException e) when (d.IsMissingOptional(e.AssemblyReference.Name)) {
+            } catch (AssemblyResolutionException e) when (IsUnusedStoreSdk(e.AssemblyReference.Name)) {
                 return null;
             }
         }
