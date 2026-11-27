@@ -3,6 +3,7 @@
 ## _Unreleased_
 
 - Add mod options for unlocking all tools or crests
+- Fix only one lifeblood mask from several lifeblood enemies killed at once
 
 ## v0.6.0
 - Apply HUD Scale setting to hornet

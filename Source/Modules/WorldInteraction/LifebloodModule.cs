@@ -37,8 +37,7 @@ public sealed class LifebloodModule : ModuleBase {
         if (blueHealthFsm.ActiveStateName == "Wait") blueHealthFsm.SendEvent(SceneReadyEvent);
     }
 
-    // Relay: HK's ScuttlerControl fires "ADD BLUE HEALTH" on HK's bus; Hornet's FSM is registered for the same event on
-    // Silksong's bus, so mirror the signal there and let the FSM grant with its own logic.
+    // The FSM drops an "ADD BLUE HEALTH" that arrives while it still adds the previous one; Silksong queues them.
 #if HK1578
     private void OnSendEvent(Action<string> orig, string name) {
         orig(name);
@@ -53,11 +52,7 @@ public sealed class LifebloodModule : ModuleBase {
 
     private void Relay(string name) {
         if (name != AddEvent || !HeroSwitch.HornetActive) return;
-        try {
-            Silksong::EventRegister.SendEvent(AddEvent);
-        } catch (Exception e) {
-            LogError($"relay: {e.Message}");
-        }
+        Silksong::GameManager.instance.AddBlueHealthQueued();
     }
 
     private SilksongPM::PlayMakerFSM? BlueHealthFsm() {
