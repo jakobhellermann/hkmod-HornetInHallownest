@@ -1,6 +1,9 @@
 using System;
 using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
+#if HK1578
+using HutongGames.PlayMaker.Actions;
+#endif
 using UnityEngine;
 
 namespace HornetInHallownest.Modules;
@@ -16,6 +19,7 @@ public sealed class GameObjectLookupModule : ModuleBase {
         // GameObject.CompareTag / FindGameObjectWithTag are internal calls on Unity 2020; hook the managed entry points.
         Detour(typeof(Component), nameof(Component.CompareTag), OnComponentCompareTag, typeof(string));
         Detour(typeof(GameObject), nameof(GameObject.FindWithTag), OnFindWithTag, typeof(string));
+        Detour(typeof(FindGameObject), nameof(FindGameObject.Find), OnFindGameObject);
 #else
         Detour(typeof(GameObject), nameof(GameObject.CompareTag), OnCompareTag, typeof(string));
         Detour(typeof(GameObject), nameof(GameObject.FindGameObjectWithTag), OnFindWithTag, typeof(string));
@@ -33,6 +37,15 @@ public sealed class GameObjectLookupModule : ModuleBase {
     }
 
 #if HK1578
+    private static void OnFindGameObject(Action<FindGameObject> orig, FindGameObject self) {
+        if (self.withTag.Value == "Untagged" || !string.IsNullOrEmpty(self.objectName.Value)) {
+            orig(self);
+            return;
+        }
+
+        self.store.Value = GameObject.FindWithTag(self.withTag.Value);
+    }
+
     private static bool OnComponentCompareTag(Func<Component, string, bool> orig, Component self, string tag) {
         return tag == RecoilerTag || orig(self, tag);
     }
