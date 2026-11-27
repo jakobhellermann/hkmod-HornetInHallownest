@@ -12,6 +12,7 @@ using HutongGames.PlayMaker.Actions;
 using Modding;
 using UnityEngine;
 using UnityEngine.U2D;
+using static HornetInHallownest.Modules.ProgressionRules;
 using SPlayerData = Silksong::PlayerData;
 using SToolCrest = Silksong::ToolCrest;
 using SToolItem = Silksong::ToolItem;
@@ -21,20 +22,9 @@ namespace HornetInHallownest.Modules;
 
 // Hornet's Silksong tools, crests and Eva upgrades are earned through HK's own progression.
 public sealed class ProgressionModule : ModuleBase {
-    internal readonly record struct Flag(string Field, int Min = 0) {
-        internal bool IsSet(PlayerData pd) => Min == 0 ? pd.GetBool(Field) : pd.GetInt(Field) >= Min;
-    }
-
-    // Godseeker mode starts with the Knight's whole kit but none of the events that earn the rest.
-    internal sealed record Rule(string Reward, Flag[] Flags, bool AnyFlag = false) {
-        internal bool IsEarned(PlayerData pd) =>
-            pd.bossRushMode || Flags.Length == 0 || (AnyFlag ? Flags.Any(f => f.IsSet(pd)) : Flags.All(f => f.IsSet(pd)));
-    }
-
     private const int BaseCharmNotches = 3;
     private const int ExtraBlueSlotNotches = 8;
     private const int ExtraYellowSlotNotches = 11;
-    private const string StartingCrest = "Hunter";
     private const string CharmGetMsg = "Charm Get Msg";
     private const string CharmTutorialMsg = "Charm Tutorial Msg";
     private const string CharmBenchMsg = "Charm Equip Msg";
@@ -67,98 +57,6 @@ public sealed class ProgressionModule : ModuleBase {
     private static AssetBundle? promptsBundle;
     private static AssetBundle? promptIconsBundle;
 
-    private static Flag Charm(int id) => new($"gotCharm_{id}");
-
-    private static Rule Earned(string reward, params Flag[] flags) => new(reward, flags);
-
-    internal static readonly Rule[] ToolRules = [
-        Earned("Straight Pin", new Flag("falseKnightDefeated")),
-        Earned("Tri Pin", Charm(25)), // Fragile Strength
-        Earned("Sting Shard", new Flag("killedMimicSpider")), // Nosk
-        Earned("Tack", new Flag("hasAcidArmour")), // Isma's Tear
-        Earned("Harpoon", Charm(15)), // Heavy Blow
-        Earned("Curve Claws", Charm(13)), // Mark of Pride
-        Earned("Curve Claws Upgraded", new Flag("killedTraitorLord")),
-        Earned("Shakra Ring", new Flag("killedMegaMossCharger")),
-        Earned("Pimpilo", Charm(10)), // Defender's Crest
-        Earned("Conch Drill", Charm(28)), // Shape of Unn
-        Earned("WebShot Forge", new Flag("maskBrokenHegemol")),
-        Earned("WebShot Architect", new Flag("maskBrokenMonomon")),
-        Earned("WebShot Weaver", new Flag("maskBrokenLurien")),
-        Earned("Silk Snare", Charm(22)), // Glowing Womb
-        Earned("Screw Attack", new Flag("hasLantern")),
-        Earned("Cogwork Saw", new Flag("royalCharmState", 3)), // Kingsoul
-        Earned("Cogwork Flier", new Flag("grimmChildLevel", 3)), // Grimmchild's third form
-        Earned("Rosary Cannon", new Flag("fragileGreed_unbreakable")),
-        Earned("Lightning Rod", new Flag("killedMegaJellyfish")), // Uumuu
-        Earned("Flintstone", new Flag("killedGrimm")), // Troupe Master Grimm
-        Earned("Lifeblood Syringe", Charm(8)), // Lifeblood Heart
-        Earned("Flea Brew", Charm(32)), // Quick Slash
-
-        Earned("Silk Spear", new Flag("fireballLevel", 1)),
-        Earned("Silk Charge", new Flag("fireballLevel", 2)), // Sharpdart
-        Earned("Parry", new Flag("quakeLevel", 1)), // Cross Stitch
-        Earned("Silk Bomb", new Flag("quakeLevel", 2)), // Rune Rage
-        Earned("Thread Sphere", new Flag("screamLevel", 1)), // Thread Storm
-        Earned("Silk Boss Needle", new Flag("screamLevel", 2)), // Pale Nails
-
-        Earned("Bell Bind", Charm(5)), // Baldur Shell
-        Earned("Quickbind", Charm(7)), // Quick Focus
-        Earned("Multibind", Charm(34)), // Deep Focus
-        Earned("Reserve Bind", Charm(27)), // Joni's Blessing
-        Earned("White Ring", Charm(20)), // Soul Catcher
-        Earned("Spool Extender", Charm(21)), // Soul Eater
-        Earned("Mosscreep Tool 1", Charm(3)), // Grubsong
-        Earned("Mosscreep Tool 2", Charm(35)), // Grubberfly's Elegy
-        Earned("Revenge Crystal", Charm(12)), // Thorns of Agony
-        Earned("Brolly Spike", Charm(16)), // Sharp Shadow
-        Earned("Dazzle Bind", Charm(38)), // Dreamshield
-        Earned("Dazzle Bind Upgraded", new Flag("dreamNailUpgraded")),
-        Earned("Flea Charm", Charm(11)), // Flukenest
-        Earned("Fractured Mask", Charm(23)), // Fragile Heart
-        Earned("Longneedle", Charm(18)), // Longnail
-        Earned("Pinstress Tool", Charm(26)), // Nailmaster's Glory
-        Earned("Poison Pouch", Charm(17)), // Spore Shroom
-        Earned("Quick Sling", Charm(19)), // Shaman Stone
-        new("Wisp Lantern",
-            [
-                new Flag("killedGhostAladar"), new Flag("killedGhostXero"), new Flag("killedGhostHu"),
-                new Flag("killedGhostMarmu"), new Flag("killedGhostNoEyes"), new Flag("killedGhostGalien"),
-                new Flag("killedGhostMarkoth")
-            ],
-            AnyFlag: true),
-        Earned("Zap Imbuement", Charm(33)), // Spell Twister
-        Earned("Thief Claw", new Flag("collectorDefeated")),
-        Earned(GrimmchildTool.ToolName, Charm(40)),
-
-        Earned("Compass", Charm(2)), // Wayward Compass
-        Earned("Rosary Magnet", Charm(1)), // Gathering Swarm
-        Earned("Sprintmaster", Charm(37)),
-        Earned("Scuttlebrace", Charm(31)), // Dashmaster
-        Earned("Wallcling", new Flag("defeatedMegaBeamMiner")), // Crystal Guardian
-        Earned("Weighted Anklet", Charm(14)), // Steady Body
-        Earned("Barbed Wire", Charm(6)), // Fury of the Fallen
-        Earned("Magnetite Dice", new Flag("grimmChildLevel", 5)), // Carefree Melody
-        Earned("Thief Charm", Charm(24)), // Fragile Greed
-        Earned("Dead Mans Purse", new Flag("jijiShadeOffered")),
-        Earned("Musician Charm", Charm(30)), // Dream Wielder
-        Earned("Shell Satchel", Charm(39)) // Weaversong
-    ];
-
-    internal static readonly Rule[] CrestRules = [
-        Earned(StartingCrest),
-        Earned("Hunter_v2", new Flag("journalEntriesCompleted", 60)), // entries encountered
-        Earned("Hunter_v3", new Flag("journalNotesCompleted", 80)), // entries completed
-        Earned("Spell", new Flag("fireballLevel", 2), new Flag("quakeLevel", 2), new Flag("screamLevel", 2)),
-        Earned("Warrior", new Flag("maskBrokenHegemol")),
-        Earned("Reaper", new Flag("dreamReward2")),
-        Earned("Wanderer", new Flag("quirrelEpilogueCompleted")),
-        Earned("Toolmaster", new Flag("nailSmithUpgrades", 4)),
-        Earned("Witch", Charm(9)) // Lifeblood Core
-    ];
-
-    internal static readonly Rule SylphsongRule = Earned("Sylphsong", new Flag("salubraBlessing"));
-
     // Keyed by HK's item screens (CreateUIMsgGetItem's "Item").
     private static readonly Dictionary<string, Silksong::PowerUpGetMsg.PowerUps> powerUpScreens = new() {
         ["Dash"] = Silksong::PowerUpGetMsg.PowerUps.Sprint,
@@ -183,25 +81,11 @@ public sealed class ProgressionModule : ModuleBase {
         ["Journal"] = ("Journal", "Journal_Prompt")
     };
 
-    internal static readonly Rule[] LocketRules = [
-        Earned("Grubfather 10", new Flag("grubsCollected", 10)),
-        Earned("Grubfather 16", new Flag("grubsCollected", 16)),
-        Earned("Grubfather 23", new Flag("grubsCollected", 23)),
-        Earned("Grubfather 31", new Flag("grubsCollected", 31)),
-        Earned("Grubfather 38", new Flag("grubsCollected", 38)),
-        Earned("Wanderer's Journal", new Flag("foundTrinket1")),
-        Earned("Hallownest Seal", new Flag("foundTrinket2")),
-        Earned("King's Idol", new Flag("foundTrinket3")),
-        Earned("Arcane Egg", new Flag("foundTrinket4")),
-        Earned("Seer 100", new Flag("dreamReward1")),
-        Earned("Seer 300", new Flag("dreamReward3")),
-        Earned("Seer 500", new Flag("dreamReward4"))
-    ];
-
     private static readonly HashSet<string> watchedFields = [
         .. ToolRules.Concat(CrestRules).Concat(LocketRules).Append(SylphsongRule).SelectMany(r => r.Flags)
             .Select(f => f.Field),
-        "charmSlots", "hasCyclone", "hasDashSlash", "hasUpwardSlash", "hasShadowDash"
+        nameof(PlayerData.charmSlots), nameof(PlayerData.hasCyclone), nameof(PlayerData.hasDashSlash),
+        nameof(PlayerData.hasUpwardSlash), nameof(PlayerData.hasShadowDash)
     ];
 
     // PlayerDataSyncModule grants Needle Strike and the Silk Hearts as HK sets them; these are the ones already announced.
@@ -224,7 +108,7 @@ public sealed class ProgressionModule : ModuleBase {
     // HK counts the journal by writing its fields directly, past the SetInt hook.
     private void OnCountJournalEntries(Action<PlayerData> orig, PlayerData self) {
         orig(self);
-        QueueApply("journalEntriesCompleted");
+        QueueApply(nameof(PlayerData.journalEntriesCompleted));
     }
 
     protected override void OnDeinitialize() {
@@ -309,8 +193,11 @@ public sealed class ProgressionModule : ModuleBase {
     // What the skipped HK message would do
     private static void RunSkippedMsgEffects(string item) {
         var pd = PlayerData.instance;
-        if (IsNailArt(item) && pd.GetBool("hasCyclone") && pd.GetBool("hasUpwardSlash") && pd.GetBool("hasDashSlash"))
-            pd.SetBool("hasAllNailArts", true);
+        if (IsNailArt(item)
+            && pd.GetBool(nameof(PlayerData.hasCyclone))
+            && pd.GetBool(nameof(PlayerData.hasUpwardSlash))
+            && pd.GetBool(nameof(PlayerData.hasDashSlash)))
+            pd.SetBool(nameof(PlayerData.hasAllNailArts), true);
 
         GameManager.instance.SaveGame();
     }
@@ -420,7 +307,7 @@ public sealed class ProgressionModule : ModuleBase {
 
         if (!earnedCrests.Contains(ss.CurrentCrestID)) SToolItemManager.SetEquippedCrest(StartingCrest);
 
-        var notches = pd.GetInt("charmSlots");
+        var notches = pd.GetInt(nameof(PlayerData.charmSlots));
         var extraBlueSlot = notches >= ExtraBlueSlotNotches;
         var extraYellowSlot = notches >= ExtraYellowSlotNotches;
         var extraSlotCount = (ss.UnlockedExtraBlueSlot ? 1 : 0) + (ss.UnlockedExtraYellowSlot ? 1 : 0);
@@ -499,7 +386,7 @@ public sealed class ProgressionModule : ModuleBase {
     }
 
     internal static int EarnedMemoryLockets(PlayerData pd) =>
-        Math.Max(0, pd.GetInt("charmSlots") - BaseCharmNotches) + LocketRules.Count(r => r.IsEarned(pd));
+        Math.Max(0, pd.GetInt(nameof(PlayerData.charmSlots)) - BaseCharmNotches) + LocketRules.Count(r => r.IsEarned(pd));
 
     // An upgraded crest carries over its previous version's slots, so only the newest version counts.
     private static void GrantMemoryLockets(PlayerData pd, SPlayerData ss, bool showPopups) {
