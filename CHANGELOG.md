@@ -9,6 +9,7 @@
 - Fix the knight getting stuck after a Hall of Gods fight when hornet was not used since loading
 - 1.5.78: Fix doors, benches, shops and NPCs not reacting to hornet
 - 1.5.78: Fix the inventory map zooming/panning being broken
+- 1.5.78: Fix broken scene transitions when WeaverCore is installed
 
 ## v0.6.0
 - Apply HUD Scale setting to hornet

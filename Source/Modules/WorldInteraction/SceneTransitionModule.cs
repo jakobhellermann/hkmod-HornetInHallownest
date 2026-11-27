@@ -13,9 +13,6 @@ using Object = UnityEngine.Object;
 using USceneManager = UnityEngine.SceneManagement.SceneManager;
 using SGate = Silksong::GlobalEnums.GatePosition;
 using SHeroTransition = Silksong::GlobalEnums.HeroTransitionState;
-using SCollisionSide = Silksong::GlobalEnums.CollisionSide;
-using SHazardType = Silksong::GlobalEnums.HazardType;
-using SDamageFlags = Silksong::GlobalEnums.DamagePropertyFlags;
 
 namespace HornetInHallownest.Modules;
 
@@ -39,7 +36,6 @@ public sealed class SceneTransitionModule : ModuleBase {
     // walk-out walks/falls her off the arena platform.
     private bool dreamArrivalPending;
     private bool dreamHeroPlaced;
-    private bool arrivalInvulnerable; // block hazard damage through the dream-arrival window (park + placement settle)
     private bool dreamPending;
     private bool playingDreamArrival;
     private bool lieDownArrival;
@@ -64,6 +60,7 @@ public sealed class SceneTransitionModule : ModuleBase {
 
     protected override void OnDeinitialize() {
         USceneManager.activeSceneChanged -= OnActiveSceneChanged;
+        Silksong::HeroInvincibilitySource.Remove(this);
         shownMsgs.Clear();
 #if HK1578
         if (knightAwaitingPosition != null) knightAwaitingPosition.heroInPosition -= OnKnightInPosition;
@@ -264,31 +261,6 @@ public sealed class SceneTransitionModule : ModuleBase {
         Detour(typeof(Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast), nameof(Silksong::HutongGames.PlayMaker.Actions.SuperJumpRaycast.DoRaycast), OnSuperJumpRaycast);
 
         Detour(typeof(GameManager), nameof(GameManager.LevelActivated), OnLevelActivated, typeof(Scene), typeof(Scene));
-
-        // Arrival i-frames: block damage through the dream-arrival window (see arrivalInvulnerable). Needed because on a
-        // cross-scene dream warp she briefly sits at the carried-over position, which in Radiance's arena is inside the
-        // Abyss Pit spike; the damage box is HeroBox (a child GO with its own layer) so root-layer tricks don't stop it.
-        Detour(typeof(Silksong::HeroController),
-            "TakeDamage",
-            OnTakeDamage,
-            typeof(GameObject),
-            typeof(SCollisionSide),
-            typeof(int),
-            typeof(SHazardType),
-            typeof(SDamageFlags));
-    }
-
-    private void OnTakeDamage(
-        Action<Silksong::HeroController, GameObject, SCollisionSide, int, SHazardType, SDamageFlags> orig,
-        Silksong::HeroController self,
-        GameObject go,
-        SCollisionSide side,
-        int dmg,
-        SHazardType hazard,
-        SDamageFlags flags
-    ) {
-        if (arrivalInvulnerable) return;
-        orig(self, go, side, dmg, hazard, flags);
     }
 
     private void OnSetHazardRespawn(Action<PlayerData, Vector3, bool> orig, PlayerData self, Vector3 pos, bool facing) {
@@ -516,7 +488,7 @@ public sealed class SceneTransitionModule : ModuleBase {
             yield return new WaitForFixedUpdate();
         }
 
-        arrivalInvulnerable = false;
+        Silksong::HeroInvincibilitySource.Remove(this);
     }
 
     private static void SnapHornetToKnight(HeroController knight) {
@@ -871,7 +843,8 @@ public sealed class SceneTransitionModule : ModuleBase {
             // Keep her non-colliding from now until the dream-gate placement (below): on scene load she sits at the
             // carried-over position, which in Radiance's arena is inside the Abyss Pit spike.
             dreamHeroPlaced = false;
-            arrivalInvulnerable = true;
+            // In the radiance arena, during the scene transition she's briefly positioned in spikes.
+            Silksong::HeroInvincibilitySource.Add(this);
             StartCoroutine(ManageArrivalLayer());
             // Same-scene re-entry (Dream Fall Catcher caught a fall): place her at the gate now, before the Fall
             // Catcher's per-frame Hero-Y<0 test re-fires into a respawn loop.
