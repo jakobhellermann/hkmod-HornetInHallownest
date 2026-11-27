@@ -30,6 +30,7 @@ public sealed class HitBridgeModule : ModuleBase {
     internal static SHitInstance? ForwardedHit;
 
     private static readonly int tinkerLayer = LayerMask.NameToLayer("Tinker");
+    private static readonly int dreamShieldMask = LayerMask.GetMask("Orbit Shield");
     private static Silksong::HeroController? solidTinkersOwner;
     private static Collider2D[] solidTinkers = [];
 
@@ -53,6 +54,7 @@ public sealed class HitBridgeModule : ModuleBase {
         // HK enemy hits call HeroController.instance.SoulGain, redirect to Hornet's SilkGain when active.
         Detour(typeof(HeroController), nameof(HeroController.SoulGain), OnSoulGain);
         Detour(typeof(EnemyBullet), nameof(EnemyBullet.OnEnable), OnEnemyBulletEnable);
+        Detour(typeof(ActionHelpers), nameof(ActionHelpers.LayerArrayToLayerMask), OnLayerArrayToLayerMask);
 
         USceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
@@ -191,6 +193,12 @@ public sealed class HitBridgeModule : ModuleBase {
         }
 
         foreach (var tinker in solidTinkers) Physics2D.IgnoreCollision(self.col, tinker);
+    }
+
+    // HK's "Orbit Shield" layer is Silksong's "Attack Detector" (Sting Shard), leading to HK's lasers being blocked by it.
+    private static int OnLayerArrayToLayerMask(Func<FsmInt[], bool, int> orig, FsmInt[] layers, bool invert) {
+        var mask = orig(layers, invert);
+        return HeroSwitch.HornetActive ? mask & ~dreamShieldMask : mask;
     }
 
     private static void OnSoulGain(Action<HeroController> orig, HeroController self) {
