@@ -13,6 +13,11 @@ public sealed class HornetGlobalSettings {
     // New games start on Hornet instead of the Knight.
     public bool StartAsHornet = true;
 
+    // All crests are usable from the start. Can be disabled later.
+    public bool UnlockAllCrests;
+    // All tools are usable from the start. Can be disabled later.
+    public bool UnlockAllTools;
+
     // When true, switching will keep both the Knight and Hornet active and controllable, however only the "primary"
     // target will be able to interact, get targeted by enemies, show HUD, etc.
     public bool BothActive;

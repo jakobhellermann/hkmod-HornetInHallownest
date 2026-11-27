@@ -367,15 +367,21 @@ public sealed class ProgressionModule : ModuleBase {
         var pd = PlayerData.instance;
         var ss = SPlayerData.instance;
         if (pd == null || ss == null) return;
+        
+        var settings = HornetInHallownest.LoadedInstance?.GlobalSettings;
         ss.SeenToolGetPrompt = true;
         ss.SeenToolWeaponGetPrompt = true;
 
-        var earnedTools = new HashSet<string>(ToolRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward));
-        if (!pd.bossRushMode) KeepOneSilkshot(earnedTools);
+        var allTools = pd.bossRushMode || settings?.UnlockAllTools == true;
+        var earnedTools = new HashSet<string>(ToolRules.Where(r => allTools || r.IsEarned(pd)).Select(r => r.Reward));
+        
+        if (!allTools) KeepOneSilkshot(earnedTools);
+        
         var upgrades = SToolItemManager.GetAllTools().Where(t => t && t.getReplaces).ToList();
         var replaceableTools = new HashSet<SToolItem?>(upgrades.Select(t => t.getReplaces));
         var replacedTools = new HashSet<SToolItem?>(upgrades.Where(t => earnedTools.Contains(t.name))
             .Select(t => t.getReplaces));
+
         foreach (var tool in SToolItemManager.GetAllTools()) {
             if (!tool) continue;
             var earned = earnedTools.Contains(tool.name);
@@ -398,7 +404,9 @@ public sealed class ProgressionModule : ModuleBase {
                 SetHidden(tool, replaced);
         }
 
-        var earnedCrests = new HashSet<string>(CrestRules.Where(r => r.IsEarned(pd)).Select(r => r.Reward));
+        var allCrests = settings?.UnlockAllCrests == true;
+        var earnedCrests = new HashSet<string>(CrestRules.Where(r => allCrests || r.IsEarned(pd)).Select(r => r.Reward));
+
         foreach (var crest in SToolItemManager.GetAllCrests()) {
             if (!crest) continue;
             if (earnedCrests.Contains(crest.name) && !crest.IsUnlocked && !IsSuperseded(crest)) {

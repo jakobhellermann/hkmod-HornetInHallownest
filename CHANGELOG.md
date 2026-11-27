@@ -2,6 +2,8 @@
 
 ## _Unreleased_
 
+- Add mod options for unlocking all tools or crests
+
 ## v0.6.0
 - Apply HUD Scale setting to hornet
 - Pick look up animation based on NPC height

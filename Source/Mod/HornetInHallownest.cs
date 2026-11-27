@@ -1,5 +1,6 @@
 extern alias Silksong;
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using HornetInHallownest.Bootstrap;
 using HornetInHallownest.Core;
@@ -19,6 +20,7 @@ namespace HornetInHallownest;
 // ReSharper disable once ClassNeverInstantiated.Global (the Modding API instantiates mods via reflection)
 public class HornetInHallownest() : Mod("HornetInHallownest"),
     ITogglableMod,
+    IMenuMod,
     ILocalSettings<HornetSaveData>,
     IGlobalSettings<HornetGlobalSettings> {
     private readonly ModuleHost moduleHost = new();
@@ -56,10 +58,34 @@ public class HornetInHallownest() : Mod("HornetInHallownest"),
         return Assembly.GetExecutingAssembly().GetName().Version.ToString();
     }
 
+    private IMenuMod.MenuEntry GetBoolMenu(string name, string description,
+        Func<HornetGlobalSettings, bool> get, Action<HornetGlobalSettings, bool> set) {
+        return new IMenuMod.MenuEntry {
+            Name = name,
+            Description = description,
+            Values = [ "No", "Yes" ],
+            Saver = opt => {
+                set(globalSettings, opt == 1);
+                if (HornetSpawner.HornetRoot) ProgressionModule.Apply();
+            },
+            Loader = () => get(globalSettings) ? 1 : 0,
+        };
+    }
+
+    public List<IMenuMod.MenuEntry> GetMenuData(IMenuMod.MenuEntry? toggleButtonEntry) {
+        return [
+            GetBoolMenu("Unlock all crests", "All crests are usable from the start. Can be disabled later.",
+                s => s.UnlockAllCrests, (s, v) => s.UnlockAllCrests = v),
+            GetBoolMenu("Unlock all tools", "All tools are usable fom the start. Can be disabled later.",
+                s => s.UnlockAllTools, (s, v) => s.UnlockAllTools = v),
+        ];
+    }
+
+    public bool ToggleButtonInsideMenu => true;
+
     public void Unload() {
         initialized = false;
-        // TP Knight to hornet if hornet was active during hot reload. Must run before the module host despawns hornet,
-        // otherwise HornetRool gets nullreference exceptions.
+        // TP Knight to hornet if hornet was active during hot reload.
         try {
             HeroSwitch.TpKnightToActiveHornet();
         } catch (Exception e) {
