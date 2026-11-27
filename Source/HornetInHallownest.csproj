@@ -14,6 +14,8 @@
         <Nullable Condition="'$(TargetFramework)' == 'hk1578'">annotations</Nullable>
         <EnableNETAnalyzers>True</EnableNETAnalyzers>
         <AnalysisMode>recommended</AnalysisMode>
+        <!-- Allow using publicized gamelibes. Seems like the .props from GameLibs don't get applied when setting framework in HollowKnightPath.props -->
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 
         <RestorePackagesWithLockFile>True</RestorePackagesWithLockFile>
         <RestoreLockedMode Condition="'$(CI)' == 'true'">True</RestoreLockedMode>
