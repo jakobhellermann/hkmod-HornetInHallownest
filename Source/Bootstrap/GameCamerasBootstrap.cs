@@ -19,15 +19,6 @@ internal static class GameCamerasBootstrap {
 
     private static Transform? inGame;
 
-    // Silksong sorting layers whose ids differ from HK's same-named ones; the rest fall back to "HUD".
-    private static readonly Dictionary<int, string> ssSortingLayerNames = new() {
-        {
-            59515797, "Inventory"
-        }, {
-            1017658613, "Scene Border"
-        }
-    };
-
     // Personal taste, this feels most in line with hollowknight when switching
     private const float BaseHudScale = 0.9f;
 
@@ -104,16 +95,6 @@ internal static class GameCamerasBootstrap {
         holder.SetActive(true);
     }
 
-    private static void RemapSortingLayers(Transform root) {
-        foreach (var mso in root.GetComponentsInChildren<Silksong::MeshSortingOrder>(true)) {
-            var id = mso.layerID;
-            if (SortingLayer.IsValid(id)) continue;
-            var hkId = SortingLayer.NameToID(ssSortingLayerNames.TryGetValue(id, out var nm) ? nm : "HUD");
-            mso.layerID = hkId;
-            mso.GetComponent<MeshRenderer>().sortingLayerID = hkId;
-        }
-    }
-
     private static Transform? FindByName(Transform root, string name) {
         if (root.name == name) return root;
         foreach (Transform c in root) {
@@ -176,8 +157,6 @@ internal static class GameCamerasBootstrap {
         var hudSetting = GameManager.instance.gameSettings.hudScaleSetting;
         SetHudAppearance(hudSetting == 2, hudSetting == 1);
 #endif
-
-        RemapSortingLayers(hudCam);
 
         // Some HUD objects' tag index is HK's "Boss", which HK FSMs count (e.g. Collector never drops jars).
         foreach (var t in hudCam.GetComponentsInChildren<Transform>(true))
