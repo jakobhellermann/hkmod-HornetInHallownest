@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using UnitySceneRepacker;
 
 namespace UnityEngine.Compat;
@@ -15,6 +16,7 @@ internal static class UnityFsBundles {
     private static readonly Dictionary<AssetBundleCreateRequest, Stream> streams = new Dictionary<AssetBundleCreateRequest, Stream>();
 
     private static GameRepacker silksong;
+    private static CompatOptions compatOptions;
 
     private static int translatedBundles;
     private static readonly Stopwatch patchTime = new Stopwatch();
@@ -27,8 +29,17 @@ internal static class UnityFsBundles {
         translatedBundles++;
         var started = patchTime.Elapsed;
         patchTime.Start();
-        silksong ??= new GameRepacker(GameDir(path));
-        var stream = silksong.OpenV8AsV7(path, Application.unityVersion);
+
+        if (silksong == null) {
+            var game = new GameRepacker(GameDir(path));
+            compatOptions = new CompatOptions {
+                TargetSortingLayers = SortingLayer.layers.Select(layer => layer.id).ToArray(),
+                SortingLayerMap = SortingLayerMap(game)
+            };
+            silksong = game;
+        }
+
+        var stream = silksong.OpenV8AsV7(path, Application.unityVersion, compatOptions);
         patchTime.Stop();
         if (stream.PatchCount > 0)
             Debug.Log($"[UnityCompat] {Path.GetFileName(path)}: {stream.PatchCount} compat patches in " + $"{(patchTime.Elapsed - started).TotalMilliseconds:F0} ms (so far {translatedBundles} bundles, " + $"{patchTime.Elapsed.TotalMilliseconds:F0} ms computing patches)");
@@ -36,6 +47,22 @@ internal static class UnityFsBundles {
         var request = AssetBundle.LoadFromStreamAsync(stream, crc);
         streams[request] = stream;
         return request;
+    }
+
+    // Each of the bundle game's sorting layers goes to this game's layer of the same name, or else to the closest one below it
+    private static Dictionary<int, int> SortingLayerMap(GameRepacker game) {
+        var map = new Dictionary<int, int>();
+        var below = 0;
+
+        foreach (var layer in game.SortingLayers()) {
+            var id = SortingLayer.layers.FirstOrDefault(l => l.name == layer.Name).id;
+            if (id == 0 && layer.Name != "Default") id = below;
+
+            if (id != layer.Id) map.Add(layer.Id, id);
+            below = id;
+        }
+
+        return map;
     }
 
     // The game a bundle of its StreamingAssets belongs to.

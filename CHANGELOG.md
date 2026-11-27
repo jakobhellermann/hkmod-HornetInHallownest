@@ -12,6 +12,7 @@
 - 1.5.78: Fix the inventory map zooming/panning being broken
 - 1.5.78: Fix broken scene transitions when WeaverCore is installed
 - 1.5.78: Fix the pause menu opening over hornet's inventory when DebugMod enables the cursor
+- 1.5.78: Fix inventory looking faded
 
 ## v0.6.0
 - Apply HUD Scale setting to hornet
