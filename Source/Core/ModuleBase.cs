@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Log = HornetInHallownest.Util.Log;
@@ -73,12 +74,17 @@ public abstract class ModuleBase {
     protected void LogErrorOnce(string key, object? msg) => Log.ErrorOnce(key, $"[{Id}] {msg}");
 
     protected Hook Detour<TDelegate>(Type type, string method, TDelegate hook, params Type[] paramTypes)
-        where TDelegate : Delegate {
+        where TDelegate : Delegate =>
+        Track(new Hook(FindMethod(type, method, paramTypes), hook));
+
+    protected ILHook ILHook(Type type, string method, ILContext.Manipulator manipulator, params Type[] paramTypes) =>
+        Track(new ILHook(FindMethod(type, method, paramTypes), manipulator));
+
+    private static MethodInfo FindMethod(Type type, string method, Type[] paramTypes) {
         // An empty params array means "the only method with this name"; NoParams is told apart by reference.
         var mi = paramTypes.Length > 0 || ReferenceEquals(paramTypes, NoParams)
             ? type.GetMethod(method, AllMethods, null, paramTypes, null)
             : type.GetMethod(method, AllMethods);
-        if (mi == null) throw new MissingMethodException(type.FullName, method);
-        return Track(new Hook(mi, hook));
+        return mi ?? throw new MissingMethodException(type.FullName, method);
     }
 }

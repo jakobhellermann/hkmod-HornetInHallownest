@@ -4,6 +4,9 @@ using System;
 using System.Collections.Generic;
 using HornetInHallownest.Core;
 using HornetInHallownest.Util;
+#if HK1578
+using MonoMod.Cil;
+#endif
 using UnityEngine;
 using SHeroController = Silksong::HeroController;
 using SPlayerData = Silksong::PlayerData;
@@ -52,6 +55,9 @@ public sealed class QuickMapModule : ModuleBase {
     private static bool isActivating;
     private static bool isZoomShortcut;
     private static bool shownAllowPaneSwapping;
+#if HK1578
+    private static readonly List<Action> realTimeRestores = [];
+#endif
 
     public override string Id => "quick-map";
 
@@ -67,7 +73,29 @@ public sealed class QuickMapModule : ModuleBase {
         Detour(typeof(Silksong::InventoryPaneInput), nameof(Silksong::InventoryPaneInput.Update), OnPaneInputUpdate);
         Detour(typeof(Silksong::InventoryMapManager), nameof(Silksong::InventoryMapManager.AutoZoomIn), OnAutoZoomIn);
         Detour(typeof(Silksong::InventoryMapManager), nameof(Silksong::InventoryMapManager.ZoomOut), OnZoomOut);
+#if HK1578
+        // On 1.5.12620 the map's fades, panning and marker menu run on unscaled time, on 1.5.78 on Time.deltaTime.
+        ILHook(typeof(FadeGroup), nameof(FadeGroup.Update), UseInventoryDeltaTime);
+        ILHook(typeof(GameMap), nameof(GameMap.Update), UseInventoryDeltaTime);
+        ILHook(typeof(MapMarkerMenu), nameof(MapMarkerMenu.Update), UseInventoryDeltaTime);
+#endif
     }
+
+#if HK1578
+    private static void UseInventoryDeltaTime(ILContext il) {
+        var cursor = new ILCursor(il);
+        var replaced = 0;
+        while (cursor.TryGotoNext(i => i.MatchCall(typeof(Time), "get_" + nameof(Time.deltaTime)))) {
+            cursor.Next.Operand = il.Import(((Func<float>)InventoryDeltaTime).Method);
+            replaced++;
+        }
+
+        if (replaced == 0) throw new InvalidOperationException($"{il.Method.FullName} reads no Time.deltaTime");
+    }
+
+    private static float InventoryDeltaTime() =>
+        SPlayerData.HasInstance && SPlayerData.instance.isInventoryOpen ? Time.unscaledDeltaTime : Time.deltaTime;
+#endif
 
     protected override void OnDeinitialize() => HideHkMap();
 
@@ -193,6 +221,27 @@ public sealed class QuickMapModule : ModuleBase {
             arrows.Find("Arrow L").gameObject,
             arrows.Find("Arrow R").gameObject);
         hkMapControl = FSMUtility.LocateFSM(worldMap.gameObject, "UI Control");
+
+#if HK1578
+        // On 1.5.78 the map runs on game time, but hornets inventory is paused. Run on realtime instead.
+        foreach (var fsm in worldMap.GetComponentsInChildren<PlayMakerFSM>(true))
+        foreach (var state in fsm.FsmStates)
+        foreach (var action in state.Actions) {
+            var realTime = action.GetType().GetFieldInfo("realTime", logFailure: false);
+            switch (realTime?.GetValue(action)) {
+                case bool value:
+                    realTime.SetValue(action, true);
+                    realTimeRestores.Add(() => realTime.SetValue(action, value));
+                    break;
+                case HutongGames.PlayMaker.FsmBool flag:
+                    var flagValue = flag.Value;
+                    flag.Value = true;
+                    realTimeRestores.Add(() => flag.Value = flagValue);
+                    break;
+            }
+        }
+#endif
+
         isActivating = true;
 
         var pharloom = pane.transform.Find("World Map");
@@ -231,6 +280,12 @@ public sealed class QuickMapModule : ModuleBase {
         shownMap.transform.localScale = hiddenMapScale;
         shownMap = null;
         hkMapPane.SetActive(false);
+
+#if HK1578
+        foreach (var restore in realTimeRestores) restore();
+        realTimeRestores.Clear();
+#endif
+
         if (pharloomMap) pharloomMap.SetActive(true);
         pharloomMap = null;
     }
