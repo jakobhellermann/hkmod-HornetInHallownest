@@ -305,7 +305,11 @@ public sealed class ProgressionModule : ModuleBase {
             }
         }
 
-        if (!earnedCrests.Contains(ss.CurrentCrestID)) SToolItemManager.SetEquippedCrest(StartingCrest);
+        if (SToolItemManager.GetCrestByName(ss.CurrentCrestID) is not { IsVisible: true }) {
+            var hunter = SToolItemManager.GetCrestByName(StartingCrest);
+            while (hunter.IsUpgradedVersionUnlocked) hunter = hunter.upgradedVersion;
+            SToolItemManager.SetEquippedCrest(hunter.name);
+        }
 
         var notches = pd.GetInt(nameof(PlayerData.charmSlots));
         var extraBlueSlot = notches >= ExtraBlueSlotNotches;
