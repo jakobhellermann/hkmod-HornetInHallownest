@@ -18,6 +18,9 @@ public sealed class HornetGlobalSettings {
     // All tools are usable from the start. Can be disabled later.
     public bool UnlockAllTools;
 
+    // Reduce hornets size to the one of the Knight, to fit through low passages.
+    public bool KnightHeight = true;
+
     // When true, switching will keep both the Knight and Hornet active and controllable, however only the "primary"
     // target will be able to interact, get targeted by enemies, show HUD, etc.
     public bool BothActive;

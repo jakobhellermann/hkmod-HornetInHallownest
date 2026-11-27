@@ -3,6 +3,7 @@
 ## _Unreleased_
 
 - Add mod options for unlocking all tools or crests
+- Add mod options to disable shrinking to the knight's height
 - Fix only one lifeblood mask from several lifeblood enemies killed at once
 - Fix sting shards and other silk skills blocking crystal lasers
 - Fix freeze when entering a pantheon as the knight

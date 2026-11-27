@@ -59,14 +59,14 @@ public class HornetInHallownest() : Mod("HornetInHallownest"),
     }
 
     private IMenuMod.MenuEntry GetBoolMenu(string name, string description,
-        Func<HornetGlobalSettings, bool> get, Action<HornetGlobalSettings, bool> set) {
+        Func<HornetGlobalSettings, bool> get, Action<HornetGlobalSettings, bool> set, Action apply) {
         return new IMenuMod.MenuEntry {
             Name = name,
             Description = description,
             Values = [ "No", "Yes" ],
             Saver = opt => {
                 set(globalSettings, opt == 1);
-                if (HornetSpawner.HornetRoot) ProgressionModule.Apply();
+                if (HornetSpawner.HornetRoot) apply();
             },
             Loader = () => get(globalSettings) ? 1 : 0,
         };
@@ -75,9 +75,11 @@ public class HornetInHallownest() : Mod("HornetInHallownest"),
     public List<IMenuMod.MenuEntry> GetMenuData(IMenuMod.MenuEntry? toggleButtonEntry) {
         return [
             GetBoolMenu("Unlock all crests", "All crests are usable from the start. Can be disabled later.",
-                s => s.UnlockAllCrests, (s, v) => s.UnlockAllCrests = v),
+                s => s.UnlockAllCrests, (s, v) => s.UnlockAllCrests = v, () => ProgressionModule.Apply()),
             GetBoolMenu("Unlock all tools", "All tools are usable fom the start. Can be disabled later.",
-                s => s.UnlockAllTools, (s, v) => s.UnlockAllTools = v),
+                s => s.UnlockAllTools, (s, v) => s.UnlockAllTools = v, () => ProgressionModule.Apply()),
+            GetBoolMenu("Knight height", "Reduce hornets size to the one of the Knight, to fit through low passages.",
+                s => s.KnightHeight, (s, v) => s.KnightHeight = v, HornetSpawner.ApplyColliderHeight),
         ];
     }
 

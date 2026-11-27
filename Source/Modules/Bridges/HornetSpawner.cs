@@ -210,7 +210,7 @@ public sealed class HornetSpawner : ModuleBase {
     // passages the Knight clears block her. When true, shrink her terrain collider (col2d) to the Knight's height.
     // Safe as a one-time set: HeroController never resizes col2d at runtime and it's separate from the HeroBox hurtbox
     // (combat untouched). Cost is cosmetic (tall sprite clips low ceilings).
-    internal static bool KnightHeightCollider = true;
+    internal static bool KnightHeightCollider => HornetInHallownest.LoadedInstance!.GlobalSettings.KnightHeight;
 
     // The two terrain-collider configs, feet-anchored. Width and feet-bottom are shared; only the height differs, and
     // the offset is computed from them (feetBottom + height/2) so there's no second hardcoded offset to keep in sync.
@@ -227,7 +227,7 @@ public sealed class HornetSpawner : ModuleBase {
 
     // Feet-anchored: keep the collider bottom at her feet (FeetBottomLocalY) and only change the height, so ground-snap
     // stays correct.
-    private static void ApplyColliderHeight() {
+    internal static void ApplyColliderHeight() {
         var root = HornetRoot;
         if (!root) return;
         TerrainCollider = root.GetComponent<BoxCollider2D>();
@@ -255,7 +255,8 @@ public sealed class HornetSpawner : ModuleBase {
     // Bound to a debug key on the debug branch.
     // ReSharper disable once UnusedMember.Global
     internal static bool ToggleColliderHeight() {
-        KnightHeightCollider = !KnightHeightCollider;
+        var settings = HornetInHallownest.LoadedInstance!.GlobalSettings;
+        settings.KnightHeight = !settings.KnightHeight;
         ApplyColliderHeight();
         return KnightHeightCollider;
     }
