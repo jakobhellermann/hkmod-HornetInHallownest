@@ -6,6 +6,7 @@
 - Fix only one lifeblood mask from several lifeblood enemies killed at once
 - Fix sting shards and other silk skills blocking crystal lasers
 - Fix freeze when entering a pantheon as the knight
+- Fix the knight getting stuck after a Hall of Gods fight when hornet was not used since loading
 
 ## v0.6.0
 - Apply HUD Scale setting to hornet

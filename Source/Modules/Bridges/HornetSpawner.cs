@@ -189,7 +189,7 @@ public sealed class HornetSpawner : ModuleBase {
         // Do not auto-activate Hornet here: the spawn coincides with HK's scene entry, and inerting the Knight mid-entry
         // breaks HK's entry handshake (never finishes -> Hornet ends in nirvana). A "reload stays on Hornet" feature
         // must defer the switch until the Knight's entry completed (isHeroInPosition + grounded).
-        HeroSwitch.SetActive(HeroSwitch.Active);
+        Runtime.StartCoroutine(ApplyActiveHeroAfterStart());
 
         // Wire gm.hero_ctrl + bare CameraController.camTarget so Silksong's hazard respawn flow
         // (PlayerDeadFromHazard -> HazardRespawn) runs without NullRefs.
@@ -199,6 +199,11 @@ public sealed class HornetSpawner : ModuleBase {
         NeutralizeAmbientTint(hornetInstance);
 
         Log.Info("[HornetSpawner] instantiated");
+    }
+
+    private static IEnumerator ApplyActiveHeroAfterStart() {
+        yield return null;
+        HeroSwitch.SetActive(HeroSwitch.Active);
     }
 
     // HK geometry is built for the Knight's collider (0.50 x 1.28); Hornet's is 0.50 x 2.08 (0.80 taller), so low
