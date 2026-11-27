@@ -5,6 +5,7 @@
 - Add mod options for unlocking all tools or crests
 - Fix only one lifeblood mask from several lifeblood enemies killed at once
 - Fix sting shards and other silk skills blocking crystal lasers
+- Fix freeze when entering a pantheon as the knight
 
 ## v0.6.0
 - Apply HUD Scale setting to hornet

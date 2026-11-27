@@ -15,7 +15,6 @@ namespace HornetInHallownest.Core;
 
 internal static class Stub {
     private static readonly List<ILHook> hooks = [];
-    private static readonly List<Hook> detours = [];
 
     internal static void Install() {
         // Trigger Language's cctor inside a SilksongContext window so its localization sheets come from our bundle, not
@@ -54,26 +53,6 @@ internal static class Stub {
             true); // achievementHandler null; achievements irrelevant
         Skip(typeof(Silksong::GameManager), nameof(Silksong::GameManager.UpdateAchievementProgress), true);
         Skip(typeof(Silksong::GameManager), nameof(Silksong::GameManager.AwardQueuedAchievements), true);
-
-        // HeroController.Start's initial AddSilk NullRefs in SpawnNewChunk (null animator); suppress so Start completes.
-        var addSilk = typeof(Silksong::HeroController).GetMethod("AddSilk",
-            BindingFlags.Instance | BindingFlags.Public,
-            null,
-            [typeof(int), typeof(bool), typeof(Silksong::SilkSpool.SilkAddSource), typeof(bool)],
-            null);
-        if (addSilk != null)
-            detours.Add(new Hook(addSilk,
-                (Action<Action<Silksong::HeroController, int, bool, Silksong::SilkSpool.SilkAddSource, bool>,
-                    Silksong::HeroController, int, bool, Silksong::SilkSpool.SilkAddSource, bool>)
-                ((orig, self, amount, heroEffect, source, force) => {
-                    try {
-                        orig(self, amount, heroEffect, source, force);
-                    } catch (Exception e) {
-                        Log.InfoOnce("addsilk-guard", $"[AddSilk] caught addsilk NullRef {e.Message}");
-                    }
-                })));
-        else
-            Log.Error("[Stub] HeroController.AddSilk(int,bool,SilkAddSource,bool) not found");
 
         Skip(typeof(Silksong::CameraController), nameof(Silksong::CameraController.ScreenFlash)); // SimpleFadeOut.SetColor NullRef (Awake never ran)
         Skip(typeof(Silksong::GameCameras),
@@ -164,8 +143,6 @@ internal static class Stub {
 
     internal static void Cleanup() {
         foreach (var h in hooks) h.Dispose();
-        foreach (var h in detours) h.Dispose();
         hooks.Clear();
-        detours.Clear();
     }
 }

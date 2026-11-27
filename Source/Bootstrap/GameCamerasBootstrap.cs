@@ -195,6 +195,10 @@ internal static class GameCamerasBootstrap {
     internal static void SetHornetHudVisible(bool on) {
         if (inGame == null || inGame.gameObject.activeSelf == on) return;
         inGame.gameObject.SetActive(on);
+
+        // Silk chunks spawned into the hidden HUD never Awake; the spool only queues changes until DrawSpool.
+        if (!on && Silksong::SilkSpool.Instance is { } spool) spool.hasDrawnSpool = false;
+
         if (on) {
             ApplyHudScale();
             HudRefresh.RefreshMaxSilkHud();
