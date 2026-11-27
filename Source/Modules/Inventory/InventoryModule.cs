@@ -79,7 +79,10 @@ public sealed class InventoryModule : ModuleBase {
         if (hkGm) {
             hkGm.isPaused = false;
             var hkIh = hkGm.GetComponent<InputHandler>();
-            if (hkIh) hkIh.StartUIInput();
+            if (hkIh) {
+                hkIh.StartUIInput();
+                hkIh.AllowPause();
+            }
         }
 
         inputBlocker = null;
@@ -113,8 +116,15 @@ public sealed class InventoryModule : ModuleBase {
                 hkGm.isPaused = value;
                 var hkIh = hkGm.GetComponent<InputHandler>();
                 if (hkIh) {
-                    if (value) hkIh.StopUIInput();
-                    else hkIh.StartUIInput();
+                    if (value) {
+                        hkIh.StopUIInput();
+                        // DebugMod's "Show Cursor While Unpaused" restarts UI input every frame.
+                        hkIh.PreventPause();
+                    }
+                    else {
+                        hkIh.StartUIInput();
+                        hkIh.AllowPause();
+                    }
                 }
             }
         } catch (Exception e) {
