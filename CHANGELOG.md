@@ -8,6 +8,7 @@
 - Fix sting shards and other silk skills blocking crystal lasers
 - Fix freeze when entering a pantheon as the knight
 - Fix the knight getting stuck after a Hall of Gods fight when hornet was not used since loading
+- Fix benches not being sittable aber toggling to hornet in the wrong moment
 - 1.5.78: Fix doors, benches, shops and NPCs not reacting to hornet
 - 1.5.78: Fix the inventory map zooming/panning being broken
 - 1.5.78: Fix broken scene transitions when WeaverCore is installed

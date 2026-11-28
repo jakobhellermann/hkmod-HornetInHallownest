@@ -1,3 +1,4 @@
+extern alias SilksongPM;
 using UnityEngine;
 
 namespace HornetInHallownest.Modules.Hero;
@@ -52,9 +53,24 @@ internal abstract class HeroPresence {
         var driver = AnimCtrl(go);
         if (!on && driver) driver.enabled = false;
         foreach (var a in go.GetComponentsInChildren<tk2dSpriteAnimator>(true))
-            if (on) a.Resume();
-            else a.Pause();
+            if (on) {
+                a.Resume();
+            } else {
+                FinishAwaitedClip(a);
+                a.Pause();
+            }
         foreach (var a in go.GetComponentsInChildren<Animator>(true)) a.enabled = on;
         if (on && driver) driver.enabled = true;
+    }
+
+    // An FSM state waiting for the clip to end, like Bench Control's wake-up, would hang on the paused animator.
+    private static void FinishAwaitedClip(tk2dSpriteAnimator animator) {
+        var clip = animator.CurrentClip;
+        if (!animator.Playing || clip?.wrapMode != tk2dSpriteAnimationClip.WrapMode.Once) return;
+        if (animator.AnimationCompleted?.Target is not (HutongGames.PlayMaker.FsmStateAction or SilksongPM::HutongGames.PlayMaker.FsmStateAction)) return;
+
+        animator.SetFrame(clip.frames.Length - 1, false);
+        animator.Stop();
+        animator.AnimationCompleted(animator, clip);
     }
 }
